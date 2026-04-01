@@ -3,7 +3,8 @@
 Conlang Engine is a local-first, professional-grade integrated development environment (IDE) designed for linguists, authors, and constructed language (conlang) creators. Unlike static spreadsheet-based dictionaries, this application utilizes a real-time morphological derivation engine, allowing creators to store pure linguistic roots while the system dynamically handles paradigms, allomorphy, and syntax validation.
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/V7V11X13JL)
-**Patreon:** https://patreon.com/KaitoCE?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink
+[Patreon]([https://www.buymeacoffee.com/](https://patreon.com/KaitoCE))
+
 
 ## Core Features
 
