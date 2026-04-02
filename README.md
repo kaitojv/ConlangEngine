@@ -57,6 +57,11 @@ The Conlang Engine is built with a minimalist, high-performance tech stack:
 
 **Important Note:** Because this application uses `localStorage`, your data is tied to the specific browser and device you are using. Regularly use the **Export .json** feature to create physical backups of your language.
 
+## CREDITS
+bdchauvette Ben Chauvette AND LukasDrgon Lukas Drgon for the amazing work with glossing rules program
+ClaudeAI for correcting my messy code all the time
+the conlang community that accepted this project with open arms
+
 ## License
 
 This project is provided as an open-source tool for the conlanging community.
