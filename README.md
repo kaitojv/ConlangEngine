@@ -6,6 +6,8 @@ Conlang Engine is a local-first, professional-grade integrated development envir
 
 Patreon: https://patreon.com/KaitoCE
 
+Discord: https://discord.gg/9b93D3Wtax
+
 
 ## Core Features
 
