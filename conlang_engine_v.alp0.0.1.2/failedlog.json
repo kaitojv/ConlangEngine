@@ -1,0 +1,49 @@
+{
+  "timestamp": "2026-04-02T21:06:12.574Z",
+  "config": {
+    "nomeIdioma": "ConlangEngine",
+    "consoantes": "p, t, k, რ=Rr, L=ŀ, ჰ=Ks, თ=sh",
+    "vogais": "a, e, i, o, u",
+    "estruturaSilabica": "CV, CVC, V",
+    "pessoas": "1S, 2S, 3S, 1P, 2P, 3P",
+    "ordemSintatica": "SOV",
+    "marcaVerbo": "",
+    "cliticos": "",
+    "bgColor": "#080812",
+    "rules": [
+      {
+        "name": "Dative Case",
+        "affix": "-l",
+        "appliesTo": "all"
+      }
+    ]
+  },
+  "lexicon": [
+    {
+      "id": 1775163675155,
+      "word": "-l",
+      "ipa": "",
+      "type": "particle",
+      "trans": "DAT",
+      "createdAt": 1775163675155
+    },
+    {
+      "id": 1775157440450,
+      "word": "na",
+      "ipa": "",
+      "type": "noun",
+      "trans": "1sg",
+      "createdAt": 1775157440450
+    },
+    {
+      "id": 1775157280870,
+      "word": "hatu",
+      "ipa": "xatɯ",
+      "type": "noun",
+      "trans": "tree",
+      "createdAt": 1775157280870,
+      "group": "",
+      "irregular": ""
+    }
+  ]
+}

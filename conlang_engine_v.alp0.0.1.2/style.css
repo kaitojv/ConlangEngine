@@ -447,3 +447,13 @@ textarea:focus::placeholder {
 }
 .leipzig-container .gloss { display: flex; flex-wrap: wrap; gap: 15px 25px; }
 .leipzig-container .gloss__word { margin: 0 !important; }
+.leipzig-container .gloss__word {
+    display: flex;
+    flex-direction: column;
+    margin-right: 1.5em !important; /* Espaço entre as palavras glossadas */
+    margin-bottom: 1em;
+}
+
+.leipzig-container .gloss__line {
+    white-space: nowrap; /* Impede que o gloss de uma palavra só quebre */
+}

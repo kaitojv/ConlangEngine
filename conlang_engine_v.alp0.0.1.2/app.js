@@ -958,39 +958,28 @@ window.renderReadingMode = function(text) {
 
 // Mode 2: Interlinear Glossed Text (IGT) using Leipzig.js
 window.renderGlossingMode = function(text) {
-    const words = text.split(/(\s+|[.,!?;:"()]+)/).filter(Boolean);
+    const tokens = text.trim().split(/\s+/); 
     
     let lineOriginal = [];
     let lineGloss = [];
     
-    words.forEach(token => {
-        if (/^[\s.,!?;:"()]+$/.test(token)) {
-            if(token.trim() && lineOriginal.length > 0) {
-                lineOriginal[lineOriginal.length - 1] += token;
-            }
-            return;
-        }
-
-        let cleanToken = token.toLowerCase();
+    tokens.forEach(token => {
+        let cleanToken = token.replace(/[.,!?;:"()]/g, "").toLowerCase();
         let parsings = getUniqueParsings(cleanToken);
 
         if (parsings.length > 0) {
             let p = parsings[0];
             let baseWord = p.root.word.replace(/\*/g, '');
             
-            // Format translation for Leipzig (replaces spaces with dots)
-            let lexicalGloss = p.root.trans.toLowerCase().trim();
-            lexicalGloss = lexicalGloss.replace(/\s*\/\s*/g, '/');
-            lexicalGloss = lexicalGloss.replace(/\s+/g, '.');
+            let lexicalGloss = p.root.trans.toLowerCase().trim().replace(/\s+/g, '.');
             
-            // Reconstructs the segmented word and aligned gloss tags
             let segmentedWord = baseWord;
             let glossParts = [lexicalGloss];
             
-            // Reverses rules to apply them from the root outwards
+        
             p.rules.slice().reverse().forEach(r => {
                 let cleanAffix = r.affix.replace(/^-|-$/g, '');
-                let tag = r.name.toUpperCase();
+                let tag = r.name.toUpperCase().replace(/\s+/g, '.'); 
                 
                 if (r.affix.endsWith('-') && !r.affix.startsWith('-')) {
                     segmentedWord = cleanAffix + '-' + segmentedWord;
@@ -1009,14 +998,15 @@ window.renderGlossingMode = function(text) {
         }
     });
 
+
     let html = `
         <div style="background: var(--bg); padding: 25px; border-radius: var(--rad-sm); border: 1px solid var(--bd); margin-top: 15px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);">
             <div data-gloss class="leipzig-container">
-                <p style="font-weight: 800; font-size: 1.15rem; color: var(--tx); margin-bottom: 5px;">${lineOriginal.join(' ')}</p>
-                <p style="color: var(--tx2); font-size: 0.95rem;">${lineGloss.join(' ')}</p>
+                <p>${lineOriginal.join(' ')}</p>
+                <p>${lineGloss.join(' ')}</p>
             </div>
             <div style="border-top: 1px dashed var(--bd); padding-top: 15px; margin-top: 15px;">
-                <input type="text" class="fi" placeholder="Type the free translation here..." style="font-style: italic; background: var(--s1); width: 100%;">
+                <input type="text" class="fi" placeholder="Tradução livre..." style="font-style: italic; background: var(--s1); width: 100%;">
             </div>
         </div>
     `;
@@ -1025,8 +1015,6 @@ window.renderGlossingMode = function(text) {
         if (typeof Leipzig !== 'undefined') {
             const leipzig = Leipzig();
             leipzig.gloss(); 
-        } else {
-            console.error("Leipzig.js library is missing in index.html");
         }
     }, 100);
 
