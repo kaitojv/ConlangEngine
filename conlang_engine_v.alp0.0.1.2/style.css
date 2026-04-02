@@ -15,6 +15,7 @@
     --tx: #f8fafc;
     --tx2: #94a3b8;
     --tx3: #64748b;
+    --tx-ph: rgba(248, 250, 252, 0.45);
     /* Borders & Status */
     --bd: rgba(255, 255, 255, 0.08);
     --bd2: rgba(255, 255, 255, 0.12);
@@ -316,6 +317,7 @@ body {
     --tx: #0f172a;
     --tx2: #334155;
     --tx3: #64748b;
+    --tx-ph: rgba(8, 14, 28, 0.45);
     /* Borders & Shadows */
     --bd: rgba(0, 0, 0, 0.1);
     --bd2: rgba(0, 0, 0, 0.2);
@@ -417,10 +419,24 @@ body {
 .toolbar-select { padding: 0.4rem 0.8rem; border: 1px solid var(--toolbar-border); border-radius: 6px; background-color: #fff; color: var(--btn-text); cursor: pointer; height: 36px; }
 .editor-content { flex-grow: 1; padding: 2rem; outline: none; overflow-y: auto; line-height: 1.6; font-size: 1.05rem; }
 .editor-content h1, .editor-content h2, .editor-content h3 { color: var(--editor-text); margin-top: 1.2em; margin-bottom: 0.5em; }
+::placeholder { 
+    color: var(--tx-ph) !important; 
+    opacity: 1; 
+    font-style: italic; 
+}
+input::-webkit-input-placeholder, 
+textarea::-webkit-input-placeholder {
+    color: var(--tx-ph);
+}
+input:-moz-placeholder, 
+textarea:-moz-placeholder {
+    color: var(--tx-ph);
+}
+input:focus::placeholder,
+textarea:focus::placeholder {
+    color: transparent;
+}
 
-::placeholder { color: var(--tx3, #a0aec0) !important; opacity: 1; font-style: italic; }
-.settings-input::placeholder, .settings-textarea::placeholder { color: #718096; }
-input:focus::placeholder { color: transparent; }
 
 /* ==========================================
    17. LEIPZIG IGT (GLOSSING) OVERRIDES
