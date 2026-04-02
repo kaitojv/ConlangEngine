@@ -43,8 +43,14 @@ html, body, header, nav, h1, h2, h3, input, button, select, textarea, div, span 
 }
 
 /* Unicode support for Conlang and IPA */
+/* Unicode support for Conlang and IPA */
 .notranslate, .ph, .ipa-chart, .gloss-orig, .gloss-morph {
-    font-family: 'Noto Sans', 'Arial Unicode MS', 'Segoe UI Historic', sans-serif !important;
+    font-family: 'Segoe UI', 'Segoe UI Historic', 'Arial Unicode MS', 'Times New Roman', sans-serif !important;
+    
+    text-rendering: optimizeLegibility !important;
+    font-feature-settings: "mark" 1, "mkmk" 1, "ccmp" 1 !important; 
+    font-variant-ligatures: contextual !important;
+    letter-spacing: normal !important; 
 }
 
 body {
