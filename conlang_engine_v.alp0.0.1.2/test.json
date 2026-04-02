@@ -1,0 +1,240 @@
+{
+  "timestamp": "2026-04-02T17:47:42.773Z",
+  "config": {
+    "nomeIdioma": "Mani",
+    "consoantes": "p, t, k, m, n, b, d, g, f, v, s, z, r, l, რ=Rr, ṫ=th, ჰ=Ks, თ=sh",
+    "vogais": "a, e, i, o, u, ɛ, ɔ, λ",
+    "estruturaSilabica": "CV, CVC, VC, V",
+    "pessoas": "1S: ma -, 1P: -'mas, 2S, 2P, 3S Masc, 3P Masc, 3S Fem, 3P Fem, 3S Neut, 3P Neut, 3S Imp, 3P Imp",
+    "ordemSintatica": "OVS",
+    "marcaVerbo": "r",
+    "cliticos": "kin, kλn, o",
+    "bgColor": "#080812",
+    "rules": [
+      {
+        "name": "Accusative Case",
+        "affix": "ir'-",
+        "appliesTo": "noun"
+      },
+      {
+        "name": "Genitive Case",
+        "affix": "un'-",
+        "appliesTo": "noun"
+      },
+      {
+        "name": "Ablative Case",
+        "affix": "ɛs'-",
+        "appliesTo": "noun"
+      },
+      {
+        "name": "Comparatice Case",
+        "affix": "vel'-",
+        "appliesTo": "noun"
+      },
+      {
+        "name": "Plural",
+        "affix": "-s",
+        "appliesTo": "noun"
+      },
+      {
+        "name": "Collective",
+        "affix": "-noma",
+        "appliesTo": "noun"
+      },
+      {
+        "name": "Abstract",
+        "affix": "-ṫi",
+        "appliesTo": "noun"
+      },
+      {
+        "name": "Agent (doer)",
+        "affix": "-rav",
+        "appliesTo": "verb"
+      },
+      {
+        "name": "Adverbial",
+        "affix": "-iჰa",
+        "appliesTo": "adjective"
+      },
+      {
+        "name": "Adjective (Resulting)",
+        "affix": "-rλ",
+        "appliesTo": "verb"
+      },
+      {
+        "name": "Passive Voice",
+        "affix": "-rem",
+        "appliesTo": "verb"
+      },
+      {
+        "name": "Imperfective Aspect",
+        "affix": "-rium",
+        "appliesTo": "verb"
+      },
+      {
+        "name": "Ordinal",
+        "affix": "-stu",
+        "appliesTo": "noun"
+      }
+    ]
+  },
+  "lexicon": [
+    {
+      "id": 1712060000001,
+      "word": "soir",
+      "ipa": "so.iɾ",
+      "type": "verb",
+      "trans": "to see",
+      "tags": [
+        "senses",
+        "action"
+      ]
+    },
+    {
+      "id": 1712060000002,
+      "word": "jivar",
+      "ipa": "ʒi.vaɾ",
+      "type": "verb",
+      "trans": "to speak / to talk",
+      "tags": [
+        "communication",
+        "action"
+      ]
+    },
+    {
+      "id": 1712060000003,
+      "word": "vimur",
+      "ipa": "vi.muɾ",
+      "type": "verb",
+      "trans": "to be (essence/existence)",
+      "tags": [
+        "copula",
+        "abstract"
+      ]
+    },
+    {
+      "id": 1712060000004,
+      "word": "avita",
+      "ipa": "a.vi.ta",
+      "type": "noun",
+      "trans": "person",
+      "tags": [
+        "human",
+        "society"
+      ]
+    },
+    {
+      "id": 1712060000005,
+      "word": "maki",
+      "ipa": "ma.ki",
+      "type": "noun",
+      "trans": "tree",
+      "tags": [
+        "nature",
+        "flora"
+      ]
+    },
+    {
+      "id": 1712060000006,
+      "word": "dλnთo",
+      "ipa": "dλn.ʃo",
+      "type": "noun",
+      "trans": "bird",
+      "tags": [
+        "nature",
+        "fauna"
+      ]
+    },
+    {
+      "id": 1712060000007,
+      "word": "kamre",
+      "ipa": "kam.ɾe",
+      "type": "noun",
+      "trans": "house / home",
+      "tags": [
+        "place",
+        "object"
+      ]
+    },
+    {
+      "id": 1712060000008,
+      "word": "bɔno",
+      "ipa": "bɔ.no",
+      "type": "adjective",
+      "trans": "good",
+      "tags": [
+        "quality"
+      ]
+    },
+    {
+      "id": 1712060000009,
+      "word": "pionთen",
+      "ipa": "pi.on.ʃen",
+      "type": "adjective",
+      "trans": "strong",
+      "tags": [
+        "physical"
+      ]
+    },
+    {
+      "id": 1712060000010,
+      "word": "tubi",
+      "ipa": "tu.bi",
+      "type": "particle",
+      "trans": "if",
+      "tags": [
+        "conditional"
+      ]
+    },
+    {
+      "id": 1712060000011,
+      "word": "iჰo",
+      "ipa": "i.ks/xo",
+      "type": "particle",
+      "trans": "no / not",
+      "tags": [
+        "negation"
+      ]
+    },
+    {
+      "id": 1712060000012,
+      "word": "mau",
+      "ipa": "ma.u",
+      "type": "pronoun",
+      "trans": "I / me",
+      "tags": [
+        "person"
+      ]
+    },
+    {
+      "id": 1712060000013,
+      "word": "vunir",
+      "ipa": "vu.niɾ",
+      "type": "verb",
+      "trans": "to want / to desire",
+      "tags": [
+        "modal"
+      ]
+    },
+    {
+      "id": 1712060000014,
+      "word": "pɔtar",
+      "ipa": "pɔ.taɾ",
+      "type": "verb",
+      "trans": "to be able to / can",
+      "tags": [
+        "modal"
+      ]
+    },
+    {
+      "id": 1712060000015,
+      "word": "namu",
+      "ipa": "na.mu",
+      "type": "noun",
+      "trans": "now / moment",
+      "tags": [
+        "time"
+      ]
+    }
+  ]
+}
