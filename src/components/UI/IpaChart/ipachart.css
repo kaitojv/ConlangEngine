@@ -1,0 +1,132 @@
+.ipa-map-wrap{
+    display: block;
+    animation: 0.3s ease 0s 1 normal none running fadeIn;
+    margin-bottom: 20px;
+}
+
+.ipa-wrapper{
+    overflow-x: auto;
+    margin: 15px 0;
+    background: var(--bg2);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    padding: 15px;
+}
+
+.ipa-chart {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 2px;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+thead {
+    display: table-header-group;
+    vertical-align: middle;
+    unicode-bidi: isolate;
+    border-color: inherit;
+}
+
+tbody {
+    display: table-row-group;
+    vertical-align: middle;
+    unicode-bidi: isolate;
+    border-color: inherit;
+}
+
+tr {
+    display: table-row;
+    vertical-align: inherit;
+    unicode-bidi: isolate;
+    border-color: inherit;
+}
+
+.ipa-chart th {
+    color: var(--tx2);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    background: transparent;
+}
+
+.ipa-chart td {
+    background: var(--acc1);
+    padding: 8px;
+    border-radius: 4px;
+}
+
+.ipa-cell {
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    min-height: 28px;
+}
+
+
+
+.ph {
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 1.2rem;
+    transition: 0.2s;
+    color: var(--tx);
+    border: 1px solid transparent;
+}
+
+tr {
+    display: table-row;
+    vertical-align: inherit;
+    unicode-bidi: isolate;
+    border-color: inherit;
+}
+
+tbody {
+    display: table-row-group;
+    vertical-align: middle;
+    unicode-bidi: isolate;
+    border-color: inherit;
+}
+
+.vowel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(45px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.vowel-grid .ph {
+    background: var(--acc1);
+    border: 1px solid var(--bd);
+    text-align: center;
+    padding: 10px 0;
+}
+
+
+
+.ipa-btn-toggle{
+    padding: 11px;
+    border-radius: 15px;
+    border: 1px solid var(--bd);
+    background: var(--s4);
+    color: var(--tx);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.ipa-btn-toggle:hover{
+    background: var(--acc);
+    color: #fff;
+    border-color: var(--acc2);
+    box-shadow: 0 0 10px rgba(124, 58, 237, 0.5);
+}
+
+.ph.selected {
+    background: var(--acc2);
+    color: #fff;
+    border-color: var(--acc2);
+    box-shadow: 0 0 10px rgba(124, 58, 237, 0.5);
+}

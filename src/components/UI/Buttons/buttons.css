@@ -1,0 +1,86 @@
+/* src/components/ui/Button/Button.css */
+.btn-base {
+    border: none;
+    padding: 12px 24px;
+    border-radius: var(--rad-sm);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: 0.3s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: inherit;
+    margin-top: 8px;
+}
+
+/* Click effects */
+.btn-base:active {
+    transform: scale(0.95);
+    transition: transform 0.05s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Variants */
+.btn-save {
+    background: linear-gradient(135deg, var(--ok), #059669);
+    color: #fff;
+    border: 1px solid var(--bd);
+}
+.btn-save:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4); }
+
+.btn-edit {
+    background: var(--acc);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+}
+.btn-edit:hover { filter: brightness(1.1); transform: translateY(-2px); }
+
+.btn-cancel {
+    background: var(--s4);
+    color: var(--tx);
+    border: 1px solid var(--bd);
+}
+.btn-cancel:hover { background: var(--er); border-color: var(--er); color: #fff; }
+
+.btn-default {
+    background-color: transparent;
+    color: var(--tx);
+    border: 1px solid var(--bd);
+}
+
+.btn-default:hover {
+    background-color: var(--s4);
+    transform: translateY(-2px);
+}
+
+.btn-ipa {
+    background: var(--acc);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+}
+
+.btn-ipa:hover { filter: brightness(1.1); transform: translateY(-2px); }
+
+.btn-error{
+    background-color: var(--err);
+    color: #fff;
+    box-shadow: 1px 1px 10px rgba(255, 0, 0, 0.3);
+}
+
+.btn-error:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 0, 0, 0.4);
+}
+
+.btn-import {
+    background: var(--acc2, #3b82f6);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+
+.btn-import:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px);
+}

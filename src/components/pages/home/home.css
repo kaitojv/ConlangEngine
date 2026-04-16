@@ -1,0 +1,148 @@
+.home-page{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: white;
+    border: 1px solid var(--bd);
+    border-radius: var(--rad);
+    transition: 3s ease;
+    padding: 60px 40px;
+    border-top: 4px solid var(--acc);       
+    background: var(--s4);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+.home-page h1{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--tx);
+    margin-bottom: 20px;
+    letter-spacing: -1px;
+    line-height: 1.2;
+}
+
+.icon-home{
+    width: 1.8rem;
+    height: 1.8rem;
+    stroke-width: 2px;
+    margin-left: 8px;
+}
+
+.interactive-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.interactive-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    border-color: var(--acc) !important;
+}
+
+.home-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+    position: relative;
+    z-index: 1;
+}
+
+.home-page {
+    margin: 0;
+}
+
+.home-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+}
+
+.home-actions .btn-primary {
+    --btn-color: var(--bd);
+    background: transparent !important;
+    color: var(--tx) !important;
+    border: 1px solid var(--bd) !important;
+
+}
+
+.home-actions .btn-secondary {
+    --btn-color: var(--bd);
+    background: transparent !important;
+    color: var(--tx) !important;
+    border: 1px solid var(--bd);
+}
+
+.widgets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.interactive-card {
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0;
+    border: 1px solid var(--bd);
+}
+
+.interactive-card h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.interactive-card p {
+    margin: 0;
+    color: var(--tx2);
+}
+
+.interactive-card .widget-footer {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--tx);
+    font-weight: bold;
+    font-size: 0.9rem;
+    padding-top: 10px;
+}
+
+.lexicon-card h3 { color: var(--acc); }
+.training-card h3 { color: var(--ok); }
+.wotd-card h3 { color: #8b5cf6; }
+.wiki-card h3 { color: #0ea5e9; }
+
+.streak-text { color: #f97316; }
+.streak-icon { display: inline; margin-bottom: -2px; }
+
+.wotd-content { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.wotd-display { text-align: center; margin: 5px 0; }
+.wotd-word { font-size: 1.8rem; display: block; color: var(--tx); font-weight: bold; }
+.wotd-translation { color: var(--tx2); font-style: italic; font-size: 0.95rem; }
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .home-page {
+        padding: 30px 20px;
+        margin-bottom: 15px;
+    }
+    
+    .home-page h1 {
+        font-size: 2.2rem;
+        margin-bottom: 15px;
+        /* Prevents long words from overflowing their container on small screens */
+        overflow-wrap: break-word;
+        word-break: break-word; /* Fallback for older browsers */
+    }
+}

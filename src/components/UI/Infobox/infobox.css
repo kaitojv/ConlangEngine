@@ -1,0 +1,19 @@
+/* src/components/ui/InfoBox/InfoBox.css */
+
+
+.infobox {
+  background: rgba(124, 58, 237, 0.05); 
+    border-left: 4px solid var(--acc);
+    padding: 15px 20px; 
+    border-radius: 0 var(--rad-sm) var(--rad-sm) 0;
+    font-size: 0.9rem; 
+    color: var(--tx2); 
+    margin: 20px 0;
+    line-height: 1.6;
+    width: 100%;
+    flex-basis: 100%;
+}
+
+.infobox strong {
+  color: var(--tx);
+}

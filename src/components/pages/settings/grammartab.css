@@ -1,0 +1,166 @@
+.rules-container{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.rule-card {
+    position: relative;
+    background: var(--s1);
+    padding: 20px 20px 0px;
+    border-radius: var(--rad-sm);
+    border: 1px solid var(--bd);
+    box-shadow: rgba(0, 0, 0, 0.05) 0px 4px 6px;
+    margin-bottom: 15px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.rule-grid{
+    display: grid;
+    grid-template-columns: 1fr 1.5fr 1fr 1fr;
+    gap: 15px;
+    align-items: start;
+    margin-bottom: 20px;
+    padding-right: 35px;
+}
+
+.rule-footer{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: stretch;
+    border-top: 1px solid var(--bd);
+    background: rgba(0, 0, 0, 0.15);
+    padding: 12px 20px;
+    margin: 0 -20px;
+}
+
+.rule-delete-btn{
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--er);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.label-with-select{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.template-select{
+    background: var(--bg);
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    color: var(--acc2);
+    font-size: 0.7rem;
+    font-weight: bold;
+    cursor: pointer;
+    outline: none;
+    padding: 4px 8px;
+    width: 100%;
+    max-width: 110px;
+}
+
+.dependency-group{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.standalone-group{
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.check-rule{
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    accent-color: var(--acc);
+}
+
+.cb-wrap{
+    margin-right: 5px;
+    display: flex;
+    padding: 0;
+    border: none;
+    background: transparent;
+    flex-direction: row-reverse;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.cb-wrap span{
+    font-size: 0.75rem;
+    color: var(--tx2);
+    font-weight: bold;
+}
+
+.select-btn{
+    margin-top: 8px    ;
+}
+
+
+
+
+.dependency-group span{
+    font-size: 0.75rem;
+    color: var(--acc2);
+    font-weight: bold;
+}
+
+.btn-edit{
+    padding: 8px 15px;
+    background: var(--ok);
+    border-radius: var(--rad-sm);
+    border: none;
+    color: var(--tx1);
+    gap: 5px;
+    width: 15rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.syntax-box{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .rule-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding-right: 0;
+    }
+    
+    .rule-delete-btn {
+        position: relative;
+        top: 0;
+        right: 0;
+        width: 100%;
+        margin-top: 10px;
+    }
+}

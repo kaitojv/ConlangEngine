@@ -1,0 +1,63 @@
+.conlangs-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+.project-card {
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.project-card:hover {
+    border-color: var(--acc);
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-hover);
+}
+.project-card.active-workspace {
+    border-color: var(--ok);
+    background: rgba(16, 185, 129, 0.05);
+}
+.project-card.create-new {
+    border: 2px dashed var(--bd);
+    background: transparent;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 150px;
+}
+.project-card.create-new:hover {
+    border-color: var(--acc);
+    background: rgba(124, 58, 237, 0.05);
+}
+.project-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--tx);
+    padding-right: 30px;
+}
+.project-meta { font-size: 0.9rem; color: var(--tx2); }
+.project-date { font-size: 0.8rem; color: var(--tx3); margin-top: auto; padding-top: 10px; }
+.project-delete-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--err);
+    border: none;
+    border-radius: 4px;
+    padding: 6px;
+}
+.project-delete-btn:hover { background: var(--err); color: var(--bg); }

@@ -1,0 +1,138 @@
+.create-word-container {
+    max-width: 48rem;
+    margin: 1.5rem auto 0;
+}
+
+.create-word-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--tx);
+    margin-bottom: 1.5rem;
+}
+
+.title-icon {
+    color: var(--acc);
+}
+
+.input-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+@media (min-width: 768px) {
+    .input-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.ideogram-section {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.ideogram-input-wrapper {
+    flex: 1;
+}
+
+.ideogram-input {
+    font-size: 1.5rem;
+    text-align: center;
+}
+
+.ideogram-action {
+    display: flex;
+    align-items: flex-end;
+    padding-bottom: 0.25rem;
+}
+
+.warning-box {
+    margin: 0.5rem 0 1rem;
+    padding: 0.75rem;
+    background-color: rgba(239, 68, 68, 0.1);
+    border-left: 4px solid #ef4444;
+    color: #ef4444;
+    font-size: 0.875rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-top-right-radius: 0.375rem;
+    border-bottom-right-radius: 0.375rem;
+}
+
+.tags-section {
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.preview-box {
+    padding: 1rem;
+    background-color: var(--s2);
+    border: 1px dashed var(--bd3);
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.preview-title {
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: var(--acc2);
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 0.75rem;
+}
+
+.preview-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+@media (min-width: 768px) {
+    .preview-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.preview-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.preview-word {
+    font-weight: bold;
+    color: var(--acc3);
+    font-size: 1.125rem;
+}
+
+.preview-translation {
+    font-size: 0.875rem;
+    color: var(--tx2);
+}
+
+.preview-empty {
+    font-size: 0.875rem;
+    color: var(--tx3);
+    font-style: italic;
+}
+
+.create-word-save-btn {
+    width: 100%;
+    padding: 1rem 0;
+    font-size: 1.125rem;
+    font-weight: bold;
+    margin-top: 0.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+}

@@ -1,0 +1,56 @@
+.wiki-editor { 
+    min-height: 400px; 
+    background: var(--s4); 
+    color: var(--tx); 
+    padding: 20px; 
+    border: 1px solid var(--bd); 
+    border-radius: var(--rad-sm); 
+    outline: none; 
+    line-height: 1.6; 
+}
+.wiki-editor h1, .wiki-editor h2, .wiki-editor h3 { 
+    color: var(--tx); 
+    margin-top: 15px; 
+    margin-bottom: 10px; 
+    font-weight: 800; 
+}
+.wiki-editor h1 { 
+    font-size: 2rem; 
+    border-bottom: 1px solid var(--bd); 
+    padding-bottom: 5px; 
+}
+.wiki-editor a { color: var(--acc); text-decoration: underline; cursor: pointer; }
+.wiki-editor ul, .wiki-editor ol { margin-left: 20px; margin-bottom: 15px; }
+.wiki-toolbar { 
+    display: flex; 
+    gap: 8px; 
+    padding: 10px; 
+    background: var(--bg); 
+    border: 1px solid var(--bd); 
+    border-radius: var(--rad-sm); 
+    margin-bottom: 15px; 
+    flex-wrap: wrap; 
+}
+.wiki-tool-btn { 
+    background: var(--bg); 
+    border: 1px solid var(--bd); 
+    color: var(--tx); 
+    padding: 8px; 
+    border-radius: var(--rad-sm); 
+    cursor: pointer; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    transition: 0.2s; 
+}
+.wiki-tool-btn:hover { background: var(--acc2); color: var(--bg); border-color: var(--acc2); }
+.wiki-page-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: var(--s1); border: 1px solid var(--bd); border-radius: var(--rad-sm); cursor: pointer; margin-bottom: 8px; transition: 0.2s; }
+.wiki-page-item:hover, .wiki-page-item.active { border-color: var(--acc); background: var(--acc2); }
+.wiki-page-item.active { border-left: 4px solid var(--acc); }
+.wiki-del-btn { 
+    background: transparent; 
+    border: none; 
+    color: var(--tx3); 
+    cursor: pointer; padding: 4px; border-radius: 4px; 
+}
+.wiki-del-btn:hover { color: var(--err); background: rgba(239, 68, 68, 0.1); }

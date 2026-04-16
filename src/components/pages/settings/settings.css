@@ -1,0 +1,41 @@
+.config-subnav{
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    padding-bottom: 5px;
+}
+
+.config-tab-btn{
+    background: var(--s4);
+    color: var(--tx1);
+    border: 1px solid var(--bd);
+    padding: 8px 18px;
+    border-radius: 99px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: 0.2s;
+}
+
+
+.config-tab-btn.active{
+    background: rgba(124, 58, 237, 0.15);
+    color: var(--acc);
+    border-color: var(--acc);
+}
+
+
+.settings-icon{
+    flex-shrink: 0;
+    margin-right: 6px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .config-tab-btn {
+        padding: 8px 14px;
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+}
