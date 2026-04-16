@@ -3,8 +3,8 @@ import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { applyRuleToWord } from '@/utils/morphologyEngine.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
-import Card from '@/components/UI/Card/card.jsx';
-import Input from '@/components/UI/Input/input.jsx';
+import Card from '@/components/UI/Card/Card.jsx';
+import Input from '@/components/UI/Input/Input.jsx';
 import { Network, AlertTriangle } from 'lucide-react';
 import './etymologyTab.css';
 
