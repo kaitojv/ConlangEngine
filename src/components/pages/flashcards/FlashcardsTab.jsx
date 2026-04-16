@@ -2,8 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
-import Card from '@/components/UI/Card/card.jsx';
-import Button from '@/components/UI/Buttons/buttons.jsx';
+import Card from '@/components/UI/Card/Card.jsx';
+import Button from '@/components/UI/Buttons/Buttons.jsx';
 import { BrainCircuit, Flame, RotateCcw, Check, X, Play } from 'lucide-react';
 import './flashcardsTab.css';
 
