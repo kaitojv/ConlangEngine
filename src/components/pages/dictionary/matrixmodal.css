@@ -124,11 +124,7 @@
 .matrix-empty-state {
     text-align: center;
     padding: 40px;
-<<<<<<< HEAD
     background-color: var(--bg);
-=======
-    background-color: var(--s1);
->>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
     border-radius: 8px;
     margin-top: 16px;
 }

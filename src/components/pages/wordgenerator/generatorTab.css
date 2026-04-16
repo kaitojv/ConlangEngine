@@ -157,15 +157,9 @@
 }
 
 .fill-challenge {
-<<<<<<< HEAD
     background-color: var(--bg);
     padding: 24px;
     border-radius: var(--rad);
-=======
-    background-color: var(--s1);
-    padding: 24px;
-    border-radius: var(--rad-md);
->>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
     margin: 2rem 0;
     text-align: center;
 }

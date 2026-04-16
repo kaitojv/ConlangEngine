@@ -1,7 +1,7 @@
 // src/components/pages/home/home.jsx
 
 import React, { useMemo } from 'react';
-import { useConfigStore } from '../../../store/useConfigStore.jsx';
+import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import FloatingBackground from './FloatingBackground.jsx';
 import { Sunrise, Sun, Moon, Sparkles, Settings2, BookA, PlusCircle, BrainCircuit, Flame, ArrowRight, Bookmark, Library } from 'lucide-react';

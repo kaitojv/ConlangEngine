@@ -35,11 +35,7 @@
 }
 
 .analytics-card {
-<<<<<<< HEAD
     background: var(--s4);
-=======
-    background: var(--s2);
->>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
     padding: 20px;
     border-radius: var(--rad-sm);
     border: 1px solid var(--bd);
@@ -75,11 +71,7 @@
     align-items: center;
     text-align: center;
     padding: 10px;
-<<<<<<< HEAD
     background: var(--s4);
-=======
-    background: var(--s2);
->>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
     border-radius: var(--rad-sm);
     border: 1px solid var(--bd);
     opacity: 0.4;

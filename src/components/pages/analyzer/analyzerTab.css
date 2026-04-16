@@ -32,11 +32,7 @@
 
 .syntax-status-box {
     display: inline-block;
-<<<<<<< HEAD
     background: var(--s4);
-=======
-    background: var(--s1);
->>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
     padding: 10px 15px;
     border-radius: var(--rad-sm);
     margin-bottom: 20px;
@@ -79,11 +75,7 @@
 .analyzer-select {
     padding: 4px;
     font-size: 0.75rem;
-<<<<<<< HEAD
     background: var(--bg);
-=======
-    background: var(--s1);
->>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
     color: var(--tx);
     border: 1px solid var(--bd);
     border-radius: var(--rad-sm);
