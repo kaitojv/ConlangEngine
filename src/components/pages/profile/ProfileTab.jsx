@@ -14,8 +14,6 @@ import './profileTab.css';
 const SUPABASE_URL = 'https://hgeuyvgjhonklflcdinj.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Ye_8zJGOXQBma3O3TMHDaA_Nr0eCYIy';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const [cloudProjects, setCloudProjects] = useState([]);
-const [isProjectSelectorOpen, setProjectSelectorOpen] = useState(false);
 
 const BADGES = [
     { id: 'genesis', name: 'Genesis', desc: 'You started a new Conlang.', Icon: Sparkles },
@@ -45,6 +43,9 @@ export default function ProfileTab() {
     const config = useConfigStore();
     const localProjects = useProjectStore(state => state.localProjects);
     const { transliterate } = useTransliterator();
+    const [cloudProjects, setCloudProjects] = useState([]);
+    const [isProjectSelectorOpen, setProjectSelectorOpen] = useState(false);
+
     
     const rawLexicon = useLexiconStore((state) => state.lexicon);
     const setLexicon = useLexiconStore((state) => state.setLexicon);
