@@ -310,23 +310,12 @@ export default function DictionaryList() {
             </div>
 
             {/* --- MODALS --- */}
-            <Modal 
-                isOpen={!!selectedWordForMatrix} 
-                onClose={() => setSelectedWordForMatrix(null)} 
-                title="Word Inflection Matrix"
-            >
+            <Modal isOpen={!!selectedWordForMatrix} onClose={() => setSelectedWordForMatrix(null)} title="Word Inflection Matrix">
                 <MatrixModal wordObj={selectedWordForMatrix} />
             </Modal>
 
-            <Modal 
-                isOpen={!!selectedWordForEdit} 
-                onClose={() => setSelectedWordForEdit(null)} 
-                title="Edit Lexicon Entry"
-            >
-                <EditWordModal 
-                    wordObj={selectedWordForEdit} 
-                    onClose={() => setSelectedWordForEdit(null)} 
-                />
+            <Modal isOpen={!!selectedWordForEdit} onClose={() => setSelectedWordForEdit(null)} title="Edit Lexicon Entry">
+                <EditWordModal wordObj={selectedWordForEdit} onClose={() => setSelectedWordForEdit(null)} />
             </Modal>
         </div>
     );
