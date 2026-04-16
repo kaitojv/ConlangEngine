@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router';
-import Card from '@/components/UI/Card/card.jsx';
-import Input from '@/components/UI/Input/input.jsx';
-import Button from '@/components/UI/Buttons/buttons.jsx';
+import Card from '@/components/UI/Card/Card.jsx';
+import Input from '@/components/UI/Input/Input.jsx';
+import Button from '@/components/UI/Buttons/Buttons.jsx';
 import { useWordGenerator } from '@/hooks/useWordGenerator.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
