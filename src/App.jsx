@@ -1,7 +1,7 @@
 //src/App.jsx
 
 //Imports
-import { useState } from 'react'; // Importação adicionada
+import React, { useState } from 'react'; // Importação adicionada
 import Header from './components/Layout/Header/Header.jsx' //Importing header component;
 import { useConfigStore } from './store/useConfigStore.jsx';
 import './index.css'; //Importing global styles
