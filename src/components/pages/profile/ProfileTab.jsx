@@ -161,7 +161,7 @@ export default function ProfileTab() {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: provider,
                 options: {
-                    redirectTo: window.location.origin + window.location.pathname
+                    redirectTo: window.location.origin
                 }
             });
             if (error) throw error;
