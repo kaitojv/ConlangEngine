@@ -6,7 +6,7 @@ import Card from "../Card/Card.jsx";
 import Button from "../Buttons/Buttons.jsx";
 import './syllabaryManager.css';
 import Modal from "../Modal/Modal.jsx";
-import FontStudioModal from "../Fontstudio/fontStudio.jsx";
+import FontStudioModal from "../Fontstudio/FontStudio.jsx";
 
 
 export default function SyllabaryManager() {
