@@ -7,6 +7,7 @@ import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
+import Modal from '@/components/UI/Modal/Modal.jsx';
 import { CloudUpload, CloudDownload, Trophy, Activity, User, LogOut, Mail, Lock, Globe, MessageCircle, BookOpen, Crown, Cog, Puzzle, Tags, Flame, GitBranch, Share2, Heart, Coffee, PieChart, Sparkles, Book, Library, BrainCircuit, ScrollText, Network, Ear, ArrowLeftRight, Layers, Volume2, PenTool, Shapes, Download, Trash2 } from 'lucide-react';
 import './profileTab.css';
 
