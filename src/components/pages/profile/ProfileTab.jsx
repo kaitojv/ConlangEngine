@@ -209,7 +209,7 @@ export default function ProfileTab() {
         setSyncStatus('⏳ Pulling from cloud...');
 
         try {
-            const { data, error } = await supabase.from('conlangs').select('project_data').eq('project_id', config.projectId).limit(1).single();
+            const { data, error } = await supabase.from('conlangs').select('project_data').eq('project_id', config.projectId).maybeSingle();
             if (error) throw error;
             
             if (data && data.project_data) {
@@ -217,6 +217,9 @@ export default function ProfileTab() {
                 config.updateConfig(data.project_data.config || {});
                 setSyncStatus('✅ Data pulled successfully!');
                 config.logActivity('Pulled latest dictionary from cloud.');
+                setTimeout(() => setSyncStatus(''), 3000);
+            } else {
+                setSyncStatus('ℹ️ No data found in the cloud for this project.');
                 setTimeout(() => setSyncStatus(''), 3000);
             }
         } catch (err) {
