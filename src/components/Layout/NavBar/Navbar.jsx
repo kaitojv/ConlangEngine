@@ -1,5 +1,4 @@
 // src/components/NavBar/NavBar.jsx
-import { useState } from 'react'; // Importing useState hook from React to manage state in the NavBar component
 import { NavLink } from 'react-router-dom';
 import { 
     Home, 
