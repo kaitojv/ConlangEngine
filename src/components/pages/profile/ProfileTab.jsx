@@ -209,7 +209,7 @@ export default function ProfileTab() {
         setSyncStatus('⏳ Pulling from cloud...');
 
         try {
-            const { data, error } = await supabase.from('conlangs').select('project_data').eq('project_id', config.projectId).single();
+            const { data, error } = await supabase.from('conlangs').select('project_data').eq('project_id', config.projectId).limit(1).single();
             if (error) throw error;
             
             if (data && data.project_data) {
