@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
-import Card from '@/components/UI/Card/card.jsx';
-import Button from '@/components/UI/Buttons/buttons.jsx';
-import Input from '@/components/UI/Input/input.jsx';
+import Card from '@/components/UI/Card/Card.jsx';
+import Button from '@/components/UI/Buttons/Buttons.jsx';
+import Input from '@/components/UI/Input/Input.jsx';
 import Modal from '@/components/UI/Modal/Modal.jsx';
 import { Book, Plus, Trash2, Bold, Italic, Underline, Link, Save, Type } from 'lucide-react';
 import './wikiTab.css';
