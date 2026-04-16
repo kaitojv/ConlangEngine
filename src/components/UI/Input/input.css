@@ -1,0 +1,35 @@
+/* src/components/ui/Input/Input.css */
+.input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 15px; /* Espaçamento padrão entre campos */
+    width: 100%;
+}
+
+.form-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--tx2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.fi {
+    width: 100%;
+    padding: 14px 16px;
+    background: var(--bg3);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad);
+    color: var(--tx);
+    outline: none;
+    font-size: 1rem;
+    transition: 0.3s ease;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    font-family: inherit;
+}
+
+.fi:focus {
+    border-color: var(--acc2);
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.15);
+}

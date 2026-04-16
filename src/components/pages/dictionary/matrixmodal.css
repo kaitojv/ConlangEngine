@@ -1,0 +1,243 @@
+.matrix-modal-container {
+    width: 100%;
+}
+
+.matrix-header-box {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background-color: var(--s4);
+    border-radius: 0.5rem;
+    border: 1px solid var(--bd2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.matrix-base-label {
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: var(--tx2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.matrix-base-word {
+    font-size: 1.875rem;
+    font-weight: bold;
+    color: var(--acc3);
+    margin-top: 0.25rem;
+}
+
+.matrix-word-class-badge {
+    padding: 0.25rem 0.75rem;
+    background-color: var(--bg);
+    border: 1px solid var(--bd);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: var(--tx2);
+}
+
+.matrix-table-container {
+    overflow-x: auto;
+    width: 100%;
+}
+
+.matrix-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+}
+
+.matrix-th-row {
+    text-align: left;
+    color: var(--tx2);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--bd);
+}
+
+.matrix-th {
+    text-align: left;
+    padding: 12px;
+    border-bottom: 1px solid var(--bd);
+    color: var(--tx2);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.matrix-tr {
+    border-bottom: 1px solid var(--bd);
+    transition: background-color 0.2s;
+}
+
+.matrix-tr:hover {
+    background-color: var(--bg);
+}
+
+.matrix-tr-row {
+    border-bottom: 1px solid var(--bd2);
+}
+
+.matrix-td {
+    padding: 12px;
+}
+
+.matrix-td-person {
+    padding: 12px;
+    font-weight: bold;
+    color: var(--acc);
+}
+
+.matrix-td-person.base {
+    color: var(--tx2);
+}
+
+.matrix-td-empty {
+    padding: 12px;
+    text-align: center;
+    color: var(--tx3);
+}
+
+.matrix-td:last-child {
+    padding-right: 0;
+}
+
+.matrix-rule-name {
+    font-weight: bold;
+    color: var(--tx);
+}
+
+.matrix-auto-form {
+    color: var(--acc2);
+    font-size: 1.125rem;
+}
+
+.matrix-failed-condition {
+    color: var(--tx3);
+    font-size: 0.875rem;
+    font-style: italic;
+}
+
+.matrix-empty-state {
+    text-align: center;
+    padding: 40px;
+    background-color: var(--s1);
+    border-radius: 8px;
+    margin-top: 16px;
+}
+
+.matrix-empty-text {
+    color: var(--tx2);
+}
+
+/* Matrix Toolbar */
+.matrix-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.matrix-toolbar-text {
+    font-size: 0.8rem;
+    color: var(--tx2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.matrix-toolbar-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Toggles */
+.matrix-toggle-group {
+    display: flex;
+    gap: 4px;
+    background-color: var(--bg);
+    padding: 4px;
+    border-radius: 6px;
+    border: 1px solid var(--bd);
+}
+
+.matrix-toggle-btn {
+    padding: 4px 12px;
+    background-color: transparent;
+    color: var(--tx2);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+.matrix-toggle-btn.active {
+    background-color: var(--acc);
+    color: #fff;
+}
+
+/* Edit Button */
+.matrix-edit-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background-color: var(--s4);
+    color: var(--tx);
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.matrix-edit-btn.active {
+    background-color: var(--acc);
+    color: #fff;
+}
+
+/* Inline Matrix Form Elements */
+.matrix-input {
+    width: 100%;
+    padding: 8px;
+    background-color: var(--bg);
+    color: var(--tx);
+    border: 1px solid var(--bd);
+    outline: none;
+    border-radius: 4px;
+    font-weight: normal;
+    transition: all 0.2s ease-in-out;
+}
+
+.matrix-input:focus {
+    border-color: var(--acc);
+    box-shadow: 0 0 0 2px var(--glow);
+}
+
+.matrix-input.overridden {
+    color: var(--acc);
+    border-color: var(--acc);
+    font-weight: bold;
+}
+
+.matrix-output {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--acc2);
+}
+
+.matrix-output.overridden {
+    color: var(--acc);
+}
+
+.matrix-invalid {
+    font-size: 0.8rem;
+    color: var(--tx3);
+}

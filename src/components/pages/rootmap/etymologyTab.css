@@ -1,0 +1,126 @@
+.etymology-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.etymology-header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.etymology-description {
+    color: var(--tx2);
+    margin-bottom: 20px;
+}
+
+.etymology-error-box {
+    color: var(--err);
+    padding: 20px 0;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+@keyframes fadeIn { 
+    from { opacity: 0; transform: translateY(10px); } 
+    to { opacity: 1; transform: translateY(0); } 
+}
+
+.etymology-tree-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.base-word-node {
+    background: var(--s2);
+    border: 3px solid var(--acc);
+    padding: 20px 50px;
+    border-radius: 12px;
+    z-index: 2;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+    text-align: center;
+}
+
+.base-word-text {
+    font-size: 2.8rem;
+    font-weight: 900;
+    color: var(--acc3);
+    letter-spacing: 1px;
+}
+
+.base-word-class {
+    font-size: 0.85rem;
+    color: var(--acc2);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.base-word-translation {
+    font-size: 1.1rem;
+    color: var(--tx);
+}
+
+.tree-connector {
+    width: 4px;
+    height: 50px;
+    background: var(--acc2);
+    opacity: 0.5;
+}
+
+.derivations-grid {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 35px;
+    border: 2px dashed var(--bd2);
+    border-radius: 16px;
+    background: rgba(0,0,0,0.2);
+    width: 100%;
+}
+
+.derivation-card {
+    background: var(--s1);
+    border: 1px solid var(--bd);
+    border-top: 4px solid var(--acc);
+    padding: 15px 20px;
+    border-radius: 8px;
+    min-width: 150px;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+    transition: all 0.2s ease;
+    text-align: center;
+    cursor: default;
+}
+
+.derivation-card:hover { 
+    transform: translateY(-5px); 
+    border-color: var(--acc) !important; 
+}
+
+.derivation-word {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--tx);
+    margin-bottom: 5px;
+}
+
+.derivation-rule {
+    font-size: 0.75rem;
+    color: var(--tx2);
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.no-derivations-msg {
+    margin-top: 30px;
+    color: var(--tx3);
+    font-style: italic;
+}

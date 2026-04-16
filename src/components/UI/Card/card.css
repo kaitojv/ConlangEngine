@@ -1,0 +1,18 @@
+/* src/components/Card.css */
+
+.card{
+    position: relative;
+    background: var(--s4);
+    border-top: 3px solid var(--acc2);
+    border-radius: var(--rad);
+    padding: 30px;
+    margin-bottom: 25px;
+    box-shadow: var(--shadow);
+    transition: 0.3s ease;
+    backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+}
+
+.card:hover{
+    border-color: rgba(255, 255, 255, 0.12);
+}

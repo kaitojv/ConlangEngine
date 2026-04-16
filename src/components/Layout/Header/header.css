@@ -1,0 +1,114 @@
+/* src/components/Header.css */
+
+.hdr {
+    background: var(--h-bg, var(--bg)) !important;
+    backdrop-filter: blur(20px); /* Apply a blur effect to the background */
+    border-bottom: 1px solid var(--bd);
+    padding: 15px 25px;
+    position: sticky; /* Make the header sticky */
+    top: 0;
+    z-index: 100; /* Ensure the header stays above other content */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.hdr-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.hdr-left{
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.toggle-btn{
+    background: transparent; 
+    cursor: pointer;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--rad-sm);
+
+}
+
+.hdr-right { 
+    display: flex; 
+    gap: 5px; 
+    align-items: center;
+    background: var(--b1); 
+    padding: 4px; 
+    border-radius: 8px; 
+    border: 1px solid var(--bd);
+    margin-left: auto;
+    color: var(--tx2);
+} 
+
+.hdr-btn{
+    background: transparent; 
+    color: var(--tx); 
+    border: none;
+    padding: 6px 12px; 
+    border-radius: 6px; 
+    font-size: 0.85rem; 
+    font-weight: 600;
+    cursor: pointer; 
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;;
+}
+
+.hdr-btn:hover {
+    background: var(--s2); 
+    color: var(--tx); 
+    transform: translateY(-1px) 
+    scale(1.02);
+}
+
+.app-dinamic-title{
+    font-size: 1.8rem;
+    font-weight: 800;
+    background: linear-gradient(to right, var(--acc3), var(--acc2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+    background-clip: text;
+    margin: 0;
+}
+
+.hdr-badge {
+    background: linear-gradient(135deg, var(--acc), var(--acc2));
+    font-size: 0.7rem;
+    color: white !important; /*Ensure the text color is white if no action is taken */
+    -webkit-text-fill-color: white !important;
+    padding: 4px  10px;
+    border-radius: 12px;
+    font-weight: 900;
+    letter-spacing: 1px;
+}
+
+.hdr-badge.live {
+    background: var(--ok);
+    color: #ffffff;
+}
+
+.hdr-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.lucide {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2px;
+}

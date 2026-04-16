@@ -1,0 +1,268 @@
+.dictionary-container {
+    width: 100%;
+    margin-top: 1.5rem;
+}
+
+.dictionary-toolbar {
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.toolbar-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+@media (min-width: 768px) {
+    .toolbar-filters {
+        flex-direction: row;
+    }
+}
+
+.search-box {
+    flex: 1;
+    position: relative;
+}
+
+.search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 0.75rem;
+    color: var(--tx2);
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.5rem 1rem 0.5rem 2.5rem;
+    background-color: var(--s4);
+    color: var(--tx);
+    border: 1px solid var(--bd);
+    border-radius: 0.375rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.search-input:focus {
+    border-color: var(--s4);
+}
+
+.filter-select {
+    padding: 0.5rem;
+    background-color: var(--s4);
+    color: var(--tx);
+    border: 1px solid var(--bd);
+    border-radius: 0.375rem;
+    outline: none;
+}
+
+.alpha-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    border-top: 1px solid var(--bd);
+    padding-top: 1rem;
+}
+
+.alpha-icon {
+    color: var(--tx2);
+    margin-right: 0.5rem;
+}
+
+.alpha-btn {
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: bold;
+    transition: all 0.2s;
+    background-color: var(--acc);
+    color: var(--tx);
+    border: none;
+    cursor: pointer;
+}
+
+.alpha-btn:hover {
+    background-color: var(--acc2);
+}
+
+.alpha-btn.active {
+    background-color: var(--acc2);
+    color: #ffffff;
+}
+
+.list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0 0.5rem;
+}
+
+.list-title {
+    color: var(--tx);
+    font-weight: bold;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+}
+
+.list-total {
+    background-color: var(--s4);
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: bold;
+    border: 1px solid var(--bd);
+}
+
+.list-total span {
+    color: var(--acc2);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 1rem;
+    background-color: var(--hdr);
+    border: 2px dashed var(--bd);
+    border-radius: 0.75rem;
+    margin-top: 1rem;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.empty-icon {
+    margin: 0 auto 1rem;
+    color: var(--tx3);
+}
+
+.empty-state h3 {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: var(--tx);
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    color: var(--tx2);
+    max-width: 24rem;
+    margin: 0 auto 1.5rem;
+}
+
+.empty-state-search {
+    text-align: center;
+    padding: 3rem 0;
+    color: var(--tx2);
+}
+
+.dictionary-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.dictionary-entry {
+    padding: 1.25rem;
+    transition: border-color 0.2s;
+    animation: slideInUp 0.3s ease-out backwards;
+}
+
+.dictionary-entry:hover {
+    border-color: var(--acc);
+}
+
+.entry-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+}
+
+.entry-words {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+}
+
+.entry-main-word {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--acc3);
+}
+
+.entry-base-word {
+    color: var(--tx2);
+    font-style: italic;
+}
+
+.entry-ipa {
+    color: var(--tx2);
+    font-family: monospace;
+    font-size: 0.875rem;
+}
+
+.word-class-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: white;
+}
+
+.entry-translation {
+    color: var(--tx);
+    font-size: 1.125rem;
+    margin-bottom: 0.75rem;
+}
+
+.entry-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.entry-tag {
+    font-size: 0.75rem;
+    background-color: var(--s2);
+    color: var(--tx2);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.entry-tag:hover {
+    background-color: var(--s3);
+}
+
+.entry-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--bd2);
+}
+
+.action-matrix {
+    margin-left: auto;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

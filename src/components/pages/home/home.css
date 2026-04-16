@@ -1,0 +1,51 @@
+.home-page{
+    display: flex ;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center ;
+    text-align: center ;
+    color: white;
+    border: 1px solid var(--bd);
+    border-radius: var(--rad);
+    margin-bottom: 25px;
+    transition: 3s ease;
+    padding: 60px 40px;
+    border-top: 4px solid var(--acc);       
+    background: var(--s4);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+.home-page h1{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--tx);
+    margin-bottom: 20px;
+    letter-spacing: -1px;
+    line-height: 1.2;
+}
+
+.icon-home{
+    width: 1.8rem;
+    height: 1.8rem;
+    stroke-width: 2px;
+    margin-left: 8px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .home-page {
+        padding: 30px 20px;
+        margin-bottom: 15px;
+    }
+    
+    .home-page h1 {
+        font-size: 2.2rem;
+        margin-bottom: 15px;
+        /* Prevents long words from overflowing their container on small screens */
+        overflow-wrap: break-word;
+        word-break: break-word; /* Fallback for older browsers */
+    }
+}

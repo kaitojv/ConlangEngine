@@ -1,0 +1,96 @@
+.analyzer-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.analyzer-header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.analyzer-description {
+    color: var(--tx2);
+    margin-bottom: 20px;
+}
+
+.analyzer-btn-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.analyzer-btn-content.text-white {
+    color: white;
+}
+
+.analyzer-modal-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.syntax-status-box {
+    display: inline-block;
+    background: var(--s1);
+    padding: 10px 15px;
+    border-radius: var(--rad-sm);
+    margin-bottom: 20px;
+}
+
+.status-icon {
+    display: inline;
+    margin-bottom: -3px;
+}
+
+.parsed-words-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.parsed-word-card {
+    background: var(--s4);
+    border-radius: var(--rad-sm);
+    padding: 15px;
+    min-width: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.unknown-root-text { font-size: 1.4rem; font-weight: bold; }
+.unknown-root-label { color: var(--err); font-size: 0.8rem; font-weight: bold; }
+
+.warning-badge {
+    font-size: 0.65rem;
+    font-weight: bold;
+    padding: 3px 8px;
+    border-radius: var(--rad-sm);
+    align-self: flex-start;
+}
+.warning-badge.ambig { background: var(--acc2); color: var(--bg); }
+.warning-badge.err { background: var(--err); color: var(--bg); }
+
+.analyzer-select {
+    padding: 4px;
+    font-size: 0.75rem;
+    background: var(--s1);
+    color: var(--tx);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    outline: none;
+}
+.analyzer-select.mt-4 { margin-top: 4px; }
+
+.word-original { font-size: 1.3rem; font-weight: bold; color: var(--acc); margin-top: 8px; }
+.word-root-label { font-size: 0.85rem; color: var(--tx2); }
+.word-translation { font-size: 0.9rem; color: var(--tx); }
+
+.rules-container { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.rule-badge { background: var(--acc2); color: var(--bg); font-size: 0.65rem; padding: 2px 6px; border-radius: var(--rad-sm); font-weight: bold; text-transform: uppercase; }
+
+.translation-section { margin-top: 20px; border-top: 1px solid var(--bd); padding-top: 20px; }
+.translation-result-box { margin-top: 15px; background: var(--s1); padding: 20px; border-radius: var(--rad-sm); border: 1px dashed var(--bd); }
+.translation-label { font-size: 0.8rem; color: var(--acc2); font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
+.translation-text { font-size: 1.3rem; color: var(--tx); }

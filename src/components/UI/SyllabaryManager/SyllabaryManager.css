@@ -1,0 +1,143 @@
+.sm-toggle-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.sm-table-wrapper {
+    overflow-x: auto;
+    border-radius: var(--rad-sm);
+    border: 1px solid var(--bd);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.sm-table {
+    width: 100%;
+    background-color: var(--bg);
+    text-align: center;
+    border-collapse: collapse;
+}
+
+.sm-thead {
+    background-color: var(--s3);
+    color: var(--acc2);
+    font-size: 1.125rem;
+    text-transform: uppercase;
+}
+
+.sm-th {
+    border-right: 1px solid var(--bd);
+    padding: 8px;
+}
+
+.sm-tr {
+    transition: background-color 0.2s ease;
+}
+
+.sm-tr:hover {
+    background-color: var(--s2);
+}
+
+.sm-th-row {
+    background-color: var(--s1);
+    color: var(--acc);
+    font-size: 1.25rem;
+    border-right: 1px solid var(--bd);
+    border-bottom: 1px solid var(--bd);
+    padding: 8px;
+}
+
+.sm-td {
+    padding: 0;
+    border-right: 1px solid var(--bd);
+    border-bottom: 1px solid var(--bd);
+}
+
+.sm-grid-input {
+    width: 100%;
+    height: 48px;
+    background-color: transparent;
+    text-align: center;
+    font-size: 1.5rem;
+    outline: none;
+    color: var(--tx);
+    border: none;
+    transition: background-color 0.2s ease;
+}
+
+.sm-grid-input:focus {
+    background-color: var(--s3);
+}
+
+.sm-add-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.sm-list-input {
+    flex: 1;
+    background-color: var(--s1);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    padding: 8px 12px;
+    color: var(--tx);
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.sm-list-input:focus {
+    border-color: var(--acc);
+}
+
+.sm-list-input-lg {
+    font-size: 1.25rem;
+}
+
+.sm-list-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+@media (min-width: 768px) {
+    .sm-list-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.sm-empty-msg {
+    color: var(--tx3);
+    grid-column: 1 / -1;
+}
+
+.sm-list-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--bg);
+    border: 1px solid var(--bd);
+    padding: 12px;
+    border-radius: var(--rad-sm);
+}
+
+.sm-list-card-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.sm-list-card-symbol {
+    font-weight: bold;
+    color: var(--acc3);
+    font-size: 1.5rem;
+}
+
+.sm-list-card-key {
+    font-size: 0.875rem;
+    color: var(--tx2);
+}
+
+.sm-list-card-actions {
+    display: flex;
+    gap: 8px;
+}
