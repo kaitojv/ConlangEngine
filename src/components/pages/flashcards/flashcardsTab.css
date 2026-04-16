@@ -25,7 +25,11 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
+<<<<<<< HEAD
     background: var(--s4);
+=======
+    background: var(--s2);
+>>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
     border: 2px solid var(--bd);
     border-radius: var(--rad);
     box-shadow: var(--shadow);
@@ -35,7 +39,11 @@
 .fc-back {
     transform: rotateY(180deg);
     border-color: var(--acc);
+<<<<<<< HEAD
     background: var(--bg);
+=======
+    background: var(--s1);
+>>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
 }
 .fc-word {
     font-size: 3rem;

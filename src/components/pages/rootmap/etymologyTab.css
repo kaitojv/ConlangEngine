@@ -37,7 +37,11 @@
 }
 
 .base-word-node {
+<<<<<<< HEAD
     background: var(--bg);
+=======
+    background: var(--s2);
+>>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
     border: 3px solid var(--acc);
     padding: 20px 50px;
     border-radius: 12px;

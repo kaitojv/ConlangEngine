@@ -1,4 +1,5 @@
 .home-page{
+<<<<<<< HEAD
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -7,6 +8,17 @@
     color: white;
     border: 1px solid var(--bd);
     border-radius: var(--rad);
+=======
+    display: flex ;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center ;
+    text-align: center ;
+    color: white;
+    border: 1px solid var(--bd);
+    border-radius: var(--rad);
+    margin-bottom: 25px;
+>>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
     transition: 3s ease;
     padding: 60px 40px;
     border-top: 4px solid var(--acc);       
@@ -33,6 +45,7 @@
     margin-left: 8px;
 }
 
+<<<<<<< HEAD
 .interactive-card {
     transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
@@ -131,6 +144,8 @@
 .wotd-word { font-size: 1.8rem; display: block; color: var(--tx); font-weight: bold; }
 .wotd-translation { color: var(--tx2); font-style: italic; font-size: 0.95rem; }
 
+=======
+>>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
     .home-page {

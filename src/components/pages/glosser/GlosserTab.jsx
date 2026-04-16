@@ -149,7 +149,11 @@ export default function GlosserTab() {
 
     const renderGlossingMode = () => {
         return (
+<<<<<<< HEAD
             <div style={{ background: 'var(--bg)', padding: '25px', borderRadius: 'var(--rad-sm)', border: '1px solid var(--bd)', marginTop: '15px' }}>
+=======
+            <div style={{ background: 'var(--s1)', padding: '25px', borderRadius: 'var(--rad-sm)', border: '1px solid var(--bd)', marginTop: '15px' }}>
+>>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'flex-end', marginBottom: '20px' }}>
                     {processedWords.map((tokenData, index) => {
                         if (tokenData.isPunctuation) {
@@ -226,7 +230,11 @@ export default function GlosserTab() {
 
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={readerMode === 'read' ? 'Interactive Reader' : 'IGT Glossing Breakdown'}>
                 {processedWords.length > 0 && (
+<<<<<<< HEAD
                     <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--bg)'}}>
+=======
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+>>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
                         {readerMode === 'read' ? renderReadingMode() : renderGlossingMode()}
                     </div>
                 )}

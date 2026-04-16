@@ -87,7 +87,10 @@ function App(){
           <Route path="/profile" element={<ProfileTab />} />
         </Routes>
       </main>
+<<<<<<< HEAD
       <Footer />
+=======
+>>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
     </div> 
     </>
 
@@ -95,4 +98,8 @@ function App(){
   )
 };
 
+<<<<<<< HEAD
 export default App;
+=======
+export default App;
+>>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804

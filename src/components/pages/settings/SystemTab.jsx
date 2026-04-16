@@ -212,10 +212,17 @@ export default function SystemTab() {
                 bg: "#050b06", 
                 card: "#0a140b", 
                 header: "#030804", 
+<<<<<<< HEAD
                 font: "#e8efe7", 
                 font2: "#1f8a11", 
                 accent: "#00ff41", 
                 accent2: "#20863a",
+=======
+                font: "#4af626", 
+                font2: "#1f8a11", 
+                accent: "#00ff41", 
+                accent2: "#00ff41",
+>>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
                 accent3: "#0891b2",
                 border: "#124211", 
                 blur: "0px",

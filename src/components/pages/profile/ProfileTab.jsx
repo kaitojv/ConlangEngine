@@ -41,11 +41,20 @@ const BADGES = [
 ];
 
 export default function ProfileTab() {
+<<<<<<< HEAD
     const [cloudProjects, setCloudProjects] = useState([]);
     const [isProjectSelectorOpen, setProjectSelectorOpen] = useState(false);
     const config = useConfigStore();
     const localProjects = useProjectStore(state => state.localProjects);
     const { transliterate } = useTransliterator();
+=======
+    const config = useConfigStore();
+    const localProjects = useProjectStore(state => state.localProjects);
+    const { transliterate } = useTransliterator();
+    const [cloudProjects, setCloudProjects] = useState([]);
+    const [isProjectSelectorOpen, setProjectSelectorOpen] = useState(false);
+
+>>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
     
     const rawLexicon = useLexiconStore((state) => state.lexicon);
     const setLexicon = useLexiconStore((state) => state.setLexicon);
@@ -320,8 +329,13 @@ export default function ProfileTab() {
                             <Button variant="default" onClick={() => { setAuthMode('signup'); handleAuth(); }}>Sign Up</Button>
                             <div className="login-divider">— OR CONTINUE WITH —</div>
                             <div className="social-row">
+<<<<<<< HEAD
                                 <Button variant="default" style={{ flex: 1, background: 'var(--s4)' }} onClick={() => handleOAuth('google')} title="Google"><Globe size={18} /></Button>
                                 <Button variant="default" style={{ flex: 1, background: 'var(--s4)' }} onClick={() => handleOAuth('github')} title="GitHub"><GitBranch size={18} /></Button>
+=======
+                                <Button variant="default" style={{ flex: 1, background: 'var(--s1)' }} onClick={() => handleOAuth('google')} title="Google"><Globe size={18} /></Button>
+                                <Button variant="default" style={{ flex: 1, background: 'var(--s1)' }} onClick={() => handleOAuth('github')} title="GitHub"><GitBranch size={18} /></Button>
+>>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
                             </div>
                         </div>
                     )}
@@ -343,10 +357,17 @@ export default function ProfileTab() {
                                 Support the project to unlock <b>Cloud Sync</b> and <b>Unlimited Workspaces</b>.
                             </p>
                             <div className="free-tier-actions">
+<<<<<<< HEAD
                                 <Button variant="default" style={{ flex: 1, background: 'var(--s4)', padding: '12px 20px' }} onClick={() => window.open('https://patreon.com', '_blank')}>
                                     <div className="btn-content"><Heart size={14}/> Support on Patreon</div>
                                 </Button>
                                 <Button variant="default" style={{ flex: 1, background: 'var(--s4)', padding: '12px 20px' }} onClick={() => window.open('https://ko-fi.com/kaitosz', '_blank')}>
+=======
+                                <Button variant="default" style={{ flex: 1, background: 'var(--s1)', padding: '12px 20px' }} onClick={() => window.open('https://patreon.com', '_blank')}>
+                                    <div className="btn-content"><Heart size={14}/> Support on Patreon</div>
+                                </Button>
+                                <Button variant="default" style={{ flex: 1, background: 'var(--s1)', padding: '12px 20px' }} onClick={() => window.open('https://ko-fi.com/kaitosz', '_blank')}>
+>>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
                                     <div className="btn-content"><Coffee size={14}/> Support on Ko-fi</div>
                                 </Button>
                             </div>

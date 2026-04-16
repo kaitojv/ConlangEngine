@@ -53,7 +53,11 @@
   align-items: center; 
   gap: 12px;
   background: transparent;
+<<<<<<< HEAD
   color: var(--tx);
+=======
+  color: var(--tx2);
+>>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
   border: none;
   border-radius: 0;
   text-align: left;
@@ -75,8 +79,13 @@
 }
 
 .nb.on, .nb.active {
+<<<<<<< HEAD
   background: var(--acc2);
   color: var(--tx);
+=======
+  background: var(--acc);
+  color: var(--tx1);
+>>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
   border-left-color: var(--acc);
 }
 

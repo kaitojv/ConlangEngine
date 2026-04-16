@@ -1,5 +1,8 @@
 // src/components/NavBar/NavBar.jsx
+<<<<<<< HEAD
 import React from 'react';
+=======
+>>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
 import { NavLink } from 'react-router-dom';
 import { 
     Home, 

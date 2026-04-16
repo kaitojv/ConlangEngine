@@ -6,7 +6,11 @@
 }
 
 .glosser-tooltip-trigger:hover {
+<<<<<<< HEAD
     background: var(--bg);
+=======
+    background: rgba(124, 58, 237, 0.15);
+>>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
 }
 
 .glosser-tooltip {
@@ -16,7 +20,11 @@
     bottom: 100%;
     left: 50%;
     transform: translateX(-50%) translateY(10px);
+<<<<<<< HEAD
     background: var(--bg) !important;
+=======
+    background: var(--s4);
+>>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
     border: 1px solid var(--bd);
     padding: 12px 16px;
     border-radius: var(--rad-sm);
