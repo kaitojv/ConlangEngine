@@ -308,7 +308,8 @@ export default function DictionaryList() {
                     );
                 })}
             </div>
-        <div>
+
+            {/* --- MODALS --- */}
             <Modal 
                 isOpen={!!selectedWordForMatrix} 
                 onClose={() => setSelectedWordForMatrix(null)} 
@@ -317,7 +318,6 @@ export default function DictionaryList() {
                 <MatrixModal wordObj={selectedWordForMatrix} />
             </Modal>
 
-            {/* --- THE EDIT WORD MODAL --- */}
             <Modal 
                 isOpen={!!selectedWordForEdit} 
                 onClose={() => setSelectedWordForEdit(null)} 
@@ -328,18 +328,6 @@ export default function DictionaryList() {
                     onClose={() => setSelectedWordForEdit(null)} 
                 />
             </Modal>
-
-        </div>
-    
-
-        <Modal 
-                isOpen={!!selectedWordForMatrix} 
-                onClose={() => setSelectedWordForMatrix(null)} 
-                title="Word Inflection Matrix"
-            >
-                <MatrixModal wordObj={selectedWordForMatrix} />
-            </Modal>
-            
         </div>
     );
 }
