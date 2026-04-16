@@ -1,20 +1,18 @@
 // src/components/pages/home/home.jsx
-<<<<<<< HEAD
+
 import React, { useMemo } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import FloatingBackground from './FloatingBackground.jsx';
 import { Sunrise, Sun, Moon, Sparkles, Settings2, BookA, PlusCircle, BrainCircuit, Flame, ArrowRight, Bookmark, Library } from 'lucide-react';
-=======
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import FloatingBackground from './FloatingBackground.jsx';
 import { Sunrise, Sun, Moon, Sparkles, Settings2, BookA } from 'lucide-react';
->>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
 import { useNavigate } from 'react-router-dom'; // Para navegar entre abas no React Router
 import Card from '@/components/UI/Card/Card.jsx';
 import './home.css';
 
-<<<<<<< HEAD
+
 export default function Home() {
     const authorName = useConfigStore((state) => state.authorName) || "Creator";
     const conlangName = useConfigStore((state) => state.conlangName) || "your conlang";
@@ -205,7 +203,7 @@ export default function Home() {
         </div>
         </>
     );
-=======
+
 
 
 export default function Home() {
@@ -284,5 +282,4 @@ export default function Home() {
         </Card> 
       </>
     )
->>>>>>> 2ab0d7936fd3406865be14858a1d047ddccc4804
 }
