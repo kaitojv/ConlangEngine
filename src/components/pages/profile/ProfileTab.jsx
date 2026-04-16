@@ -14,6 +14,8 @@ import './profileTab.css';
 const SUPABASE_URL = 'https://hgeuyvgjhonklflcdinj.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Ye_8zJGOXQBma3O3TMHDaA_Nr0eCYIy';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const [cloudProjects, setCloudProjects] = useState([]);
+const [isProjectSelectorOpen, setProjectSelectorOpen] = useState(false);
 
 const BADGES = [
     { id: 'genesis', name: 'Genesis', desc: 'You started a new Conlang.', Icon: Sparkles },
@@ -155,6 +157,22 @@ export default function ProfileTab() {
         }
     };
 
+    const handleSelectProject = (project) => {
+        if (project && project.project_data) {
+            setLexicon(project.project_data.dictionary || []);
+            config.updateConfig(project.project_data.config || {});
+            // The wiki data is stored as a separate key in the DB payload, so we update it in the config store.
+            if (project.project_data.wiki) {
+                config.updateConfig({ wikiPages: project.project_data.wiki });
+            }
+            setProjectSelectorOpen(false);
+            const projectName = project.project_data.config?.conlangName || 'Untitled Project';
+            setSyncStatus(`✅ Loaded project: ${projectName}`);
+            config.logActivity(`Pulled project '${projectName}' from cloud.`);
+            setTimeout(() => setSyncStatus(''), 3000);
+        }
+    };
+
     const handleOAuth = async (provider) => {
         setAuthStatus({ msg: `⏳ Redirecting to ${provider}...`, type: 'tx2' });
         try {
@@ -205,26 +223,34 @@ export default function ProfileTab() {
     };
 
     const handlePullFromCloud = async () => {
-        if (!session || !config.projectId) return alert("No active cloud project found to pull from.");
-        setSyncStatus('⏳ Pulling from cloud...');
+        if (!session) return alert("You must be logged in to pull projects.");
+        setSyncStatus('⏳ Fetching cloud projects...');
 
         try {
-            const { data, error } = await supabase.from('conlangs').select('project_data').eq('project_id', config.projectId).maybeSingle();
+            const { data: projects, error } = await supabase
+                .from('conlangs')
+                .select('project_id, project_data')
+                .eq('user_id', session.user.id);
+
             if (error) throw error;
             
-            if (data && data.project_data) {
-                setLexicon(data.project_data.dictionary || []);
-                config.updateConfig(data.project_data.config || {});
-                setSyncStatus('✅ Data pulled successfully!');
-                config.logActivity('Pulled latest dictionary from cloud.');
+            if (!projects || projects.length === 0) {
+                setSyncStatus('ℹ️ No projects found in the cloud for your account.');
                 setTimeout(() => setSyncStatus(''), 3000);
+                return;
+            }
+
+            if (projects.length === 1) {
+                // If only one project, load it directly
+                handleSelectProject(projects[0]);
             } else {
-                setSyncStatus('ℹ️ No data found in the cloud for this project.');
-                setTimeout(() => setSyncStatus(''), 3000);
+                setCloudProjects(projects);
+                setProjectSelectorOpen(true);
+                setSyncStatus(''); 
             }
         } catch (err) {
             console.error(err);
-            setSyncStatus(`❌ Pull failed: ${err.message}`);
+            setSyncStatus(`❌ Failed to fetch projects: ${err.message}`);
         }
     };
 
@@ -411,6 +437,19 @@ export default function ProfileTab() {
                     </div>
                 </Card>
             </div>
+
+            <Modal isOpen={isProjectSelectorOpen} onClose={() => setProjectSelectorOpen(false)} title="Select a Cloud Project to Load">
+                <div className="project-selector-list">
+                    {cloudProjects.map(p => (
+                        <div key={p.project_id} className="project-selector-item" onClick={() => handleSelectProject(p)}>
+                            <h4>{p.project_data.config?.conlangName || 'Untitled Project'}</h4>
+                            <p>{(p.project_data.dictionary || []).length} words</p>
+                            <span className="project-selector-id">ID: {p.project_id}</span>
+                        </div>
+                    ))}
+                </div>
+            </Modal>
+            
         </div>
     );
 }
