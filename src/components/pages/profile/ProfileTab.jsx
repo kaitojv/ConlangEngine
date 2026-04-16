@@ -47,12 +47,7 @@ export default function ProfileTab() {
     const config = useConfigStore();
     const localProjects = useProjectStore(state => state.localProjects);
     const { transliterate } = useTransliterator();
-    const config = useConfigStore();
-    const localProjects = useProjectStore(state => state.localProjects);
-    const { transliterate } = useTransliterator();
-    const [cloudProjects, setCloudProjects] = useState([]);
-    const [isProjectSelectorOpen, setProjectSelectorOpen] = useState(false);
-
+    
 
     
     const rawLexicon = useLexiconStore((state) => state.lexicon);
@@ -331,8 +326,6 @@ export default function ProfileTab() {
 
                                 <Button variant="default" style={{ flex: 1, background: 'var(--s4)' }} onClick={() => handleOAuth('google')} title="Google"><Globe size={18} /></Button>
                                 <Button variant="default" style={{ flex: 1, background: 'var(--s4)' }} onClick={() => handleOAuth('github')} title="GitHub"><GitBranch size={18} /></Button>
-                                <Button variant="default" style={{ flex: 1, background: 'var(--s1)' }} onClick={() => handleOAuth('google')} title="Google"><Globe size={18} /></Button>
-                                <Button variant="default" style={{ flex: 1, background: 'var(--s1)' }} onClick={() => handleOAuth('github')} title="GitHub"><GitBranch size={18} /></Button>
 
                             </div>
                         </div>
@@ -357,10 +350,6 @@ export default function ProfileTab() {
                             <div className="free-tier-actions">
 
                                 <Button variant="default" style={{ flex: 1, background: 'var(--s4)', padding: '12px 20px' }} onClick={() => window.open('https://patreon.com', '_blank')}>
-                                    <div className="btn-content"><Heart size={14}/> Support on Patreon</div>
-                                </Button>
-                                <Button variant="default" style={{ flex: 1, background: 'var(--s4)', padding: '12px 20px' }} onClick={() => window.open('https://ko-fi.com/kaitosz', '_blank')}>
-                              <Button variant="default" style={{ flex: 1, background: 'var(--s1)', padding: '12px 20px' }} onClick={() => window.open('https://patreon.com', '_blank')}>
                                     <div className="btn-content"><Heart size={14}/> Support on Patreon</div>
                                 </Button>
                                 <Button variant="default" style={{ flex: 1, background: 'var(--s1)', padding: '12px 20px' }} onClick={() => window.open('https://ko-fi.com/kaitosz', '_blank')}>
