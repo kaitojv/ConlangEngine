@@ -4,9 +4,9 @@ import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useProjectStore } from '@/store/useProjectStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
-import Card from '@/components/UI/Card/card.jsx';
-import Button from '@/components/UI/Buttons/buttons.jsx';
-import Input from '@/components/UI/Input/input.jsx';
+import Card from '@/components/UI/Card/Card.jsx';
+import Button from '@/components/UI/Buttons/Buttons.jsx';
+import Input from '@/components/UI/Input/Input.jsx';
 import { CloudUpload, CloudDownload, Trophy, Activity, User, LogOut, Mail, Lock, Globe, MessageCircle, BookOpen, Crown, Cog, Puzzle, Tags, Flame, GitBranch, Share2, Heart, Coffee, PieChart, Sparkles, Book, Library, BrainCircuit, ScrollText, Network, Ear, ArrowLeftRight, Layers, Volume2, PenTool, Shapes, Download, Trash2 } from 'lucide-react';
 import './profileTab.css';
 
