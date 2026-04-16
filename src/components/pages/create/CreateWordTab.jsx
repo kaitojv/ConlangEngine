@@ -12,7 +12,7 @@ import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
 import './createWordTab.css';
 import Modal from '../../UI/Modal/Modal.jsx';
-import FontStudioModal from '../../UI/Fontstudio/fontStudio.jsx';
+import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
 
 
 export default function CreateWordTab() {
