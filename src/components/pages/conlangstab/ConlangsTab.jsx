@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useConfigStore, INITIAL_CONFIG } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useProjectStore } from '@/store/useProjectStore.jsx';
-import Card from '@/components/UI/Card/card.jsx';
+import Card from '@/components/UI/Card/Card.jsx';
 import { Languages, Plus, Trash2, CheckCircle2 } from 'lucide-react';
 import './conlangsTab.css';
 
