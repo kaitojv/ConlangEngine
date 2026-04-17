@@ -19,7 +19,6 @@ export default function ConlangsTab() {
     
     // Active Workspace Stores
     const config = useConfigStore();
-    const isProActive = useConfigStore(state => state.isProActive);
     const setFullConfig = useConfigStore(state => state.setFullConfig);
     const setLexicon = useLexiconStore(state => state.setLexicon);
     
@@ -31,15 +30,43 @@ export default function ConlangsTab() {
     // Auth state
     const [session, setSession] = useState(null);
     const [loading, setLoading] = useState(true);
-    const isLive = session && isProActive;
+    const [isLive, setIsLive] = useState(false);
 
     useEffect(() => {
+        const checkLiveStatus = async (currentSession) => {
+            if (!currentSession) {
+                setIsLive(false);
+                setLoading(false);
+                return;
+            }
+
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('live_until')
+                    .eq('id', currentSession.user.id)
+                    .single();
+
+                if (!error && data?.live_until) {
+                    setIsLive(new Date(data.live_until) > new Date());
+                } else {
+                    setIsLive(false);
+                }
+            } catch (err) {
+                console.error('Error fetching live status:', err);
+                setIsLive(false);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
-            setLoading(false);
+            checkLiveStatus(session);
         });
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
+            checkLiveStatus(session);
         });
         return () => subscription.unsubscribe();
     }, []);
