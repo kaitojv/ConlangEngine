@@ -22,6 +22,7 @@ import FlashcardsTab from './components/pages/flashcards/FlashcardsTab.jsx';
 import ProfileTab from './components/pages/profile/ProfileTab.jsx';
 import ConlangsTab from './components/pages/conlangstab/ConlangsTab.jsx';
 import Footer from './components/Layout/Footer/Footer.jsx';
+import FloatingKeyboard from './components/UI/FloatingKeyboard/FloatingKeyboard.jsx';
 
 function App(){
 
@@ -88,7 +89,10 @@ function App(){
         </Routes>
       </main>
       <Footer />
+      <FloatingKeyboard />
+      
     </div> 
+    
     </>
 
 

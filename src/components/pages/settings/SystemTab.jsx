@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Card from '../../UI/Card/Card.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import './systemtab.css';
-import { Palette, CaseLower } from 'lucide-react';
+import { Palette, CaseLower, Database } from 'lucide-react';
 import { useConfigStore, INITIAL_CONFIG } from '../../../store/useConfigStore.jsx';
 import { useProjectStore } from '../../../store/useProjectStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
@@ -20,7 +20,9 @@ export default function SystemTab() {
     const customGlyphs = useConfigStore((state) => state.customGlyphs) || {};
     const setFullConfig = useConfigStore((state) => state.setFullConfig);
     const updateConfig = useConfigStore((state) => state.updateConfig);
+    const setLexicon = useLexiconStore((state) => state.setLexicon);
     const fileInputRef = useRef(null);
+    const legacyInputRef = useRef(null);
 
 
     const applyThemePreset = (preset) => {
@@ -169,6 +171,77 @@ export default function SystemTab() {
             navigate('/');
             window.location.reload();
         }
+    };
+
+    const handleLegacyImport = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const oldData = JSON.parse(e.target.result);
+                
+                if (!oldData.config && !oldData.dictionary) {
+                    alert("This doesn't look like a valid legacy save file.");
+                    return;
+                }
+
+                if (!window.confirm("⚠️ This will overwrite your CURRENT workspace with the legacy data. Make sure you have backed up your current work. Proceed?")) {
+                    event.target.value = '';
+                    return;
+                }
+                
+                const currentConfig = useConfigStore.getState();
+                const newConfig = { ...INITIAL_CONFIG, projectId: currentConfig.projectId };
+                
+                if (oldData.config) {
+                    if (oldData.config.nomeIdioma) newConfig.conlangName = oldData.config.nomeIdioma;
+                    if (oldData.config.inventory) {
+                        const allPhonemes = oldData.config.inventory.split(',').map(p => p.trim());
+                        // Automatically split vowels and consonants using common IPA vowels
+                        const vowels = allPhonemes.filter(p => /[aeiouáéíóúâêîôûäëïöüæœøɛɔʌəaɒeɘɜiɪɨoɵœuʉʊyʏλ]/i.test(p));
+                        const consonants = allPhonemes.filter(p => !vowels.includes(p));
+                        newConfig.vowels = vowels.join(', ');
+                        newConfig.consonants = consonants.join(', ');
+                    }
+                    if (oldData.config.syllable) newConfig.syllablePattern = oldData.config.syllable;
+                    if (oldData.config.syntax) newConfig.syntaxOrder = oldData.config.syntax;
+                    if (oldData.config.bgColor) newConfig.colors = { ...INITIAL_CONFIG.colors, bg: oldData.config.bgColor };
+                }
+                
+                if (oldData.wikiPagesData) {
+                    newConfig.wikiPages = oldData.wikiPagesData;
+                }
+
+                const newLexicon = (oldData.dictionary || []).map((word, index) => ({
+                    id: Date.now() + index, 
+                    word: word.word || '',
+                    ipa: word.ipa || '',
+                    wordClass: word.type || '',
+                    translation: word.trans || '',
+                    tags: word.tags || [],
+                    ideogram: '',
+                    inflectionOverrides: {},
+                    createdAt: Date.now()
+                }));
+
+                setFullConfig(newConfig);
+                setLexicon(newLexicon);
+                
+                // Explicitly save to the project archive so it appears in the Workspaces tab instantly
+                useProjectStore.getState().saveProjectToArchive(newConfig, newLexicon);
+                
+                alert("Legacy project imported successfully! Your grammar and dictionary are now updated.");
+                
+            } catch (err) {
+                console.error("Legacy import failed:", err);
+                alert("Failed to parse legacy save file. Ensure it is valid JSON.");
+            } finally {
+                if (legacyInputRef.current) legacyInputRef.current.value = '';
+            }
+        };
+        reader.readAsText(file);
     };
 
     // Dark Themes
@@ -335,6 +408,16 @@ export default function SystemTab() {
                     </Button>
                 </div>
             </Card>
+        <Card>
+            <h2 className='flex sg-title'><Database /> Legacy Importer</h2>
+            <p>Import a JSON save file from the old version of Conlang Engine. This will convert your old data and overwrite your current active workspace.</p>
+            <div className='font-btns'>
+                <label className='fontUp-btn btn-imp'>
+                    <input className='file-input' type="file" accept=".json" onClick={(e) => { e.target.value = null }} onChange={handleLegacyImport} ref={legacyInputRef} />
+                    <h4>Import Legacy JSON</h4>
+                </label>
+            </div>
+        </Card>
             <Card>
                 <h2 className='flex sg-title'><Palette /> Aesthetics and Theme</h2>
                 <p>Dark Themes</p>

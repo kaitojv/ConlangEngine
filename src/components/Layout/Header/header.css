@@ -1,7 +1,7 @@
 /* src/components/Header.css */
 
 .hdr {
-    background: var(--h-bg, var(--bg)) !important;
+    background: var(--bg) !important;
     backdrop-filter: blur(20px); /* Apply a blur effect to the background */
     border-bottom: 1px solid var(--bd);
     padding: 15px 25px;

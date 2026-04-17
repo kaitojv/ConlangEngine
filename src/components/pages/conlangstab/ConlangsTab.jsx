@@ -7,12 +7,7 @@ import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import { Languages, Plus, Trash2, CheckCircle2, Lock } from 'lucide-react';
 import './conlangsTab.css';
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase
-const SUPABASE_URL = 'https://hgeuyvgjhonklflcdinj.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_Ye_8zJGOXQBma3O3TMHDaA_Nr0eCYIy';
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+import { supabase } from '@/utils/supabaseClient.js';
 
 export default function ConlangsTab() {
     const navigate = useNavigate();

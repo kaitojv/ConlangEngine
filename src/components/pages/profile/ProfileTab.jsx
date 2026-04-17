@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useProjectStore } from '@/store/useProjectStore.jsx';
@@ -10,11 +9,7 @@ import Input from '@/components/UI/Input/Input.jsx';
 import Modal from '@/components/UI/Modal/Modal.jsx';
 import { CloudUpload, CloudDownload, Trophy, Activity, User, LogOut, Globe, MessageCircle, BookOpen, Crown, Cog, Puzzle, Tags, Flame, GitBranch, Share2, Heart, Coffee, PieChart, Sparkles, Book, Library, BrainCircuit, ScrollText, Network, Ear, ArrowLeftRight, Layers, Volume2, PenTool, Shapes, Download, Trash2 } from 'lucide-react';
 import './profileTab.css';
-
-// Initialize Supabase
-const SUPABASE_URL = 'https://hgeuyvgjhonklflcdinj.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_Ye_8zJGOXQBma3O3TMHDaA_Nr0eCYIy';
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+import { supabase } from '@/utils/supabaseClient.js';
 
 const BADGES = [
     { id: 'genesis', name: 'Genesis', desc: 'You started a new Conlang.', Icon: Sparkles },
