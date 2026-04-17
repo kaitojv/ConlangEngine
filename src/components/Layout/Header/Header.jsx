@@ -20,10 +20,47 @@ export default function Header({ openMenu }){
     const fileInputRef = useRef(null);
     const isProActive = useConfigStore(state => state.isProActive);
     const [session, setSession] = useState(null);
+    const [isLive, setIsLive] = useState(false);
 
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+        const checkLiveStatus = async (currentSession) => {
+            if (!currentSession) {
+                setIsLive(false);
+                useConfigStore.setState({ isProActive: false });
+                return;
+            }
+            try {
+                const { data } = await supabase
+                    .from('profiles')
+                    .select('is_pro, live_until')
+                    .eq('id', currentSession.user.id)
+                    .single();
+
+                let activeLive = false;
+                if (data) {
+                    if (data.is_pro) {
+                        activeLive = true;
+                    } else if (data.live_until) {
+                        const safeDateStr = data.live_until.replace(' ', 'T');
+                        activeLive = new Date(safeDateStr) > new Date();
+                    }
+                }
+                setIsLive(activeLive);
+                // Silently sync global store so NavBar unlocks without spamming the activity log
+                useConfigStore.setState({ isProActive: activeLive });
+            } catch (err) {
+                setIsLive(false);
+            }
+        };
+
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setSession(session);
+            checkLiveStatus(session);
+        });
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+            checkLiveStatus(session);
+        });
         return () => subscription.unsubscribe();
     }, []);
 
@@ -174,7 +211,7 @@ export default function Header({ openMenu }){
                     <Menu className='toggle-btn' onClick={openMenu} style={{ cursor: 'pointer' }} />
                     <div className="hdr-brand">
                         <h1 className='app-dinamic-title'>ConlangEngine</h1>
-                        {(session && isProActive) ? (
+                        {isLive ? (
                             <span className='hdr-badge' style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--acc)', color: '#fff', boxShadow: '0 0 10px var(--acc)', borderColor: 'var(--acc)' }}>
                                 <Cloud size={14} /> LIVE
                             </span>

@@ -43,15 +43,30 @@ export default function ConlangsTab() {
             try {
                 const { data, error } = await supabase
                     .from('profiles')
-                    .select('live_until')
+                    .select('is_pro, live_until')
                     .eq('id', currentSession.user.id)
                     .single();
 
-                if (!error && data?.live_until) {
-                    setIsLive(new Date(data.live_until) > new Date());
-                } else {
-                    setIsLive(false);
+                if (error) {
+                    console.error('Supabase Profiles Error:', error.message);
                 }
+
+                let activeLive = false;
+                if (data) {
+                    if (data.is_pro) {
+                        activeLive = true;
+                    } else if (data.live_until) {
+                        // Fixes a common browser bug where Postgres date strings fail to parse
+                        const safeDateStr = data.live_until.replace(' ', 'T');
+                        activeLive = new Date(safeDateStr) > new Date();
+                    }
+                }
+                
+                setIsLive(activeLive);
+                
+                // Sync the database status to your local store so the Header and NavBar update instantly!
+                useConfigStore.getState().updateConfig({ isProActive: activeLive });
+
             } catch (err) {
                 console.error('Error fetching live status:', err);
                 setIsLive(false);
