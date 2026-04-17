@@ -1,17 +1,25 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useConfigStore, INITIAL_CONFIG } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useProjectStore } from '@/store/useProjectStore.jsx';
 import Card from '@/components/UI/Card/Card.jsx';
-import { Languages, Plus, Trash2, CheckCircle2 } from 'lucide-react';
+import Button from '@/components/UI/Buttons/Buttons.jsx';
+import { Languages, Plus, Trash2, CheckCircle2, Lock } from 'lucide-react';
 import './conlangsTab.css';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase
+const SUPABASE_URL = 'https://hgeuyvgjhonklflcdinj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_Ye_8zJGOXQBma3O3TMHDaA_Nr0eCYIy';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export default function ConlangsTab() {
     const navigate = useNavigate();
     
     // Active Workspace Stores
     const config = useConfigStore();
+    const isProActive = useConfigStore(state => state.isProActive);
     const setFullConfig = useConfigStore(state => state.setFullConfig);
     const setLexicon = useLexiconStore(state => state.setLexicon);
     
@@ -19,6 +27,22 @@ export default function ConlangsTab() {
     const localProjects = useProjectStore(state => state.localProjects);
     const saveProjectToArchive = useProjectStore(state => state.saveProjectToArchive);
     const deleteLocalProject = useProjectStore(state => state.deleteLocalProject);
+
+    // Auth state
+    const [session, setSession] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const isLive = session && isProActive;
+
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setSession(session);
+            setLoading(false);
+        });
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+        });
+        return () => subscription.unsubscribe();
+    }, []);
 
     // Auto-Backup: Saves the current active workspace whenever we view the dashboard
     useEffect(() => {
@@ -65,6 +89,29 @@ export default function ConlangsTab() {
             setFullConfig({ ...INITIAL_CONFIG, projectId: 'local_' + Date.now() });
         }
     };
+
+    if (loading) {
+        return (
+            <div className="conlangs-container">
+                <Card><p>Checking access...</p></Card>
+            </div>
+        );
+    }
+
+    if (!isLive) {
+        return (
+            <div className="conlangs-container">
+                <Card className="locked-feature-card">
+                    <Lock size={48} />
+                    <h2>Workspaces are a LIVE Feature</h2>
+                    <p>Upgrade to Conlang Engine LIVE to create and manage multiple conlang projects in the cloud.</p>
+                    <Button variant="imp" onClick={() => navigate('/profile')}>
+                        Go to Profile to Upgrade
+                    </Button>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="conlangs-container">

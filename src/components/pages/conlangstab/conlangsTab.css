@@ -61,3 +61,29 @@
     padding: 6px;
 }
 .project-delete-btn:hover { background: var(--err); color: var(--bg); }
+
+.locked-feature-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 40px;
+    gap: 15px;
+}
+
+.locked-feature-card h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--tx);
+}
+
+.locked-feature-card p {
+    color: var(--tx2);
+    max-width: 400px;
+    margin-bottom: 10px;
+}
+
+.locked-feature-card svg {
+    color: var(--acc);
+    margin-bottom: 10px;
+}

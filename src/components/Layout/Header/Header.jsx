@@ -1,20 +1,31 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import './header.css' //Importing styles from CSS file
-import {Menu, Home, Printer, Save, FolderUp, User} from 'lucide-react'
+import {Menu, Home, Printer, Save, FolderUp, User, Cloud} from 'lucide-react'
 import Button from '../../UI/Buttons/Buttons.jsx';
 import { useNavigate, NavLink } from 'react-router-dom';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useProjectStore } from '../../../store/useProjectStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
+import { createClient } from '@supabase/supabase-js';
 
-
-
+// Initialize Supabase
+const SUPABASE_URL = 'https://hgeuyvgjhonklflcdinj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_Ye_8zJGOXQBma3O3TMHDaA_Nr0eCYIy';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 
 export default function Header({ openMenu }){
 
     const navigate = useNavigate();
     const fileInputRef = useRef(null);
+    const isProActive = useConfigStore(state => state.isProActive);
+    const [session, setSession] = useState(null);
+
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+        return () => subscription.unsubscribe();
+    }, []);
 
     const handleSave = () => {
         const config = useConfigStore.getState();
@@ -163,7 +174,13 @@ export default function Header({ openMenu }){
                     <Menu className='toggle-btn' onClick={openMenu} style={{ cursor: 'pointer' }} />
                     <div className="hdr-brand">
                         <h1 className='app-dinamic-title'>ConlangEngine</h1>
-                        <span className='hdr-badge'>Local</span>
+                        {(session && isProActive) ? (
+                            <span className='hdr-badge' style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--acc)', color: '#fff', boxShadow: '0 0 10px var(--acc)', borderColor: 'var(--acc)' }}>
+                                <Cloud size={14} /> LIVE
+                            </span>
+                        ) : (
+                            <span className='hdr-badge'>Local</span>
+                        )}
                     </div>
                 </div>
 

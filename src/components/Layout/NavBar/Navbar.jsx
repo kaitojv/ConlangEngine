@@ -1,6 +1,6 @@
 // src/components/NavBar/NavBar.jsx
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { NavLink } from 'react-router-dom';
 import { 
@@ -16,12 +16,24 @@ import {
     Map, 
     BookOpen, 
     Library, 
-    Layers 
+    Layers,
+    Lock
 } from 'lucide-react';
 import './navbar.css';
+import { useConfigStore } from '@/store/useConfigStore.jsx';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase
+const SUPABASE_URL = 'https://hgeuyvgjhonklflcdinj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_Ye_8zJGOXQBma3O3TMHDaA_Nr0eCYIy';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export default function NavBar({ isMenuOpen, closeMenu }) {
     
+        const isProActive = useConfigStore(state => state.isProActive);
+        const [session, setSession] = useState(null);
+        const isLive = session && isProActive;
+
         const tabs = [
             {
                 title: 'WORKSPACE',
@@ -57,6 +69,16 @@ export default function NavBar({ isMenuOpen, closeMenu }) {
                 }
         ];
 
+        useEffect(() => {
+            supabase.auth.getSession().then(({ data: { session } }) => {
+                setSession(session);
+            });
+            const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+                setSession(session);
+            });
+            return () => subscription.unsubscribe();
+        }, []);
+
         return (
             <>
             <div 
@@ -78,17 +100,27 @@ export default function NavBar({ isMenuOpen, closeMenu }) {
                             <div className="nav-group-label">{group.title}</div>
                             
                             
-                            {group.items.map((tab) => (
-                                <NavLink 
-                                    key={tab.id} 
-                                    to={tab.id}
-                                    className={({isActive}) => `nb ${isActive ? 'on' : ''}`} 
-                                    onClick={closeMenu} 
-                                >
-                                    <tab.Icon className='nav-icon' size={18}/>
-                                    <span className='nav-label'>{tab.label}</span>
-                                </NavLink>
-                            ))}
+                            {group.items.map((tab) => {
+                                if (tab.id === '/conlangs' && !isLive) {
+                                    return (
+                                        <div key={tab.id} className="nb disabled" title="Upgrade to LIVE to unlock multiple workspaces.">
+                                            <Lock className='nav-icon' size={18}/>
+                                            <span className='nav-label'>{tab.label}</span>
+                                        </div>
+                                    );
+                                }
+                                return (
+                                    <NavLink 
+                                        key={tab.id} 
+                                        to={tab.id}
+                                        className={({isActive}) => `nb ${isActive ? 'on' : ''}`} 
+                                        onClick={closeMenu} 
+                                    >
+                                        <tab.Icon className='nav-icon' size={18}/>
+                                        <span className='nav-label'>{tab.label}</span>
+                                    </NavLink>
+                                );
+                            })}
 
                         </div>
                     ))}
