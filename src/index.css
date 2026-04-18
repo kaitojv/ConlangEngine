@@ -32,10 +32,10 @@
   --shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
   --shadow-hover: 0 20px 40px -10px rgba(124, 58, 237, 0.15);
   --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0); /* This seems to be a default for foreground, not card */
+  --card: var(--s1); /* Use a dark surface color for cards in dark mode */
   --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
+  --popover: var(--s1); /* Use a dark surface color for popovers in dark mode */
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
@@ -44,10 +44,10 @@
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
   --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  --accent-foreground: oklch(0.205 0 0); /* This is a dark color, likely for text on accent */
+  --destructive: oklch(0.577 0.245 27.325); /* This is a red color */
+  --border: var(--bd); /* Use custom border variable */
+  --input: var(--s4); /* Use custom surface 4 for inputs */
   --ring: oklch(0.708 0 0);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
@@ -77,8 +77,10 @@
   --h-bg: #ffffff;
   --tx: #0f172a;
   --tx2: #475569;
-  --bd: rgba(0, 0, 0, 0.1);
+  --bd: rgba(0, 0, 0, 0.1); /* Light theme border */
   --acc: #6d28d9;
+  --s4: var(--s2); /* Define s4 for light theme, slightly darker than s1 */
+  --card: var(--s1); /* White for cards in light mode */
 }
 
 * {

@@ -7,7 +7,8 @@ import Card from '@/components/UI/Card/Card.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Modal from '@/components/UI/Modal/Modal.jsx';
-import { BookOpen, List, Wand2 } from 'lucide-react';
+import { BookOpen, List, Wand2, Copy, Check } from 'lucide-react';
+import * as HoverCard from '@radix-ui/react-hover-card';
 import './glosserTab.css';
 
 export default function GlosserTab() {
@@ -16,6 +17,7 @@ export default function GlosserTab() {
     const [processedWords, setProcessedWords] = useState([]);
     const [freeTranslation, setFreeTranslation] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [copied, setCopied] = useState(false);
 
     // Store Data
     const lexicon = useLexiconStore((state) => state.lexicon);
@@ -34,10 +36,10 @@ export default function GlosserTab() {
 
         // Ghost Pronouns
         const personRules = getPersonRules(config.personRules);
-        personRules.forEach(rule => {
-            if (rule.free && normalizeToBase(rule.free.toLowerCase()) === safeSurface) {
+        personRules.forEach(rule => { // Changed rule.free to rule.freeForm
+            if (rule.freeForm && normalizeToBase(rule.freeForm.toLowerCase()) === safeSurface) {
                 parsings.push({
-                    root: { word: rule.free, wordClass: 'pronoun', translation: `Pronoun (${rule.name})` },
+                    root: { word: rule.freeForm, wordClass: 'pronoun', translation: `Pronoun (${rule.name})` },
                     rules: []
                 });
             }
@@ -107,10 +109,52 @@ export default function GlosserTab() {
         setIsModalOpen(true);
     };
 
+    // --- EXPORT IGT TO CLIPBOARD ---
+    const handleCopyIGT = () => {
+        let line1 = []; // Segmented Conlang Words
+        let line2 = []; // Grammatical Glosses
+
+        processedWords.forEach(tokenData => {
+            if (tokenData.isPunctuation && !tokenData.text.trim()) return;
+
+            if (tokenData.isPunctuation) {
+                line1.push(tokenData.text);
+                line2.push(tokenData.text);
+            } else if (tokenData.parsings.length > 0) {
+                let p = tokenData.parsings[0];
+                let baseWord = p.root.word.replace(/\*/g, '');
+                let lexicalGloss = (p.root.translation?.split(',')[0] || '').toLowerCase().trim().replace(/\s*\/\s*/g, '/').replace(/\s+/g, '.');
+                
+                let segmentedWord = baseWord;
+                let glossParts = [lexicalGloss];
+                
+                p.rules.slice().reverse().forEach(r => {
+                    let cleanAffix = r.affix.replace(/^-|-$/g, '');
+                    let tag = r.name.toUpperCase();
+                    
+                    if (r.affix.endsWith('-') && !r.affix.startsWith('-')) {
+                        segmentedWord = cleanAffix + '-' + segmentedWord;
+                        glossParts.unshift(tag);
+                    } else {
+                        segmentedWord = segmentedWord + '-' + cleanAffix;
+                        glossParts.push(tag);
+                    }
+                });
+                line1.push(segmentedWord);
+                line2.push(glossParts.join('-'));
+            }
+        });
+
+        const igtText = `${line1.join('\t')}\n${line2.join('\t')}\n${freeTranslation ? `'${freeTranslation}'` : ''}`.trim();
+        navigator.clipboard.writeText(igtText);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
     // --- 3. RENDER HELPERS ---
     const renderReadingMode = () => {
         return (
-            <div style={{ lineHeight: '2', fontSize: '1.2rem', color: 'var(--tx)' }}>
+            <div style={{ lineHeight: '2.2', fontSize: '1.2rem', color: 'var(--tx)', padding: '20px', background: 'var(--card)', borderRadius: 'var(--rad)', border: '1px solid var(--bd)' }}>
                 {processedWords.map((tokenData, index) => {
                     if (tokenData.isPunctuation) {
                         return <span key={index} style={{ whiteSpace: 'pre-wrap' }}>{tokenData.text}</span>;
@@ -123,22 +167,29 @@ export default function GlosserTab() {
                         let tags = p.rules.length ? p.rules.map(r => r.name).join(' + ') : 'Root';
 
                         return (
-                            <span key={index} className="glosser-tooltip-trigger custom-font-text notranslate">
-                                {transliterate(tokenData.text)}
-                                <div className="glosser-tooltip">
-                                    <div style={{ fontWeight: '900', color: 'var(--acc2)', fontSize: '1.1rem', marginBottom: '4px' }}>
-                                        {transliterate(baseWord)} <span className="notranslate" style={{ fontWeight: 'normal', color: 'var(--tx3)', fontSize: '0.9rem' }}>{ipa}</span>
-                                    </div>
-                                    <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--tx2)', fontWeight: 'bold' }}>{p.root.wordClass}</div>
-                                    <div style={{ fontSize: '0.95rem', color: 'var(--tx)' }}>{p.root.translation}</div>
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--acc)', marginTop: '4px', fontWeight: 'bold' }}>{tags}</div>
-                                </div>
-                            </span>
+                            <HoverCard.Root key={index} openDelay={200} closeDelay={150}>
+                                <HoverCard.Trigger asChild>
+                                    <span className="custom-font-text notranslate" style={{ cursor: 'pointer', color: 'var(--acc)', borderBottom: '2px dotted var(--acc)', transition: 'all 0.2s ease', padding: '0 2px' }}>
+                                        {transliterate(tokenData.text)}
+                                    </span>
+                                </HoverCard.Trigger>
+                                <HoverCard.Portal>
+                                    <HoverCard.Content sideOffset={8} style={{ background: 'var(--card)', border: '1px solid var(--bd)', padding: '15px', borderRadius: 'var(--rad-sm)', boxShadow: 'var(--shadow-hover)', zIndex: 100000, maxWidth: '300px', color: 'var(--tx)', display: 'flex', flexDirection: 'column', gap: '6px', animation: 'slideUp 0.2s ease' }}>
+                                        <div style={{ fontWeight: '900', color: 'var(--acc)', fontSize: '1.2rem' }}>
+                                            {transliterate(baseWord)} <span className="notranslate" style={{ fontWeight: 'normal', color: 'var(--tx3)', fontSize: '0.9rem', marginLeft: '6px' }}>{ipa}</span>
+                                        </div>
+                                        <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--tx2)', fontWeight: 'bold' }}>{p.root.wordClass}</div>
+                                        <div style={{ fontSize: '1rem', color: 'var(--tx)', lineHeight: '1.4' }}>{p.root.translation}</div>
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--acc2)', marginTop: '4px', fontWeight: '600' }}>{tags}</div>
+                                        <HoverCard.Arrow style={{ fill: 'var(--card)' }} />
+                                    </HoverCard.Content>
+                                </HoverCard.Portal>
+                            </HoverCard.Root>
                         );
                     }
 
                     return (
-                        <span key={index} className="custom-font-text notranslate" style={{ color: 'var(--err)', borderBottom: '2px wavy var(--err)', cursor: 'help' }} title="Unknown root">
+                        <span key={index} className="custom-font-text notranslate" style={{ color: 'var(--err)', borderBottom: '2px wavy var(--err)', cursor: 'help', padding: '0 2px' }} title="Unknown root">
                             {transliterate(tokenData.text)}
                         </span>
                     );
@@ -149,12 +200,12 @@ export default function GlosserTab() {
 
     const renderGlossingMode = () => {
         return (
-            <div style={{ background: 'var(--bg)', padding: '25px', borderRadius: 'var(--rad-sm)', border: '1px solid var(--bd)', marginTop: '15px' }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'flex-end', marginBottom: '20px' }}>
+            <div style={{ background: 'var(--card)', padding: '25px', borderRadius: 'var(--rad)', border: '1px solid var(--bd)' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px 25px', alignItems: 'flex-end', marginBottom: '25px' }}>
                     {processedWords.map((tokenData, index) => {
                         if (tokenData.isPunctuation) {
                             if (!tokenData.text.trim()) return null; // Skip spaces in Leipzig mode
-                            return <div key={index} style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--tx)', alignSelf: 'flex-start' }}>{tokenData.text}</div>;
+                            return <div key={index} style={{ fontSize: '1.4rem', fontWeight: 'bold', color: 'var(--tx2)', alignSelf: 'flex-end', paddingBottom: '4px' }}>{tokenData.text}</div>;
                         }
 
                         if (tokenData.parsings.length > 0) {
@@ -179,29 +230,34 @@ export default function GlosserTab() {
                             });
 
                             return (
-                                <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <div className="custom-font-text notranslate" style={{ fontWeight: '800', fontSize: '1.15rem', color: 'var(--acc2)' }}>{transliterate(segmentedWord)}</div>
-                                    <div style={{ color: 'var(--tx2)', fontSize: '0.9rem', textTransform: 'lowercase' }}>{glossParts.join('-')}</div>
+                                <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 'max-content' }}>
+                                    <div className="custom-font-text notranslate" style={{ fontWeight: '800', fontSize: '1.25rem', color: 'var(--acc)' }}>{transliterate(segmentedWord)}</div>
+                                    <div style={{ color: 'var(--tx2)', fontSize: '0.95rem', textTransform: 'lowercase', letterSpacing: '0.5px' }}>{glossParts.join('-')}</div>
                                 </div>
                             );
                         }
 
                         return (
-                            <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <div className="custom-font-text notranslate" style={{ fontWeight: '800', fontSize: '1.15rem', color: 'var(--err)' }}>{transliterate(tokenData.text)}</div>
-                                <div style={{ color: 'var(--err)', fontSize: '0.9rem' }}>???</div>
+                            <div key={index} style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 'max-content' }}>
+                                <div className="custom-font-text notranslate" style={{ fontWeight: '800', fontSize: '1.25rem', color: 'var(--err)' }}>{transliterate(tokenData.text)}</div>
+                                <div style={{ color: 'var(--err)', fontSize: '0.95rem' }}>???</div>
                             </div>
                         );
                     })}
                 </div>
-                <div style={{ borderTop: '1px dashed var(--bd)', paddingTop: '15px' }}>
+                <div style={{ borderTop: '1px dashed var(--bd)', paddingTop: '20px', display: 'flex', gap: '15px', alignItems: 'center' }}>
                     <input 
                         type="text" 
                         placeholder="Type the free translation here..." 
                         value={freeTranslation}
                         onChange={(e) => setFreeTranslation(e.target.value)}
-                        style={{ width: '100%', padding: '10px', background: 'transparent', border: 'none', color: 'var(--tx)', fontStyle: 'italic', fontSize: '1.1rem', outline: 'none' }}
+                        style={{ flex: 1, padding: '10px 15px', background: 'var(--s4)', border: '1px solid var(--bd)', borderRadius: 'var(--rad-sm)', color: 'var(--tx)', fontStyle: 'italic', fontSize: '1.05rem', outline: 'none' }}
                     />
+                    <Button variant="edit" onClick={handleCopyIGT}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? 'Copied!' : 'Copy IGT'}
+                        </div>
+                    </Button>
                 </div>
             </div>
         );
@@ -226,7 +282,7 @@ export default function GlosserTab() {
 
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={readerMode === 'read' ? 'Interactive Reader' : 'IGT Glossing Breakdown'}>
                 {processedWords.length > 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--bg)'}}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
                         {readerMode === 'read' ? renderReadingMode() : renderGlossingMode()}
                     </div>
                 )}

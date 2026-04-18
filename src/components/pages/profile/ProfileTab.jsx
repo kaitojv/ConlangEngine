@@ -43,13 +43,12 @@ export default function ProfileTab() {
     const localProjects = useProjectStore(state => state.localProjects);
     const { transliterate } = useTransliterator();
     
-
-    
+    // Grab the lexicon, but safely wrap it just in case local storage got corrupted
     const rawLexicon = useLexiconStore((state) => state.lexicon);
     const setLexicon = useLexiconStore((state) => state.setLexicon);
-    // Failsafe for corrupted local storage from the previous project-switching bug
     const lexicon = Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []);
 
+    // Bundle up all the authentication and sync states
     const [session, setSession] = useState(null);
     const [authMode, setAuthMode] = useState('login');
     const [email, setEmail] = useState('');
@@ -57,14 +56,14 @@ export default function ProfileTab() {
     const [authStatus, setAuthStatus] = useState({ msg: '', type: '' });
     const [syncStatus, setSyncStatus] = useState('');
 
-    // 1. Session Management
+    // Listen to Supabase to see if the user is currently logged in
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
         return () => subscription.unsubscribe();
     }, []);
 
-    // 2. Gamification Checker
+    // Check the user's progress and unlock any achievements they've earned
     useEffect(() => {
         const unlock = (id, name) => {
             if (!config.unlockedBadges?.includes(id)) {
@@ -93,7 +92,7 @@ export default function ProfileTab() {
         if (config.customFont || Object.keys(config.customGlyphs || {}).length > 0) unlock('calligrapher', 'Calligrapher');
     }, [lexicon, config.grammarRules, config.streak]);
 
-    // 3. Analytics Calculation
+    // Crunch the numbers for the overall dictionary statistics
     const analytics = useMemo(() => {
         const totalWords = lexicon.length;
         const uniqueTags = new Set(lexicon.flatMap(w => w.tags || [])).size;
@@ -113,31 +112,38 @@ export default function ProfileTab() {
         return { totalWords, uniqueTags, ipaCoverage, topClass };
     }, [lexicon]);
 
-    // Phonotactics Calculator
+    // Analyze the actual letters and sounds being used in the language
     const phonotactics = useMemo(() => {
         const text = lexicon.map(w => w.word.replace(/\*/g, '').toLowerCase()).join('');
         const vowelsList = (config.vowels || "a,e,i,o,u").split(',').map(v => v.split('=')[0].trim().toLowerCase());
-        let vCount = 0; let cCount = 0; const freqs = {};
+        
+        let vCount = 0; 
+        let cCount = 0; 
+        const freqs = {};
 
         for (const char of text) {
             if (char.match(/[a-z]/i)) { 
-                if (vowelsList.includes(char)) vCount++;
-                else cCount++;
+                if (vowelsList.includes(char)) {
+                    vCount++;
+                } else {
+                    cCount++;
+                }
                 freqs[char] = (freqs[char] || 0) + 1;
             }
         }
+        
         const total = vCount + cCount;
         const vRatio = total ? Math.round((vCount/total)*100) : 0;
         const cRatio = total ? Math.round((cCount/total)*100) : 0;
 
-        const topPhonemes = Object.entries(freqs).sort((a,b) => b[1] - a[1]).slice(0, 5);
+        const topPhonemes = Object.entries(freqs).sort((a, b) => b[1] - a[1]).slice(0, 5);
         const maxFreq = topPhonemes.length ? topPhonemes[0][1] : 1;
 
         return { vRatio, cRatio, topPhonemes, maxFreq, total };
     }, [lexicon, config.vowels]);
 
 
-    // 4. Handlers
+    // Sign up or log into the Cloud network
     const handleAuth = async () => {
         setAuthStatus({ msg: '⏳ Connecting to secure server...', type: 'tx2' });
         try {
@@ -160,7 +166,7 @@ export default function ProfileTab() {
         if (project && project.project_data) {
             setLexicon(project.project_data.dictionary || []);
             config.updateConfig(project.project_data.config || {});
-            // The wiki data is stored as a separate key in the DB payload, so we update it in the config store.
+            
             if (project.project_data.wiki) {
                 config.updateConfig({ wikiPages: project.project_data.wiki });
             }
@@ -192,6 +198,7 @@ export default function ProfileTab() {
         setSession(null);
     };
 
+    // Back up all local data securely into Supabase
     const handlePushToCloud = async () => {
         if (!session) return alert("You must be logged in to sync!");
         setSyncStatus('⏳ Pushing to cloud...');
@@ -221,6 +228,7 @@ export default function ProfileTab() {
         }
     };
 
+    // Retrieve cloud backups
     const handlePullFromCloud = async () => {
         if (!session) return alert("You must be logged in to pull projects.");
         setSyncStatus('⏳ Fetching cloud projects...');
@@ -266,9 +274,9 @@ export default function ProfileTab() {
         }
     };
 
+    // Figure out which icon looks best next to the activity timeline text
     const getActivityDetails = (text) => {
-        // Strip old legacy emojis from existing local storage entries
-        let cleanText = text.replace(/^(✍️|📚|🗑️|⚙️|☁️|🏆|✨)\s*/, '');
+        const cleanText = text.replace(/^(✍️|📚|🗑️|⚙️|☁️|🏆|✨)\s*/, '');
         let Icon = Activity;
         if (cleanText.includes('custom glyph')) Icon = PenTool;
         else if (cleanText.includes('Deleted')) Icon = Trash2;
@@ -283,7 +291,6 @@ export default function ProfileTab() {
     return (
         <div className="profile-dashboard-layout">
             
-            {/* Account Status Card */}
             <Card className="account-status-card">
                 <div className="account-header">
                     <div>
@@ -297,16 +304,16 @@ export default function ProfileTab() {
                     
                     {session ? (
                         <div className="account-actions">
-                            <Button variant="imp" style={{ background: 'var(--acc)', borderColor: 'var(--acc)' }} onClick={handleShareLink} title="Copy Public Link">
+                            <Button variant="save" className="share-btn" onClick={handleShareLink} title="Copy Public Link">
                                 <div className="btn-content"><Share2 size={16}/> Share Link</div>
                             </Button>
-                            <Button variant="save" onClick={handlePushToCloud}>
+                            <Button variant="default" className="push-btn" onClick={handlePushToCloud}>
                                 <div className="btn-content"><CloudUpload size={16}/> Push to Cloud</div>
                             </Button>
-                            <Button variant="edit" onClick={handlePullFromCloud}>
+                            <Button variant="default" className="pull-btn" onClick={handlePullFromCloud}>
                                 <div className="btn-content"><CloudDownload size={16}/> Pull from Cloud</div>
                             </Button>
-                            <Button variant="cancel" style={{ borderColor: 'var(--err)', color: 'var(--err)' }} onClick={handleLogout}>
+                            <Button variant="error" className="signout-btn" onClick={handleLogout}>
                                 <div className="btn-content"><LogOut size={16}/> Sign Out</div>
                             </Button>
                         </div>
@@ -319,8 +326,8 @@ export default function ProfileTab() {
                             <div className="login-divider">— OR CONTINUE WITH —</div>
                             <div className="social-row">
 
-                                <Button variant="default" style={{ flex: 1, background: 'var(--s4)' }} onClick={() => handleOAuth('google')} title="Google"><Globe size={18} /></Button>
-                                <Button variant="default" style={{ flex: 1, background: 'var(--s4)' }} onClick={() => handleOAuth('github')} title="GitHub"><GitBranch size={18} /></Button>
+                                <Button variant="default" className="social-btn" onClick={() => handleOAuth('google')} title="Google"><Globe size={18} /></Button>
+                                <Button variant="default" className="social-btn" onClick={() => handleOAuth('github')} title="GitHub"><GitBranch size={18} /></Button>
 
                             </div>
                         </div>
@@ -330,7 +337,6 @@ export default function ProfileTab() {
                 {syncStatus && <div className={`auth-status-msg ${syncStatus.includes('❌') ? 'text-err' : 'text-tx'}`}>{syncStatus}</div>}
             </Card>
 
-            {/* Free Tier Banner */}
             {!config.isProActive && (
                 <Card>
                     <div className="free-tier-wrapper">
@@ -344,11 +350,10 @@ export default function ProfileTab() {
                             </p>
                             <div className="free-tier-actions">
 
-                                <Button variant="default" style={{ flex: 1, background: 'var(--s4)', padding: '12px 20px' }} onClick={() => window.open('https://patreon.com', '_blank')}>
+                                <Button variant="default" className="support-btn" onClick={() => window.open('https://patreon.com', '_blank')}>
                                     <div className="btn-content"><Heart size={14}/> Support on Patreon</div>
                                 </Button>
-                                <Button variant="default" style={{ flex: 1, background: 'var(--s1)', padding: '12px 20px' }} onClick={() => window.open('https://ko-fi.com/kaitosz', '_blank')}>
-
+                                <Button variant="default" className="support-btn support-alt" onClick={() => window.open('https://ko-fi.com/kaitosz', '_blank')}>
                                     <div className="btn-content"><Coffee size={14}/> Support on Ko-fi</div>
                                 </Button>
                             </div>

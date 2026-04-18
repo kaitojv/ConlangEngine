@@ -1,7 +1,7 @@
 // ./src/components/UI/buttons.csx
 import './buttons.css';
 
-export default function Button({ variant = 'save', children, ...props }) {
+export default function Button({ variant = 'save', children, className = '', ...props }) {
   const variantClass = 
   ({
     save: 'save',
@@ -14,7 +14,7 @@ export default function Button({ variant = 'save', children, ...props }) {
   })[variant] || 'save';
   
   return (
-    <button className={`btn-${variant} btn-base`}  {...props}>
+    <button className={`btn-${variantClass} btn-base ${className}`.trim()} {...props}>
       {children}
     </button>
   );

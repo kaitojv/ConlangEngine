@@ -63,3 +63,14 @@
     font-size: 0.8rem;
     color: var(--tx3);
 }
+
+.kofi-btn {
+    color: var(--tx2);
+}
+
+/* Optional UX/UI recommendation to vertically align icons and text smoothly */
+.social-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}

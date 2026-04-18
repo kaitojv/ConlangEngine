@@ -8,11 +8,13 @@ import { BrainCircuit, Flame, RotateCcw, Check, X, Play } from 'lucide-react';
 import './flashcardsTab.css';
 
 export default function FlashcardsTab() {
+    // Pull in the dictionary and streak settings from our global state
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
     const { streak, lastStudyDate } = useConfigStore();
     const updateConfig = useConfigStore((state) => state.updateConfig);
     const { transliterate } = useTransliterator();
 
+    // Keep track of what the user is currently doing with their deck
     const [deck, setDeck] = useState([]);
     const [currentIdx, setCurrentIdx] = useState(0);
     const [isFlipped, setIsFlipped] = useState(false);
@@ -20,41 +22,36 @@ export default function FlashcardsTab() {
     const [hasFinished, setHasFinished] = useState(false);
     const [deckStarted, setDeckStarted] = useState(false);
 
-    // Extract unique semantic tags from the dictionary
+    // Figure out all the unique semantic tags they've used so we can filter by them
     const allTags = useMemo(() => {
         const tags = lexicon.flatMap(word => word.tags || []);
         return [...new Set(tags)].sort();
     }, [lexicon]);
 
-    // Daily Streak Logic
+    // Bump up their study streak if they finish a deck today!
     const recordDailyStudy = () => {
         const today = new Date().toDateString();
         if (lastStudyDate !== today) {
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
             
-            let newStreak = 1;
-            if (lastStudyDate === yesterday.toDateString()) {
-                newStreak = (streak || 0) + 1;
-            }
-            
+            const newStreak = lastStudyDate === yesterday.toDateString() ? (streak || 0) + 1 : 1;
             updateConfig({ streak: newStreak, lastStudyDate: today });
         }
     };
 
-    // Initialize the deck
-    const startDeck = () => {
-        let filteredLexicon = lexicon;
-        if (selectedTag !== 'all') {
-            filteredLexicon = lexicon.filter(w => w.tags && w.tags.includes(selectedTag));
-        }
+    // Gather the words, shuffle them up, and get ready to study
+    const startDeck = (tag = selectedTag) => {
+        const filteredLexicon = tag === 'all' 
+            ? lexicon 
+            : lexicon.filter(w => w.tags?.includes(tag));
 
         if (filteredLexicon.length === 0) {
-            alert("No words found for the selected tag.");
-            return;
+            setDeckStarted(false);
+            return alert("No words found for the selected tag.");
         }
 
-        // Shuffle the array
+        // A quick and dirty way to shuffle the deck
         const shuffled = [...filteredLexicon].sort(() => Math.random() - 0.5);
         
         setDeck(shuffled);
@@ -65,18 +62,17 @@ export default function FlashcardsTab() {
     };
 
     const handleFlip = () => {
-        if (hasFinished) return;
-        setIsFlipped(!isFlipped);
+        if (!hasFinished) setIsFlipped(!isFlipped);
     };
 
+    // Move to the next card, and maybe toss this one back in the pile if they need to review it
     const handleNext = (needsReview) => {
         setIsFlipped(false);
         
-        // Wait for the flip animation to finish before swapping text
+        // Wait for the card to physically flip over before changing its text!
         setTimeout(() => {
-            let updatedDeck = [...deck];
+            const updatedDeck = [...deck];
             if (needsReview) {
-                // Push the current word to the end of the deck to review it again
                 updatedDeck.push(deck[currentIdx]);
                 setDeck(updatedDeck);
             }
@@ -88,39 +84,45 @@ export default function FlashcardsTab() {
             } else {
                 setCurrentIdx(nextIdx);
             }
-        }, 300);
+        }, 300); // Matches the CSS transition time
     };
 
     const currentWord = deck[currentIdx];
     const remainingCards = deck.length - currentIdx;
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center' }}>
-            {/* Header & Controls */}
-            <Card style={{ width: '100%', maxWidth: '700px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
-                    <h2 className='flex sg-title' style={{ margin: 0 }}><BrainCircuit /> Study Deck</h2>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(249, 115, 22, 0.1)', color: '#f97316', padding: '8px 16px', borderRadius: 'var(--rad-sm)', fontWeight: 'bold', border: '1px solid rgba(249, 115, 22, 0.3)' }}>
+        <div className="flashcards-container">
+            
+            {/* --- CONTROLS & HEADER --- */}
+            <Card className="controls-card">
+                <div className="controls-header">
+                    <h2 className="flex sg-title mb-0"><BrainCircuit /> Study Deck</h2>
+                    <div className="streak-badge">
                         <Flame size={18} /> {streak || 0} Day Streak
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                    <div style={{ flex: 1, minWidth: '200px' }}>
-                        <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '8px', fontWeight: 'bold' }}>Filter by Semantic Tag:</label>
+                <div className="filter-section">
+                    <div className="filter-select-container">
+                        <label className="filter-select-label">Filter by Semantic Tag:</label>
                         <select 
                             value={selectedTag} 
-                            onChange={(e) => setSelectedTag(e.target.value)}
-                            style={{ width: '100%', padding: '10px', background: 'var(--bg)', color: 'var(--tx)', border: '1px solid var(--bd)', borderRadius: 'var(--rad-sm)', outline: 'none' }}
+                            onChange={(e) => {
+                                setSelectedTag(e.target.value);
+                                if (deckStarted) startDeck(e.target.value);
+                            }}
+                            className="filter-select"
                         >
                             <option value="all">All Words</option>
                             {allTags.map(tag => (
-                                <option key={tag} value={tag}>{tag.charAt(0).toUpperCase() + tag.slice(1)}</option>
+                                <option key={tag} value={tag}>
+                                    {tag.charAt(0).toUpperCase() + tag.slice(1)}
+                                </option>
                             ))}
                         </select>
                     </div>
                     <Button variant="imp" onClick={startDeck}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="btn-content-flex">
                             {deckStarted ? <RotateCcw size={18} /> : <Play size={18} />}
                             {deckStarted ? 'Restart Deck' : 'Start Study Session'}
                         </div>
@@ -128,42 +130,45 @@ export default function FlashcardsTab() {
                 </div>
             </Card>
 
-            {/* Flashcard Area */}
+            {/* --- ACTIVE FLASHCARD AREA --- */}
             {deckStarted && (
-                <div style={{ width: '100%', maxWidth: '700px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div className="flashcard-area">
                     
-                    <div style={{ color: 'var(--tx2)', fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '10px' }}>
-                        Cards Remaining: <span style={{ color: 'var(--acc2)' }}>{hasFinished ? 0 : remainingCards}</span>
+                    <div className="cards-remaining">
+                        Cards Remaining: <span className="cards-remaining-count">{hasFinished ? 0 : remainingCards}</span>
                     </div>
 
+                    {/* The interactive card itself */}
                     <div className="fc-scene" onClick={handleFlip}>
                         <div className={`fc-inner ${isFlipped && !hasFinished ? 'is-flipped' : ''}`}>
                             
-                            {/* FRONT FACE */}
                             <div className="fc-face">
                                 {hasFinished ? (
                                     <>
-                                        <div style={{ fontSize: '4rem', marginBottom: '10px' }}>🎉</div>
-                                        <h2 style={{ color: 'var(--ok)', fontSize: '2rem', margin: 0 }}>Deck Finished!</h2>
-                                        <p style={{ color: 'var(--tx2)', marginTop: '10px' }}>Great job today! Your streak has been updated.</p>
+                                        <div className="finished-emoji">🎉</div>
+                                        <h2 className="finished-title">Deck Finished!</h2>
+                                        <p className="finished-text">Great job today! Your streak has been updated.</p>
                                     </>
                                 ) : currentWord ? (
                                     <>
-                                        <div className="fc-word custom-font-text notranslate">{transliterate(currentWord.word)}</div>
-                                        {currentWord.ipa && <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>}
-                                        <div style={{ position: 'absolute', bottom: '20px', color: 'var(--tx3)', fontSize: '0.8rem' }}>Click to flip</div>
+                                        <div className="fc-word custom-font-text notranslate">
+                                            {transliterate(currentWord.word)}
+                                        </div>
+                                        {currentWord.ipa && (
+                                            <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>
+                                        )}
+                                        <div className="flip-hint">Click to flip</div>
                                     </>
                                 ) : null}
                             </div>
 
-                            {/* BACK FACE */}
                             <div className="fc-face fc-back">
                                 {currentWord && !hasFinished && (
                                     <>
                                         <div className="fc-trans">{currentWord.translation}</div>
                                         <div className="fc-class">{currentWord.wordClass}</div>
                                         {currentWord.tags && currentWord.tags.length > 0 && (
-                                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                            <div className="fc-tags-container">
                                                 {currentWord.tags.map(tag => (
                                                     <span key={tag} className="fc-tag-pill">#{tag}</span>
                                                 ))}
@@ -175,19 +180,22 @@ export default function FlashcardsTab() {
                         </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div style={{ 
-                        display: 'flex', gap: '20px', width: '100%', maxWidth: '400px', 
-                        opacity: (isFlipped && !hasFinished) ? 1 : 0, 
-                        pointerEvents: (isFlipped && !hasFinished) ? 'auto' : 'none',
-                        transition: 'opacity 0.3s ease',
-                        marginTop: '10px'
-                    }}>
-                        <Button variant="error" style={{ flex: 1, padding: '15px' }} onClick={(e) => { e.stopPropagation(); handleNext(true); }}>
-                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}><X size={20} /> Needs Review</div>
+                    {/* Action buttons (Only visible when viewing the back of the card) */}
+                    <div className={`fc-actions ${isFlipped && !hasFinished ? 'visible' : ''}`}>
+                        <Button 
+                            variant="error" 
+                            className="fc-action-btn" 
+                            onClick={(e) => { e.stopPropagation(); handleNext(true); }}
+                        >
+                            <div className="btn-content-flex"><X size={20} /> Needs Review</div>
                         </Button>
-                        <Button variant="ok" style={{ flex: 1, padding: '15px', background: 'var(--ok)', color: '#000', border: 'none' }} onClick={(e) => { e.stopPropagation(); handleNext(false); }}>
-                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}><Check size={20} /> Got It</div>
+                        
+                        <Button 
+                            variant="default" 
+                            className="fc-action-btn btn-got-it" 
+                            onClick={(e) => { e.stopPropagation(); handleNext(false); }}
+                        >
+                            <div className="btn-content-flex"><Check size={20} /> Got It</div>
                         </Button>
                     </div>
 

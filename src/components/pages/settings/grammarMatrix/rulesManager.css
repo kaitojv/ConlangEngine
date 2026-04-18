@@ -1,0 +1,40 @@
+.rules-manager-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.rules-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.rules-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px 20px;
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px dashed var(--bd);
+    border-radius: var(--rad-sm, 8px);
+    color: var(--tx2);
+}
+
+.rules-empty-state h3 {
+    margin: 10px 0 5px 0;
+    color: var(--tx);
+}
+
+.empty-state-icon {
+    color: var(--tx3);
+    margin-bottom: 10px;
+}
+
+.rules-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+}

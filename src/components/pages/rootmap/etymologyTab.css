@@ -1,3 +1,32 @@
+/* Append these utility classes to your profileTab.css */
+
+.share-btn {
+    background: var(--acc) !important;
+    border-color: var(--acc) !important;
+}
+
+.push-btn, .pull-btn {
+    background: var(--s4) !important;
+}
+
+.signout-btn {
+    background: transparent !important;
+}
+
+.social-btn {
+    flex: 1;
+    background: var(--s4) !important;
+}
+
+.support-btn {
+    flex: 1;
+    background: var(--s4) !important;
+    padding: 12px 20px !important;
+}
+
+.support-alt {
+    background: var(--acc) !important;
+}
 .etymology-container {
     display: flex;
     flex-direction: column;
@@ -87,7 +116,7 @@
 }
 
 .derivation-card {
-    background: var(--s1);
+    background: var(--s4);
     border: 1px solid var(--bd);
     border-top: 4px solid var(--acc);
     padding: 15px 20px;

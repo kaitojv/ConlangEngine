@@ -94,3 +94,34 @@
 .translation-result-box { margin-top: 15px; background: var(--s1); padding: 20px; border-radius: var(--rad-sm); border: 1px dashed var(--bd); }
 .translation-label { font-size: 0.8rem; color: var(--acc2); font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
 .translation-text { font-size: 1.3rem; color: var(--tx); }
+
+/* Add these new classes to your analyzerTab.css */
+
+.execute-analysis-btn {
+    margin-top: 10px;
+    
+}
+
+/* Status Box Dynamics */
+.syntax-status-box.status-valid {
+    border: 1px solid var(--ok, #10b981);
+    color: var(--ok, #10b981);
+}
+
+.syntax-status-box.status-invalid {
+    border: 1px solid var(--err, #ef4444);
+    color: var(--err, #ef4444);
+}
+
+/* Word Card Borders */
+.parsed-word-card.card-error {
+    border: 2px solid var(--err, #ef4444);
+}
+
+.parsed-word-card.card-warning {
+    border: 2px solid var(--acc2, #f59e0b);
+}
+
+.parsed-word-card.card-default {
+    border: 2px solid var(--bd, #374151);
+}

@@ -23,6 +23,26 @@ import ProfileTab from './components/pages/profile/ProfileTab.jsx';
 import ConlangsTab from './components/pages/conlangstab/ConlangsTab.jsx';
 import Footer from './components/Layout/Footer/Footer.jsx';
 import FloatingKeyboard from './components/UI/FloatingKeyboard/FloatingKeyboard.jsx';
+import ProtectedRoute from './components/UI/ProtectedRoute/ProtectedRoute.jsx';
+import Login from './components/pages/login/Login.jsx';
+import HelpTab from './components/pages/help/HelpTab.jsx'; // Adjust import path if you named the folder differently
+
+// Define your allowlist of safe relative routes based on your actual Route paths
+export const ALLOWED_REDIRECTS = [
+  '/',
+  '/dictionary',
+  '/conlangs',
+  '/settings',
+  '/create',
+  '/generator',
+  '/rootmap',
+  '/analyzer',
+  '/reader',
+  '/wiki',
+  '/flashcards',
+  '/profile',
+  '/help'
+];
 
 function App(){
 
@@ -75,17 +95,20 @@ function App(){
       <main className="content">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/dictionary" element={<Dictionary />} />
-          <Route path="/conlangs" element={<ConlangsTab />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/create" element={<CreateWordTab />} />
-          <Route path="/generator" element={<GeneratorTab />} />
-          <Route path="/rootmap" element={<EtymologyTab />} />
-          <Route path="/analyzer" element={<AnalyzerTab />} />
-          <Route path="/reader" element={<GlosserTab />} />
-          <Route path="/wiki" element={<WikiTab />} />
-          <Route path="/flashcards" element={<FlashcardsTab />} />
-          <Route path="/profile" element={<ProfileTab />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/help" element={<HelpTab />} />
+          
+          <Route path="/dictionary" element={<ProtectedRoute><Dictionary /></ProtectedRoute>} />
+          <Route path="/conlangs" element={<ProtectedRoute><ConlangsTab /></ProtectedRoute>} />
+          <Route path="/create" element={<ProtectedRoute><CreateWordTab /></ProtectedRoute>} />
+          <Route path="/generator" element={<ProtectedRoute><GeneratorTab /></ProtectedRoute>} />
+          <Route path="/rootmap" element={<ProtectedRoute><EtymologyTab /></ProtectedRoute>} />
+          <Route path="/analyzer" element={<ProtectedRoute><AnalyzerTab /></ProtectedRoute>} />
+          <Route path="/reader" element={<ProtectedRoute><GlosserTab /></ProtectedRoute>} />
+          <Route path="/wiki" element={<ProtectedRoute><WikiTab /></ProtectedRoute>} />
+          <Route path="/flashcards" element={<ProtectedRoute><FlashcardsTab /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><ProfileTab /></ProtectedRoute>} />
         </Routes>
       </main>
       <Footer />

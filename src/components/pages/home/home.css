@@ -131,6 +131,33 @@
 .wotd-word { font-size: 1.8rem; display: block; color: var(--tx); font-weight: bold; }
 .wotd-translation { color: var(--tx2); font-style: italic; font-size: 0.95rem; }
 
+
+/* Smooth hover state for interactive widget cards */
+.interactive-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+}
+
+.interactive-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); /* Adjust opacity based on your dark/light theme */
+}
+
+/* Make the arrow icon pop slightly on hover */
+.interactive-card .widget-footer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    color: var(--acc, #3b82f6);
+    transition: gap 0.2s ease;
+}
+
+.interactive-card:hover .widget-footer {
+    gap: 10px; /* Gently pushes the arrow to the right */
+}
+
+
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
     .home-page {
@@ -145,4 +172,24 @@
         overflow-wrap: break-word;
         word-break: break-word; /* Fallback for older browsers */
     }
+}
+
+/* --- Floating Background Animations --- */
+.floating-bg-container {
+    position: absolute;
+    inset: 0; /* Shorthand for top, right, bottom, left: 0 */
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.floating-bg-word {
+    position: absolute;
+    color: var(--tx2);
+    font-weight: bold;
+    white-space: nowrap;
+    left: 0;
+    top: 0;
+    /* Pushes this element's animations to the GPU to prevent lag */
+    will-change: transform; 
 }

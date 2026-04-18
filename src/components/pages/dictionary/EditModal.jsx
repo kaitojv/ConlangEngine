@@ -1,131 +1,109 @@
-// src/components/pages/dictionary/EditWordModal.jsx
 import React, { useState, useEffect } from 'react';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
+import Input from '../../UI/Input/Input.jsx';
+import Button from '../../UI/Buttons/Buttons.jsx';
+import { Save } from 'lucide-react';
+import './editModal.css';
 
 export default function EditWordModal({ wordObj, onClose }) {
+    // Grab our global dictionary tools
     const updateWord = useLexiconStore((state) => state.updateWord);
     const lexicon = useLexiconStore((state) => state.lexicon);
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const { normalizeToBase } = useTransliterator();
 
-    // Local state for the form
-    const [word, setWord] = useState('');
-    const [ipa, setIpa] = useState('');
-    const [wordClass, setWordClass] = useState('');
-    const [translation, setTranslation] = useState('');
-    const [tags, setTags] = useState('');
-    const [ideogram, setIdeogram] = useState('');
+    // Bundle all the form fields into one neat state object
+    const [formData, setFormData] = useState({
+        word: '', ipa: '', wordClass: '', translation: '', tags: '', ideogram: ''
+    });
+    const { word, ipa, wordClass, translation, tags, ideogram } = formData;
 
-    // Populate the form when the modal opens with a word
+    const updateField = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
+
+    // Whenever the user clicks edit on a word, immediately populate the form with its current data
     useEffect(() => {
         if (wordObj) {
-            setWord(wordObj.word || '');
-            setIpa(wordObj.ipa || '');
-            setWordClass(wordObj.wordClass || '');
-            setTranslation(wordObj.translation || '');
-            setTags(wordObj.tags ? wordObj.tags.join(', ') : '');
-            setIdeogram(wordObj.ideogram || '');
+            setFormData({
+                word: wordObj.word || '',
+                ipa: wordObj.ipa || '',
+                wordClass: wordObj.wordClass || '',
+                translation: wordObj.translation || '',
+                tags: wordObj.tags ? wordObj.tags.join(', ') : '',
+                ideogram: wordObj.ideogram || ''
+            });
         }
     }, [wordObj]);
 
+    // Validate everything before saving changes to the dictionary
     const handleSave = () => {
-        if (!word.trim() || !translation.trim()) {
-            alert("Please fill in both the word and the translation.");
-            return;
-        }
+        const cleanInputWord = word.trim();
+        const cleanInputTrans = translation.trim();
 
-        const safeWord = normalizeToBase(word.trim());
-        const cleanInputWord = safeWord.toLowerCase();
-        const cleanInputTrans = translation.trim().toLowerCase();
+        if (!cleanInputWord || !cleanInputTrans) return alert("Please fill in both the word and the translation.");
 
-        // Check for duplicates, but IGNORE the current word being edited
+        const safeWord = normalizeToBase(cleanInputWord);
+        const safeLowerWord = safeWord.toLowerCase();
+        const safeLowerTrans = cleanInputTrans.toLowerCase();
+
+        // Make sure they didn't accidentally change the word to match something that already exists!
         const isDuplicate = lexicon.some(entry => {
             if (entry.id === wordObj.id) return false; // Skip itself
             
             const dbWord = entry.word.replace(/\*/g, '').toLowerCase();
             const dbTrans = entry.translation.toLowerCase();
-            return dbWord === cleanInputWord || dbTrans === cleanInputTrans;
+            return dbWord === safeLowerWord || dbTrans === safeLowerTrans;
         });
 
         if (isDuplicate) {
-            alert("This word or translation already exists in another dictionary entry!");
-            return;
+            return alert("This word or translation already exists in another dictionary entry!");
         }
 
         const processedTags = tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
 
-        // Update the word in the Zustand store
         updateWord(wordObj.id, {
             word: safeWord,
             ipa: ipa.trim(),
-            wordClass: wordClass.trim().toLowerCase(),
-            translation: translation.trim(),
+            wordClass: wordClass.trim(), // Kept exact case for flexibility
+            translation: cleanInputTrans,
             tags: processedTags,
             ideogram: ideogram.trim()
         });
 
         alert("Word updated successfully!");
-        onClose(); // Close the modal
+        onClose(); 
     };
 
     if (!wordObj) return null;
 
-    // Common input style object to avoid Tailwind
-    const inputStyle = {
-        width: '100%',
-        padding: '12px',
-        backgroundColor: 'var(--s1)',
-        color: 'var(--tx)',
-        border: '1px solid var(--bd)',
-        borderRadius: '8px',
-        outline: 'none',
-        marginBottom: '16px',
-        boxSizing: 'border-box'
-    };
-
-    const labelStyle = {
-        fontSize: '0.75rem',
-        fontWeight: 'bold',
-        color: 'var(--tx2)',
-        textTransform: 'uppercase',
-        marginBottom: '8px',
-        display: 'block'
-    };
-
     return (
-        <div style={{ width: '100%' }}>
+        <div className="edit-modal-container">
             
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
+            <div className="edit-modal-grid">
                 <div>
-                    <label style={labelStyle}>Word (Conlang)</label>
-                    <input 
-                        style={inputStyle}
-                        type="text" 
+                    <Input 
+                        label="Word (Conlang)" 
                         value={word}
-                        onChange={(e) => setWord(e.target.value)}
+                        onChange={(e) => updateField('word', e.target.value)}
+                        className="custom-font-text notranslate"
                     />
                 </div>
                 
                 <div>
-                    <label style={labelStyle}>IPA (Optional)</label>
-                    <input 
-                        style={inputStyle}
-                        type="text" 
+                    <Input 
+                        label="IPA (Optional)" 
                         value={ipa}
-                        onChange={(e) => setIpa(e.target.value)}
+                        onChange={(e) => updateField('ipa', e.target.value)}
                     />
                 </div>
 
                 <div>
-                    <label style={labelStyle}>Part of Speech</label>
-                    <input 
-                        style={inputStyle}
-                        type="text"
-                        list="edit-word-classes"
+                    <Input 
+                        label="Part of Speech"
                         value={wordClass}
-                        onChange={(e) => setWordClass(e.target.value.toLowerCase())}
+                        onChange={(e) => updateField('wordClass', e.target.value.toLowerCase())}
+                        list="edit-word-classes"
                     />
                     <datalist id="edit-word-classes">
                         <option value="noun" />
@@ -134,50 +112,46 @@ export default function EditWordModal({ wordObj, onClose }) {
                         <option value="adverb" />
                         <option value="pronoun" />
                         <option value="particle" />
+                        <option value="conjunction" />
+                        <option value="preposition" />
                     </datalist>
                 </div>
             </div>
 
             {phonologyTypes === 'logographic' && (
                 <div>
-                    <label style={labelStyle}>Ideogram / Symbol</label>
-                    <input 
-                        style={{ ...inputStyle, fontSize: '1.5rem', textAlign: 'center' }}
-                        type="text" 
-                        className="notranslate"
+                    <Input 
+                        label="Ideogram / Symbol"
                         value={ideogram}
-                        onChange={(e) => setIdeogram(e.target.value)}
+                        onChange={(e) => updateField('ideogram', e.target.value)}
+                        className="ideogram-edit-input notranslate custom-font-text"
                     />
                 </div>
             )}
 
             <div>
-                <label style={labelStyle}>Translation / Definition</label>
-                <input 
-                    style={inputStyle}
-                    type="text" 
+                <Input 
+                    label="Translation / Definition" 
                     value={translation}
-                    onChange={(e) => setTranslation(e.target.value)}
+                    onChange={(e) => updateField('translation', e.target.value)}
                 />
             </div>
 
             <div>
-                <label style={labelStyle}>Semantic Tags (Comma separated)</label>
-                <input 
-                    style={inputStyle}
-                    type="text" 
+                <Input 
+                    label="Semantic Tags (Comma separated)" 
                     value={tags}
-                    onChange={(e) => setTags(e.target.value)}
+                    onChange={(e) => updateField('tags', e.target.value)}
                 />
             </div>
 
-            <button 
-                className="btn btn-save" 
-                style={{ width: '100%', padding: '16px', fontSize: '1.1rem', marginTop: '10px' }}
+            <Button 
+                variant="save" 
+                className="edit-modal-save-btn"
                 onClick={handleSave}
             >
-                💾 Save Changes
-            </button>
+                <Save size={18} /> Save Changes
+            </Button>
         </div>
     );
 }

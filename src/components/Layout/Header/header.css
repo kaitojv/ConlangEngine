@@ -55,7 +55,7 @@
 .hdr-btn{
     background: transparent; 
     color: var(--tx); 
-    border: none;
+    border: none !important;
     padding: 6px 12px; 
     border-radius: 6px; 
     font-size: 0.85rem; 
@@ -64,11 +64,13 @@
     transition: all 0.3s;
     display: flex;
     align-items: center;
-    gap: 8px;;
+    gap: 8px;
+    box-shadow: none !important;
+    outline: none !important;
 }
 
 .hdr-btn:hover {
-    background: var(--s2); 
+    background: var(--s4); 
     color: var(--tx); 
     transform: translateY(-1px) 
     scale(1.02);

@@ -1,0 +1,175 @@
+/* src/components/pages/settings/personRulesEditor.css */
+
+.person-rules-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.person-rules-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.person-rules-header .input-label {
+    margin-bottom: 0; /* Override default margin for input-label */
+}
+
+.btn-auto-fill {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    background-color: var(--acc);
+    color: var(--tx); /* Use --tx for text color */
+    border: none;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease;
+}
+
+.btn-auto-fill:hover {
+    background-color: var(--acc2);
+}
+
+.rules-column-headers {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 2fr 2fr auto; /* Matches rule-item grid */
+    gap: 10px;
+    padding: 0 10px; /* Align with rule-item padding */
+    font-weight: 600;
+    color: var(--tx2); /* Lighter text for headers */
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: -5px; /* Pull it closer to the first rule item */
+}
+
+.rules-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.rule-item {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 2fr 2fr auto; /* Person, Number, Gender, Free, Affix, Delete */
+    gap: 10px;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid var(--bd);
+    border-radius: var(--radius); /* Use --radius from theme */
+    background-color: var(--card); /* Use --card for item background */
+}
+
+.rule-select,
+.rule-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--bd);
+    border-radius: var(--radius);
+    background-color: var(--s4); /* Use --s4 for input background, consistent with Input.jsx */
+    color: var(--tx);
+    font-size: 0.9em;
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
+
+.rule-select:focus,
+.rule-input:focus {
+    outline: none;
+    border-color: var(--acc);
+    box-shadow: 0 0 0 2px var(--acc3);
+}
+
+.btn-delete-rule {
+    background: none;
+    border: none;
+    color: var(--tx2);
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+}
+
+.btn-delete-rule:hover {
+    color: var(--err);
+}
+
+.btn-add-rule {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 10px 15px;
+    border-radius: var(--radius);
+    background-color: var(--acc);
+    color: var(--tx); /* Use --tx for text color */
+    border: none;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.2s ease;
+    margin-top: 10px;
+}
+
+.btn-add-rule:hover {
+    background-color: var(--acc2);
+}
+
+.no-rules-message {
+    text-align: center;
+    color: var(--tx2);
+    padding: 20px;
+    border: 1px dashed var(--bd);
+    border-radius: var(--radius);
+    background-color: var(--s4);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .rule-item {
+        grid-template-columns: 1fr 1fr; /* Stack on smaller screens */
+    }
+    .rule-item > *:nth-child(3), /* Gender */
+    .rule-item > *:nth-child(4), /* Free Form */
+    .rule-item > *:nth-child(5) { /* Affix */
+        grid-column: span 2; /* Make these span full width */
+    }
+    .btn-delete-rule {
+        grid-column: 2 / 3; /* Position delete button */
+        justify-self: end;
+    }
+}
+
+/* Responsive adjustments for headers */
+@media (max-width: 768px) {
+    .rules-column-headers {
+        grid-template-columns: 1fr 1fr;
+    }
+    .rules-column-headers > *:nth-child(3), /* Gender */
+    .rules-column-headers > *:nth-child(4), /* Free Form */
+    .rules-column-headers > *:nth-child(5), /* Affix */
+    .rules-column-headers > *:nth-child(6) { /* Actions */
+        display: none; /* Hide on smaller screens to avoid clutter */
+    }
+}
+
+@media (max-width: 480px) {
+    .rule-item {
+        grid-template-columns: 1fr; /* Full stack on very small screens */
+    }
+    .rule-item > * {
+        grid-column: span 1;
+    }
+    .btn-delete-rule {
+        justify-self: center;
+    }
+    .rules-column-headers {
+        grid-template-columns: 1fr;
+        display: none; /* Hide headers completely on very small screens if they don't fit well */
+    }
+}

@@ -1,0 +1,122 @@
+/* 
+  Main container for the Help & Information page.
+  Keeps everything centered and sets a max width so it doesn't stretch too far on big screens.
+*/
+.help-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 30px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+/* 
+  The header section containing the title and the navigation buttons.
+  We add a subtle bottom border to separate it from the content.
+*/
+.help-header {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    border-bottom: 1px solid var(--bd);
+    padding-bottom: 20px;
+}
+
+.help-header h2 {
+    margin: 0;
+    color: var(--tx);
+}
+
+/* 
+  Wrapper for our custom Button components to lay them out horizontally.
+  Uses flex-wrap so they stack nicely on mobile devices.
+*/
+.help-nav {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* 
+  Overrides for our custom Button component when used as a tab.
+  We remove backgrounds and borders until they are hovered or active.
+*/
+.help-nav-btn {
+    background: transparent !important;
+    color: var(--tx2) !important;
+    border: 1px solid transparent !important;
+    box-shadow: none !important;
+    transition: all 0.2s ease-in-out;
+}
+
+/* Highlight the button when the user hovers over it or when it's the active tab */
+.help-nav-btn.active, .help-nav-btn:hover {
+    background: var(--s4) !important;
+    color: var(--tx) !important;
+    border-color: var(--bd) !important;
+}
+
+/* 
+  Styles for the actual content area below the header.
+  We use a card-like appearance with a subtle background and border.
+*/
+.help-section {
+    background: var(--b1);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-md, 8px);
+    padding: 25px;
+    animation: fade-in 0.3s ease-in-out;
+}
+
+/* Keep the title and its icon aligned nicely */
+.help-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--tx);
+}
+
+/* Give the icons a bit of personality using our accent color */
+.help-icon {
+    color: var(--acc);
+}
+
+/* Spacing out the FAQ list so it doesn't feel cramped */
+.help-faq-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.help-faq-list li strong {
+    color: var(--tx);
+    font-size: 1.05rem;
+}
+
+.help-faq-list li p {
+    margin: 5px 0 0 0;
+    color: var(--tx2);
+}
+
+/* Just a little highlight for the support email */
+.help-email {
+    color: var(--acc);
+}
+
+/* Simple fade-in animation so switching tabs feels smooth instead of jarring */
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

@@ -1,5 +1,4 @@
-// src/components/pages/dictionary/CreateWordTab.jsx
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
@@ -14,59 +13,65 @@ import './createWordTab.css';
 import Modal from '../../UI/Modal/Modal.jsx';
 import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
 
-
 export default function CreateWordTab() {
+    const location = useLocation();
+    const { normalizeToBase, transliterate } = useTransliterator();
+
+    // Global stores
     const addWord = useLexiconStore((state) => state.addWord);
     const checkDuplicate = useLexiconStore((state) => state.checkDuplicate);
-    
     const configData = useConfigStore(); 
     const { phonologyTypes, grammarRules, vowels, verbMarker } = configData;
     
-
-    // 2. CALLING THE NORMALIZER FUNCTION
-    const { normalizeToBase, transliterate } = useTransliterator();
-    const location = useLocation();
-
-    const [word, setWord] = useState('');
-    const [ipa, setIpa] = useState('');
-    const [wordClass, setWordClass] = useState('noun');
-    const [translation, setTranslation] = useState('');
-    const [tags, setTags] = useState('');
-    const [ideogram, setIdeogram] = useState('');
+    // Let's track all our input fields in one neat object
+    const [formData, setFormData] = useState({
+        word: '',
+        ipa: '',
+        wordClass: 'noun',
+        translation: '',
+        tags: '',
+        ideogram: ''
+    });
+    
+    const { word, ipa, wordClass, translation, tags, ideogram } = formData;
     const [isFontStudioOpen, setIsFontStudioOpen] = useState(false);
 
-    // Catch the generated word from the Generator Tab and pre-fill the inputs
+    const updateField = (field, value) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    // If the user generated a word in the Generator Tab and clicked "Add to Dictionary", we catch it here
     useEffect(() => {
         if (location.state?.prefillWord) {
-            setWord(location.state.prefillWord);
-            if (location.state.prefillIpa) setIpa(location.state.prefillIpa);
-            if (location.state.prefillClass) setWordClass(location.state.prefillClass);
+            setFormData(prev => ({
+                ...prev,
+                word: location.state.prefillWord,
+                ipa: location.state.prefillIpa || prev.ipa,
+                wordClass: location.state.prefillClass || prev.wordClass
+            }));
         }
     }, [location.state]);
 
     const isDuplicate = checkDuplicate(word, translation) && (word !== '' || translation !== '');
 
+    // Validate and save the new root to our dictionary
     const handleSave = () => {
-        if (!word.trim() || !translation.trim()) {
-            alert("Please fill in both the word and the translation.");
-            return;
-        }
+        const cleanWord = word.trim();
+        const cleanTrans = translation.trim();
+
+        if (!cleanWord || !cleanTrans) return alert("Please fill in both the word and the translation.");
+        
         if (isDuplicate) {
-            alert("This word or translation already exists in your dictionary!");
-            return;
+            return alert("This word or translation already exists in your dictionary!");
         }
 
-
-
-        // 3. CLEANING THE WORD BEFORE SAVING (e.g., if input is "maრ", it becomes "mar")
-        const safeWord = normalizeToBase(word.trim());
-
+        // Clean up the word to ensure custom alien letters map correctly to the base orthography
+        const safeWord = normalizeToBase(cleanWord);
         const validation = validateNewWord(safeWord, configData);
         
+        // Warn the user if they break their own phonotactic rules, but let them bypass it
         if (!validation.valid) {
-            const proceed = window.confirm(
-                `⚠️ Phono-Syntax Warning:\n${validation.reason}\n\nDo you want to save it as an irregular exception anyway?`
-            );
+            const proceed = window.confirm(`⚠️ Phono-Syntax Warning:\n${validation.reason}\n\nDo you want to save it as an irregular exception anyway?`);
             if (!proceed) return; // User canceled to fix the word
         }
 
@@ -76,45 +81,40 @@ export default function CreateWordTab() {
             word: safeWord,
             ipa: ipa.trim(),
             wordClass: wordClass,
-            translation: translation.trim(),
+            translation: cleanTrans,
             tags: processedTags,
             ideogram: ideogram.trim()
         });
 
-        setWord('');
-        setIpa('');
-        setWordClass('noun');
-        setTranslation('');
-        setTags('');
-        setIdeogram('');
+        // Reset the form for the next word
+        setFormData({ word: '', ipa: '', wordClass: 'noun', translation: '', tags: '', ideogram: '' });
         alert("Root saved successfully!");
     };
 
-    // 4. CLEANING THE WORD IN THE REAL-TIME PREVIEW
+    // Spin up a live preview of how this word will interact with the language's grammar rules
     const derivedWords = useMemo(() => {
         if (!word || !translation) return [];
 
-        let results = [];
-        // Clean the word so the Preview doesn't break with custom alien letters
+        const results = [];
         const safeBaseWord = normalizeToBase(word.trim());
 
         grammarRules.forEach(rule => {
-            let ruleClasses = rule.appliesTo.split(',').map(c => c.trim().toLowerCase());
+            const ruleClasses = rule.appliesTo.split(',').map(c => c.trim().toLowerCase());
+            
             if (ruleClasses.includes('all') || ruleClasses.includes(wordClass.toLowerCase())) {
+                let base = safeBaseWord;
                 
-                let base = safeBaseWord; // Use the safe base
-                
+                // If it's a verb, we strip the infinitive marker before applying affixes
                 if (wordClass === 'verb' && verbMarker) {
                     const markers = verbMarker.split(',').map(m => m.trim());
                     const match = markers.find(m => base.endsWith(m));
                     if (match) base = base.slice(0, -match.length);
                 }
 
-                let result = applyRuleToWord(base, rule, grammarRules, vowels);
+                const result = applyRuleToWord(base, rule, grammarRules, vowels);
 
-                if (result !== null) {
+                if (result) {
                     results.push({
-                        // Note: When rendering the list later, we will pass this through transliterate()
                         derivedWord: result, 
                         ruleName: rule.name,
                         translationText: `${translation} (${rule.name.toLowerCase()})`
@@ -138,7 +138,7 @@ export default function CreateWordTab() {
                         <Input 
                             label="WORD (CONLANG)" 
                             value={word}
-                            onChange={(e) => setWord(e.target.value)}
+                            onChange={(e) => updateField('word', e.target.value)}
                             placeholder="e.g., makin"
                             className="custom-font-text notranslate"
                         />
@@ -147,7 +147,7 @@ export default function CreateWordTab() {
                         <Input 
                             label="IPA (OPTIONAL)" 
                             value={ipa}
-                            onChange={(e) => setIpa(e.target.value)}
+                            onChange={(e) => updateField('ipa', e.target.value)}
                             placeholder="/ma'kin/"
                         />
                     </div>
@@ -155,7 +155,7 @@ export default function CreateWordTab() {
                         <Input 
                             label="PART OF SPEECH"
                             value={wordClass}
-                            onChange={(e) => setWordClass(e.target.value.toLowerCase())}
+                            onChange={(e) => updateField('wordClass', e.target.value.toLowerCase())}
                             placeholder="Ex: noun, verb, classifier..."
                             list="word-classes"
                         />
@@ -180,7 +180,7 @@ export default function CreateWordTab() {
                             <Input 
                                 label="IDEOGRAM / SYMBOL" 
                                 value={ideogram}
-                                onChange={(e) => setIdeogram(e.target.value)}
+                                onChange={(e) => updateField('ideogram', e.target.value)}
                                 placeholder="e.g., 水"
                                 className="ideogram-input notranslate custom-font-text"
                             />
@@ -196,7 +196,7 @@ export default function CreateWordTab() {
                 <Input 
                     label="Translation / Definition" 
                     value={translation}
-                    onChange={(e) => setTranslation(e.target.value)}
+                    onChange={(e) => updateField('translation', e.target.value)}
                     placeholder="Meaning in English..."
                 />
 
@@ -211,7 +211,7 @@ export default function CreateWordTab() {
                     <Input 
                         label="Semantic Tags" 
                         value={tags}
-                        onChange={(e) => setTags(e.target.value)}
+                        onChange={(e) => updateField('tags', e.target.value)}
                         placeholder="Ex: nature, abstract, emotion (comma separated)"
                     />
                 </div>
@@ -256,9 +256,9 @@ export default function CreateWordTab() {
                 title="Draw Custom Ideogram"
             >
                 <FontStudioModal 
-                    targetLabel={word || 'New Ideogram'} 
+                    targetLabel={word || 'New Root'} 
                     onSave={(newChar) => {
-                        setIdeogram(prev => prev + newChar);
+                        updateField('ideogram', ideogram + newChar);
                         setIsFontStudioOpen(false);
                     }} 
                     onCancel={() => setIsFontStudioOpen(false)} 

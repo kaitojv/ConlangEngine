@@ -7,12 +7,12 @@ import { Lightbulb, Edit2, Save } from 'lucide-react';
 import './matrixmodal.css';
 
 export default function MatrixModal({ wordObj }) {
-    // --- 1. GLOBAL STATE & STORE HOOKS ---
+    // Grab the language settings and dictionary from our global stores
     const grammarRules = useConfigStore((state) => state.grammarRules) || [];
     const vowels = useConfigStore((state) => state.vowels);
     const verbMarker = useConfigStore((state) => state.verbMarker);
     const cliticsRules = useConfigStore((state) => state.cliticsRules);
-    const personsConfig = useConfigStore((state) => state.personRules); // Fixed property name
+    const personsConfig = useConfigStore((state) => state.personRules); 
     const syntaxOrder = useConfigStore((state) => state.syntaxOrder) || 'SVO';
 
     const lexicon = useLexiconStore((state) => state.lexicon);
@@ -22,19 +22,21 @@ export default function MatrixModal({ wordObj }) {
     const [isEditMode, setIsEditMode] = useState(false);
     const [conjugationMode, setConjugationMode] = useState('affix');
 
-    // --- 2. LIVE DATA & DERIVED STATE ---
+    // Figure out exactly what word we're looking at and prep its base form for conjugation
     const liveWord = lexicon.find(w => w.id === wordObj?.id) || wordObj;
 
     const cleanBaseWord = useMemo(() => {
         if (!liveWord?.word) return '';
         let base = liveWord.word;
 
+        // Strip clitics if they are attached to the base word
         if (cliticsRules) {
             const clitics = cliticsRules.split(',').map(c => c.trim().replace(/^-/, '')).filter(Boolean);
             const matchedClitic = clitics.find(c => base.endsWith(c));
             if (matchedClitic) base = base.slice(0, -matchedClitic.length);
         }
 
+        // If it's a verb, we strip the infinitive marker before applying affixes
         if (liveWord.wordClass?.toLowerCase() === 'verb' && verbMarker) {
             const markers = verbMarker.split(',').map(m => m.trim().replace(/^-/, '')).filter(Boolean);
             const matchedMarker = markers.find(m => base.endsWith(m));
@@ -54,18 +56,18 @@ export default function MatrixModal({ wordObj }) {
 
     const personRules = useMemo(() => {
         const parsedPersons = getPersonRules(personsConfig);
-        return [{ name: 'BASE', affix: '', free: '', appliesTo: 'all' }, ...parsedPersons];
+        return [{ name: 'BASE', affix: '', freeForm: '', appliesTo: 'all' }, ...parsedPersons];
     }, [personsConfig]);
 
-    const hasNonStandaloneRules = applicableRules.some(rule => !rule.standalone);
-    const hasStandaloneRules = applicableRules.some(rule => rule.standalone);
-    const hasDualConjugation = personRules.some(p => p.affix && p.free);
-    
+    const hasNonStandaloneRules = applicableRules.some(rule => !rule.standalone); // Rules that need person/class
+    const hasStandaloneRules = applicableRules.some(rule => rule.standalone); // Rules that don't need person/class
+    const hasDualConjugation = personRules.some(p => p.affix && p.freeForm); // Check if any person rule has both affix and free form
+
     const showPersonColumn = personRules.length > 1 && hasNonStandaloneRules;
 
     if (!liveWord) return null;
 
-    // --- 3. HANDLERS & HELPERS ---
+    // Tools for saving manual overrides and running the morphology engine
     const handleOverrideChange = (overrideKey, value) => {
         const currentOverrides = liveWord.inflectionOverrides || {};
         updateWord(liveWord.id, {
@@ -80,17 +82,17 @@ export default function MatrixModal({ wordObj }) {
         let generatedResult = applyRuleToWord(cleanBaseWord, rule, grammarRules, vowels);
 
         if (generatedResult && !rule.standalone && person.name !== 'BASE') {
-            const useFree = (conjugationMode === 'free' && person.free) || (!person.affix && person.free);
-            const useAffix = (conjugationMode === 'affix' && person.affix) || (!person.free && person.affix);
+            const useFree = (conjugationMode === 'free' && person.freeForm) || (!person.affix && person.freeForm);
+            const useAffix = (conjugationMode === 'affix' && person.affix) || (!person.freeForm && person.affix);
 
             if (useFree) {
                 const sIndex = syntaxOrder.toUpperCase().indexOf('S');
                 const vIndex = syntaxOrder.toUpperCase().indexOf('V');
                 
                 if (vIndex !== -1 && sIndex !== -1 && vIndex < sIndex) {
-                    generatedResult = `${generatedResult} ${person.free}`;
+                    generatedResult = `${generatedResult} ${person.freeForm}`;
                 } else {
-                    generatedResult = `${person.free} ${generatedResult}`;
+                    generatedResult = `${person.freeForm} ${generatedResult}`;
                 }
             } else if (useAffix) {
                 generatedResult = applyRuleToWord(generatedResult, person, grammarRules, vowels);
@@ -100,7 +102,7 @@ export default function MatrixModal({ wordObj }) {
         return generatedResult;
     };
 
-    // --- 4. RENDER ---
+    // Time to paint the UI!
     return (
         <div className="matrix-modal-container">
             <div className="matrix-header-box">
@@ -108,34 +110,32 @@ export default function MatrixModal({ wordObj }) {
                    {isEditMode ? (
                         <>
                             <span className="matrix-base-label">Edit Root & IPA</span>
-                            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                            <div className="matrix-edit-fields-wrapper">
                                 <input 
                                     type="text"
-                                    className="matrix-input custom-font-text notranslate"
+                                    className="matrix-input matrix-edit-input-root custom-font-text notranslate"
                                     value={liveWord.word}
                                     onChange={(e) => updateWord(liveWord.id, { word: e.target.value })}
                                     placeholder="Root word"
-                                    style={{ width: '160px', fontSize: '1.2rem', padding: '4px 8px', fontWeight: 'bold' }}
                                 />
                                 <input 
                                     type="text"
-                                    className="matrix-input notranslate"
+                                    className="matrix-input matrix-edit-input-ipa notranslate"
                                     value={liveWord.ipa || ''}
                                     onChange={(e) => updateWord(liveWord.id, { ipa: e.target.value })}
                                     placeholder="IPA (e.g. /ma/)"
-                                    style={{ width: '120px', fontSize: '1rem', padding: '4px 8px' }}
                                 />
                             </div>
                         </>
                     ) : (
                         <>
                             <span className="matrix-base-label">Base Root</span>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+                            <div className="matrix-base-display-wrapper">
                                 <div className="matrix-base-word notranslate custom-font-text">
                                     {transliterate(liveWord.word)}
                                 </div>
                                 {liveWord.ipa && (
-                                    <span className="notranslate" style={{ color: 'var(--tx3)', fontSize: '1.1rem' }}>
+                                    <span className="notranslate matrix-ipa-text">
                                         /{liveWord.ipa}/
                                     </span>
                                 )}
@@ -144,7 +144,6 @@ export default function MatrixModal({ wordObj }) {
                     )}
                 </div>
                 <span className="matrix-word-class-badge">
-
                     {liveWord.wordClass}
                 </span>
             </div>
@@ -177,7 +176,7 @@ export default function MatrixModal({ wordObj }) {
                         className={`matrix-edit-btn ${isEditMode ? 'active' : ''}`}
                         onClick={() => setIsEditMode(!isEditMode)}
                     >
-                        {isEditMode ? <><Save size={16} /> Save & Close</> : <><Edit2 size={16} /> Edit Exceptions</>}
+                        {isEditMode ? <><Save size={16} /> Save & Close</> : <><Edit2 size={16} /> Edit</>}
                     </button>
                 </div>
             </div>

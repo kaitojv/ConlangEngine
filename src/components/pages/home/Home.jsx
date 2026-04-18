@@ -1,11 +1,9 @@
-// src/components/pages/home/home.jsx
-
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import FloatingBackground from './FloatingBackground.jsx';
 import { Sunrise, Sun, Moon, Sparkles, Settings2, BookA, PlusCircle, BrainCircuit, Flame, ArrowRight, Bookmark, Library } from 'lucide-react';
-import { useNavigate } from 'react-router-dom'; // Para navegar entre abas no React Router
 import Card from '@/components/UI/Card/Card.jsx';
 import './home.css';
 

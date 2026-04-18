@@ -1,0 +1,18 @@
+.rule-label {
+  font-size: 0.65rem;
+  color: var(--tx2);
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--bd);
+  padding: 5px 10px;
+  border-radius: 6px;
+  width: fit-content;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.dependency-icon {
+  color: var(--acc2);
+}

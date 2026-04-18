@@ -1,0 +1,18 @@
+.edit-modal-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.edit-modal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+}
+
+.edit-modal-save-btn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+}

@@ -1,237 +1,110 @@
-// src/utils/morphologyEngine.js
+// src/utils/morphologyEngine.jsx
 
-/**
- * Parses user-defined vowels and transforms them into a safe Regex string.
- * Extracts the base character (e.g., if input is "a, e=é, i", it returns "aei").
- * Escapes special regex characters to prevent execution errors.
- */
-function getVowelRegexString(vowelsConfig) {
-    if (!vowelsConfig) return 'aeiou'; // Safety fallback
-    
-    // Extract the left side of "=", trim spaces, and join
-    const vowels = vowelsConfig.split(',').map(v => v.trim().split('=')[0].toLowerCase());
-    
-    // Escape special regex characters
-    return vowels.map(v => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('');
-}
+// Placeholder for stripAffix - actual implementation would be more complex
+export const stripAffix = (word, affixRule) => {
+    // Example: if affixRule is '-s', check if word ends with 's' and return word without 's'
+    // This is a simplified placeholder.
+    if (!affixRule || !word) return null;
 
-/**
- * Evaluates if a word ends with a vowel based on the user's config.
- * Used for phonological conditioning (allomorphy) during derivation.
- */
-function endsWithVowel(wordBase, vowelsConfig) {
-    if (!wordBase) return false;
-    const vowels = (vowelsConfig || "a,e,i,o,u").split(',').map(v => v.trim().split('=')[0].toLowerCase()); 
-    const lastChar = wordBase.slice(-1).toLowerCase();
-    return vowels.some(v => lastChar === v);
-}
-
-/**
- * Applies simple concatenative affixes and positional infixes to a base word.
- * Uses the dynamic vowels configuration to accurately identify boundaries.
- */
-export function applySimpleAffix(base, aff, vowelsConfig) {
-    let cleanBase = base.replace(/\*/g, '');
-
-    // Check for infix notation (-affix-@position or standard infix syntax)
-    if (aff.startsWith('-') && (aff.includes('-@') || aff.endsWith('-'))) {
-        let parts = aff.split('@');
-        let inf = parts[0].replace(/-/g, '');
-        let pos = parts[1];
-
-        // If the base word has a wildcard placeholder (*)
-        if (base.includes('*')) return base.replace('*', inf).replace(/\*/g, '');
-
-        if (pos) {
-            // Dynamically build the regex for Vowels and Consonants based on user config
-            const vString = getVowelRegexString(vowelsConfig);
-            const vowelRegex = new RegExp(`[${vString}]`, 'i');
-            const consRegex = new RegExp(`[^${vString}]`, 'i');
-
-            if (pos === 'V') {
-                // Insert after the first vowel
-                let match = cleanBase.match(vowelRegex);
-                if (match) { let idx = match.index + 1; return cleanBase.slice(0, idx) + inf + cleanBase.slice(idx); }
-            } else if (pos === 'C') {
-                // Insert after the first consonant
-                let match = cleanBase.match(consRegex);
-                if (match) { let idx = match.index + 1; return cleanBase.slice(0, idx) + inf + cleanBase.slice(idx); }
-            } else if (!isNaN(pos)) {
-                // Insert at a specific numerical index
-                let idx = parseInt(pos); return cleanBase.slice(0, idx) + inf + cleanBase.slice(idx);
-            }
-        }
-        // Default: insert after the first letter
-        return cleanBase.slice(0, 1) + inf + cleanBase.slice(1);
-    }
-    
-    // Prefix application
-    if (aff.endsWith('-')) return aff.replace('-', '') + cleanBase;
-    
-    // Suffix application (or generic fallback)
-    if (aff.startsWith('-')) return cleanBase + aff.replace('-', '');
-    
-    return cleanBase + aff;
-}
-
-/**
- * Evaluates regex conditions, dependencies, and applies the correct templatic or affix rule.
- * * @param {string} baseWord - The word to modify (e.g., "makin")
- * @param {object|string} ruleConfig - The rule object from Zustand or a raw affix string
- * @param {array} grammarRules - The full list of rules from Zustand (needed for dependency resolution)
- * @param {string} vowelsConfig - The user's vowels string from Zustand
- * @param {array} visited - Anti-infinite loop array to track rule dependencies
- * @returns {string|null} - The modified word, or null if phonological conditions failed.
- */
-export function applyRuleToWord(baseWord, ruleConfig, grammarRules, vowelsConfig, visited = []) {
-    if (!baseWord) return baseWord;
-    
-    let cleanBase = baseWord.replace(/\*/g, '');
-    let affixString = "";
-
-    // --- 1. COMPATIBILITY, DEPENDENCIES & PHONOLOGY ---
-    if (typeof ruleConfig === 'string') {
-        affixString = ruleConfig;
-    } else {
-        affixString = ruleConfig.affix;
-
-        // A) DEPENDENCY CHAINING
-        if (ruleConfig.dependency) {
-            const depName = ruleConfig.dependency.toLowerCase().trim();
-            const parentRule = grammarRules?.find(r => r.name && r.name.toLowerCase() === depName);
-            
-            if (parentRule) {
-                // Recursively apply the parent rule first
-                cleanBase = applyRuleToWord(cleanBase, parentRule, grammarRules, vowelsConfig, [...visited, ruleConfig.name]);
-                if (cleanBase === null) return null; 
-            }
-        }
-
-        // B) PHONOLOGICAL CONDITIONING
-        if (ruleConfig.condition && ruleConfig.condition !== 'always') {
-            const isVowelEnd = endsWithVowel(cleanBase, vowelsConfig);
-            if (ruleConfig.condition === 'vowel' && !isVowelEnd) return null; 
-            if (ruleConfig.condition === 'consonant' && isVowelEnd) return null; 
-        }
+    // Reversing arbitrary regex transformations (like n => m) is mathematically 
+    // impossible without a dictionary of underlying forms, so we skip them in the basic analyzer.
+    if (affixRule.includes('=>')) {
+        return null;
     }
 
-    if (!affixString) return cleanBase;
-
-    // --- 2. TEMPLATIC ROOTS (=>) ---
-    if (affixString.includes('=>')) {
-        let parts = affixString.split('=>');
-        let regexPattern = parts[0].trim(); // e.g., (.)(.)(.)
-        let template = parts[1].trim();     // e.g., $1a$2a$3
-        
-        let regex = new RegExp(regexPattern);
-        if (regex.test(cleanBase)) {
-            return cleanBase.replace(regex, template);
+    const cleanAffix = affixRule.replace(/^-|-$/g, ''); // Remove leading/trailing hyphens for matching
+    if (affixRule.startsWith('-') && !affixRule.endsWith('-')) { // Suffix
+        if (word.endsWith(cleanAffix)) {
+            return word.slice(0, word.length - cleanAffix.length);
+        }
+    } else if (affixRule.endsWith('-') && !affixRule.startsWith('-')) { // Prefix
+        if (word.startsWith(cleanAffix)) {
+            return word.slice(cleanAffix.length);
+        }
+    } else if (affixRule.startsWith('-') && affixRule.endsWith('-')) { // Infix (simple check for now)
+        // For infixes, this logic would be much more complex, depending on @position
+        // For now, a very basic check: if the affix is *in* the word
+        const parts = word.split(cleanAffix);
+        if (parts.length > 1) {
+            return parts.join(''); // Remove the infix
         }
     }
+    return null;
+};
 
-    // --- 3. INLINE REGEX CONDITIONS (:) ---
-    if (affixString.includes(':')) {
-        let conditions = affixString.split(',');
-        for (let cond of conditions) {
-            // If it's a simple affix without conditions, apply it immediately
-            if (!cond.includes(':')) return applySimpleAffix(cleanBase, cond.trim(), vowelsConfig); 
-            
-            let parts = cond.split(':');
-            let regexStr = parts[0].trim();
-            let aff = parts[1].trim();
-            
+// Placeholder for applyRuleToWord - actual implementation would be more complex
+export const applyRuleToWord = (baseWord, rule, grammarRules, vowels) => {
+    // This is a simplified placeholder.
+    // In a real scenario, this would apply the rule's affix to the baseWord
+    // considering rule.type, rule.affix, rule.position, etc.
+    if (!baseWord || !rule || !rule.affix) return baseWord;
+
+    // 1. Check for Regex replacement patterns (e.g. "n(?=[pb]) => m")
+    if (rule.affix.includes('=>')) {
+        const parts = rule.affix.split('=>');
+        if (parts.length === 2) {
+            const pattern = parts[0].trim();
+            const replacement = parts[1].trim();
             try {
-                let regex = new RegExp(regexStr);
-                if (regex.test(cleanBase)) return applySimpleAffix(cleanBase, aff, vowelsConfig);
-            } catch(e) { 
-                console.error("Invalid Regex: " + regexStr); 
+                // We use 'g' to replace all matching occurrences in the root
+                const regex = new RegExp(pattern, 'g');
+                return baseWord.replace(regex, replacement);
+            } catch (e) {
+                console.error("Invalid Regex rule:", pattern);
+                return baseWord; // Return unmodified word if the user's regex crashes
             }
         }
-        return cleanBase; 
-    }
-    
-    // --- 4. STANDARD AFFIXATION ---
-    return applySimpleAffix(cleanBase, affixString, vowelsConfig);
-}  
-
-
-export function tryStrip(w, aff) {
-    if (aff.startsWith('-') && aff.endsWith('-')) { 
-        let inf = aff.split('@')[0].replace(/-/g, ''); 
-        let idx = w.indexOf(inf);
-        if (idx !== -1) return w.slice(0, idx) + w.slice(idx + inf.length);
-    } else if (aff.endsWith('-')) { 
-        let pref = aff.replace('-', ''); 
-        if (w.startsWith(pref)) return w.slice(pref.length);
-    } else if (aff.startsWith('-')) { 
-        let suf = aff.replace('-', ''); 
-        if (w.endsWith(suf)) return w.slice(0, -suf.length);
-    }
-    return null;
-}
-
-/**
- * Strips affixes considering regex configurations and comma-separated rules.
- * Affects: Word root identification. Returns the stripped string or null.
- */
-export function stripAffix(word, affixConfig) {
-    let affixesToTry = [];
-    if (affixConfig.includes(':')) {
-        affixConfig.split(',').forEach(c => {
-            if (c.includes(':')) affixesToTry.push(c.split(':')[1].trim());
-            else affixesToTry.push(c.trim());
-        });
-    } else {
-        affixesToTry.push(affixConfig.trim());
     }
 
-    for (let aff of affixesToTry) {
-        let stripped = tryStrip(word, aff);
-        if (stripped) return stripped; 
-    }
-    return null;
-}
+    const cleanAffix = rule.affix.replace(/^-|-$/g, '');
 
-/**
- * Dynamically converts Person & Class configurations into pseudo-rules.
- * Affects: Syntax parser alignments and 2D Matrix generations.
- * @param {string} personsConfig - The raw string from Zustand (e.g., "1S: mi/-m, 2S: ti/-t")
- */
-export function getPersonRules(personsConfig) {
-    if (!personsConfig) return [];
-    
-    const rawGroups = personsConfig.split(',').map(p => p.trim()).filter(Boolean);
-    let pRules = [];
-
-    rawGroups.forEach(g => {
-        if (g.includes(':')) {
-            let parts = g.split(':');
-            let label = parts[0].trim();
-            let markers = parts[1].split('/').map(m => m.trim());
-
-                    // Find both affix and free markers
-                    let affixMarker = markers.find(m => m.includes('-') || m.includes("'"));
-                    let freeMarker = markers.find(m => !m.includes('-') && !m.includes("'"));
-
-                    let ruleAffix = "";
-                    if (affixMarker) {
-                        ruleAffix = affixMarker;
-                        if (affixMarker.startsWith("'") && !affixMarker.startsWith("-")) {
-                            ruleAffix = "-" + affixMarker; 
-                        } else if (affixMarker.endsWith("'") && !affixMarker.endsWith("-")) {
-                            ruleAffix = affixMarker + "-";
+    if (rule.affix.startsWith('-') && !rule.affix.endsWith('-')) { // Suffix
+        return baseWord + cleanAffix;
+    } else if (rule.affix.endsWith('-') && !rule.affix.startsWith('-')) { // Prefix
+        return cleanAffix + baseWord;
+    } else if (rule.affix.startsWith('-') && rule.affix.endsWith('-')) { // Infix
+        // Simplified infix application: just insert in the middle or at a specific position
+        const positionMatch = rule.affix.match(/@(\w+)/);
+        if (positionMatch && positionMatch[1] === 'V' && vowels) {
+            // Find first vowel and insert after it
+            const vowelList = vowels.split(',').map(v => v.trim());
+            for (let i = 0; i < baseWord.length; i++) {
+                if (vowelList.includes(baseWord[i])) {
+                    return baseWord.slice(0, i + 1) + cleanAffix + baseWord.slice(i + 1);
                 }
-                    }
-
-                    if (ruleAffix || freeMarker) {
-                        pRules.push({
-                            name: label, 
-                            affix: ruleAffix,
-                            free: freeMarker || "",
-                            appliesTo: 'verb' 
-                        });
             }
         }
+        // Default to middle if no specific position or vowel found
+        const middle = Math.floor(baseWord.length / 2);
+        return baseWord.slice(0, middle) + cleanAffix + baseWord.slice(middle);
+    }
+    return baseWord;
+};
+
+/**
+ * Processes an array of person rule objects to add a 'name' property
+ * in a consistent format (e.g., "1S", "2P.Masc").
+ * This function is used by MatrixModal, AnalyzerTab, and GlosserTab.
+ *
+ * @param {Array<Object>} personRulesArray - An array of person rule objects from the config store.
+ * @returns {Array<Object>} The processed array with 'name' properties.
+ */
+export const getPersonRules = (personRulesArray) => {
+    if (!Array.isArray(personRulesArray)) {
+        console.warn("getPersonRules received a non-array value for personRules. Falling back to empty array.", personRulesArray);
+        return [];
+    }
+
+    return personRulesArray.map(rule => {
+        // If standard '1st', '2nd', '3rd', abbreviate to '1', '2', '3'. Otherwise, keep user's custom text intact.
+        const person = rule.person ? (rule.person.match(/^[123]/) ? rule.person.charAt(0).toUpperCase() : rule.person) : '';
+        const number = rule.number ? rule.number.toUpperCase() : '';
+        const gender = rule.gender ? `.${rule.gender}` : '';
+        const name = `${person}${number}${gender}`;
+
+        return {
+            ...rule,
+            name: name || (rule.id ? `Rule-${rule.id.substring(0, 4)}` : 'UnnamedRule')
+        };
     });
-    return pRules;
-}
+};

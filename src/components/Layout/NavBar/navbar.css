@@ -113,3 +113,28 @@
     align-items: center;
     border-bottom: 1px solid var(--bd);
 }
+
+.nav-group {
+    width: 100%;
+    margin-bottom: 12px;
+}
+
+/* Optional UX touch: make the locked items look distinct without breaking layout */
+.nb.locked {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: transparent !important;
+}
+
+.nb.locked:hover {
+    opacity: 0.8;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Resetting the default margin that H4 tags bring so it matches your old layout perfectly */
+.nav-group-label {
+    margin: 0 0 8px 0;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    opacity: 0.7;
+}

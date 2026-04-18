@@ -1,36 +1,319 @@
-.glosser-tooltip-trigger {
-    position: relative;
-    cursor: pointer;
-    border-bottom: 1px dashed var(--acc);
-    transition: all 0.2s;
+.glosser-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
-.glosser-tooltip-trigger:hover {
+.glosser-header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.glosser-description {
+    color: var(--tx2);
+    margin-bottom: 20px;
+}
+
+.glosser-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+}
+
+.glosser-mode-toggles {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-content-flex {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.glosser-modal-content {
+    display: flex;
+    flex-direction: column;
     background: var(--bg);
 }
 
-.glosser-tooltip {
-    visibility: hidden;
-    opacity: 0;
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%) translateY(10px);
-    background: var(--bg) !important;
-    border: 1px solid var(--bd);
-    padding: 12px 16px;
-    border-radius: var(--rad-sm);
-    box-shadow: var(--shadow-hover);
-    z-index: 10;
-    transition: all 0.2s ease;
-    width: max-content;
-    pointer-events: none;
-    font-family: 'Inter', sans-serif;
-    text-align: center;
+/* Reading Mode Styles */
+.glosser-reading-text {
+    line-height: 2;
+    font-size: 1.2rem;
+    color: var(--tx);
 }
 
-.glosser-tooltip-trigger:hover .glosser-tooltip {
-    visibility: visible;
-    opacity: 1;
-    transform: translateX(-50%) translateY(-5px);
+.glosser-punctuation {
+    white-space: pre-wrap;
+}
+
+.glosser-unknown-root {
+    color: var(--err);
+    border-bottom: 2px wavy var(--err);
+    cursor: help;
+}
+
+.glosser-tooltip-header {
+    font-weight: 900;
+    color: var(--acc2);
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+}
+
+.glosser-tooltip-ipa {
+    font-weight: normal;
+    color: var(--tx3);
+    font-size: 0.9rem;
+}
+
+.glosser-tooltip-class {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--tx2);
+    font-weight: bold;
+}
+
+.glosser-tooltip-translation {
+    font-size: 0.95rem;
+    color: var(--tx);
+}
+
+.glosser-tooltip-tags {
+    font-size: 0.8rem;
+    color: var(--acc);
+    margin-top: 4px;
+    font-weight: bold;
+}
+
+/* IGT Gloss Mode Styles */
+.glosser-igt-container {
+    background: var(--bg);
+    padding: 25px;
+    border-radius: var(--rad-sm, 6px);
+    border: 1px solid var(--bd);
+    margin-top: 15px;
+}
+
+.glosser-igt-words {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-end;
+    margin-bottom: 20px;
+}
+
+.glosser-igt-punctuation {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--tx);
+    align-self: flex-start;
+}
+
+.glosser-igt-word-column {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.glosser-igt-morphemes {
+    font-weight: 800;
+    font-size: 1.15rem;
+    color: var(--acc2);
+}
+
+.glosser-igt-glosses {
+    color: var(--tx2);
+    font-size: 0.9rem;
+    text-transform: lowercase;
+}
+
+.glosser-igt-unknown-word {
+    font-weight: 800;
+    font-size: 1.15rem;
+    color: var(--err);
+}
+
+.glosser-igt-unknown-gloss {
+    color: var(--err);
+    font-size: 0.9rem;
+}
+
+.glosser-igt-translation-area {
+    border-top: 1px dashed var(--bd);
+    padding-top: 15px;
+}
+
+.glosser-igt-translation-input {
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    border: none;
+    color: var(--tx);
+    font-style: italic;
+    font-size: 1.1rem;
+    outline: none;
+}
+
+.glosser-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.glosser-header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.glosser-description {
+    color: var(--tx2);
+    margin-bottom: 20px;
+}
+
+.glosser-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+}
+
+.glosser-mode-toggles {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-content-flex {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.glosser-modal-content {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+}
+
+/* Reading Mode Styles */
+.glosser-reading-text {
+    line-height: 2;
+    font-size: 1.2rem;
+    color: var(--tx);
+}
+
+.glosser-punctuation {
+    white-space: pre-wrap;
+}
+
+.glosser-unknown-root {
+    color: var(--err);
+    border-bottom: 2px wavy var(--err);
+    cursor: help;
+}
+
+.glosser-tooltip-header {
+    font-weight: 900;
+    color: var(--acc2);
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+}
+
+.glosser-tooltip-ipa {
+    font-weight: normal;
+    color: var(--tx3);
+    font-size: 0.9rem;
+}
+
+.glosser-tooltip-class {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--tx2);
+    font-weight: bold;
+}
+
+.glosser-tooltip-translation {
+    font-size: 0.95rem;
+    color: var(--tx);
+}
+
+.glosser-tooltip-tags {
+    font-size: 0.8rem;
+    color: var(--acc);
+    margin-top: 4px;
+    font-weight: bold;
+}
+
+/* IGT Gloss Mode Styles */
+.glosser-igt-container {
+    background: var(--bg);
+    padding: 25px;
+    border-radius: var(--rad-sm, 6px);
+    border: 1px solid var(--bd);
+    margin-top: 15px;
+}
+
+.glosser-igt-words {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-end;
+    margin-bottom: 20px;
+}
+
+.glosser-igt-punctuation {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--tx);
+    align-self: flex-start;
+}
+
+.glosser-igt-word-column {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.glosser-igt-morphemes {
+    font-weight: 800;
+    font-size: 1.15rem;
+    color: var(--acc2);
+}
+
+.glosser-igt-glosses {
+    color: var(--tx2);
+    font-size: 0.9rem;
+    text-transform: lowercase;
+}
+
+.glosser-igt-unknown-word {
+    font-weight: 800;
+    font-size: 1.15rem;
+    color: var(--err);
+}
+
+.glosser-igt-unknown-gloss {
+    color: var(--err);
+    font-size: 0.9rem;
+}
+
+.glosser-igt-translation-area {
+    border-top: 1px dashed var(--bd);
+    padding-top: 15px;
+}
+
+.glosser-igt-translation-input {
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    border: none;
+    color: var(--tx);
+    font-style: italic;
+    font-size: 1.1rem;
+    outline: none;
 }
