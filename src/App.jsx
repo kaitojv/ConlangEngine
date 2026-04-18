@@ -94,7 +94,6 @@ function App(){
       <main className="content">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
           <Route path="/help" element={<HelpTab />} />
           
           <Route path="/dictionary" element={<ProtectedRoute><Dictionary /></ProtectedRoute>} />
@@ -107,7 +106,7 @@ function App(){
           <Route path="/wiki" element={<ProtectedRoute><WikiTab /></ProtectedRoute>} />
           <Route path="/flashcards" element={<ProtectedRoute><FlashcardsTab /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><ProfileTab /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProfileTab />} />
         </Routes>
       </main>
       <Footer />

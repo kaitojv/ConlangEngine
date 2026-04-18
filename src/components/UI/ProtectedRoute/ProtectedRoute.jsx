@@ -23,7 +23,7 @@ export default function ProtectedRoute({ children }) {
     }
 
     if (!isAuthenticated) {
-        return <Navigate to={`/login?redirectTo=${location.pathname}`} replace />;
+        return <Navigate to={`/profile?redirectTo=${location.pathname}`} replace />;
     }
 
     return children;

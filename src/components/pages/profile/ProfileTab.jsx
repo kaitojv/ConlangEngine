@@ -9,6 +9,8 @@ import Input from '@/components/UI/Input/Input.jsx';
 import Modal from '@/components/UI/Modal/Modal.jsx';
 import { CloudUpload, CloudDownload, Trophy, Activity, User, LogOut, Globe, MessageCircle, BookOpen, Crown, Cog, Puzzle, Tags, Flame, GitBranch, Share2, Heart, Coffee, PieChart, Sparkles, Book, Library, BrainCircuit, ScrollText, Network, Ear, ArrowLeftRight, Layers, Volume2, PenTool, Shapes, Download, Trash2 } from 'lucide-react';
 import './profileTab.css';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ALLOWED_REDIRECTS } from '../../../App.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
 
 const BADGES = [
@@ -43,6 +45,9 @@ export default function ProfileTab() {
     const localProjects = useProjectStore(state => state.localProjects);
     const { transliterate } = useTransliterator();
     
+    const navigate = useNavigate();
+    const location = useLocation();
+    
     // Grab the lexicon, but safely wrap it just in case local storage got corrupted
     const rawLexicon = useLexiconStore((state) => state.lexicon);
     const setLexicon = useLexiconStore((state) => state.setLexicon);
@@ -62,6 +67,19 @@ export default function ProfileTab() {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
         return () => subscription.unsubscribe();
     }, []);
+
+    // Handle redirections after successfully logging in
+    useEffect(() => {
+        if (session) {
+            const searchParams = new URLSearchParams(location.search);
+            const requestedRedirect = searchParams.get('redirectTo');
+            
+            if (requestedRedirect) {
+                const safeRedirectUrl = ALLOWED_REDIRECTS.includes(requestedRedirect) ? requestedRedirect : '/';
+                navigate(safeRedirectUrl, { replace: true });
+            }
+        }
+    }, [session, location.search, navigate]);
 
     // Check the user's progress and unlock any achievements they've earned
     useEffect(() => {
