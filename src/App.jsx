@@ -24,7 +24,6 @@ import ConlangsTab from './components/pages/conlangstab/ConlangsTab.jsx';
 import Footer from './components/Layout/Footer/Footer.jsx';
 import FloatingKeyboard from './components/UI/FloatingKeyboard/FloatingKeyboard.jsx';
 import ProtectedRoute from './components/UI/ProtectedRoute/ProtectedRoute.jsx';
-import Login from './components/pages/login/Login.jsx';
 import HelpTab from './components/pages/help/HelpTab.jsx'; // Adjust import path if you named the folder differently
 
 // Define your allowlist of safe relative routes based on your actual Route paths
