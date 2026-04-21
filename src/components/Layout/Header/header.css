@@ -1,8 +1,9 @@
 /* src/components/Header.css */
 
 .hdr {
-    background: var(--bg) !important;
-    backdrop-filter: blur(20px); /* Apply a blur effect to the background */
+    background: color-mix(in srgb, var(--bg) 80%, transparent) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--bd);
     padding: 15px 25px;
     position: sticky; /* Make the header sticky */
@@ -15,13 +16,18 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    flex-wrap: wrap;
     gap: 15px;
     max-width: 1200px;
     margin: 0 auto;
 }
 
-.hdr-left{
+.hdr-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.hdr-actions {
     display: flex;
     align-items: center;
     gap: 15px;
@@ -48,9 +54,28 @@
     padding: 4px; 
     border-radius: 8px; 
     border: 1px solid var(--bd);
-    margin-left: auto;
     color: var(--tx2);
 } 
+
+.profile-header-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--s4);
+    color: var(--tx);
+    border: 1px solid var(--bd);
+    transition: all 0.3s ease;
+}
+
+.profile-header-button:hover {
+    background-color: var(--acc);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
 
 .hdr-btn{
     background: transparent; 
@@ -72,8 +97,8 @@
 .hdr-btn:hover {
     background: var(--s4); 
     color: var(--tx); 
-    transform: translateY(-1px) 
-    scale(1.02);
+    transform: translateY(-1px) scale(1.02);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
 }
 
 .app-dinamic-title{
@@ -90,12 +115,17 @@
 .hdr-badge {
     background: linear-gradient(135deg, var(--acc), var(--acc2));
     font-size: 0.7rem;
-    color: white !important; /*Ensure the text color is white if no action is taken */
+    color: white !important;
     -webkit-text-fill-color: white !important;
-    padding: 4px  10px;
+    padding: 4px 10px;
     border-radius: 12px;
     font-weight: 900;
     letter-spacing: 1px;
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    white-space: nowrap;
+    gap: 4px;
 }
 
 .hdr-badge.live {
@@ -113,4 +143,8 @@
     width: 18px;
     height: 18px;
     stroke-width: 2px;
+}
+
+.hidden-file-input {
+    display: none;
 }

@@ -2,11 +2,45 @@ import { useState } from 'react';
 import './ipachart.css'
 import Button from '../Buttons/Buttons';
 
+const COLUMNS = ['Bilabial', 'Labiodental', 'Dental', 'Alveolar', 'Postalveolar', 'Retroflex', 'Palatal', 'Velar', 'Uvular', 'Pharyngeal', 'Glottal'];
+
+const PULMONIC = [
+    { row: 'Plosive', cells: [['p','b'], null, null, ['t','d'], null, ['ʈ','ɖ'], ['c','ɟ'], ['k','g'], ['q','ɢ'], null, ['ʔ', null]] },
+    { row: 'Nasal', cells: [['m', null], ['ɱ', null], null, ['n', null], null, ['ɳ', null], ['ɲ', null], ['ŋ', null], ['ɴ', null], null, null] },
+    { row: 'Trill', cells: [['ʙ', null], null, null, ['r', null], null, null, null, null, ['ʀ', null], null, null] },
+    { row: 'Tap or Flap', cells: [[null, 'ⱱ'], null, null, ['ɾ', null], null, ['ɽ', null], null, null, null, null, null] },
+    { row: 'Fricative', cells: [['ɸ','β'], ['f','v'], ['θ','ð'], ['s','z'], ['ʃ','ʒ'], ['ʂ','ʐ'], ['ç','ʝ'], ['x','ɣ'], ['χ','ʁ'], ['ħ','ʕ'], ['h','ɦ']] },
+    { row: 'Lateral Fricative', cells: [null, null, null, ['ɬ','ɮ'], null, null, null, null, null, null, null] },
+    { row: 'Approximant', cells: [null, ['ʋ', null], null, ['ɹ', null], null, ['ɻ', null], ['j', null], ['ɰ', null], null, null, null] },
+    { row: 'Lateral Approximant', cells: [null, null, null, ['l', null], null, ['ɭ', null], ['ʎ', null], ['ʟ', null], null, null, null] }
+];
+
+const NON_PULMONIC = [
+    { title: 'Clicks', sounds: ['ʘ', 'ǀ', 'ǃ', 'ǂ', 'ǁ'] },
+    { title: 'Voiced Implosives', sounds: ['ɓ', 'ɗ', 'ʄ', 'ɠ', 'ʛ'] },
+    { title: 'Ejectives', sounds: ['pʼ', 'tʼ', 'kʼ', 'sʼ'] }
+];
+
+const OTHER_CONSONANTS = [
+    'ʍ', 'w', 'ɥ', 'ʜ', 'ʢ', 'ʡ', 'ɕ', 'ʑ', 'ɺ', 'ɧ', 't͡s', 'd͡z', 't͡ʃ', 'd͡ʒ', 't͡ɕ', 'd͡ʑ'
+];
+
+const VOWELS = [
+    // format: [Front_Unrounded, Front_Rounded, Central_Unrounded, Central_Rounded, Back_Unrounded, Back_Rounded]
+    { label: 'Close', sounds: ['i','y','ɨ','ʉ','ɯ','u'] },
+    { label: 'Near-close', sounds: ['ɪ','ʏ',null,null,null,'ʊ'] },
+    { label: 'Close-mid', sounds: ['e','ø','ɘ','ɵ','ɤ','o'] },
+    { label: 'Mid', sounds: [null,null,'ə',null,null,null] },
+    { label: 'Open-mid', sounds: ['ɛ','œ','ɜ','ɞ','ʌ','ɔ'] },
+    { label: 'Near-open', sounds: ['æ',null,'ɐ',null,null,null] },
+    { label: 'Open', sounds: ['a','ɶ',null,null,'ɑ','ɒ'] },
+];
 
 export default function IpaChart({ consonants = '', setConsonants, vowels = '', setVowels }) {
     const [isOpen, setIsOpen] = useState(false);
     
     const togglePhoneme = (phoneme, type) => {
+        if (!phoneme) return;
         const currentStr = type === 'cons' ? consonants : vowels;
         const setStr = type === 'cons' ? setConsonants : setVowels;
 
@@ -16,15 +50,21 @@ export default function IpaChart({ consonants = '', setConsonants, vowels = '', 
         if (idx > -1) { arr.splice(idx, 1); } else { arr.push(phoneme); }
         setStr(arr.join(', '));
     };
-    const renderPh = (phoneme, type) => {
+
+    const isSelected = (phoneme, type) => {
+        if (!phoneme) return false;
         const currentStr = type === 'cons' ? consonants : vowels;
-        const isSelected = currentStr.split(',').map(s => s.trim().split('=')[0]).includes(phoneme);
-        
+        return currentStr.split(',').map(s => s.trim().split('=')[0]).includes(phoneme);
+    };
+
+    const renderPh = (phoneme, type) => {
+        if (!phoneme) return <span className="ph empty"></span>;
         return (
             <span 
                 key={phoneme}
-                className={`ph ${isSelected ? 'selected' : ''}`} 
+                className={`ph ${isSelected(phoneme, type) ? 'selected' : ''}`} 
                 onClick={() => togglePhoneme(phoneme, type)}
+                title={`Toggle ${phoneme}`}
             >
                 {phoneme}
             </span>
@@ -32,26 +72,120 @@ export default function IpaChart({ consonants = '', setConsonants, vowels = '', 
     };
 
     return (
-        <div className='ipa-chart'>
-            <Button className='ipa-btn-toggle' onClick={() => setIsOpen(!isOpen)} variant="save">
-                {isOpen ? 'Hide IPA Chart' : 'IPA Chart'}
+        <div className='ipa-chart-container'>
+            <Button className='ipa-btn-toggle' onClick={() => setIsOpen(!isOpen)} variant={isOpen ? "default" : "save"}>
+                {isOpen ? 'Close IPA Chart' : 'Interactive Visual IPA Chart'}
             </Button>
             
             {isOpen && (
-                <div className="ipa-map-wrap" style={{ animation: 'fadeIn 0.3s', margin: '15px 0 20px 0' }}>
+                <div className="ipa-map-wrap">
+                    {/* PULMONIC CONSONANTS */}
+                    <h3 className="ipa-section-title">Pulmonic Consonants</h3>
                     <div className="ipa-wrapper">
-                        <table className="ipa-chart">
-                            <thead><tr><th></th><th>Bilabial</th><th>Labiodental</th><th>Dental</th><th>Alveolar</th><th>Postalveolar</th><th>Retroflex</th><th>Palatal</th><th>Velar</th><th>Uvular</th><th>Pharyngeal</th><th>Glottal</th></tr></thead>
+                        <table className="ipa-chart-table">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    {COLUMNS.map(col => <th key={col}>{col}</th>)}
+                                </tr>
+                            </thead>
                             <tbody>
-                                <tr><th>Plosive</th><td><div className="ipa-cell">{renderPh('p', 'cons')}{renderPh('b', 'cons')}</div></td><td></td><td></td><td><div className="ipa-cell">{renderPh('t', 'cons')}{renderPh('d', 'cons')}</div></td><td></td><td><div className="ipa-cell">{renderPh('ʈ', 'cons')}{renderPh('ɖ', 'cons')}</div></td><td><div className="ipa-cell">{renderPh('c', 'cons')}{renderPh('ɟ', 'cons')}</div></td><td><div className="ipa-cell">{renderPh('k', 'cons')}{renderPh('g', 'cons')}</div></td><td><div className="ipa-cell">{renderPh('q', 'cons')}{renderPh('ɢ', 'cons')}</div></td><td className="imp"></td><td><div className="ipa-cell">{renderPh('ʔ', 'cons')}</div></td></tr>
-                                <tr><th>Nasal</th><td><div className="ipa-cell">{renderPh('m', 'cons')}</div></td><td><div className="ipa-cell">{renderPh('ɱ', 'cons')}</div></td><td></td><td><div className="ipa-cell">{renderPh('n', 'cons')}</div></td><td></td><td><div className="ipa-cell">{renderPh('ɳ', 'cons')}</div></td><td><div className="ipa-cell">{renderPh('ɲ', 'cons')}</div></td><td><div className="ipa-cell">{renderPh('ŋ', 'cons')}</div></td><td><div className="ipa-cell">{renderPh('ɴ', 'cons')}</div></td><td className="imp"></td><td className="imp"></td></tr>
-                                <tr><th>Fricative</th><td><div className="ipa-cell">{renderPh('ɸ', 'cons')}{renderPh('β', 'cons')}</div></td><td><div className="ipa-cell">{renderPh('f', 'cons')}{renderPh('v', 'cons')}</div></td><td><div className="ipa-cell">{renderPh('θ', 'cons')}{renderPh('ð', 'cons')}</div></td><td><div className="ipa-cell">{renderPh('s', 'cons')}{renderPh('z', 'cons')}</div></td><td><div className="ipa-cell">{renderPh('ʃ', 'cons')}{renderPh('ʒ', 'cons')}</div></td><td><div className="ipa-cell">{renderPh('ʂ', 'cons')}{renderPh('ʐ', 'cons')}</div></td><td><div className="ipa-cell">{renderPh('ç', 'cons')}{renderPh('ʝ', 'cons')}</div></td><td><div className="ipa-cell">{renderPh('x', 'cons')}{renderPh('ɣ', 'cons')}</div></td><td><div className="ipa-cell">{renderPh('χ', 'cons')}{renderPh('ʁ', 'cons')}</div></td><td><div className="ipa-cell">{renderPh('ħ', 'cons')}{renderPh('ʕ', 'cons')}</div></td><td><div className="ipa-cell">{renderPh('h', 'cons')}{renderPh('ɦ', 'cons')}</div></td></tr>
-                                <tr><th>Approximant</th><td></td><td><div className="ipa-cell">{renderPh('ʋ', 'cons')}</div></td><td></td><td><div className="ipa-cell">{renderPh('ɹ', 'cons')}</div></td><td></td><td><div className="ipa-cell">{renderPh('ɻ', 'cons')}</div></td><td><div className="ipa-cell">{renderPh('j', 'cons')}</div></td><td><div className="ipa-cell">{renderPh('ɰ', 'cons')}</div></td><td></td><td></td><td className="imp"></td></tr>
+                                {PULMONIC.map((rowData, i) => (
+                                    <tr key={rowData.row}>
+                                        <th>{rowData.row}</th>
+                                        {rowData.cells.map((cell, j) => (
+                                            <td key={j} className={!cell ? 'imp' : ''}>
+                                                {cell && (
+                                                    <div className="ipa-cell">
+                                                        {renderPh(cell[0], 'cons')}
+                                                        {renderPh(cell[1], 'cons')}
+                                                    </div>
+                                                )}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     </div>
-                    <div className="vowel-grid">
-                        {renderPh('i', 'vow')}{renderPh('y', 'vow')}{renderPh('u', 'vow')}{renderPh('e', 'vow')}{renderPh('o', 'vow')}{renderPh('ɛ', 'vow')}{renderPh('ɔ', 'vow')}{renderPh('æ', 'vow')}{renderPh('a', 'vow')}{renderPh('ɑ', 'vow')}
+
+                    {/* NON-PULMONIC & OTHER */}
+                    <div className="ipa-extra-sections">
+                        <div className="ipa-extra-box">
+                            <h3 className="ipa-section-title">Non-Pulmonic</h3>
+                            <div className="ipa-non-pulmonic">
+                                {NON_PULMONIC.map(group => (
+                                    <div key={group.title} className="np-group">
+                                        <span className="np-title">{group.title}</span>
+                                        <div className="np-sounds">
+                                            {group.sounds.map(s => renderPh(s, 'cons'))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="ipa-extra-box">
+                            <h3 className="ipa-section-title">Co-articulated & Other</h3>
+                            <div className="ipa-other-sounds">
+                                {OTHER_CONSONANTS.map(s => renderPh(s, 'cons'))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* VOWEL TRAPEZOID */}
+                    <h3 className="ipa-section-title">Vowels</h3>
+                    <div className="ipa-vowel-container">
+                        <div className="vowel-headers">
+                            <span>Front</span>
+                            <span>Central</span>
+                            <span>Back</span>
+                        </div>
+                        <div className="vowel-trapezoid" style={{ position: 'relative' }}>
+                            <svg style={{ position: 'absolute', top: '24px', bottom: '24px', left: '80px', width: 'calc(100% - 80px)', height: 'calc(100% - 48px)', zIndex: 0, pointerEvents: 'none' }}>
+                                {/* Outer Trapezoid */}
+                                <polygon points="10%,0 90%,0 90%,100% 50%,100%" fill="none" stroke="var(--bd)" strokeWidth="2" />
+                                {/* Central Line */}
+                                <line x1="50%" y1="0" x2="70%" y2="100%" stroke="var(--bd)" strokeWidth="2" />
+                                {/* Close-mid Horizontal Line */}
+                                <line x1="23.33%" y1="33.33%" x2="90%" y2="33.33%" stroke="var(--bd)" strokeWidth="2" />
+                                {/* Open-mid Horizontal Line */}
+                                <line x1="36.66%" y1="66.66%" x2="90%" y2="66.66%" stroke="var(--bd)" strokeWidth="2" />
+                            </svg>
+                            
+                            {VOWELS.map((row, i) => {
+                                const frontLeft = 10 + (i * 6.666);
+                                const centralLeft = 50 + (i * 3.333);
+                                const backLeft = 90;
+
+                                return (
+                                    <div key={row.label || i} className="vowel-row">
+                                        <span className="vowel-row-label">{row.label}</span>
+                                        
+                                        {(row.sounds[0] || row.sounds[1]) && (
+                                            <div className="vowel-cell-group front" style={{ left: `${frontLeft}%` }}>
+                                                {renderPh(row.sounds[0], 'vow')}
+                                                {renderPh(row.sounds[1], 'vow')}
+                                            </div>
+                                        )}
+                                        
+                                        {(row.sounds[2] || row.sounds[3]) && (
+                                            <div className="vowel-cell-group central" style={{ left: `${centralLeft}%` }}>
+                                                {renderPh(row.sounds[2], 'vow')}
+                                                {renderPh(row.sounds[3], 'vow')}
+                                            </div>
+                                        )}
+
+                                        {(row.sounds[4] || row.sounds[5]) && (
+                                            <div className="vowel-cell-group back" style={{ left: `${backLeft}%` }}>
+                                                {renderPh(row.sounds[4], 'vow')}
+                                                {renderPh(row.sounds[5], 'vow')}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             )}

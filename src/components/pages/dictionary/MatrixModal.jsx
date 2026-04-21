@@ -17,10 +17,16 @@ export default function MatrixModal({ wordObj }) {
 
     const lexicon = useLexiconStore((state) => state.lexicon);
     const updateWord = useLexiconStore((state) => state.updateWord);
+    const addWord = useLexiconStore((state) => state.addWord);
 
     const { transliterate } = useTransliterator();
     const [isEditMode, setIsEditMode] = useState(false);
     const [conjugationMode, setConjugationMode] = useState('affix');
+    
+    // State for saving derivations
+    const [derivationToSave, setDerivationToSave] = useState(null);
+    const [derivationTranslation, setDerivationTranslation] = useState('');
+    const [derivationClass, setDerivationClass] = useState('');
 
     // Figure out exactly what word we're looking at and prep its base form for conjugation
     const liveWord = lexicon.find(w => w.id === wordObj?.id) || wordObj;
@@ -181,6 +187,50 @@ export default function MatrixModal({ wordObj }) {
                 </div>
             </div>
 
+            {derivationToSave && (
+                <div style={{ background: 'var(--s2)', padding: '15px', borderRadius: '8px', marginBottom: '15px', border: '1px solid var(--acc)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <h4 style={{ margin: 0, color: 'var(--tx)' }}>
+                            Save Derived Word: <span className="custom-font-text notranslate" style={{ color: 'var(--acc)', fontSize: '1.2em', marginLeft: '5px' }}>{transliterate(derivationToSave.word)}</span>
+                        </h4>
+                        <button onClick={() => setDerivationToSave(null)} style={{ background: 'none', border: 'none', color: 'var(--tx3)', cursor: 'pointer', fontSize: '0.9rem' }}>Cancel</button>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <div style={{ flex: 2 }}>
+                            <input 
+                                type="text" 
+                                className="fi" 
+                                placeholder="Translation (e.g., cats)" 
+                                value={derivationTranslation} 
+                                onChange={e => setDerivationTranslation(e.target.value)} 
+                                autoFocus
+                            />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <select className="fi" value={derivationClass} onChange={e => setDerivationClass(e.target.value)}>
+                                <option value="noun">Noun</option>
+                                <option value="verb">Verb</option>
+                                <option value="adjective">Adjective</option>
+                                <option value="adverb">Adverb</option>
+                                <option value="pronoun">Pronoun</option>
+                                <option value="particle">Particle</option>
+                            </select>
+                        </div>
+                        <button 
+                            className="btn-save btn-base" 
+                            onClick={() => {
+                                if (!derivationTranslation.trim()) return alert("Translation required");
+                                addWord({ word: derivationToSave.word, wordClass: derivationClass, translation: derivationTranslation.trim() });
+                                setDerivationToSave(null);
+                                alert("Saved to dictionary!");
+                            }}
+                        >
+                            Save
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className="matrix-table-container">
                 <table className="matrix-table">
                     <thead>
@@ -239,9 +289,24 @@ export default function MatrixModal({ wordObj }) {
                                                     onChange={(e) => handleOverrideChange(overrideKey, e.target.value)}
                                                 />
                                             ) : (
-                                                <span className={`notranslate matrix-output custom-font-text ${manualValue ? 'overridden' : ''}`}>
-                                                    {finalWordToDisplay ? transliterate(finalWordToDisplay) : <span className="matrix-invalid">Invalid</span>}
-                                                </span>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                    <span className={`notranslate matrix-output custom-font-text ${manualValue ? 'overridden' : ''}`}>
+                                                        {finalWordToDisplay ? transliterate(finalWordToDisplay) : <span className="matrix-invalid">Invalid</span>}
+                                                    </span>
+                                                    {finalWordToDisplay && (
+                                                        <button 
+                                                            className="matrix-quick-save-btn"
+                                                            onClick={() => {
+                                                                setDerivationToSave({ word: finalWordToDisplay, ruleName: rule.name, personName: person.name });
+                                                                setDerivationTranslation('');
+                                                                setDerivationClass(liveWord.wordClass);
+                                                            }}
+                                                            title="Save to Lexicon"
+                                                        >
+                                                            +
+                                                        </button>
+                                                    )}
+                                                </div>
                                             )}
                                         </td>
                                     );

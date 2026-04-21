@@ -1,8 +1,35 @@
 // src/hooks/useTransliterator.jsx
 import { useConfigStore } from '../store/useConfigStore.jsx';
 
+const SCRIPT_MAPS = {
+    runic: {
+        'f': 'ᚠ', 'u': 'ᚢ', 'th': 'ᚦ', 'a': 'ᚨ', 'r': 'ᚱ', 'k': 'ᚲ', 'g': 'ᚷ', 'w': 'ᚹ',
+        'h': 'ᚺ', 'n': 'ᚾ', 'i': 'ᛁ', 'j': 'ᛃ', 'ei': 'ᛇ', 'p': 'ᛈ', 'z': 'ᛉ', 's': 'ᛊ',
+        't': 'ᛏ', 'b': 'ᛒ', 'e': 'ᛖ', 'm': 'ᛗ', 'l': 'ᛚ', 'ng': 'ᛜ', 'd': 'ᛞ', 'o': 'ᛟ'
+    },
+    cyrillic: {
+        'shch': 'щ', 'sh': 'ш', 'zh': 'ж', 'ch': 'ч', 'ts': 'ц', 'ya': 'я', 'yu': 'ю',
+        'a': 'а', 'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д', 'e': 'е', 'z': 'з', 'i': 'и',
+        'k': 'к', 'l': 'л', 'm': 'м', 'n': 'н', 'o': 'о', 'p': 'п', 'r': 'р', 's': 'с',
+        't': 'т', 'u': 'у', 'f': 'ф', 'h': 'х', 'y': 'ы'
+    },
+    greek: {
+        'th': 'θ', 'ph': 'φ', 'ch': 'χ', 'ps': 'ψ',
+        'a': 'α', 'b': 'β', 'g': 'γ', 'd': 'δ', 'e': 'ε', 'z': 'ζ', 'h': 'η', 'i': 'ι',
+        'k': 'κ', 'l': 'λ', 'm': 'μ', 'n': 'ν', 'x': 'ξ', 'o': 'ο', 'p': 'π', 'r': 'ρ',
+        's': 'σ', 't': 'τ', 'y': 'υ', 'w': 'ω'
+    },
+    georgian: {
+        'ts': 'ც', 'dz': 'ძ', 'ch': 'ჩ', 'j': 'ჯ', 'sh': 'შ', 'zh': 'ჟ', 'gh': 'ღ', 'kh': 'ხ',
+        'a': 'ა', 'b': 'ბ', 'g': 'გ', 'd': 'დ', 'e': 'ე', 'v': 'ვ', 'z': 'ზ', 't': 'თ',
+        'i': 'ი', 'k': 'კ', 'l': 'ლ', 'm': 'მ', 'n': 'ნ', 'o': 'ო', 'p': 'პ', 'r': 'რ',
+        's': 'ს', 'u': 'უ', 'p': 'ფ', 'q': 'ქ', 'h': 'ჰ'
+    }
+};
+
 export function useTransliterator() {
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
+    const alphabeticScript = useConfigStore((state) => state.alphabeticScript);
     const syllabaryMap = useConfigStore((state) => state.syllabaryMap) || {};
     
     // Fetching consonants and vowels from Settings
@@ -36,19 +63,39 @@ export function useTransliterator() {
         if (phonologyTypes === 'alphabetic' || !phonologyTypes) {
             const { mapToText } = getOrthographyMap();
             
-            // If the user hasn't configured any "=", return the normal word
-            if (Object.keys(mapToText).length === 0) return cleanWord;
-
-            // If configured, scan the word and replace the characters
             let result = cleanWord;
-            for (const [base, text] of Object.entries(mapToText)) {
-                const regex = new RegExp(base, 'g');
-                result = result.replace(regex, text);
+
+            // Apply pre-existing script mapping if chosen
+            if (alphabeticScript && alphabeticScript !== 'latin') {
+                const scriptMap = SCRIPT_MAPS[alphabeticScript] || {};
+                const sortedKeys = Object.keys(scriptMap).sort((a, b) => b.length - a.length);
+                let out = "";
+                let i = 0;
+                while (i < result.length) {
+                    let match = null;
+                    for (let key of sortedKeys) {
+                        if (result.startsWith(key, i)) {
+                            match = key; break;
+                        }
+                    }
+                    if (match) { out += scriptMap[match]; i += match.length; } 
+                    else { out += result[i]; i++; }
+                }
+                result = out;
             }
+
+            // Apply custom "=" mappings on top
+            if (Object.keys(mapToText).length > 0) {
+                for (const [base, text] of Object.entries(mapToText)) {
+                    const regex = new RegExp(base, 'g');
+                    result = result.replace(regex, text);
+                }
+            }
+            
             return result;
         }
 
-        if (phonologyTypes === 'syllabic') {
+        if (phonologyTypes === 'syllabic' || phonologyTypes === 'featural_block') {
             const syllables = Object.keys(syllabaryMap).sort((a, b) => b.length - a.length);
             let out = "";
             let i = 0;
@@ -87,6 +134,16 @@ export function useTransliterator() {
             const regex = new RegExp(escapedText, 'g');
             baseWord = baseWord.replace(regex, base);
         }
+
+        if (alphabeticScript && alphabeticScript !== 'latin') {
+            const scriptMap = SCRIPT_MAPS[alphabeticScript] || {};
+            for (const [base, text] of Object.entries(scriptMap)) {
+                const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regex = new RegExp(escapedText, 'g');
+                baseWord = baseWord.replace(regex, base);
+            }
+        }
+
         return baseWord;
     };
 

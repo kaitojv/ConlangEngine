@@ -9,7 +9,9 @@ import './helptab.css';
 const About = () => (
     <div className="help-section">
         <h3 className="help-section-title"><Info className="help-icon" /> About ConlangEngine</h3>
-        <p>Welcome to ConlangEngine! This tool is designed to help you build, manage, and evolve your constructed languages in a unified workspace.</p>
+        <p>Welcome to <strong>ConlangEngine</strong>! This tool is built by conlangers, for conlangers.</p>
+        <p>ConlangEngine provides a unified, blazing-fast, local-first workspace to build, manage, and evolve your constructed languages. Instead of scattering your conlang across spreadsheets and text documents, you can use our built-in Dictionary, Grammar engine, Word Generator, and Text Analyzer all in one place.</p>
+        <p>Your data is stored locally in your browser by default, meaning you can work offline with zero lag. You can also export your work to JSON or PDF at any time, or use our Cloud Sync (LIVE) features to backup and sync your work across devices.</p>
     </div>
 );
 
@@ -17,8 +19,24 @@ const About = () => (
 const HowToUse = () => (
     <div className="help-section">
         <h3 className="help-section-title"><BookOpen className="help-icon" /> How to Use</h3>
-        <p>Here you can find instructions on how to use the various features of ConlangEngine.</p>
-        {/* You can add your tutorial steps or guide here */}
+        <div className="help-guide-grid">
+            <div className="guide-card">
+                <h4>1. Start with Settings</h4>
+                <p>Head over to the <strong>Settings</strong> tab to define your language's Phonology (vowels, consonants, phonotactics) and Grammar rules. This lays the foundation for auto-generation.</p>
+            </div>
+            <div className="guide-card">
+                <h4>2. Generate or Create Words</h4>
+                <p>Use the <strong>Generator</strong> to rapidly build new roots based on your phonotactics, or use <strong>Create Word</strong> to manually add specific vocabulary.</p>
+            </div>
+            <div className="guide-card">
+                <h4>3. Build your Lexicon</h4>
+                <p>The <strong>Dictionary</strong> tab acts as your central database. You can search, filter by part of speech, edit roots, and even see auto-generated conjugations via the Inflection Matrix.</p>
+            </div>
+            <div className="guide-card">
+                <h4>4. Analyze & Translate</h4>
+                <p>Once you have a vocabulary, use the <strong>Analyzer</strong> and <strong>Reader</strong> to break down sentences, test out translations, and generate interlinear glosses.</p>
+            </div>
+        </div>
     </div>
 );
 
@@ -27,8 +45,22 @@ const FAQ = () => (
     <div className="help-section">
         <h3 className="help-section-title"><HelpCircle className="help-icon" /> Frequently Asked Questions</h3>
         <ul className="help-faq-list">
-            <li><strong>What is a conlang?</strong><p>A constructed language.</p></li>
-            <li><strong>Is my data saved?</strong><p>Yes, you can export your project locally as a JSON file or save it directly to the cloud if you have an active session!</p></li>
+            <li>
+                <strong>Is my data safe if I close the browser?</strong>
+                <p>Yes! Your language data is automatically saved locally to your browser's storage. However, we highly recommend using the <strong>Save</strong> button in the top right to download a `.json` backup of your project regularly, just in case you clear your browser cache.</p>
+            </li>
+            <li>
+                <strong>Can I use ConlangEngine offline?</strong>
+                <p>Absolutely. The core application runs entirely locally on your device. You only need an internet connection to use Cloud Sync (LIVE) features or to log into your profile.</p>
+            </li>
+            <li>
+                <strong>What does the PDF button do?</strong>
+                <p>It automatically compiles your entire language—including phonology rules, grammar configurations, and your full dictionary—into a beautifully formatted PDF document that you can share with others!</p>
+            </li>
+            <li>
+                <strong>How do the auto-derivations work?</strong>
+                <p>When you create a word, the engine checks your Grammar Settings for rules that apply to that word's part of speech. It then automatically applies your prefixes/suffixes to show you how the word behaves in your language.</p>
+            </li>
         </ul>
     </div>
 );
@@ -36,8 +68,13 @@ const FAQ = () => (
 // The Contact section tells users how to reach out for support or feedback
 const Contact = () => (
     <div className="help-section">
-        <h3 className="help-section-title"><Mail className="help-icon" /> Contact Us</h3>
-        <p>If you have any issues, feature requests, or feedback, please reach out to us at <strong className="help-email">support@conlangengine.com</strong>.</p>
+        <h3 className="help-section-title"><Mail className="help-icon" /> Contact & Community</h3>
+        <p>If you have any issues, feature requests, or just want to show off your conlang, we'd love to hear from you!</p>
+        <ul className="help-contact-list">
+            <li><strong>Email Support:</strong> <span className="help-email">support@conlangengine.com</span></li>
+            <li><strong>Community Discord:</strong> <a href="https://discord.gg/9b93D3Wtax" target="_blank" rel="noopener noreferrer" className="help-link">Join our Server</a></li>
+            <li><strong>Bug Reports:</strong> <a href="https://github.com/kaitojv/ConlangEngine/" target="_blank" rel="noopener noreferrer" className="help-link">GitHub Repository</a></li>
+        </ul>
     </div>
 );
 

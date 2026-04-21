@@ -170,8 +170,22 @@ export default function FloatingKeyboard() {
                 end = start;
             }
 
-            // Directly set the value
-            activeEl.value = val;
+            // Use native setter to bypass React's value tracker hijacking
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+                window.HTMLInputElement.prototype,
+                'value'
+            ).set;
+            const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(
+                window.HTMLTextAreaElement.prototype,
+                'value'
+            ).set;
+
+            const setter = activeEl.tagName === 'TEXTAREA' ? nativeTextAreaValueSetter : nativeInputValueSetter;
+            if (setter) {
+                setter.call(activeEl, val);
+            } else {
+                activeEl.value = val;
+            }
 
             // Dispatch an InputEvent to simulate user typing, which React's controlled components respond to.
             // Use InputEvent for better compatibility with frameworks, falling back to generic Event.
@@ -207,7 +221,7 @@ export default function FloatingKeyboard() {
 
     };
 
-    const panelInputStyle = { width: '100%', padding: '8px', marginBottom: '10px', background: 'rgba(0,0,0,0.15)', color: 'inherit', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px' };
+    const panelInputStyle = { width: '100%', padding: '8px', marginBottom: '10px', background: 'var(--s4)', color: 'inherit', border: '1px solid var(--bd)', borderRadius: '4px' };
 
     return (
         <div className="floating-keyboard-wrapper">
@@ -231,7 +245,7 @@ export default function FloatingKeyboard() {
                         <input autoFocus type="text" placeholder="Search word or translation..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={panelInputStyle} />
                         <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
                             {lexicon.filter(w => w.word.toLowerCase().includes(searchQuery.toLowerCase()) || w.translation.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 15).map(w => (
-                                <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid rgba(150,150,150,0.2)' }}>
+                                <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--bd)' }}>
                                     <strong>{w.word}</strong> <span style={{ opacity: 0.7, fontSize: '0.9em' }}>{w.translation}</span>
                                 </div>
                             ))}
@@ -251,7 +265,7 @@ export default function FloatingKeyboard() {
                         <input autoFocus placeholder="Conlang Word" value={newWord.word} onChange={e => setNewWord({...newWord, word: e.target.value})} style={panelInputStyle} />
                         <input placeholder="Part of Speech (e.g., Noun)" value={newWord.wordClass} onChange={e => setNewWord({...newWord, wordClass: e.target.value})} style={panelInputStyle} />
                         <input placeholder="Translation" value={newWord.translation} onChange={e => setNewWord({...newWord, translation: e.target.value})} style={panelInputStyle} />
-                        <button onClick={handleQuickSaveWord} style={{ padding: '10px', background: 'var(--accent, #7c3aed)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+                        <button onClick={handleQuickSaveWord} style={{ padding: '10px', background: 'var(--acc)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
                             Save to Lexicon
                         </button>
                     </div>
@@ -270,7 +284,7 @@ export default function FloatingKeyboard() {
                                 key={char} 
                                 onMouseDown={(e) => e.preventDefault()} // Stops button from stealing focus from inputs
                                 onClick={() => insertTextAtCursor(char)} 
-                                style={{ padding: '10px', background: 'rgba(150,150,150,0.1)', border: '1px solid rgba(150,150,150,0.2)', color: 'inherit', cursor: 'pointer', borderRadius: '4px', fontSize: '1.2em' }}
+                                style={{ padding: '10px', background: 'var(--s2)', border: '1px solid var(--bd)', color: 'inherit', cursor: 'pointer', borderRadius: '4px', fontSize: '1.2em' }}
                             >
                                 {char}
                             </button>

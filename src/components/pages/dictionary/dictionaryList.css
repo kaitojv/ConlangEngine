@@ -210,6 +210,17 @@
     color: white;
 }
 
+.badge-noun { background-color: #3b82f6; }
+.badge-verb { background-color: #ef4444; }
+.badge-adjective { background-color: #10b981; }
+.badge-adverb { background-color: #f59e0b; }
+.badge-pronoun { background-color: #8b5cf6; }
+.badge-particle { background-color: #ec4899; }
+.badge-conjunction { background-color: #6366f1; }
+.badge-preposition { background-color: #14b8a6; }
+.badge-classifier { background-color: #f43f5e; }
+.badge-other { background-color: var(--s3); color: var(--tx) !important; }
+
 .entry-translation {
     color: var(--tx);
     font-size: 1.125rem;

@@ -241,3 +241,29 @@
     font-size: 0.8rem;
     color: var(--tx3);
 }
+
+.matrix-quick-save-btn {
+    background: transparent;
+    border: 1px solid var(--bd);
+    color: var(--acc);
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, background 0.2s, color 0.2s;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.matrix-td:hover .matrix-quick-save-btn {
+    opacity: 1;
+}
+
+.matrix-quick-save-btn:hover {
+    background: var(--acc);
+    color: var(--bg);
+}

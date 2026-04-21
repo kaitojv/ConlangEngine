@@ -23,7 +23,7 @@
 
 /* Variants */
 .btn-save {
-    background: linear-gradient(135deg, var(--ok), #059669);
+    background: var(--ok);
     color: #fff;
     border: 1px solid var(--bd);
 }
@@ -41,7 +41,7 @@
     color: var(--tx);
     border: 1px solid var(--bd);
 }
-.btn-cancel:hover { background: var(--er); border-color: var(--er); color: #fff; }
+.btn-cancel:hover { background: var(--err); border-color: var(--err); color: #fff; }
 
 .btn-default {
     background-color: transparent;
@@ -75,7 +75,7 @@
 }
 
 .btn-import {
-    background: var(--acc2, #3b82f6);
+    background: var(--acc2);
     color: #fff;
     box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
 }

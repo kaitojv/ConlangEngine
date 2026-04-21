@@ -7,6 +7,13 @@ export const INITIAL_CONFIG = {
     authorName: 'Author Name',
     description: 'A brief description of your conlang.',
     phonologyTypes: 'alphabetic',
+    alphabeticScript: 'latin', // e.g. latin, cyrillic, runic, greek
+    featuralComponents: {}, // Stores strokes for initials, vowels, finals
+    blockSettings: {
+        maxChars: 3,
+        layoutTemplate: '2top1bottom', 
+        slotMapping: ['Initial', 'Vowel', 'Final']
+    },
     syntaxOrder:'SVO',
     writingDirection: 'ltr',
     consonants:'p, t, k, m, n, s, l, r',
@@ -36,6 +43,42 @@ export const INITIAL_CONFIG = {
     customFontBase64: null, 
 };
 
+// IndexedDB Helper for handling massive font files without breaking local storage quotas
+const DB_NAME = 'ConlangEngineDB';
+const STORE_NAME = 'fonts';
+
+const saveFontToDB = (fontBase64) => {
+    return new Promise((resolve) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME);
+        req.onsuccess = (e) => {
+            try {
+                const db = e.target.result;
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                tx.objectStore(STORE_NAME).put(fontBase64, 'customFontBase64');
+                tx.oncomplete = () => resolve(true);
+            } catch (err) { resolve(false); }
+        };
+    });
+};
+
+export const loadFontFromDB = () => {
+    return new Promise((resolve) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME);
+        req.onsuccess = (e) => {
+            try {
+                const db = e.target.result;
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const getReq = tx.objectStore(STORE_NAME).get('customFontBase64');
+                getReq.onsuccess = () => resolve(getReq.result);
+                getReq.onerror = () => resolve(null);
+            } catch (err) { resolve(null); }
+        };
+        req.onerror = () => resolve(null);
+    });
+};
+
 export const useConfigStore = create(
     persist(
         (set) => ({
@@ -43,21 +86,40 @@ export const useConfigStore = create(
 
             setFullConfig: (newConfig) => set(() => ({ ...INITIAL_CONFIG, ...newConfig })),
             
-            addCustomGlyph: (charCode, strokesArray, base64Font) => set((state) => ({
-                customGlyphs: { ...state.customGlyphs, [charCode]: strokesArray },
-                customFontBase64: base64Font,
-                activity: [{ text: `Created custom glyph (${charCode})`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15)
-            })),
+            // Cleanup utility to wipe bloated legacy state
+            purgeBloatedGlyphs: () => set((state) => {
+                if (Object.keys(state.customGlyphs || {}).length > 200) {
+                    return { customGlyphs: {} };
+                }
+                return {};
+            }),
+
+            addCustomGlyph: (charCode, strokesArray, base64Font) => {
+                if (base64Font) saveFontToDB(base64Font);
+                set((state) => ({
+                    customGlyphs: { ...state.customGlyphs, [charCode]: strokesArray },
+                    customFontBase64: base64Font,
+                    activity: [{ text: `Created custom glyph (${charCode})`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15)
+                }));
+            },
 
             incrementPuaCounter: () => set((state) => ({ puaCounter: state.puaCounter + 1 })),
             
-            saveWikiPage: (pageId, content) => set((state) => ({
-                wikiPages: { ...state.wikiPages, [pageId]: content }
-                // We don't log saveWikiPage to prevent the 3-second auto-save from flooding the timeline!
-            })),
-            addWikiPage: (pageId, title) => set((state) => ({
-                wikiPages: { ...state.wikiPages, [pageId]: `<h1>${title}</h1><p>Start typing...</p>` },
-                activity: [{ text: `Created wiki page: ${title}`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15)
+            saveWikiPage: (pageId, content) => set((state) => {
+                const existing = state.wikiPages[pageId];
+                if (existing && typeof existing === 'object' && existing.type === 'corpus') {
+                    return { wikiPages: { ...state.wikiPages, [pageId]: { ...existing, content } } };
+                }
+                return { wikiPages: { ...state.wikiPages, [pageId]: content } };
+            }),
+            addWikiPage: (pageId, title, type = 'wiki') => set((state) => ({
+                wikiPages: { 
+                    ...state.wikiPages, 
+                    [pageId]: type === 'corpus' 
+                        ? { type: 'corpus', title: title, content: '' } 
+                        : `<h1>${title}</h1><p>Start typing...</p>` 
+                },
+                activity: [{ text: `Created document: ${title}`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15)
             })),
             deleteWikiPage: (pageId) => set((state) => {
                 const newPages = { ...state.wikiPages };
@@ -99,14 +161,23 @@ export const useConfigStore = create(
                     const lastTime = new Date(newActivity[0].time).getTime();
                     if (Date.now() - lastTime < 60000) { // 1 minute debounce window
                         newActivity[0].time = now;
+                        if (newConfig.customFontBase64) saveFontToDB(newConfig.customFontBase64);
                         return { ...newConfig, activity: newActivity };
                     }
                 }
 
                 newActivity = [{ text, time: now }, ...newActivity].slice(0, 15);
+                if (newConfig.customFontBase64) saveFontToDB(newConfig.customFontBase64);
                 return { ...newConfig, activity: newActivity };
             }),
         }),
-        {name: 'conlang-config'}
+        {
+            name: 'conlang-config',
+            partialize: (state) => {
+                // Exclude customFontBase64 from being saved to localStorage (quota limit)
+                const { customFontBase64, ...rest } = state;
+                return rest;
+            }
+        }
     )
 );

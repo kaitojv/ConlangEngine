@@ -136,31 +136,33 @@ export default function Header({ openMenu }) {
                     </div>
                 </div>
 
-                <div className="hdr-right">
-                <Button className="hdr-btn" onClick={() => navigate('/')}>
-                        <Home /> Home
-                    </Button>
-                <Button className="hdr-btn" onClick={handleGeneratePDF}>
-                        <Printer /> PDF
-                    </Button>
-                <Button className="hdr-btn" onClick={handleSave}>
-                        <Save /> Save
-                    </Button>
-                    <input 
-                        type="file" 
-                        accept=".json" 
-                        ref={fileInputRef} 
-                        onChange={handleLoad} 
-                        className="hidden-file-input"
-                    />
-                <Button className="hdr-btn" onClick={() => fileInputRef.current.click()}>
-                        <FolderUp /> Load
-                    </Button>
+                <div className="hdr-actions">
+                    <div className="hdr-right">
+                        <Button className="hdr-btn" onClick={() => navigate('/')}>
+                            <Home /> Home
+                        </Button>
+                        <Button className="hdr-btn" onClick={handleGeneratePDF}>
+                            <Printer /> PDF
+                        </Button>
+                        <Button className="hdr-btn" onClick={handleSave}>
+                            <Save /> Save
+                        </Button>
+                        <input 
+                            type="file" 
+                            accept=".json" 
+                            ref={fileInputRef} 
+                            onChange={handleLoad} 
+                            className="hidden-file-input"
+                        />
+                        <Button className="hdr-btn" onClick={() => fileInputRef.current.click()}>
+                            <FolderUp /> Load
+                        </Button>
+                    </div>
+                    
+                    <NavLink to="/profile" className="profile-header-button" title="Profile">
+                        <User size={20} />
+                    </NavLink>
                 </div>
-
-                <NavLink to="/profile" className="profile-header-button" title="Profile">
-                    <User size={24} />
-                </NavLink>
             </div>
         </header>
     );

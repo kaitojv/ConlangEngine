@@ -9,6 +9,7 @@ export default function SettingsGeneral() {
     const conlangName = useConfigStore((state) => state.conlangName);
     const authorName = useConfigStore((state) => state.authorName);
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
+    const alphabeticScript = useConfigStore((state) => state.alphabeticScript);
     const updateConfig = useConfigStore((state) => state.updateConfig);
 
     return (        
@@ -44,15 +45,34 @@ export default function SettingsGeneral() {
                 >
                     <option value="alphabetic">Alphabetic / Root-based</option>
                     <option value="syllabic">Syllabic (Grid-based)</option>
+                    <option value="featural_block">Featural Block (Hangul-style)</option>
                     <option value="logographic">Logographic (Ideograms)</option>
                 </select>
             </div>
+
+            {phonologyTypes === 'alphabetic' && (
+                <div className="sg-input-group">
+                    <label className="form-label">Pre-existing Script Mapping</label>
+                    <select 
+                        className="fi" 
+                        value={alphabeticScript || 'latin'}
+                        onChange={(e) => updateConfig({ alphabeticScript: e.target.value })}
+                    >
+                        <option value="latin">Latin (Default)</option>
+                        <option value="cyrillic">Cyrillic</option>
+                        <option value="greek">Greek</option>
+                        <option value="runic">Runic</option>
+                        <option value="georgian">Georgian</option>
+                    </select>
+                </div>
+            )}
             
             <Infobox>
 
                 <div className="flex items-center gap-2"><WholeWord /> <b>Writing System Guide:</b></div>  
-                • <b>Alphabetic:</b> Standard root-based system. Uses your consonants, vowels, and syllable patterns.<br />
+                • <b>Alphabetic:</b> Standard root-based system. Uses your consonants, vowels, and syllable patterns. Maps to various scripts.<br />
                 • <b>Syllabic:</b> Unlocks the Syllabary Manager.<br />
+                • <b>Featural Block:</b> Unlocks the Block Manager. Dynamically composes syllables into square blocks.<br />
                 • <b>Logographic:</b> Whole words become symbols.
             </Infobox>
 

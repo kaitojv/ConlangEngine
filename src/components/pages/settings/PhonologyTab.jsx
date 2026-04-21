@@ -5,6 +5,7 @@ import Input from '../../UI/Input/Input.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
 import SyllabaryManager from '../../UI/SyllabaryManager/SyllabaryManager.jsx';
+import BlockManager from '../../UI/BlockManager/BlockManager.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import applySoundChanges from '../../../utils/applysoundchanges.jsx';
 import { Info, AudioLines, Hourglass, Eye } from 'lucide-react';
@@ -78,6 +79,12 @@ export default function PhonologyTab() {
             {phonologyTypes === 'syllabic' && (
                 <div className="animate-in fade-in duration-300">
                     <SyllabaryManager />
+                </div>
+            )}
+
+            {phonologyTypes === 'featural_block' && (
+                <div className="animate-in fade-in duration-300">
+                    <BlockManager />
                 </div>
             )}
 

@@ -120,3 +120,59 @@
         transform: translateY(0);
     }
 }
+
+/* Guide Grid for How to Use */
+.help-guide-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.guide-card {
+    background: var(--s4);
+    padding: 15px;
+    border-radius: var(--rad-md, 8px);
+    border: 1px solid var(--bd);
+}
+
+.guide-card h4 {
+    margin: 0 0 10px 0;
+    color: var(--acc2);
+}
+
+.guide-card p {
+    margin: 0;
+    color: var(--tx2);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.help-contact-list {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.help-contact-list li {
+    color: var(--tx2);
+}
+
+.help-contact-list strong {
+    color: var(--tx);
+    margin-right: 10px;
+}
+
+.help-link {
+    color: var(--acc);
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.help-link:hover {
+    text-decoration: underline;
+    color: var(--acc2);
+}

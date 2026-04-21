@@ -8,6 +8,7 @@ import Modal from '../../UI/Modal/Modal.jsx'
 import MatrixModal from './MatrixModal.jsx';
 import EditWordModal from './EditModal.jsx';
 import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import './dictionaryList.css';
 
 export default function DictionaryList() {
@@ -30,9 +31,13 @@ export default function DictionaryList() {
     // Track which words are currently selected for our popup modals
     const [selectedWordForMatrix, setSelectedWordForMatrix] = useState(null);
     const [selectedWordForEdit, setSelectedWordForEdit] = useState(null); 
+    
+    // Manage how many dictionary items are rendered at once for performance
+    const [visibleCount, setVisibleCount] = useState(50);
 
     const updateFilter = (key, value) => {
         setFilters(prev => ({ ...prev, [key]: value }));
+        setVisibleCount(50); // Reset visible count when filter changes
     };
 
     // Extract all the unique first letters from the dictionary so we can build our A-Z quick jump bar
@@ -81,18 +86,29 @@ export default function DictionaryList() {
 
     // Quick action to bin a word
     const handleDelete = (id) => {
-        if (window.confirm("Are you sure you want to delete this root?")) {
-            deleteWord(id);
-        }
+        toast.custom((t) => (
+            <div style={{ background: 'var(--s4)', color: 'var(--tx)', padding: '15px', borderRadius: '8px', border: '1px solid var(--err)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <strong>⚠️ Delete Word</strong>
+                <span>Are you sure you want to delete this root?</span>
+                <div style={{display: 'flex', gap: '10px', marginTop: '5px'}}>
+                    <button onClick={() => {
+                        toast.dismiss(t.id);
+                        deleteWord(id);
+                        toast.success("Word deleted.");
+                    }} style={{padding: '5px 10px', background: 'var(--err)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Delete</button>
+                    <button onClick={() => toast.dismiss(t.id)} style={{padding: '5px 10px', background: 'var(--s2)', color: 'var(--tx)', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Cancel</button>
+                </div>
+            </div>
+        ), { duration: Infinity });
     };
 
     // Try to pronounce the word using the browser's built-in text-to-speech
     const handleListen = (word) => {
         if (!('speechSynthesis' in window)) {
-            return alert("Sorry, your browser doesn't support text-to-speech.");
+            return toast.error("Sorry, your browser doesn't support text-to-speech.");
         }
         if (!word) {
-            return alert("This word is empty and cannot be pronounced.");
+            return toast.error("This word is empty and cannot be pronounced.");
         }
 
         // Interrupt any ongoing speech so it doesn't queue up a dozen words if the user spams the button
@@ -185,7 +201,7 @@ export default function DictionaryList() {
             )}
 
             <div className="dictionary-cards">
-                {filteredLexicon.map((entry) => {
+                {filteredLexicon.slice(0, visibleCount).map((entry) => {
                     const safeWord = entry.word.replace(/\*/g, '');
                     const displayWord = transliterate(safeWord, lexicon);
                     
@@ -271,6 +287,14 @@ export default function DictionaryList() {
                     );
                 })}
             </div>
+
+            {visibleCount < filteredLexicon.length && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', marginBottom: '40px' }}>
+                    <Button variant="edit" onClick={() => setVisibleCount(prev => prev + 50)}>
+                        Load More ({filteredLexicon.length - visibleCount} remaining)
+                    </Button>
+                </div>
+            )}
 
             <Modal isOpen={!!selectedWordForMatrix} onClose={() => setSelectedWordForMatrix(null)} title="Word Inflection Matrix">
                 <MatrixModal wordObj={selectedWordForMatrix} />

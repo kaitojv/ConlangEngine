@@ -19,12 +19,14 @@
 .footer-brand h2 {
     margin: 0 0 5px 0;
     color: var(--acc);
+    text-align: center;
 }
 
 .footer-brand p {
     margin: 0;
     color: var(--tx2);
     font-size: 0.9rem;
+    text-align: center;
 }
 
 .social-links {

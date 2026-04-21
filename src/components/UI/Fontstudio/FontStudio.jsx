@@ -24,7 +24,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
         ctx.lineWidth = brushSize; 
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        ctx.strokeStyle = '#0f172a';
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--tx').trim() || '#0f172a';
         
         strokes.forEach(stroke => {
             if (stroke.length < 2) return;
@@ -58,7 +58,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
         ctx.lineWidth = brushSize; 
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        ctx.strokeStyle = '#0f172a';
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--tx').trim() || '#0f172a';
 
         const lastPoint = currentStroke[currentStroke.length - 1];
         ctx.beginPath();
@@ -103,9 +103,9 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
         if (base64Font) {
             addCustomGlyph(charCode, strokes, base64Font);
             
-            // 4. Give the generated Unicode character back to the parent component!
+            // 4. Give the generated Unicode character and the strokes back to the parent component!
             const newChar = String.fromCharCode(charCode);
-            onSave(newChar);
+            onSave(newChar, strokes);
         }
     };
 
@@ -116,9 +116,9 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
                 <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--tx2)' }}>Draw your custom ideogram below.</p>
             </div>
 
-            <div style={{ position: 'relative', border: '2px solid var(--bd)', borderRadius: '8px', backgroundColor: '#f8fafc', overflow: 'hidden' }}>
+            <div style={{ position: 'relative', border: '2px solid var(--bd)', borderRadius: '8px', backgroundColor: 'var(--s1)', overflow: 'hidden' }}>
                 {/* Visual Blueprint Background Lines */}
-                <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: 'linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px)', backgroundSize: '20px 20px', opacity: 0.5 }}></div>
+                <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: 'linear-gradient(var(--bd) 1px, transparent 1px), linear-gradient(90deg, var(--bd) 1px, transparent 1px)', backgroundSize: '20px 20px', opacity: 0.5 }}></div>
                 
                 <canvas
                     ref={canvasRef}

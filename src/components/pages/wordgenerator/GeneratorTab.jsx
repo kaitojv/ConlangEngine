@@ -25,7 +25,10 @@ export default function GeneratorTab() {
     const vowels = useConfigStore((state) => state.vowels);
     const verbMarker = useConfigStore((state) => state.verbMarker);
     const cliticsRules = useConfigStore((state) => state.cliticsRules);
+    
+    // UI State for different modes
     const [isFillMode, setIsFillMode] = useState(false);
+    const [isBatchMode, setIsBatchMode] = useState(false);
 
     const handleGenerate = () => {
         generateWord(numSyllables, targetClass);
@@ -70,9 +73,8 @@ export default function GeneratorTab() {
         });
     }, [generatedWord, generatedClass, grammarRules, vowels, verbMarker, cliticsRules]);
 
-    if (isFillMode) {
-        return <FillMode onExit={() => setIsFillMode(false)} />;
-    }
+    if (isFillMode) return <FillMode onExit={() => setIsFillMode(false)} />;
+    if (isBatchMode) return <BatchMode onExit={() => setIsBatchMode(false)} />;
 
     return (
         <div className="generator-container">
@@ -108,10 +110,12 @@ export default function GeneratorTab() {
                 </div>
                 <Button onClick={handleGenerate}><div className="generator-btn-content"><Wand2 size={18} /> Generate Word</div></Button>
 
-                <div className="fill-mode-prompt">
-                    <p>Or, enter "Fill Mode" to translate a list of common words.</p>
+                <div className="fill-mode-prompt" style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
                     <Button variant="edit" onClick={() => setIsFillMode(true)}>
-                        <BookCopy size={18} /> Enter Fill Mode
+                        <BookCopy size={18} /> Fill Mode
+                    </Button>
+                    <Button variant="imp" onClick={() => setIsBatchMode(true)}>
+                        <Wand2 size={18} /> Batch Generator
                     </Button>
                 </div>
             </Card>
@@ -215,6 +219,160 @@ function FillMode({ onExit }) {
                     <Button variant="default" onClick={handleSkip}><SkipForward size={18} /> Skip</Button>
                     <Button variant="save" onClick={handleSaveAndNext}><Check size={18} /> Save and Next</Button>
                 </div>
+            </Card>
+        </div>
+    );
+}
+
+function BatchMode({ onExit }) {
+    const { generateWord } = useWordGenerator();
+    const addWord = useLexiconStore((state) => state.addWord);
+    
+    const [batchSize, setBatchSize] = useState(20);
+    const [numSyllables, setNumSyllables] = useState(2);
+    const [generatedBatch, setGeneratedBatch] = useState([]);
+    const [selectedWords, setSelectedWords] = useState(new Set());
+    const [translations, setTranslations] = useState({});
+
+    const handleGenerateBatch = () => {
+        const newBatch = [];
+        for (let i = 0; i < batchSize; i++) {
+            const result = generateWord(numSyllables, 'random');
+            if (result && !newBatch.some(w => w.word === result.word)) {
+                newBatch.push({ ...result, id: crypto.randomUUID() });
+            }
+        }
+        setGeneratedBatch(newBatch);
+        setSelectedWords(new Set());
+        setTranslations({});
+    };
+
+    const toggleSelection = (id) => {
+        const newSet = new Set(selectedWords);
+        if (newSet.has(id)) newSet.delete(id);
+        else newSet.add(id);
+        setSelectedWords(newSet);
+    };
+
+    const updateTranslation = (id, val) => {
+        setTranslations(prev => ({ ...prev, [id]: val }));
+        
+        // Auto-select if they start typing a translation
+        if (val.trim() && !selectedWords.has(id)) {
+            toggleSelection(id);
+        }
+    };
+
+    const handleSaveSelected = () => {
+        let savedCount = 0;
+        selectedWords.forEach(id => {
+            const entry = generatedBatch.find(w => w.id === id);
+            if (entry) {
+                addWord({
+                    word: entry.word,
+                    wordClass: entry.wordClass,
+                    translation: translations[id] || 'Unknown',
+                });
+                savedCount++;
+            }
+        });
+        
+        alert(`Successfully saved ${savedCount} words to the dictionary!`);
+        
+        // Remove saved words from the batch
+        setGeneratedBatch(prev => prev.filter(w => !selectedWords.has(w.id)));
+        setSelectedWords(new Set());
+    };
+
+    return (
+        <div className="fill-mode-container">
+            <Card>
+                <div className="fill-mode-header">
+                    <h2 className='flex sg-title'><Wand2 /> Batch Auto-Generator</h2>
+                    <Button variant="cancel" onClick={onExit}>Exit Batch Mode</Button>
+                </div>
+                <p>Generate a bulk list of phonotactically valid words. Select the ones you like, give them a translation, and save them directly to your Lexicon.</p>
+                
+                <div className="generator-input-row" style={{ marginTop: '20px' }}>
+                    <div className="generator-input-group">
+                        <label className="generator-label">Words to Generate</label>
+                        <input 
+                            type="number" min="5" max="50"
+                            className="generator-input"
+                            value={batchSize} onChange={(e) => setBatchSize(Number(e.target.value))} 
+                        />
+                    </div>
+                    <div className="generator-input-group">
+                        <label className="generator-label">Syllables per Word</label>
+                        <input 
+                            type="number" min="1" max="10"
+                            className="generator-input"
+                            value={numSyllables} onChange={(e) => setNumSyllables(Number(e.target.value))} 
+                        />
+                    </div>
+                </div>
+                
+                <Button variant="imp" onClick={handleGenerateBatch} style={{ marginBottom: '20px' }}>
+                    Generate {batchSize} Words
+                </Button>
+
+                {generatedBatch.length > 0 && (
+                    <div className="batch-results">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                            <h3 style={{ margin: 0, color: 'var(--tx2)' }}>Results ({generatedBatch.length})</h3>
+                            <Button 
+                                variant="save" 
+                                onClick={handleSaveSelected}
+                                disabled={selectedWords.size === 0}
+                            >
+                                Save Selected ({selectedWords.size})
+                            </Button>
+                        </div>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '400px', overflowY: 'auto', paddingRight: '10px' }}>
+                            {generatedBatch.map(item => (
+                                <div 
+                                    key={item.id} 
+                                    style={{ 
+                                        display: 'grid', 
+                                        gridTemplateColumns: 'auto 1fr 1fr', 
+                                        gap: '15px', 
+                                        alignItems: 'center',
+                                        background: selectedWords.has(item.id) ? 'var(--s3)' : 'var(--s2)',
+                                        padding: '10px 15px',
+                                        borderRadius: '8px',
+                                        border: `1px solid ${selectedWords.has(item.id) ? 'var(--acc)' : 'transparent'}`,
+                                        cursor: 'pointer'
+                                    }}
+                                    onClick={(e) => {
+                                        // Don't toggle if they clicked the input
+                                        if (e.target.tagName !== 'INPUT') toggleSelection(item.id);
+                                    }}
+                                >
+                                    <input 
+                                        type="checkbox" 
+                                        checked={selectedWords.has(item.id)}
+                                        onChange={() => toggleSelection(item.id)}
+                                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                    />
+                                    <div>
+                                        <div className="custom-font-text notranslate" style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--tx)' }}>{item.word}</div>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--tx3)' }}>/{item.ipa}/ • {item.wordClass}</div>
+                                    </div>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Enter translation..." 
+                                        className="generator-input"
+                                        value={translations[item.id] || ''}
+                                        onChange={(e) => updateTranslation(item.id, e.target.value)}
+                                        onClick={(e) => e.stopPropagation()}
+                                        style={{ margin: 0 }}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </Card>
         </div>
     );

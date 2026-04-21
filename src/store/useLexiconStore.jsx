@@ -11,7 +11,7 @@ export const useLexiconStore = create(
 
             addWord: (newWordData) => set((state) => {
                 const newEntry = {
-                    id: Date.now(),
+                    id: Date.now() + Math.random(),
                     word: newWordData.word,
                     ipa: newWordData.ipa || '',
                     wordClass: newWordData.wordClass,

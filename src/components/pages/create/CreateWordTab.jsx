@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
+import { useShallow } from 'zustand/react/shallow';
 import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
@@ -12,6 +13,7 @@ import { validateNewWord } from '@/utils/validationEngine.jsx';
 import './createWordTab.css';
 import Modal from '../../UI/Modal/Modal.jsx';
 import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
+import toast from 'react-hot-toast';
 
 export default function CreateWordTab() {
     const location = useLocation();
@@ -20,8 +22,12 @@ export default function CreateWordTab() {
     // Global stores
     const addWord = useLexiconStore((state) => state.addWord);
     const checkDuplicate = useLexiconStore((state) => state.checkDuplicate);
-    const configData = useConfigStore(); 
-    const { phonologyTypes, grammarRules, vowels, verbMarker } = configData;
+    const { phonologyTypes, grammarRules, vowels, verbMarker } = useConfigStore(useShallow(state => ({
+        phonologyTypes: state.phonologyTypes,
+        grammarRules: state.grammarRules,
+        vowels: state.vowels,
+        verbMarker: state.verbMarker
+    })));
     
     // Let's track all our input fields in one neat object
     const [formData, setFormData] = useState({
@@ -35,6 +41,8 @@ export default function CreateWordTab() {
     
     const { word, ipa, wordClass, translation, tags, ideogram } = formData;
     const [isFontStudioOpen, setIsFontStudioOpen] = useState(false);
+    const [selectedDerivs, setSelectedDerivs] = useState({});
+    const [customTranslations, setCustomTranslations] = useState({});
 
     const updateField = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -54,29 +62,7 @@ export default function CreateWordTab() {
 
     const isDuplicate = checkDuplicate(word, translation) && (word !== '' || translation !== '');
 
-    // Validate and save the new root to our dictionary
-    const handleSave = () => {
-        const cleanWord = word.trim();
-        const cleanTrans = translation.trim();
-
-        if (!cleanWord || !cleanTrans) return alert("Please fill in both the word and the translation.");
-        
-        if (isDuplicate) {
-            return alert("This word or translation already exists in your dictionary!");
-        }
-
-        // Clean up the word to ensure custom alien letters map correctly to the base orthography
-        const safeWord = normalizeToBase(cleanWord);
-        const validation = validateNewWord(safeWord, configData);
-        
-        // Warn the user if they break their own phonotactic rules, but let them bypass it
-        if (!validation.valid) {
-            const proceed = window.confirm(`⚠️ Phono-Syntax Warning:\n${validation.reason}\n\nDo you want to save it as an irregular exception anyway?`);
-            if (!proceed) return; // User canceled to fix the word
-        }
-
-        const processedTags = tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
-
+    const saveConfirmedWord = (safeWord, cleanTrans, processedTags) => {
         addWord({
             word: safeWord,
             ipa: ipa.trim(),
@@ -88,11 +74,67 @@ export default function CreateWordTab() {
 
         // Reset the form for the next word
         setFormData({ word: '', ipa: '', wordClass: 'noun', translation: '', tags: '', ideogram: '' });
-        alert("Root saved successfully!");
+        setSelectedDerivs({});
+        setCustomTranslations({});
+        toast.success("Root and selected derivations saved successfully!");
+    };
+
+    // Validate and save the new root to our dictionary
+    const handleSave = () => {
+        const cleanWord = word.trim();
+        const cleanTrans = translation.trim();
+
+        if (!cleanWord || !cleanTrans) {
+            return toast.error("Please fill in both the word and the translation.");
+        }
+        
+        if (isDuplicate) {
+            return toast.error("This word or translation already exists in your dictionary!");
+        }
+
+        // Clean up the word to ensure custom alien letters map correctly to the base orthography
+        const safeWord = normalizeToBase(cleanWord);
+        const validation = validateNewWord(safeWord, useConfigStore.getState());
+        const processedTags = tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+        
+        // Warn the user if they break their own phonotactic rules, but let them bypass it
+        if (!validation.valid) {
+            toast.custom((t) => (
+                <div style={{ background: 'var(--s4)', color: 'var(--tx)', padding: '15px', borderRadius: '8px', border: '1px solid var(--err)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <strong>⚠️ Phono-Syntax Warning</strong>
+                    <span>{validation.reason}</span>
+                    <p style={{fontSize: '0.9rem', color: 'var(--tx2)'}}>Do you want to save it as an irregular exception anyway?</p>
+                    <div style={{display: 'flex', gap: '10px', marginTop: '5px'}}>
+                        <button onClick={() => {
+                            toast.dismiss(t.id);
+                            saveConfirmedWord(safeWord, cleanTrans, processedTags);
+                        }} style={{padding: '5px 10px', background: 'var(--err)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Save Anyway</button>
+                        <button onClick={() => toast.dismiss(t.id)} style={{padding: '5px 10px', background: 'var(--s2)', color: 'var(--tx)', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Cancel</button>
+                    </div>
+                </div>
+            ), { duration: Infinity });
+            return;
+        }
+
+        saveConfirmedWord(safeWord, cleanTrans, processedTags);
+
+        // Also save any selected derivations
+        derivedWords.forEach((item, idx) => {
+            if (selectedDerivs[idx]) {
+                addWord({
+                    word: item.derivedWord,
+                    ipa: '', // Derivations don't auto-generate IPA yet
+                    wordClass: wordClass, // Default to root's class
+                    translation: customTranslations[idx] !== undefined ? customTranslations[idx].trim() : item.translationText,
+                    tags: processedTags,
+                    ideogram: ''
+                });
+            }
+        });
     };
 
     // Spin up a live preview of how this word will interact with the language's grammar rules
-    const derivedWords = useMemo(() => {
+    const derivedWords = (() => {
         if (!word || !translation) return [];
 
         const results = [];
@@ -124,7 +166,7 @@ export default function CreateWordTab() {
         });
 
         return results;
-    }, [word, translation, wordClass, grammarRules, vowels, verbMarker, normalizeToBase]);
+    })();
 
     return (
         <div className="create-word-container">
@@ -225,13 +267,28 @@ export default function CreateWordTab() {
                         {derivedWords.length > 0 ? (
                             <div className="preview-grid">
                                 {derivedWords.map((item, idx) => (
-                                    <div key={idx} className="preview-item">
-                                        <span className="preview-word notranslate custom-font-text">
-                                            {transliterate(item.derivedWord)}
-                                        </span>
-                                        <span className="preview-translation">
-                                            {item.translationText}
-                                        </span>
+                                    <div 
+                                        key={idx} 
+                                        className={`preview-item ${selectedDerivs[idx] ? 'selected' : ''}`}
+                                        onClick={() => setSelectedDerivs(prev => ({ ...prev, [idx]: !prev[idx] }))}
+                                        title="Click to save alongside root"
+                                    >
+                                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, marginRight: '10px' }}>
+                                            <span className="preview-word notranslate custom-font-text">
+                                                {transliterate(item.derivedWord)}
+                                            </span>
+                                            <input 
+                                                type="text"
+                                                className="preview-translation-input"
+                                                value={customTranslations[idx] !== undefined ? customTranslations[idx] : item.translationText}
+                                                onChange={(e) => setCustomTranslations(prev => ({ ...prev, [idx]: e.target.value }))}
+                                                onClick={(e) => e.stopPropagation()} // Prevent toggling the checkbox when editing translation
+                                                placeholder={item.translationText}
+                                            />
+                                        </div>
+                                        <div className="preview-checkbox">
+                                            {selectedDerivs[idx] && <span style={{ color: 'var(--bg)' }}>✓</span>}
+                                        </div>
                                     </div>
                                 ))}
                             </div>

@@ -38,8 +38,8 @@ const NAV_GROUPS = [
         title: 'Resources',
         items: [
             { id: '/reader', label: 'Reader', Icon: BookOpen },
-            { id: '/wiki', label: 'Wiki', Icon: Library },
-            { id: '/flashcards', label: 'Flashcards', Icon: Layers },
+            { id: '/wiki', label: 'Library & Writing', Icon: Library },
+            { id: '/study', label: 'Study & Flashcards', Icon: Layers },
         ]
     },
     {
