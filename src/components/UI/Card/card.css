@@ -2,8 +2,7 @@
 
 .card {
     position: relative;
-    background: var(--s1);
-    border-top: 3px solid var(--acc2);
+    background: var(--s4);
     border-radius: var(--rad);
     padding: 30px;
     margin-bottom: 25px;

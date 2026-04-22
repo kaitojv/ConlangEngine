@@ -1,17 +1,12 @@
-.home-page{
+.home-page {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     text-align: center;
     color: white;
-    border: 1px solid var(--bd);
-    border-radius: var(--rad);
-    transition: 3s ease;
-    padding: 60px 40px;
     border-top: 4px solid var(--acc);       
-    background: var(--s4);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    padding: 60px 40px;
 }
 
 .home-page h1{

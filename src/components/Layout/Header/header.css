@@ -24,13 +24,13 @@
 .hdr-left {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 15px;
 }
 
 .hdr-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 15px;
 }
 
 .toggle-btn {
@@ -40,90 +40,101 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 38px;
-    height: 38px;
-    border-radius: var(--rad-sm);
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
     color: var(--tx);
-    transition: background 0.2s;
+    transition: all 0.2s;
 }
 
 .toggle-btn:hover {
-    background: var(--s2);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.toggle-btn svg {
+    width: 16px;
+    height: 16px;
 }
 
 .hdr-right { 
     display: flex; 
-    gap: 2px; 
+    gap: 10px; 
     align-items: center;
-    background: var(--s2); 
-    padding: 4px; 
-    border-radius: var(--rad-sm); 
-    border: 1px solid var(--bd);
+    background: #0b0f1c; /* Solid deep midnight */
+    padding: 6px 12px; 
+    border-radius: 8px; 
+    border: 1px solid rgba(255, 255, 255, 0.1);
 } 
 
 .profile-header-button {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    background-color: var(--s4);
+    background-color: #0b0f1c;
     color: var(--tx);
-    border: 1px solid var(--bd);
-    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s;
 }
 
 .profile-header-button:hover {
     background-color: var(--acc);
     color: white;
-    transform: translateY(-1px);
 }
 
 .hdr-btn {
     background: transparent; 
-    color: var(--tx2); 
+    color: #ffffff !important; 
     border: none !important;
-    padding: 8px 12px; 
-    border-radius: 6px; 
+    padding: 4px 8px; 
+    border-radius: 4px; 
     font-size: 0.85rem; 
     font-weight: 600;
     cursor: pointer; 
     transition: all 0.2s;
     display: flex;
     align-items: center;
-    gap: 6px;
-    box-shadow: none !important;
+    gap: 8px;
 }
 
 .hdr-btn:hover {
-    background: var(--s4); 
-    color: var(--tx); 
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.hdr-btn svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2px;
 }
 
 .app-dinamic-title {
-    font-size: 1.4rem;
+    font-size: 1.8rem;
     font-weight: 800;
-    color: var(--tx);
+    background: linear-gradient(to right, #a78bfa, #8b5cf6); /* Vibrant purple gradient */
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     letter-spacing: -0.5px;
     margin: 0;
 }
 
 .hdr-badge {
-    background: var(--acc);
+    background: linear-gradient(135deg, #7c3aed, #a78bfa);
     font-size: 0.65rem;
     color: white !important;
-    padding: 2px 8px;
-    border-radius: 10px;
+    padding: 4px 12px;
+    border-radius: 99px; /* Pill shape */
     font-weight: 800;
-    letter-spacing: 0.5px;
     text-transform: uppercase;
+    box-shadow: 0 0 15px rgba(124, 58, 237, 0.3);
 }
 
 .hdr-brand {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
 }
 
 .hidden-file-input {
@@ -131,35 +142,27 @@
 }
 
 /* Header Responsiveness */
-@media (max-width: 768px) {
-    .hdr {
-        padding: 8px 12px;
+@media (max-width: 1024px) {
+    .hdr-btn span {
+        display: none;
     }
-    
-    .app-dinamic-title {
-        display: none; /* Hide title on very small screens to save space */
-    }
-    
-    .hdr-btn span, 
     .hdr-btn {
-        font-size: 0; /* Hide text of buttons on mobile, showing only icons */
         padding: 8px;
-    }
-    
-    .hdr-btn svg {
-        margin: 0;
-    }
-
-    .hdr-right {
-        background: transparent;
-        border: none;
-        padding: 0;
     }
 }
 
-@media (min-width: 480px) {
+@media (max-width: 768px) {
+    .hdr {
+        padding: 8px 15px;
+    }
+    
     .app-dinamic-title {
-        display: block;
-        font-size: 1.2rem;
+        font-size: 1.4rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .app-dinamic-title {
+        display: none;
     }
 }
