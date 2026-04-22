@@ -139,13 +139,13 @@ export default function Header({ openMenu }) {
                 <div className="hdr-actions">
                     <div className="hdr-right">
                         <Button className="hdr-btn" onClick={() => navigate('/')}>
-                            <Home /> Home
+                            <Home /> <span>Home</span>
                         </Button>
                         <Button className="hdr-btn" onClick={handleGeneratePDF}>
-                            <Printer /> PDF
+                            <Printer /> <span>PDF</span>
                         </Button>
                         <Button className="hdr-btn" onClick={handleSave}>
-                            <Save /> Save
+                            <Save /> <span>Save</span>
                         </Button>
                         <input 
                             type="file" 
@@ -155,7 +155,7 @@ export default function Header({ openMenu }) {
                             className="hidden-file-input"
                         />
                         <Button className="hdr-btn" onClick={() => fileInputRef.current.click()}>
-                            <FolderUp /> Load
+                            <FolderUp /> <span>Load</span>
                         </Button>
                     </div>
                     

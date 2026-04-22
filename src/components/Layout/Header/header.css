@@ -30,7 +30,7 @@
 .hdr-actions {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 8px; /* Tighter gap for better space management */
 }
 
 .toggle-btn {
@@ -73,11 +73,13 @@
     justify-content: center;
     width: 32px;
     height: 32px;
+    min-width: 32px; /* Prevent shrinking */
     border-radius: 50%;
     background-color: var(--s4);
     color: var(--tx);
     border: 1px solid var(--bd);
     transition: all 0.2s;
+    flex-shrink: 0; /* Never let the profile icon disappear */
 }
 
 .profile-header-button:hover {
@@ -98,6 +100,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    margin: 0 !important; /* Reset any Button.jsx margins */
 }
 
 .hdr-btn:hover {
@@ -150,20 +153,33 @@
     .hdr-btn {
         padding: 8px;
     }
+    .hdr-right {
+        gap: 4px;
+        padding: 4px;
+    }
 }
 
 @media (max-width: 768px) {
     .hdr {
-        padding: 8px 15px;
+        padding: 8px 12px;
     }
     
     .app-dinamic-title {
         font-size: 1.4rem;
+    }
+
+    .hdr-right {
+        background: transparent;
+        border: none;
+        padding: 0;
     }
 }
 
 @media (max-width: 480px) {
     .app-dinamic-title {
         display: none;
+    }
+    .hdr-left {
+        gap: 8px;
     }
 }
