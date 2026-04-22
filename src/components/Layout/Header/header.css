@@ -125,14 +125,19 @@
 }
 
 .hdr-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     background: linear-gradient(135deg, var(--acc), var(--acc2));
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     color: white !important;
     padding: 4px 12px;
     border-radius: 99px; /* Pill shape */
     font-weight: 800;
     text-transform: uppercase;
     box-shadow: 0 0 15px color-mix(in srgb, var(--acc) 30%, transparent);
+    white-space: nowrap;
 }
 
 .hdr-brand {
