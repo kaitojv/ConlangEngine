@@ -4,7 +4,7 @@
   text-transform: uppercase;
   font-weight: 800;
   letter-spacing: 0.5px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--s2);
   border: 1px solid var(--bd);
   padding: 5px 10px;
   border-radius: 6px;

@@ -7,11 +7,11 @@
 
 .rule-card {
     position: relative;
-    background: var(--s1);
+    background: var(--s4);
     padding: 20px 20px 0px;
-    border-radius: var(--rad-sm);
+    border-radius: var(--rad);
     border: 1px solid var(--bd);
-    box-shadow: rgba(0, 0, 0, 0.05) 0px 4px 6px;
+    box-shadow: var(--shadow);
     margin-bottom: 15px;
     overflow: hidden;
     display: flex;
@@ -36,7 +36,7 @@
     align-items: center;
     width: stretch;
     border-top: 1px solid var(--bd);
-    background: rgba(0, 0, 0, 0.15);
+    background: var(--s2);
     padding: 12px 20px;
     margin: 0 -20px;
 }
@@ -52,11 +52,16 @@
     align-items: center;
     justify-content: center;
     border: none;
-    background: rgba(239, 68, 68, 0.1);
+    background: var(--s2);
     color: var(--err);
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s;
+}
+
+.rule-delete-btn:hover {
+    background: var(--err);
+    color: white;
 }
 
 .label-with-select{
@@ -67,7 +72,7 @@
 }
 
 .template-select{
-    background: var(--bg);
+    background: var(--s2);
     border: 1px solid var(--bd);
     border-radius: 6px;
     color: var(--acc2);
@@ -121,25 +126,10 @@
     margin-top: 8px    ;
 }
 
-
-
-
 .dependency-group span{
     font-size: 0.75rem;
     color: var(--acc2);
     font-weight: bold;
-}
-
-.btn-edit{
-    padding: 8px 15px;
-    background: var(--ok);
-    border-radius: var(--rad-sm);
-    border: none;
-    color: var(--tx);
-    gap: 5px;
-    width: 15rem;
-    cursor: pointer;
-    transition: all 0.2s;
 }
 
 .syntax-box{
