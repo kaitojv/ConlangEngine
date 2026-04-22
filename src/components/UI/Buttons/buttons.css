@@ -30,9 +30,15 @@
 
 .btn-edit {
     background: var(--acc);
-    color: #fff;
+    color: white;
+    box-shadow: 0 4px 10px color-mix(in srgb, var(--acc2) 20%, transparent);
 }
-.btn-edit:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3); }
+
+.btn-edit:hover {
+    background: color-mix(in srgb, var(--acc) 80%, black);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px color-mix(in srgb, var(--acc) 30%, transparent);
+}
 
 .btn-cancel {
     background: var(--s2);
@@ -53,7 +59,7 @@
 }
 
 .btn-ipa {
-    background: var(--acc);
+    background: var(--ok);
     color: #fff;
 }
 .btn-ipa:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3); }

@@ -251,7 +251,10 @@ export default function SystemTab() {
             preview: "#0b0f19",
             colors: { 
                 bg: "#0b0f19", 
-                card: "#12121c", 
+                s1: "#151a28", 
+                s2: "#1a2033", 
+                s3: "#1f283d", 
+                s4: "#12121c", 
                 header: "#080812", 
                 font: "#f8fafc", 
                 font2: "#94a3b8", 
@@ -267,7 +270,10 @@ export default function SystemTab() {
             preview: "linear-gradient(135deg, #000000, #0a0a0a)",
             colors: { 
                 bg: "#000000", 
-                card: "#09090b", 
+                s1: "#09090b", 
+                s2: "#121214", 
+                s3: "#1a1a1c", 
+                s4: "#040405", 
                 header: "#000000", 
                 font: "#ffffff", 
                 font2: "#a1a1aa", 
@@ -341,12 +347,40 @@ export default function SystemTab() {
         {
             name: "Clean Paper",
             preview: "#ffffff",
-            colors: { bg: "#f4f4f5", card: "#ffffff", header: "#fafafa", font: "#09090b", font2: "#71717a", accent: "#3b82f6", accent2: "#3b82f6", accent3: "#8b5cf6", border: "#e4e4e7", blur: "0px", glow: "rgba(0, 0, 0, 0.08)" }
+            colors: { 
+                bg: "#f4f4f5", 
+                s1: "#ffffff", 
+                s2: "#f8f8fa", 
+                s3: "#f1f1f4", 
+                s4: "#fafafa", 
+                header: "#fafafa", 
+                font: "#09090b", 
+                font2: "#71717a", 
+                accent: "#3b82f6", 
+                accent2: "#3b82f6", 
+                accent3: "#8b5cf6", 
+                border: "#e4e4e7", 
+                blur: "0px", 
+                glow: "rgba(0, 0, 0, 0.08)" }
         },
         {
             name: "Vintage Sepia",
             preview: "#fdf6e3",
-            colors: { bg: "#fdf6e3", card: "#fefbf4", header: "#fdf6e3", font: "#4a3c31", font2: "#9a8c83", accent: "#d97706", accent2: "#d97706", accent3: "#9a3412", border: "#e8dfcc", blur: "0px", glow: "rgba(217, 119, 6, 0.15)" }
+            colors: { 
+                bg: "#fdf6e3", 
+                s1: "#fefbf4", 
+                s2: "#f9f2e0", 
+                s3: "#f4ead2", 
+                s4: "#fcf8ef", 
+                header: "#fdf6e3", 
+                font: "#4a3c31", 
+                font2: "#9a8c83", 
+                accent: "#d97706", 
+                accent2: "#d97706", 
+                accent3: "#9a3412", 
+                border: "#e8dfcc", 
+                blur: "0px", 
+                glow: "rgba(217, 119, 6, 0.15)" }
         },
         {
             name: "Nord Snow",
@@ -447,17 +481,20 @@ export default function SystemTab() {
                 <br />
                 <h2>Custom Theme</h2>
                 <div className='pick-colors'>
-                    <label className='selector-name'>Background Color</label>
+                    <label className='selector-name'>Background</label>
                     <input type='color' className='color-selector' value={getSafeColor(colors.bg, '#0b0f19')} onChange={(e) => updateConfig({ colors: { ...colors, bg: e.target.value }})} />
-                    <label className='selector-name'>Card/Box Color</label>
-                    <input type='color' className='color-selector' value={getSafeColor(colors.card, '#0b0f19')} onChange={(e) => updateConfig({ colors: { ...colors, card: e.target.value }})}/>
-                    <label className='selector-name'>Header Color</label>
-                    <input type='color' className='color-selector' value={getSafeColor(colors.header, '#0b0f19')} onChange={(e) => updateConfig({ colors: { ...colors, header: e.target.value }})}/>
-                    <label className='selector-name'>Font Color</label>
+                    
+                    <label className='selector-name'>Surface 1 (Cards)</label>
+                    <input type='color' className='color-selector' value={getSafeColor(colors.s1, '#151a28')} onChange={(e) => updateConfig({ colors: { ...colors, s1: e.target.value }})}/>
+                    
+                    <label className='selector-name'>Surface 4 (Input)</label>
+                    <input type='color' className='color-selector' value={getSafeColor(colors.s4, '#12121c')} onChange={(e) => updateConfig({ colors: { ...colors, s4: e.target.value }})}/>
+                    
+                    <label className='selector-name'>Text Primary</label>
                     <input type='color' className='color-selector' value={getSafeColor(colors.font, '#ffffff')} onChange={(e) => updateConfig({ colors: { ...colors, font: e.target.value }})}/>
-                    <label className='selector-name'>Glow Color</label>
+                    
+                    <label className='selector-name'>Accent Glow</label>
                     <input type='color' className='color-selector' value={getSafeColor(colors.glow, '#1a1638')} onChange={(e) => updateConfig({ colors: { ...colors, glow: e.target.value }})}/>
-
                 </div>
             </Card>
             <Card>

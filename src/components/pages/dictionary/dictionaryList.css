@@ -249,8 +249,8 @@
 
 .entry-tag {
     font-size: 0.75rem;
-    background-color: var(--s2);
-    color: var(--tx2);
+    background-color: var(--acc);
+    color: var(--tx);
     padding: 0.25rem 0.5rem;
     border-radius: 0.375rem;
     cursor: pointer;
@@ -258,7 +258,7 @@
 }
 
 .entry-tag:hover {
-    background-color: var(--s3);
+    background-color: var(--bg);
 }
 
 .entry-actions {

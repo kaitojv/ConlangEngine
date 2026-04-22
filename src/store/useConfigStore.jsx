@@ -34,9 +34,18 @@ export const INITIAL_CONFIG = {
     customFont: null,
     theme: 'dark',
     colors: {
-        card: '#1e1e1e',
-        header: '#2d2d2d',
-        font: '#ffffff'
+        bg: '#0b0f19',
+        s1: '#151a28',
+        s2: '#1a2033',
+        s3: '#1f283d',
+        s4: '#12121c',
+        font: '#f8fafc',
+        font2: '#94a3b8',
+        accent: '#7c3aed',
+        accent2: '#8b5cf6',
+        accent3: '#4c1d95',
+        border: 'rgba(255, 255, 255, 0.08)',
+        glow: '#1a1638'
     },
     customGlyphs: {},
     puaCounter: 57344,      

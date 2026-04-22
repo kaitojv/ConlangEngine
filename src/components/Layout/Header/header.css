@@ -40,42 +40,43 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 8px;
     color: var(--tx);
     transition: all 0.2s;
 }
 
 .toggle-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--acc);
 }
 
 .toggle-btn svg {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
+    stroke-width: 1.5px;
 }
 
 .hdr-right { 
     display: flex; 
-    gap: 10px; 
+    gap: 8px; 
     align-items: center;
-    background: #0b0f1c; /* Solid deep midnight */
-    padding: 6px 12px; 
-    border-radius: 8px; 
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--s4); 
+    padding: 4px 8px; 
+    border-radius: 10px; 
+    border: 1px solid var(--bd);
 } 
 
 .profile-header-button {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
-    background-color: #0b0f1c;
+    background-color: var(--s4);
     color: var(--tx);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--bd);
     transition: all 0.2s;
 }
 
@@ -86,33 +87,33 @@
 
 .hdr-btn {
     background: transparent; 
-    color: #ffffff !important; 
+    color: var(--tx) !important; 
     border: none !important;
-    padding: 4px 8px; 
-    border-radius: 4px; 
+    padding: 6px 10px; 
+    border-radius: 6px; 
     font-size: 0.85rem; 
     font-weight: 600;
     cursor: pointer; 
     transition: all 0.2s;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .hdr-btn:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--acc);
 }
 
 .hdr-btn svg {
-    width: 18px;
-    height: 18px;
-    stroke-width: 2px;
+    width: 16px;
+    height: 16px;
+    stroke-width: 1.8px;
 }
 
 .app-dinamic-title {
     font-size: 1.8rem;
     font-weight: 800;
-    background: linear-gradient(to right, #a78bfa, #8b5cf6); /* Vibrant purple gradient */
+    background: linear-gradient(to right, var(--acc), var(--acc2));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -121,14 +122,14 @@
 }
 
 .hdr-badge {
-    background: linear-gradient(135deg, #7c3aed, #a78bfa);
+    background: linear-gradient(135deg, var(--acc), var(--acc2));
     font-size: 0.65rem;
     color: white !important;
     padding: 4px 12px;
     border-radius: 99px; /* Pill shape */
     font-weight: 800;
     text-transform: uppercase;
-    box-shadow: 0 0 15px rgba(124, 58, 237, 0.3);
+    box-shadow: 0 0 15px color-mix(in srgb, var(--acc) 30%, transparent);
 }
 
 .hdr-brand {

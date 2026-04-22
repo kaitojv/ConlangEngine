@@ -10,10 +10,17 @@ export function useThemeInjector() {
         
         const root = document.documentElement;
         
-        // Main colors
+        // Main colors & Surfaces
         if (colors.bg) root.style.setProperty('--bg', colors.bg);
-        if (colors.card) root.style.setProperty('--s4', colors.card);
         if (colors.header) root.style.setProperty('--h-bg', colors.header);
+        
+        if (colors.s1) root.style.setProperty('--s1', colors.s1);
+        if (colors.s2) root.style.setProperty('--s2', colors.s2);
+        if (colors.s3) root.style.setProperty('--s3', colors.s3);
+        if (colors.s4) root.style.setProperty('--s4', colors.s4);
+        
+        // Backward compatibility for 'card'
+        if (colors.card) root.style.setProperty('--s4', colors.card);
         
         // Texts and Accents
         if (colors.font) root.style.setProperty('--tx', colors.font);
@@ -22,8 +29,7 @@ export function useThemeInjector() {
         if (colors.accent2) root.style.setProperty('--acc2', colors.accent2);
         if (colors.accent3) root.style.setProperty('--acc3', colors.accent3);
         
-
-        // Bords and Visual Effects
+        // Borders and Visual Effects
         if (colors.border) root.style.setProperty('--bd', colors.border);
         if (colors.blur !== undefined) root.style.setProperty('--blur', colors.blur);
         if (colors.glow !== undefined) root.style.setProperty('--glow', colors.glow);
