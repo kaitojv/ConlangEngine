@@ -39,13 +39,14 @@
     background-color: var(--s4);
     color: var(--tx);
     border: 1px solid var(--bd);
-    border-radius: 0.375rem;
+    border-radius: var(--rad-sm);
     outline: none;
-    transition: border-color 0.2s;
+    transition: all 0.2s;
 }
 
 .search-input:focus {
-    border-color: var(--s4);
+    border-color: var(--acc);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 20%, transparent);
 }
 
 .filter-select {
@@ -59,11 +60,17 @@
 
 .alpha-filter-bar {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap; /* Prevent wrapping on mobile */
+    overflow-x: auto; /* Enable horizontal scroll */
     gap: 0.5rem;
     align-items: center;
     border-top: 1px solid var(--bd);
-    padding-top: 1rem;
+    padding: 1rem 0.5rem;
+    scrollbar-width: none; /* Hide scrollbar for cleaner look */
+}
+
+.alpha-filter-bar::-webkit-scrollbar {
+    display: none;
 }
 
 .alpha-icon {
@@ -96,7 +103,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
+    margin: 2rem 0 1rem 0; /* More top margin to separate from filters */
     padding: 0 0.5rem;
 }
 
@@ -181,6 +188,7 @@
     display: flex;
     align-items: baseline;
     gap: 0.75rem;
+    flex-wrap: wrap; /* Allow wrapping on narrow screens */
 }
 
 .entry-main-word {

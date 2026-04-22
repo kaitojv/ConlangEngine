@@ -74,13 +74,19 @@
   --s1: #ffffff;
   --s2: #f1f5f9;
   --s3: #e2e8f0;
+  --s4: #ffffff; /* Inputs should be pure white in light theme */
   --h-bg: #ffffff;
   --tx: #0f172a;
   --tx2: #475569;
-  --bd: rgba(0, 0, 0, 0.1); /* Light theme border */
+  --tx3: #64748b;
+  --bd: rgba(0, 0, 0, 0.08);
+  --bd2: rgba(0, 0, 0, 0.12);
   --acc: #6d28d9;
-  --s4: var(--s2); /* Define s4 for light theme, slightly darker than s1 */
-  --card: var(--s1); /* White for cards in light mode */
+  --acc2: #7c3aed;
+  --acc3: #f5f3ff;
+  --card: var(--s1);
+  --input: #ffffff;
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 * {
@@ -175,7 +181,7 @@ select option{
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
   .content {
-    padding: 20px 12px;
+    padding: 15px 12px 100px 12px; /* Extra bottom padding for floating buttons */
   }
   h2 {
     font-size: 1.25rem;

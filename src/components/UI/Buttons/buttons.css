@@ -25,23 +25,21 @@
 .btn-save {
     background: var(--ok);
     color: #fff;
-    border: 1px solid var(--bd);
 }
-.btn-save:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4); }
+.btn-save:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
 
 .btn-edit {
     background: var(--acc);
     color: #fff;
-    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
 }
-.btn-edit:hover { filter: brightness(1.1); transform: translateY(-2px); }
+.btn-edit:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3); }
 
 .btn-cancel {
-    background: var(--s4);
+    background: var(--s2);
     color: var(--tx);
     border: 1px solid var(--bd);
 }
-.btn-cancel:hover { background: var(--err); border-color: var(--err); color: #fff; }
+.btn-cancel:hover { background: var(--s3); }
 
 .btn-default {
     background-color: transparent;
@@ -50,37 +48,32 @@
 }
 
 .btn-default:hover {
-    background-color: var(--s4);
+    background-color: var(--s2);
     transform: translateY(-2px);
 }
 
 .btn-ipa {
     background: var(--acc);
     color: #fff;
-    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
 }
+.btn-ipa:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3); }
 
-.btn-ipa:hover { filter: brightness(1.1); transform: translateY(-2px); }
-
-.btn-error{
+.btn-error {
     background-color: var(--err);
     color: #fff;
-    box-shadow: 1px 1px 10px rgba(255, 0, 0, 0.3);
 }
-
 .btn-error:hover {
     filter: brightness(1.1);
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 0, 0, 0.4);
+    box-shadow: 0 4px 12px rgba(255, 0, 0, 0.3);
 }
 
 .btn-import {
     background: var(--acc2);
     color: #fff;
-    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
 }
-
 .btn-import:hover {
     filter: brightness(1.1);
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }

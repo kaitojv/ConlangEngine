@@ -1,15 +1,15 @@
 /* src/components/Header.css */
 
 .hdr {
-    background: color-mix(in srgb, var(--bg) 80%, transparent) !important;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: var(--h-bg) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--bd);
-    padding: 15px 25px;
-    position: sticky; /* Make the header sticky */
+    padding: 10px 20px;
+    position: sticky;
     top: 0;
-    z-index: 100; /* Ensure the header stays above other content */
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    box-shadow: var(--shadow);
 }
 
 .hdr-flex {
@@ -24,127 +24,142 @@
 .hdr-left {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 12px;
 }
 
 .hdr-actions {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 10px;
 }
 
-.toggle-btn{
+.toggle-btn {
     background: transparent; 
     cursor: pointer;
     border: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     border-radius: var(--rad-sm);
+    color: var(--tx);
+    transition: background 0.2s;
+}
 
+.toggle-btn:hover {
+    background: var(--s2);
 }
 
 .hdr-right { 
     display: flex; 
-    gap: 5px; 
+    gap: 2px; 
     align-items: center;
-    background: var(--b1); 
+    background: var(--s2); 
     padding: 4px; 
-    border-radius: 8px; 
+    border-radius: var(--rad-sm); 
     border: 1px solid var(--bd);
-    color: var(--tx2);
 } 
 
 .profile-header-button {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     background-color: var(--s4);
     color: var(--tx);
     border: 1px solid var(--bd);
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
 }
 
 .profile-header-button:hover {
     background-color: var(--acc);
     color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
 }
 
-.hdr-btn{
+.hdr-btn {
     background: transparent; 
-    color: var(--tx); 
+    color: var(--tx2); 
     border: none !important;
-    padding: 6px 12px; 
+    padding: 8px 12px; 
     border-radius: 6px; 
     font-size: 0.85rem; 
     font-weight: 600;
     cursor: pointer; 
-    transition: all 0.3s;
+    transition: all 0.2s;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     box-shadow: none !important;
-    outline: none !important;
 }
 
 .hdr-btn:hover {
     background: var(--s4); 
     color: var(--tx); 
-    transform: translateY(-1px) scale(1.02);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
 }
 
-.app-dinamic-title{
-    font-size: 1.8rem;
+.app-dinamic-title {
+    font-size: 1.4rem;
     font-weight: 800;
-    background: linear-gradient(to right, var(--acc3), var(--acc2));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--tx);
     letter-spacing: -0.5px;
-    background-clip: text;
     margin: 0;
 }
 
 .hdr-badge {
-    background: linear-gradient(135deg, var(--acc), var(--acc2));
-    font-size: 0.7rem;
+    background: var(--acc);
+    font-size: 0.65rem;
     color: white !important;
-    -webkit-text-fill-color: white !important;
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-weight: 900;
-    letter-spacing: 1px;
-    display: inline-flex;
-    flex-direction: row;
-    align-items: center;
-    white-space: nowrap;
-    gap: 4px;
-}
-
-.hdr-badge.live {
-    background: var(--ok);
-    color: #ffffff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
 }
 
 .hdr-brand {
     display: flex;
     align-items: center;
-    gap: 10px;
-}
-
-.lucide {
-    width: 18px;
-    height: 18px;
-    stroke-width: 2px;
+    gap: 8px;
 }
 
 .hidden-file-input {
     display: none;
+}
+
+/* Header Responsiveness */
+@media (max-width: 768px) {
+    .hdr {
+        padding: 8px 12px;
+    }
+    
+    .app-dinamic-title {
+        display: none; /* Hide title on very small screens to save space */
+    }
+    
+    .hdr-btn span, 
+    .hdr-btn {
+        font-size: 0; /* Hide text of buttons on mobile, showing only icons */
+        padding: 8px;
+    }
+    
+    .hdr-btn svg {
+        margin: 0;
+    }
+
+    .hdr-right {
+        background: transparent;
+        border: none;
+        padding: 0;
+    }
+}
+
+@media (min-width: 480px) {
+    .app-dinamic-title {
+        display: block;
+        font-size: 1.2rem;
+    }
 }
