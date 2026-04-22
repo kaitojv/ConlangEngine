@@ -121,10 +121,22 @@ export default function CreateWordTab() {
         // Also save any selected derivations
         derivedWords.forEach((item, idx) => {
             if (selectedDerivs[idx]) {
+                // Determine the best class for the derivation
+                const rule = grammarRules.find(r => r.name === item.ruleName);
+                let targetClass = wordClass; // Fallback
+                if (rule) {
+                    const ruleClasses = rule.appliesTo.split(',').map(c => c.trim().toLowerCase());
+                    if (!ruleClasses.includes('all')) {
+                        targetClass = ruleClasses[0]; // Use the specific class the rule applies to
+                    } else if (wordClass.includes(',')) {
+                        targetClass = wordClass.split(',')[0].trim(); // Use the first class of the root
+                    }
+                }
+
                 addWord({
                     word: item.derivedWord,
                     ipa: '', // Derivations don't auto-generate IPA yet
-                    wordClass: wordClass, // Default to root's class
+                    wordClass: targetClass,
                     translation: customTranslations[idx] !== undefined ? customTranslations[idx].trim() : item.translationText,
                     tags: processedTags,
                     ideogram: ''
@@ -140,15 +152,17 @@ export default function CreateWordTab() {
         const results = [];
         const safeBaseWord = normalizeToBase(word.trim());
 
+        const currentClasses = wordClass ? wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
+
         grammarRules.forEach(rule => {
             const ruleClasses = rule.appliesTo.split(',').map(c => c.trim().toLowerCase());
             
-            if (ruleClasses.includes('all') || ruleClasses.includes(wordClass.toLowerCase())) {
+            if (ruleClasses.includes('all') || currentClasses.some(cc => ruleClasses.includes(cc))) {
                 let base = safeBaseWord;
                 
                 // If it's a verb, we strip the infinitive marker before applying affixes
-                if (wordClass === 'verb' && verbMarker) {
-                    const markers = verbMarker.split(',').map(m => m.trim());
+                if (currentClasses.includes('verb') && verbMarker) {
+                    const markers = verbMarker.split(',').map(m => m.trim().replace(/^-/, ''));
                     const match = markers.find(m => base.endsWith(m));
                     if (match) base = base.slice(0, -match.length);
                 }

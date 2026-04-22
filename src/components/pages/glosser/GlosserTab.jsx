@@ -49,8 +49,12 @@ export default function GlosserTab() {
         if (config.verbMarker) {
             const markers = config.verbMarker.split(',').map(m => m.trim().replace(/^-/, ''));
             markers.forEach(marker => {
-                lexicon.filter(e => normalizeToBase(e.word.toLowerCase()) === safeSurface + normalizeToBase(marker) && e.wordClass === 'verb')
-                       .forEach(m => parsings.push({ root: m, rules: [] }));
+                lexicon.filter(e => {
+                    const isMatch = normalizeToBase(e.word.toLowerCase()) === safeSurface + normalizeToBase(marker);
+                    if (!isMatch) return false;
+                    const classes = e.wordClass ? e.wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
+                    return classes.includes('verb');
+                }).forEach(m => parsings.push({ root: m, rules: [] }));
             });
         }
 
@@ -62,7 +66,8 @@ export default function GlosserTab() {
             if (stripped) {
                 findAllParsings(stripped, depth + 1).forEach(sp => {
                     let applies = rule.appliesTo ? rule.appliesTo.split(',').map(c => c.trim().toLowerCase()) : ['all'];
-                    if (applies.includes('all') || applies.includes(sp.root.wordClass?.toLowerCase())) {
+                    const rootClasses = sp.root.wordClass ? sp.root.wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
+                    if (applies.includes('all') || rootClasses.some(rc => applies.includes(rc))) {
                         parsings.push({ root: sp.root, rules: [rule, ...sp.rules] });
                     }
                 });

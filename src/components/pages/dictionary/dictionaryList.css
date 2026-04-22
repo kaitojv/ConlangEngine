@@ -218,7 +218,12 @@
 .badge-particle { background-color: #ec4899; }
 .badge-conjunction { background-color: #6366f1; }
 .badge-preposition { background-color: #14b8a6; }
+.badge-adposition { background-color: #14b8a6; }
 .badge-classifier { background-color: #f43f5e; }
+.badge-numeral { background-color: #0ea5e9; }
+.badge-article { background-color: #a855f7; }
+.badge-determiner { background-color: #d946ef; }
+.badge-interjection { background-color: #84cc16; }
 .badge-other { background-color: var(--s3); color: var(--tx) !important; }
 
 .entry-translation {

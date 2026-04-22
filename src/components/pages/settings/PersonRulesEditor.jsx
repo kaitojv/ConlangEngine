@@ -46,8 +46,11 @@ export default function PersonRulesEditor() {
                 const freeAffixParts = parts[1].trim().split('/');
                 const freeForm = freeAffixParts[0]?.trim() || '';
                 const affix = freeAffixParts[1]?.trim() || '';
+                
+                // New appliesTo field for Person Rules
+                const appliesTo = 'all'; 
 
-                return { id, person, number, gender, freeForm, affix };
+                return { id, person, number, gender, freeForm, affix, appliesTo };
             }).filter(Boolean); // Filter out any nulls from failed parsing
             setRules(parsed);
         } else if (Array.isArray(storedPersonRules)) {
@@ -97,7 +100,8 @@ export default function PersonRulesEditor() {
             number: 'S',
             gender: '',
             freeForm: '',
-            affix: ''
+            affix: '',
+            appliesTo: 'all'
         };
         updateStore([...rules, newRule]);
     };
@@ -109,12 +113,12 @@ export default function PersonRulesEditor() {
 
     const handleAutoFill = () => {
         const presetRules = [
-            { id: uuidv4(), person: '1st', number: 'S', gender: '', freeForm: 'I', affix: '-m' },
-            { id: uuidv4(), person: '2nd', number: 'S', gender: '', freeForm: 'you', affix: '-s' },
-            { id: uuidv4(), person: '3rd', number: 'S', gender: '', freeForm: 'he', affix: '-t' },
-            { id: uuidv4(), person: '1st', number: 'P', gender: '', freeForm: 'we', affix: '-mus' },
-            { id: uuidv4(), person: '2nd', number: 'P', gender: '', freeForm: 'you', affix: '-tis' },
-            { id: uuidv4(), person: '3rd', number: 'P', gender: '', freeForm: 'they', affix: '-nt' },
+            { id: uuidv4(), person: '1st', number: 'S', gender: '', freeForm: 'I', affix: '-m', appliesTo: 'verb' },
+            { id: uuidv4(), person: '2nd', number: 'S', gender: '', freeForm: 'you', affix: '-s', appliesTo: 'verb' },
+            { id: uuidv4(), person: '3rd', number: 'S', gender: '', freeForm: 'he', affix: '-t', appliesTo: 'verb' },
+            { id: uuidv4(), person: '1st', number: 'P', gender: '', freeForm: 'we', affix: '-mus', appliesTo: 'verb' },
+            { id: uuidv4(), person: '2nd', number: 'P', gender: '', freeForm: 'you', affix: '-tis', appliesTo: 'verb' },
+            { id: uuidv4(), person: '3rd', number: 'P', gender: '', freeForm: 'they', affix: '-nt', appliesTo: 'verb' },
         ];
         updateStore(presetRules);
     };
@@ -134,6 +138,7 @@ export default function PersonRulesEditor() {
                 <span>Gender</span>
                 <span>Free Form</span>
                 <span>Affix</span>
+                <span>Applies To</span>
                 {/* Empty span for the delete button column */}
                 <span></span> 
             </div>
@@ -182,6 +187,14 @@ export default function PersonRulesEditor() {
                             placeholder="Affix (e.g., -m, s-, -ma-@V)"
                             value={rule.affix}
                             onChange={(e) => handleRuleChange(rule.id, 'affix', e.target.value)}
+                        />
+
+                        <input
+                            type="text"
+                            className="rule-input"
+                            placeholder="e.g. noun, verb"
+                            value={rule.appliesTo || 'all'}
+                            onChange={(e) => handleRuleChange(rule.id, 'appliesTo', e.target.value.toLowerCase())}
                         />
 
                         <button type="button" className="btn-delete-rule" onClick={() => deleteRule(rule.id)}>

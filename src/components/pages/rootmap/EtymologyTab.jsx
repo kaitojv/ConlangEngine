@@ -42,7 +42,8 @@ export default function EtymologyTab() {
         }
         
         // If it's a verb, we should also strip the infinitive marker before conjugating it
-        if (targetWord.wordClass === 'verb' && verbMarker) {
+        const targetClasses = targetWord.wordClass ? targetWord.wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
+        if (targetClasses.includes('verb') && verbMarker) {
             const markers = verbMarker.split(',').map(m => m.trim().replace(/^-/, '')).filter(Boolean);
             const matchedMarker = markers.find(m => baseWord.endsWith(m));
             if (matchedMarker) baseWord = baseWord.slice(0, -matchedMarker.length);
@@ -51,7 +52,7 @@ export default function EtymologyTab() {
         // Now, find all grammar rules that actually apply to this specific part of speech
         const applicableRules = grammarRules.filter(rule => {
             const allowedClasses = rule.appliesTo.split(',').map(c => c.trim().toLowerCase());
-            return allowedClasses.includes('all') || allowedClasses.includes(targetWord.wordClass.toLowerCase());
+            return allowedClasses.includes('all') || targetClasses.some(tc => allowedClasses.includes(tc));
         });
 
         // Finally, apply each rule to the base word and build our list of generated derivations

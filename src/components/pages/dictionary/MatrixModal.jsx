@@ -43,7 +43,8 @@ export default function MatrixModal({ wordObj }) {
         }
 
         // If it's a verb, we strip the infinitive marker before applying affixes
-        if (liveWord.wordClass?.toLowerCase() === 'verb' && verbMarker) {
+        const liveClasses = liveWord.wordClass ? liveWord.wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
+        if (liveClasses.includes('verb') && verbMarker) {
             const markers = verbMarker.split(',').map(m => m.trim().replace(/^-/, '')).filter(Boolean);
             const matchedMarker = markers.find(m => base.endsWith(m));
             if (matchedMarker) base = base.slice(0, -matchedMarker.length);
@@ -54,16 +55,25 @@ export default function MatrixModal({ wordObj }) {
 
     const applicableRules = useMemo(() => {
         if (!liveWord) return [];
+        const liveClasses = liveWord.wordClass ? liveWord.wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
+        
         return grammarRules.filter(rule => {
             const classes = rule.appliesTo.split(',').map(c => c.trim().toLowerCase());
-            return classes.includes('all') || classes.includes(liveWord.wordClass.toLowerCase());
+            return classes.includes('all') || liveClasses.some(lc => classes.includes(lc));
         });
     }, [liveWord, grammarRules]);
 
     const personRules = useMemo(() => {
         const parsedPersons = getPersonRules(personsConfig);
-        return [{ name: 'BASE', affix: '', freeForm: '', appliesTo: 'all' }, ...parsedPersons];
-    }, [personsConfig]);
+        const liveClasses = liveWord.wordClass ? liveWord.wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
+        
+        const filtered = parsedPersons.filter(person => {
+            const applies = person.appliesTo ? person.appliesTo.split(',').map(c => c.trim().toLowerCase()) : ['all'];
+            return applies.includes('all') || liveClasses.some(lc => applies.includes(lc));
+        });
+
+        return [{ name: 'BASE', affix: '', freeForm: '', appliesTo: 'all' }, ...filtered];
+    }, [personsConfig, liveWord]);
 
     const hasNonStandaloneRules = applicableRules.some(rule => !rule.standalone); // Rules that need person/class
     const hasStandaloneRules = applicableRules.some(rule => rule.standalone); // Rules that don't need person/class
@@ -214,6 +224,14 @@ export default function MatrixModal({ wordObj }) {
                                 <option value="adverb">Adverb</option>
                                 <option value="pronoun">Pronoun</option>
                                 <option value="particle">Particle</option>
+                                <option value="conjunction">Conjunction</option>
+                                <option value="preposition">Preposition</option>
+                                <option value="adposition">Adposition</option>
+                                <option value="classifier">Classifier</option>
+                                <option value="numeral">Numeral</option>
+                                <option value="article">Article</option>
+                                <option value="determiner">Determiner</option>
+                                <option value="interjection">Interjection</option>
                             </select>
                         </div>
                         <button 
@@ -299,7 +317,14 @@ export default function MatrixModal({ wordObj }) {
                                                             onClick={() => {
                                                                 setDerivationToSave({ word: finalWordToDisplay, ruleName: rule.name, personName: person.name });
                                                                 setDerivationTranslation('');
-                                                                setDerivationClass(liveWord.wordClass);
+                                                                
+                                                                // Smartly default the target class based on the grammar rule
+                                                                const ruleClasses = rule.appliesTo.split(',').map(c => c.trim().toLowerCase());
+                                                                if (ruleClasses.includes('all')) {
+                                                                    setDerivationClass(liveWord.wordClass ? liveWord.wordClass.split(',')[0].trim().toLowerCase() : 'noun');
+                                                                } else {
+                                                                    setDerivationClass(ruleClasses[0]); // Default to the first class this rule applies to
+                                                                }
                                                             }}
                                                             title="Save to Lexicon"
                                                         >

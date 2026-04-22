@@ -48,7 +48,12 @@ export default function DictionaryList() {
 
     // Do the same for word classes (Noun, Verb, etc.) to populate the dropdown
     const uniqueClasses = useMemo(() => {
-        const classes = new Set(lexicon.map(w => w.wordClass).filter(Boolean));
+        const classes = new Set();
+        lexicon.forEach(w => {
+            if (w.wordClass) {
+                w.wordClass.split(',').forEach(cls => classes.add(cls.trim()));
+            }
+        });
         return [...classes].sort();
     }, [lexicon]);
 
@@ -66,7 +71,11 @@ export default function DictionaryList() {
         }
 
         if (filters.type !== 'all') {
-            result = result.filter(e => e.wordClass === filters.type);
+            result = result.filter(e => {
+                if (!e.wordClass) return false;
+                const classes = e.wordClass.split(',').map(c => c.trim().toLowerCase());
+                return classes.includes(filters.type.toLowerCase());
+            });
         }
 
         if (filters.letter !== 'all') {
@@ -205,9 +214,6 @@ export default function DictionaryList() {
                     const safeWord = entry.word.replace(/\*/g, '');
                     const displayWord = transliterate(safeWord, lexicon);
                     
-                    // Safely format the word class into a valid CSS class string (e.g. "proper noun" -> "proper-noun")
-                    const safeClassBadge = entry.wordClass ? entry.wordClass.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase() : 'other';
-
                     return (
                         <Card key={entry.id} className="dictionary-entry">
                             <div className="entry-header">
@@ -229,9 +235,19 @@ export default function DictionaryList() {
                                     )}
                                 </div>
                                 
-                                <span className={`word-class-badge badge-${safeClassBadge}`}>
-                                    {entry.wordClass || 'Other'}
-                                </span>
+                                <div className="word-classes-wrapper" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                    {entry.wordClass ? entry.wordClass.split(',').map((cls, idx) => {
+                                        const cleanCls = cls.trim();
+                                        const safeClassBadge = cleanCls.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+                                        return (
+                                            <span key={idx} className={`word-class-badge badge-${safeClassBadge}`}>
+                                                {cleanCls}
+                                            </span>
+                                        );
+                                    }) : (
+                                        <span className="word-class-badge badge-other">Other</span>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="entry-translation">

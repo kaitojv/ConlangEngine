@@ -52,7 +52,7 @@ export const RuleRow = ({ rule, onUpdate, onDelete }) => {
 
         <div className="form-group">
           <label className="rule-label">Applies To</label>
-          <input type="text" name="appliesTo" className="fi" value={rule.appliesTo} onChange={handleChange} placeholder="noun, verb..." spellCheck="false" />
+          <input type="text" name="appliesTo" className="fi" value={rule.appliesTo} onChange={handleChange} placeholder="e.g. noun, verb" spellCheck="false" />
         </div>
 
         <div className="form-group">

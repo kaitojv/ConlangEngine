@@ -121,7 +121,12 @@ export default function ProfileTab() {
         let maxCount = 0;
         const classCounts = {};
         lexicon.forEach(w => {
-            if (w.wordClass) classCounts[w.wordClass] = (classCounts[w.wordClass] || 0) + 1;
+            if (w.wordClass) {
+                w.wordClass.split(',').forEach(cls => {
+                    const cleanCls = cls.trim().toLowerCase();
+                    classCounts[cleanCls] = (classCounts[cleanCls] || 0) + 1;
+                });
+            }
         });
         for (const [cls, count] of Object.entries(classCounts)) {
             if (count > maxCount) { maxCount = count; topClass = cls; }
