@@ -13,7 +13,8 @@ import './dictionaryList.css';
 
 export default function DictionaryList() {
     // Grab the global stores for our dictionary and language settings
-    const lexicon = useLexiconStore((state) => state.lexicon) || [];
+    const rawLexicon = useLexiconStore((state) => state.lexicon);
+    const lexicon = Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []);
     const deleteWord = useLexiconStore((state) => state.deleteWord);
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     
@@ -271,7 +272,7 @@ export default function DictionaryList() {
                             <div className="entry-actions">
                                 <Button 
                                     variant="ipa" 
-                                    onClick={() => handleListen(safeWord)}
+                                    onClick={() => handleListen(entry.ipa || safeWord)}
                                 >
                                     <Volume2 size={14} /> Listen
                                 </Button>
@@ -313,11 +314,11 @@ export default function DictionaryList() {
             )}
 
             <Modal isOpen={!!selectedWordForMatrix} onClose={() => setSelectedWordForMatrix(null)} title="Word Inflection Matrix">
-                <MatrixModal wordObj={selectedWordForMatrix} />
+                <MatrixModal key={selectedWordForMatrix?.id} wordObj={selectedWordForMatrix} />
             </Modal>
 
             <Modal isOpen={!!selectedWordForEdit} onClose={() => setSelectedWordForEdit(null)} title="Edit Lexicon Entry">
-                <EditWordModal wordObj={selectedWordForEdit} onClose={() => setSelectedWordForEdit(null)} />
+                <EditWordModal key={selectedWordForEdit?.id} wordObj={selectedWordForEdit} onClose={() => setSelectedWordForEdit(null)} />
             </Modal>
         </div>
     );

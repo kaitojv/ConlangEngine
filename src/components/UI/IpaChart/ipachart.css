@@ -9,6 +9,9 @@
     border-radius: 16px;
     border: 1px solid var(--bd);
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    overflow-x: scroll !important;
+    max-width: 100%;
+    scrollbar-gutter: stable;
 }
 
 .ipa-section-title {
@@ -23,11 +26,50 @@
 }
 
 .ipa-wrapper {
-    overflow-x: auto;
+    overflow-x: scroll !important;
     background: var(--bg);
     border: 1px solid var(--bd);
     border-radius: var(--rad-sm);
     padding: 15px;
+    scrollbar-gutter: stable;
+    padding-bottom: 25px; /* Added space so scrollbar doesn't cover content */
+}
+
+/* Ensure scrollbars are visible and styled */
+.ipa-wrapper::-webkit-scrollbar,
+.ipa-map-wrap::-webkit-scrollbar,
+.ipa-vowel-container::-webkit-scrollbar {
+    height: 14px !important;
+    display: block !important;
+    background-color: var(--s2) !important; /* Force track background visibility */
+}
+
+.ipa-wrapper::-webkit-scrollbar-thumb,
+.ipa-map-wrap::-webkit-scrollbar-thumb,
+.ipa-vowel-container::-webkit-scrollbar-thumb {
+    background-color: var(--acc) !important;
+    border: 2px solid var(--s1) !important;
+    border-radius: 10px !important;
+    min-width: 60px !important;
+    visibility: visible !important;
+}
+
+.ipa-wrapper::-webkit-scrollbar-track,
+.ipa-map-wrap::-webkit-scrollbar-track,
+.ipa-vowel-container::-webkit-scrollbar-track {
+    background-color: var(--s2) !important;
+    border: 1px solid var(--bd) !important;
+    visibility: visible !important;
+    display: block !important;
+}
+
+/* Firefox support */
+.ipa-wrapper,
+.ipa-map-wrap,
+.ipa-vowel-container {
+    scrollbar-width: auto !important;
+    scrollbar-color: var(--acc) var(--s2) !important;
+    scrollbar-gutter: stable both !important;
 }
 
 .ipa-chart-table {
@@ -155,6 +197,9 @@
     width: 100%;
     max-width: 600px;
     margin: 0 auto;
+    overflow-x: scroll !important;
+    scrollbar-gutter: stable;
+    padding-bottom: 30px;
 }
 
 .vowel-headers {

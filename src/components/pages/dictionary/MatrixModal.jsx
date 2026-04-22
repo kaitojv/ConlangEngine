@@ -265,8 +265,8 @@ export default function MatrixModal({ wordObj }) {
                     </thead>
                     <tbody>
                     {personRules.map(person => {
+                        // Always show the BASE row. For other rows, only show if we have person markers to display.
                         if (person.name !== 'BASE' && !showPersonColumn) return null;
-                        if (person.name === 'BASE' && personRules.length > 1 && !hasStandaloneRules) return null;
 
                         return (
                             <tr key={`row_${person.name}`} className="matrix-tr-row">

@@ -13,6 +13,7 @@ import { validateNewWord } from '@/utils/validationEngine.jsx';
 import './createWordTab.css';
 import Modal from '../../UI/Modal/Modal.jsx';
 import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
+import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
 import toast from 'react-hot-toast';
 
 export default function CreateWordTab() {
@@ -206,6 +207,9 @@ export default function CreateWordTab() {
                             onChange={(e) => updateField('ipa', e.target.value)}
                             placeholder="/ma'kin/"
                         />
+                        <div style={{ marginTop: '-10px', marginBottom: '10px' }}>
+                            <IpaChart onSelect={(char) => updateField('ipa', ipa + char)} />
+                        </div>
                     </div>
                     <div>
                         <Input 

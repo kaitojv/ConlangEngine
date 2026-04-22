@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import './ipachart.css'
 import Button from '../Buttons/Buttons';
 
@@ -36,11 +36,19 @@ const VOWELS = [
     { label: 'Open', sounds: ['a','ɶ',null,null,'ɑ','ɒ'] },
 ];
 
-export default function IpaChart({ consonants = '', setConsonants, vowels = '', setVowels }) {
+export default function IpaChart({ consonants = '', setConsonants, vowels = '', setVowels, onSelect, alwaysOpen }) {
     const [isOpen, setIsOpen] = useState(false);
     
-    const togglePhoneme = (phoneme, type) => {
+    const handleClick = (phoneme, type) => {
         if (!phoneme) return;
+        
+        // If onSelect is provided, we act as a keyboard (appending text)
+        if (onSelect) {
+            onSelect(phoneme);
+            return;
+        }
+
+        // Otherwise, we act as an inventory selector (toggling commas)
         const currentStr = type === 'cons' ? consonants : vowels;
         const setStr = type === 'cons' ? setConsonants : setVowels;
 
@@ -52,7 +60,7 @@ export default function IpaChart({ consonants = '', setConsonants, vowels = '', 
     };
 
     const isSelected = (phoneme, type) => {
-        if (!phoneme) return false;
+        if (!phoneme || onSelect) return false;
         const currentStr = type === 'cons' ? consonants : vowels;
         return currentStr.split(',').map(s => s.trim().split('=')[0]).includes(phoneme);
     };
@@ -63,8 +71,8 @@ export default function IpaChart({ consonants = '', setConsonants, vowels = '', 
             <span 
                 key={phoneme}
                 className={`ph ${isSelected(phoneme, type) ? 'selected' : ''}`} 
-                onClick={() => togglePhoneme(phoneme, type)}
-                title={`Toggle ${phoneme}`}
+                onClick={() => handleClick(phoneme, type)}
+                title={`Select ${phoneme}`}
             >
                 {phoneme}
             </span>
@@ -73,11 +81,13 @@ export default function IpaChart({ consonants = '', setConsonants, vowels = '', 
 
     return (
         <div className='ipa-chart-container'>
-            <Button className='ipa-btn-toggle' onClick={() => setIsOpen(!isOpen)} variant={isOpen ? "default" : "save"}>
-                {isOpen ? 'Close IPA Chart' : 'Interactive Visual IPA Chart'}
-            </Button>
+            {!alwaysOpen && (
+                <Button className='ipa-btn-toggle' onClick={() => setIsOpen(!isOpen)} variant={isOpen ? "default" : "save"}>
+                    {isOpen ? 'Close IPA Chart' : 'Interactive Visual IPA Chart'}
+                </Button>
+            )}
             
-            {isOpen && (
+            {(isOpen || alwaysOpen) && (
                 <div className="ipa-map-wrap">
                     {/* PULMONIC CONSONANTS */}
                     <h3 className="ipa-section-title">Pulmonic Consonants</h3>

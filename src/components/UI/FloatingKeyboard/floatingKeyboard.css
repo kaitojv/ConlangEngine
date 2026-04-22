@@ -108,6 +108,18 @@
     animation: slideUp 0.3s ease;
 }
 
+.virtual-keyboard-container.ipa-picker-wide {
+    width: 800px;
+    max-width: 95vw;
+}
+
+.virtual-keyboard-container.ipa-picker-wide .ipa-map-wrap {
+    padding: 10px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
 .virtual-keyboard-header {
     display: flex;
     justify-content: space-between;

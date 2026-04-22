@@ -4,7 +4,7 @@ import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
-import { Save } from 'lucide-react';
+import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
 import './editModal.css';
 
 export default function EditWordModal({ wordObj, onClose }) {
@@ -30,7 +30,7 @@ export default function EditWordModal({ wordObj, onClose }) {
                 ipa: wordObj.ipa || '',
                 wordClass: wordObj.wordClass || '',
                 translation: wordObj.translation || '',
-                tags: wordObj.tags ? wordObj.tags.join(', ') : '',
+                tags: Array.isArray(wordObj.tags) ? wordObj.tags.join(', ') : (typeof wordObj.tags === 'string' ? wordObj.tags : ''),
                 ideogram: wordObj.ideogram || ''
             });
         }
@@ -96,6 +96,9 @@ export default function EditWordModal({ wordObj, onClose }) {
                         value={ipa}
                         onChange={(e) => updateField('ipa', e.target.value)}
                     />
+                    <div style={{ marginTop: '-10px', marginBottom: '10px' }}>
+                        <IpaChart onSelect={(char) => updateField('ipa', ipa + char)} />
+                    </div>
                 </div>
 
                 <div>

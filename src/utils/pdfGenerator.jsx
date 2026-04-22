@@ -53,14 +53,46 @@ export const generateConlangPDF = (config, lexicon) => {
             <p><strong>Word Order:</strong> ${config.syntaxOrder || 'SVO'}</p>
             <p><strong>Writing Direction:</strong> <span style="text-transform: uppercase;">${config.writingDirection || 'LTR'}</span></p>
             <p><strong>Verb Marker:</strong> ${config.verbMarker || 'None'}</p>
-            <p><strong>Person Rules:</strong> ${config.personRules || 'None'}</p>
             <p><strong>Clitics/Particles:</strong> ${config.cliticsRules || 'None'}</p>
             
+            ${Array.isArray(config.personRules) && config.personRules.length > 0 ? `
+            <h3>Person & Class Alignment</h3>
+            <table>
+                <thead>
+                    <tr><th>Person</th><th>Number</th><th>Gender</th><th>Free Form</th><th>Affix</th><th>Applies To</th></tr>
+                </thead>
+                <tbody>
+                    ${config.personRules.map(p => `
+                        <tr>
+                            <td>${p.person || '-'}</td>
+                            <td>${p.number || '-'}</td>
+                            <td>${p.gender || '-'}</td>
+                            <td>${p.freeForm || '-'}</td>
+                            <td><code>${p.affix || '-'}</code></td>
+                            <td>${p.appliesTo || 'all'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            ` : `<p><strong>Person Rules:</strong> ${typeof config.personRules === 'string' ? config.personRules : 'None'}</p>`}
+
             ${config.grammarRules && config.grammarRules.length > 0 ? `
-            <h3>Grammar Rules</h3>
-            <ul>
-                ${config.grammarRules.map(r => `<li>${typeof r === 'object' ? `<strong>${r.title || r.name || 'Rule'}:</strong> ${r.content || r.description || ''}` : r}</li>`).join('')}
-            </ul>
+            <h3>Grammar & Inflection Rules</h3>
+            <table>
+                <thead>
+                    <tr><th>Rule Name</th><th>Affix / Formula</th><th>Applies To</th><th>Condition</th></tr>
+                </thead>
+                <tbody>
+                    ${config.grammarRules.map(r => `
+                        <tr>
+                            <td><strong>${r.name || 'Unnamed'}</strong></td>
+                            <td><code>${r.affix || '-'}</code></td>
+                            <td>${r.appliesTo || 'all'}</td>
+                            <td>${r.condition || 'always'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
             ` : ''}
 
             <div class="page-break"></div>
@@ -73,7 +105,10 @@ export const generateConlangPDF = (config, lexicon) => {
                 <tbody>
                     ${lexicon.map(w => `
                         <tr>
-                            <td><span class="custom-font" style="font-size: 1.1em;"><strong>${w.word}</strong></span>${w.ideogram ? `<br/><span style="font-size: 1.4em;" class="custom-font">${w.ideogram}</span>` : ''}</td>
+                            <td>
+                                <span class="custom-font" style="font-size: 1.1em;"><strong>${w.word.replace(/\*/g, '')}</strong></span>
+                                ${w.ideogram ? `<br/><span style="font-size: 1.4em;" class="custom-font">${w.ideogram}</span>` : ''}
+                            </td>
                             <td>${w.ipa ? `/${w.ipa}/` : ''}</td>
                             <td><em>${w.wordClass || ''}</em></td>
                             <td>${w.translation || ''}</td>
@@ -85,8 +120,22 @@ export const generateConlangPDF = (config, lexicon) => {
 
             ${Object.keys(config.wikiPages || {}).length > 0 ? `
             <div class="page-break"></div>
-            <h2>4. Wiki & Lore</h2>
-            ${Object.entries(config.wikiPages || {}).map(([id, content]) => `<div class="wiki-page">${content}</div>`).join('')}
+            <h2>4. Library & Documents</h2>
+            ${Object.entries(config.wikiPages).map(([id, page]) => {
+                const isObject = typeof page === 'object' && page !== null;
+                const title = isObject ? page.title : id.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                const content = isObject ? page.content : page;
+                const type = isObject ? page.type : 'wiki';
+
+                return `
+                    <div class="wiki-page">
+                        <h3>${title} <span style="font-size: 0.7em; font-weight: normal; color: #888;">(${type})</span></h3>
+                        <div class="${type === 'corpus' ? 'custom-font' : ''}" style="white-space: pre-wrap; background: #fafafa; padding: 15px; border-radius: 6px; border: 1px solid #eee;">
+                            ${content}
+                        </div>
+                    </div>
+                `;
+            }).join('')}
             ` : ''}
         </body>
         </html>

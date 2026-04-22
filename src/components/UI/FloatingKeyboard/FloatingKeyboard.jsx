@@ -4,6 +4,7 @@ import 'react-simple-keyboard/build/css/index.css';
 import { Keyboard as KeyboardIcon, Plus, X, Book, BookPlus, Languages } from 'lucide-react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
+import IpaChart from '../IpaChart/Ipachart.jsx';
 import './floatingKeyboard.css';
 
 const Keyboard = SimpleKeyboard.default || SimpleKeyboard;
@@ -28,7 +29,8 @@ export default function FloatingKeyboard() {
     const setLexicon = useLexiconStore(state => state.setLexicon);
 
     // Standard IPA character grid
-    const ipaCharacters = ['p','b','t','d','k','g','f','v','θ','ð','s','z','ʃ','ʒ','x','ɣ','h','m','n','ŋ','l','r','j','w','i','ɪ','e','ɛ','æ','a','ə','ʌ','u','ʊ','o','ɔ','ɑ'];
+    // Standard IPA character grid is now handled by the IpaChart component
+    // const ipaCharacters = [...];
 
     // Dynamically build the keyboard layout
     const customLayout = useMemo(() => {
@@ -273,22 +275,13 @@ export default function FloatingKeyboard() {
             )}
 
             {isIpaOpen && (
-                <div className="virtual-keyboard-container">
+                <div className="virtual-keyboard-container ipa-picker-wide">
                     <div className="virtual-keyboard-header">
                         <span className="vk-title">IPA Picker</span>
                         <button className="vk-close" onClick={() => setIsIpaOpen(false)}><X size={16}/></button>
                     </div>
-                    <div style={{ padding: '15px', display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
-                        {ipaCharacters.map(char => (
-                            <button 
-                                key={char} 
-                                onMouseDown={(e) => e.preventDefault()} // Stops button from stealing focus from inputs
-                                onClick={() => insertTextAtCursor(char)} 
-                                style={{ padding: '10px', background: 'var(--s2)', border: '1px solid var(--bd)', color: 'inherit', cursor: 'pointer', borderRadius: '4px', fontSize: '1.2em' }}
-                            >
-                                {char}
-                            </button>
-                        ))}
+                    <div style={{ padding: '5px', maxHeight: '70vh', overflowY: 'auto' }}>
+                        <IpaChart alwaysOpen onSelect={(char) => insertTextAtCursor(char)} />
                     </div>
                 </div>
             )}
