@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
@@ -26,6 +26,73 @@ function CorpusEditor({ content, onSave, writingDirection }) {
     }, [content]);
 
     const isVertical = writingDirection?.startsWith('vertical');
+    const personRulesStr = useConfigStore(state => state.personRules) || "";
+
+    // Parse person markers for better glossing
+    const personMap = useMemo(() => {
+        const map = {};
+        if (!personRulesStr) return map;
+
+        const processAffix = (aff, data) => {
+            const cleanAff = aff.trim().replace(/^['"-]/, '').replace(/['"-]$/, '').split('@')[0];
+            if (cleanAff) {
+                map[cleanAff] = data;
+                map["'" + cleanAff] = data;
+                map["-" + cleanAff] = data;
+            }
+        };
+
+        // Handle modern Array format
+        if (Array.isArray(personRulesStr)) {
+            personRulesStr.forEach(rule => {
+                if (rule.affix) {
+                    const p = rule.person ? rule.person.replace(/[a-z]/g, '') : '';
+                    const n = rule.number || '';
+                    const g = rule.gender ? '.' + rule.gender : '';
+                    processAffix(rule.affix, { 
+                        label: `${p}${n}${g}`, 
+                        translation: rule.freeForm ? `(${rule.freeForm})` : '' 
+                    });
+                }
+            });
+            return map;
+        }
+
+        // Handle legacy String format
+        if (typeof personRulesStr === 'string') {
+            personRulesStr.split(',').forEach(rule => {
+                const parts = rule.split(':');
+                if (parts.length < 2) return;
+                const label = parts[0].trim();
+                const affixes = parts[1].trim();
+                if (label && affixes) {
+                    affixes.split('/').forEach(aff => processAffix(aff, { label, translation: '' }));
+                }
+            });
+        }
+        return map;
+    }, [personRulesStr]);
+
+    // Helper to find entry even if inflected
+    const findEntry = (token) => {
+        const clean = token.replace(/[.,!?()[\]{}"`:;]/g, '').toLowerCase();
+        
+        // 1. Exact match
+        let entry = lexicon.find(e => e.word.replace(/\*/g,'').toLowerCase() === clean);
+        if (entry) return { entry, isExact: true };
+
+        // 2. Try to find root (substring match)
+        const sortedLexicon = [...lexicon].sort((a, b) => b.word.length - a.word.length);
+        for (const e of sortedLexicon) {
+            const root = e.word.replace(/\*/g,'').toLowerCase();
+            if (root.length >= 3 && clean.startsWith(root)) {
+                const suffix = clean.slice(root.length);
+                const personData = personMap[suffix] || personMap[suffix.replace(/^['"-]/, '')] || { label: suffix, translation: '' };
+                return { entry: e, isExact: false, personData };
+            }
+        }
+        return { entry: null, isExact: false };
+    };
 
     const renderInterlinear = () => {
         const tokens = text.split(/(\s+)/);
@@ -44,8 +111,7 @@ function CorpusEditor({ content, onSave, writingDirection }) {
                 {tokens.map((token, i) => {
                     if (!token.trim()) return <span key={i} style={{ whiteSpace: 'pre' }}>{token}</span>;
                     
-                    const cleanWord = token.replace(/[.,!?()[\]{}"':;]/g, '').toLowerCase();
-                    const entry = lexicon.find(e => e.word.replace(/\*/g,'').toLowerCase() === cleanWord);
+                    const { entry, isExact, personData } = findEntry(token);
                     const displayWord = transliterate(token, lexicon);
 
                     return (
@@ -54,15 +120,24 @@ function CorpusEditor({ content, onSave, writingDirection }) {
                             flexDirection: isVertical ? 'row' : 'column',
                             alignItems: isVertical ? 'flex-start' : 'center',
                             gap: '2px',
-                            textOrientation: 'mixed'
+                            textOrientation: 'mixed',
+                            opacity: entry ? 1 : 0.6
                         }}>
-                            <span className="custom-font-text notranslate" style={{ fontSize: '1.2rem', color: entry ? 'var(--acc)' : 'var(--tx)', fontWeight: entry ? 'bold' : 'normal' }}>
+                            <span className="custom-font-text notranslate" style={{ 
+                                fontSize: '1.2rem', 
+                                color: entry ? (isExact ? 'var(--acc)' : 'var(--acc2)') : 'var(--tx)', 
+                                fontWeight: entry ? 'bold' : 'normal' 
+                            }}>
                                 {displayWord}
                             </span>
                             {entry && (
                                 <>
-                                    <span style={{ fontSize: '0.75rem', color: 'var(--tx3)', fontStyle: 'italic', fontFamily: 'sans-serif' }}>{entry.wordClass || 'root'}</span>
-                                    <span style={{ fontSize: '0.9rem', color: 'var(--tx)', fontFamily: 'sans-serif' }}>{entry.translation}</span>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--tx3)', fontStyle: 'italic', fontFamily: 'sans-serif' }}>
+                                        {entry.wordClass || 'root'}{!isExact && ` (+${personData.label})`}
+                                    </span>
+                                    <span style={{ fontSize: '0.9rem', color: 'var(--tx)', fontFamily: 'sans-serif', fontWeight: isExact ? 'normal' : '500' }}>
+                                        {entry.translation} {personData?.translation}
+                                    </span>
                                 </>
                             )}
                         </div>
