@@ -3,10 +3,11 @@ import { NavLink } from 'react-router-dom';
 import { 
     Home, Languages, Settings, PlusCircle, Book, 
     Sparkles, Activity, Map, BookOpen, Library, Layers,
-    Lock, HelpCircle
+    Lock, HelpCircle, Sun, Moon, Link2
 } from 'lucide-react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
+import { DARK_THEMES, LIGHT_THEMES } from '@/utils/themePresets.js';
 import './navbar.css';
 
 // We define the navigation structure outside the component so it isn't recreated on every single render.
@@ -32,6 +33,7 @@ const NAV_GROUPS = [
             { id: '/generator', label: 'Generator', Icon: Sparkles },
             { id: '/analyzer', label: 'Analyzer', Icon: Activity },
             { id: '/rootmap', label: 'Root Map', Icon: Map },
+            { id: '/aligner', label: 'Sentence Mapper', Icon: Link2 },
         ]
     },
     {
@@ -52,6 +54,8 @@ const NAV_GROUPS = [
 
 export default function NavBar({ isMenuOpen, closeMenu }) {
     const isProActive = useConfigStore(state => state.isProActive);
+    const theme = useConfigStore(state => state.theme);
+    const updateConfig = useConfigStore(state => state.updateConfig);
     const [session, setSession] = useState(null);
     
     // Keep track of the user's active session to determine if they get access to LIVE features
@@ -64,6 +68,19 @@ export default function NavBar({ isMenuOpen, closeMenu }) {
         });
         return () => subscription.unsubscribe();
     }, []);
+
+    const toggleTheme = () => {
+        const isDark = theme === 'dark';
+        const targetList = isDark ? LIGHT_THEMES : DARK_THEMES;
+        
+        // Pick a random theme from the target list for variety
+        const randomTheme = targetList[Math.floor(Math.random() * targetList.length)];
+        
+        updateConfig({ 
+            theme: isDark ? 'light' : 'dark',
+            colors: randomTheme.colors 
+        });
+    };
 
     const isLive = session && isProActive;
 
@@ -78,7 +95,10 @@ export default function NavBar({ isMenuOpen, closeMenu }) {
 
             <nav className={`navbar-container ${isMenuOpen ? 'active' : ''}`}>
                 <header className="sidebar-header">
-                    <h3>Navigation</h3>
+                    <button className="theme-toggle-nav" onClick={toggleTheme} title="Toggle Day/Night Mode">
+                        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                        <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                    </button>
                 </header>
 
                 <div className="navbar">

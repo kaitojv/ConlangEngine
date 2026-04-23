@@ -12,7 +12,7 @@ import opentype from 'opentype.js';
 export default function SystemTab() {
 
     const navigate = useNavigate();
-    
+
     const colors = useConfigStore((state) => state.colors) || {};
     const conlangName = useConfigStore((state) => state.conlangName) || 'MyConlang';
     const customFontBase64 = useConfigStore((state) => state.customFontBase64);
@@ -32,10 +32,10 @@ export default function SystemTab() {
 
     const getSafeColor = (colorString, fallback) => {
         if (typeof colorString !== 'string') return fallback;
-        
+
         // If it's already a hex, return it
         if (colorString.startsWith('#')) return colorString;
-        
+
         // If it's a gradient or rgba, try to find the first hex color within it for the color picker to show something valid
         const hexMatch = colorString.match(/#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}/);
         if (hexMatch) return hexMatch[0];
@@ -43,23 +43,23 @@ export default function SystemTab() {
         // If no hex found but it's a valid CSS color string (like rgba), we still can't use it in <input type="color">
         // but we return it anyway for other uses, or fallback if it's for a picker.
         // For simplicity in this app, we'll return the fallback if it's not a hex.
-        return fallback; 
+        return fallback;
     };
 
     const handleFontUpload = (event) => {
         const file = event.target.files[0];
         if (!file) return;
 
-        const MAX_SIZE = 2.5 * 1024 * 1024; 
-        
+        const MAX_SIZE = 2.5 * 1024 * 1024;
+
         if (file.size > MAX_SIZE) {
             alert("⚠️ File is too large. Please use a font smaller than 2.5MB to avoid breaking local storage limits.");
-            event.target.value = ''; 
+            event.target.value = '';
             return;
         }
 
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = function (e) {
             try {
                 const base64Font = e.target.result;
 
@@ -70,17 +70,17 @@ export default function SystemTab() {
                 alert("❌ Failed to save font. Your browser's local storage is full. Try a smaller font file.");
             }
         };
-        
+
         reader.readAsDataURL(file);
     };
 
     const handleClearFont = () => {
-        if(!window.confirm("Are you sure you want to remove the custom font? The app will revert to default system fonts.")) return;
-        
+        if (!window.confirm("Are you sure you want to remove the custom font? The app will revert to default system fonts.")) return;
+
         updateConfig({ customFont: null, customFontBase64: null });
-        
-        if(fileInputRef.current) {
-            fileInputRef.current.value = ''; 
+
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
         }
     };
 
@@ -91,7 +91,7 @@ export default function SystemTab() {
             alert("No custom font to download. Upload a font or draw characters in the Syllabary first.");
             return;
         }
-        
+
         if (customFont) {
             // Download the uploaded font
             const a = document.createElement('a');
@@ -172,11 +172,11 @@ export default function SystemTab() {
 
     const handleWipeWorkspace = () => {
         const isConfirmed = window.confirm("Are you ABSOLUTELY sure you want to delete your current local project? This will permanently delete all your lexicon, grammar rules, and settings.");
-        
+
         if (isConfirmed) {
             // Clear all local storage to wipe the project data
             localStorage.clear();
-            
+
             // Redirect to home and reload the page to re-initialize the app state
             navigate('/');
             window.location.reload();
@@ -191,7 +191,7 @@ export default function SystemTab() {
         reader.onload = (e) => {
             try {
                 const oldData = JSON.parse(e.target.result);
-                
+
                 if (!oldData.config && !oldData.dictionary) {
                     alert("This doesn't look like a valid legacy save file.");
                     return;
@@ -201,10 +201,10 @@ export default function SystemTab() {
                     event.target.value = '';
                     return;
                 }
-                
+
                 const currentConfig = useConfigStore.getState();
                 const newConfig = { ...INITIAL_CONFIG, projectId: currentConfig.projectId };
-                
+
                 if (oldData.config) {
                     if (oldData.config.nomeIdioma) newConfig.conlangName = oldData.config.nomeIdioma;
                     if (oldData.config.inventory) {
@@ -219,13 +219,13 @@ export default function SystemTab() {
                     if (oldData.config.syntax) newConfig.syntaxOrder = oldData.config.syntax;
                     if (oldData.config.bgColor) newConfig.colors = { ...INITIAL_CONFIG.colors, bg: oldData.config.bgColor };
                 }
-                
+
                 if (oldData.wikiPagesData) {
                     newConfig.wikiPages = oldData.wikiPagesData;
                 }
 
                 const newLexicon = (oldData.dictionary || []).map((word, index) => ({
-                    id: Date.now() + index, 
+                    id: Date.now() + index,
                     word: word.word || '',
                     ipa: word.ipa || '',
                     wordClass: word.type || '',
@@ -238,12 +238,12 @@ export default function SystemTab() {
 
                 setFullConfig(newConfig);
                 setLexicon(newLexicon);
-                
+
                 // Explicitly save to the project archive so it appears in the Workspaces tab instantly
                 useProjectStore.getState().saveProjectToArchive(newConfig, newLexicon);
-                
+
                 alert("Legacy project imported successfully! Your grammar and dictionary are now updated.");
-                
+
             } catch (err) {
                 console.error("Legacy import failed:", err);
                 alert("Failed to parse legacy save file. Ensure it is valid JSON.");
@@ -261,78 +261,82 @@ export default function SystemTab() {
         {
             name: "Midnight (Default)",
             preview: "#0b0f19",
-            colors: { 
-                bg: "#0b0f19", 
-                s1: "#151a28", 
-                s2: "#1a2033", 
-                s3: "#1f283d", 
-                s4: "#12121c", 
-                header: "#080812", 
-                font: "#f8fafc", 
-                font2: "#94a3b8", 
-                accent: "#7c3aed", 
+            colors: {
+                bg: "#0b0f19",
+                s1: "#151a28",
+                s2: "#1a2033",
+                s3: "#1f283d",
+                s4: "#12121c",
+                header: "#080812",
+                font: "#f8fafc",
+                font2: "#94a3b8",
+                accent: "#7c3aed",
                 accent2: "#8b5cf6",
                 accent3: "#4c1d95",
-                border: "rgba(255, 255, 255, 0.08)", 
-                blur: "0px", 
-                glow: "#1a1638" }
+                border: "rgba(255, 255, 255, 0.08)",
+                blur: "0px",
+                glow: "#1a1638"
+            }
         },
         {
             name: "Obsidian Void",
             preview: "linear-gradient(135deg, #000000, #0a0a0a)",
-            colors: { 
-                bg: "#000000", 
-                s1: "#09090b", 
-                s2: "#121214", 
-                s3: "#1a1a1c", 
-                s4: "#040405", 
-                header: "#000000", 
-                font: "#ffffff", 
-                font2: "#a1a1aa", 
-                accent: "#ffffff", 
+            colors: {
+                bg: "#000000",
+                s1: "#09090b",
+                s2: "#121214",
+                s3: "#1a1a1c",
+                s4: "#040405",
+                header: "#000000",
+                font: "#ffffff",
+                font2: "#a1a1aa",
+                accent: "#ffffff",
                 accent2: "#d4d4d8",
                 accent3: "#52525b",
-                border: "#1f1f22", 
+                border: "#1f1f22",
                 blur: "0px",
-                glow: "rgba(255, 255, 255, 0.05)" }
+                glow: "rgba(255, 255, 255, 0.05)"
+            }
         },
         {
             name: "Hacker Matrix",
             preview: "linear-gradient(135deg, #050b06, #001f05)",
-            colors: { 
-                bg: "#050b06", 
-                s1: "#0a140b", 
+            colors: {
+                bg: "#050b06",
+                s1: "#0a140b",
                 s2: "#0d1f0e",
                 s3: "#122a13",
                 s4: "#030804",
-                header: "#030804", 
-                font: "#4af626", 
-                font2: "#1f8a11", 
-                accent: "#00ff41", 
+                header: "#030804",
+                font: "#4af626",
+                font2: "#1f8a11",
+                accent: "#00ff41",
                 accent2: "#00ff41",
                 accent3: "#0891b2",
-                border: "#124211", 
+                border: "#124211",
                 blur: "0px",
-                glow: "rgba(0, 255, 65, 0.15)" }
+                glow: "rgba(0, 255, 65, 0.15)"
+            }
         },
         {
             name: "Deep Purple",
             preview: "linear-gradient(135deg, #13071e, #2b1145)",
-            colors: { 
-                bg: "#0f0518", 
-                s1: "#1d0b30", 
+            colors: {
+                bg: "#0f0518",
+                s1: "#1d0b30",
                 s2: "#2a1045",
                 s3: "#37155a",
                 s4: "#0a0312",
-                header: "#0a0312", 
-                font: "#f3e8ff", 
-                font2: "#c084fc", 
-                accent: "#d946ef", 
+                header: "#0a0312",
+                font: "#f3e8ff",
+                font2: "#c084fc",
+                accent: "#d946ef",
                 accent2: "#c084fc",
                 accent3: "#db2777",
-                border: "rgba(192, 132, 252, 0.2)", 
+                border: "rgba(192, 132, 252, 0.2)",
                 blur: "0px",
-                glow: "rgba(217, 70, 239, 0.2)" }
+                glow: "rgba(217, 70, 239, 0.2)"
+            }
         },
         {
             name: "Apple Glass",
@@ -361,40 +365,42 @@ export default function SystemTab() {
         {
             name: "Clean Paper",
             preview: "#ffffff",
-            colors: { 
-                bg: "#f4f4f5", 
-                s1: "#ffffff", 
-                s2: "#f8f8fa", 
-                s3: "#f1f1f4", 
-                s4: "#fafafa", 
-                header: "#fafafa", 
-                font: "#09090b", 
-                font2: "#71717a", 
-                accent: "#3b82f6", 
-                accent2: "#3b82f6", 
-                accent3: "#8b5cf6", 
-                border: "#e4e4e7", 
-                blur: "0px", 
-                glow: "rgba(0, 0, 0, 0.08)" }
+            colors: {
+                bg: "#f4f4f5",
+                s1: "#ffffff",
+                s2: "#f8f8fa",
+                s3: "#f1f1f4",
+                s4: "#fafafa",
+                header: "#fafafa",
+                font: "#09090b",
+                font2: "#71717a",
+                accent: "#3b82f6",
+                accent2: "#3b82f6",
+                accent3: "#8b5cf6",
+                border: "#e4e4e7",
+                blur: "0px",
+                glow: "rgba(0, 0, 0, 0.08)"
+            }
         },
         {
             name: "Vintage Sepia",
             preview: "#fdf6e3",
-            colors: { 
-                bg: "#fdf6e3", 
-                s1: "#fefbf4", 
-                s2: "#f9f2e0", 
-                s3: "#f4ead2", 
-                s4: "#fcf8ef", 
-                header: "#fdf6e3", 
-                font: "#4a3c31", 
-                font2: "#9a8c83", 
-                accent: "#d97706", 
-                accent2: "#d97706", 
-                accent3: "#9a3412", 
-                border: "#e8dfcc", 
-                blur: "0px", 
-                glow: "rgba(217, 119, 6, 0.15)" }
+            colors: {
+                bg: "#fdf6e3",
+                s1: "#fefbf4",
+                s2: "#f9f2e0",
+                s3: "#f4ead2",
+                s4: "#fcf8ef",
+                header: "#fdf6e3",
+                font: "#4a3c31",
+                font2: "#9a8c83",
+                accent: "#d97706",
+                accent2: "#d97706",
+                accent3: "#9a3412",
+                border: "#e8dfcc",
+                blur: "0px",
+                glow: "rgba(217, 119, 6, 0.15)"
+            }
         },
         {
             name: "Nord Snow",
@@ -445,10 +451,10 @@ export default function SystemTab() {
                     <Button variant='error' onClick={handleClearFont}>Remove Font</Button>
                 </div>
                 <div className='font-status'>
-                    <p>{customFont 
-                        ? "✅ Custom font is currently active!" 
-                        : Object.keys(customGlyphs).length > 0 
-                            ? `✅ You have ${Object.keys(customGlyphs).length} custom glyphs ready to export!` 
+                    <p>{customFont
+                        ? "✅ Custom font is currently active!"
+                        : Object.keys(customGlyphs).length > 0
+                            ? `✅ You have ${Object.keys(customGlyphs).length} custom glyphs ready to export!`
                             : "❌ No custom font uploaded."}</p>
                 </div>
                 <div className='export-font-box'>
@@ -459,16 +465,16 @@ export default function SystemTab() {
                     </Button>
                 </div>
             </Card>
-        <Card>
-            <h2 className='flex sg-title'><Database /> Legacy Importer</h2>
-            <p>Import a JSON save file from the old version of Conlang Engine. This will convert your old data and overwrite your current active workspace.</p>
-            <div className='font-btns'>
-                <label className='fontUp-btn btn-imp'>
-                    <input className='file-input' type="file" accept=".json" onClick={(e) => { e.target.value = null }} onChange={handleLegacyImport} ref={legacyInputRef} />
-                    <h4>Import Legacy JSON</h4>
-                </label>
-            </div>
-        </Card>
+            <Card>
+                <h2 className='flex sg-title'><Database /> Legacy Importer</h2>
+                <p>Import a JSON save file from the old version of Conlang Engine. This will convert your old data and overwrite your current active workspace.</p>
+                <div className='font-btns'>
+                    <label className='fontUp-btn btn-imp'>
+                        <input className='file-input' type="file" accept=".json" onClick={(e) => { e.target.value = null }} onChange={handleLegacyImport} ref={legacyInputRef} />
+                        <h4>Import Legacy JSON</h4>
+                    </label>
+                </div>
+            </Card>
             <Card>
                 <h2 className='flex sg-title'><Palette /> Aesthetics and Theme</h2>
                 <p>Dark Themes</p>
@@ -499,19 +505,19 @@ export default function SystemTab() {
                 <h2>Custom Theme</h2>
                 <div className='pick-colors'>
                     <label className='selector-name'>Background</label>
-                    <input type='color' className='color-selector' value={getSafeColor(colors.bg, '#0b0f19')} onChange={(e) => updateConfig({ colors: { ...colors, bg: e.target.value }})} />
-                    
+                    <input type='color' className='color-selector' value={getSafeColor(colors.bg, '#0b0f19')} onChange={(e) => updateConfig({ colors: { ...colors, bg: e.target.value } })} />
+
                     <label className='selector-name'>Surface 1 (Cards)</label>
-                    <input type='color' className='color-selector' value={getSafeColor(colors.s1, '#151a28')} onChange={(e) => updateConfig({ colors: { ...colors, s1: e.target.value }})}/>
-                    
+                    <input type='color' className='color-selector' value={getSafeColor(colors.s1, '#151a28')} onChange={(e) => updateConfig({ colors: { ...colors, s1: e.target.value } })} />
+
                     <label className='selector-name'>Surface 4 (Input)</label>
-                    <input type='color' className='color-selector' value={getSafeColor(colors.s4, '#12121c')} onChange={(e) => updateConfig({ colors: { ...colors, s4: e.target.value }})}/>
-                    
+                    <input type='color' className='color-selector' value={getSafeColor(colors.s4, '#12121c')} onChange={(e) => updateConfig({ colors: { ...colors, s4: e.target.value } })} />
+
                     <label className='selector-name'>Text Primary</label>
-                    <input type='color' className='color-selector' value={getSafeColor(colors.font, '#ffffff')} onChange={(e) => updateConfig({ colors: { ...colors, font: e.target.value }})}/>
-                    
+                    <input type='color' className='color-selector' value={getSafeColor(colors.font, '#ffffff')} onChange={(e) => updateConfig({ colors: { ...colors, font: e.target.value } })} />
+
                     <label className='selector-name'>Accent Glow</label>
-                    <input type='color' className='color-selector' value={getSafeColor(colors.glow, '#1a1638')} onChange={(e) => updateConfig({ colors: { ...colors, glow: e.target.value }})}/>
+                    <input type='color' className='color-selector' value={getSafeColor(colors.glow, '#1a1638')} onChange={(e) => updateConfig({ colors: { ...colors, glow: e.target.value } })} />
                 </div>
             </Card>
             <Card>

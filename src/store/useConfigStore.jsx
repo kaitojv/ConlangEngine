@@ -53,6 +53,7 @@ export const INITIAL_CONFIG = {
     puaCounter: 57344,      
     customFontBase64: null, 
     numeralBase: 10,
+    sentenceMaps: [],
 };
 
 // IndexedDB Helper for handling massive font files without breaking local storage quotas

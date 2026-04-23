@@ -107,11 +107,49 @@
 
 
 .sidebar-header {
-    padding: 25px 20px 15px;
+    padding: 20px 15px;
     display: flex; 
     justify-content: space-between; 
     align-items: center;
     border-bottom: 1px solid var(--bd);
+}
+
+.theme-toggle-nav {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 12px;
+    color: var(--tx);
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.theme-toggle-nav:hover {
+    background: var(--acc);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--acc) 30%, transparent);
+}
+
+.theme-toggle-nav:active {
+    transform: scale(0.96);
+}
+
+.theme-toggle-nav svg {
+    color: var(--acc);
+    transition: all 0.3s ease;
+}
+
+.theme-toggle-nav:hover svg {
+    color: white;
+    transform: rotate(20deg);
 }
 
 .nav-group {
