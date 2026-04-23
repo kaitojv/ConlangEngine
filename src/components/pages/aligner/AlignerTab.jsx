@@ -182,7 +182,7 @@ export default function AlignerTab() {
                                     return (
                                         <button key={`t-${i}`} className={`word-chip target-chip ${selectedTarget === i ? 'selected' : ''}`}
                                             style={linkedColors.length > 0 ? { borderColor: linkedColors[0], boxShadow: `0 0 15px ${linkedColors[0]}66` } : {}}
-                                            onClick={() => handleTargetClick(index)}>{word}</button>
+                                            onClick={() => handleTargetClick(i)}>{word}</button>
                                     );
                                 })}
                             </div>

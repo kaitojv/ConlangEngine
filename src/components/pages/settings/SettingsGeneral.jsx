@@ -8,6 +8,7 @@ import { Lightbulb, WholeWord, Bolt } from 'lucide-react'
 export default function SettingsGeneral() {
     const conlangName = useConfigStore((state) => state.conlangName);
     const authorName = useConfigStore((state) => state.authorName);
+    const description = useConfigStore((state) => state.description) || '';
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const alphabeticScript = useConfigStore((state) => state.alphabeticScript);
     const updateConfig = useConfigStore((state) => state.updateConfig);
@@ -35,6 +36,17 @@ export default function SettingsGeneral() {
                 value={conlangName}
                 onChange={(e) => updateConfig({ conlangName: e.target.value })}
             />
+
+            <div className="sg-input-group">
+                <label className="form-label">Description & Lore</label>
+                <textarea 
+                    className="fi" 
+                    style={{ minHeight: '120px', resize: 'vertical', paddingTop: '12px' }}
+                    placeholder="Describe the philosophy, history, or core rules of your conlang..."
+                    value={description}
+                    onChange={(e) => updateConfig({ description: e.target.value })}
+                />
+            </div>
 
             <div className="sg-input-group">
                 <label className="form-label">Language Typology</label>
