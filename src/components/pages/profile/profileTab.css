@@ -220,3 +220,20 @@
 
 .activity-empty { color: var(--tx3); font-style: italic; }
 .badge-icon-wrapper { margin-bottom: 5px; display: inline-block;}
+
+.project-selector-list { display: flex; flex-direction: column; gap: 10px; }
+.project-selector-item {
+    cursor: pointer;
+    padding: 14px 16px;
+    border-radius: var(--rad-sm);
+    border: 1px solid var(--bd);
+    background: var(--s4);
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+.project-selector-item:hover {
+    background: var(--s2, var(--s1));
+    border-color: var(--acc);
+}
+.project-selector-item h4 { margin: 0 0 4px; color: var(--tx); }
+.project-selector-item p { margin: 0; font-size: 0.85rem; color: var(--tx2); }
+.project-selector-id { font-size: 0.75rem; color: var(--tx3); }
