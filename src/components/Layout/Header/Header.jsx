@@ -131,7 +131,9 @@ export default function Header({ openMenu }) {
         <header className="hdr">
             <div className="hdr-flex">
                 <div className="hdr-left">
-                    <Menu className="toggle-btn" onClick={openMenu} />
+                    <button className="toggle-btn" onClick={openMenu} title="Toggle Menu">
+                        <Menu size={20} />
+                    </button>
                     <div className="hdr-brand">
                         <h1 className="app-dinamic-title">ConlangEngine</h1>
                         {isLive ? (

@@ -62,11 +62,23 @@
   We use a card-like appearance with a subtle background and border.
 */
 .help-section {
-    background: var(--b1);
+    background: var(--s4);
     border: 1px solid var(--bd);
-    border-radius: var(--rad-md, 8px);
-    padding: 25px;
+    border-radius: var(--rad, 16px);
+    padding: 30px;
     animation: fade-in 0.3s ease-in-out;
+}
+
+.help-section p {
+    color: var(--tx2);
+    line-height: 1.7;
+    margin-bottom: 12px;
+}
+
+.help-section-subtitle {
+    color: var(--tx3) !important;
+    font-style: italic;
+    margin-bottom: 24px !important;
 }
 
 /* Keep the title and its icon aligned nicely */
@@ -84,6 +96,261 @@
     color: var(--acc);
 }
 
+/* =========================================
+   ABOUT — Features Overview Chips
+   ========================================= */
+.help-features-overview {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--bd);
+}
+
+.help-features-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--tx);
+    font-size: 1rem;
+    margin: 0 0 14px 0;
+}
+
+.help-features-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.help-feature-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: rgba(124, 58, 237, 0.08);
+    color: var(--acc2);
+    border: 1px solid rgba(124, 58, 237, 0.15);
+    transition: all 0.2s;
+}
+
+.help-feature-chip:hover {
+    background: rgba(124, 58, 237, 0.15);
+    transform: translateY(-1px);
+}
+
+/* =========================================
+   HOW TO USE — Walkthrough Timeline
+   ========================================= */
+.help-walkthrough {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+}
+
+/* The left-side connector line */
+.help-walkthrough::before {
+    content: '';
+    position: absolute;
+    left: 18px;
+    top: 40px;
+    bottom: 40px;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--acc), var(--acc2), var(--acc));
+    opacity: 0.3;
+    border-radius: 2px;
+}
+
+.walkthrough-phase {
+    position: relative;
+    padding-left: 50px;
+    padding-bottom: 30px;
+}
+
+.walkthrough-phase:last-child {
+    padding-bottom: 0;
+}
+
+.phase-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+
+.phase-number {
+    position: absolute;
+    left: 0;
+    width: 44px; /* Increased size to fit text */
+    height: 44px;
+    border-radius: 50%;
+    background: var(--acc);
+    color: white;
+    font-size: 0.65rem; /* Slightly smaller font to fit "PHASE" */
+    font-weight: 800;
+    display: flex;
+    flex-direction: column; /* Stack "PHASE" and number */
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    z-index: 1;
+    box-shadow: 0 0 12px rgba(124, 58, 237, 0.3);
+    line-height: 1.1;
+    border: 2px solid var(--s1); /* Add border to make it pop */
+}
+
+.phase-title {
+    margin: 0;
+    color: var(--tx);
+    font-size: 1.15rem;
+}
+
+.phase-body {
+    background: var(--s1);
+    border: 1px solid var(--bd);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.phase-body > p {
+    margin-top: 0;
+}
+
+.walkthrough-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.walkthrough-step {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.step-icon {
+    color: var(--acc2);
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.walkthrough-step div {
+    color: var(--tx2);
+    font-size: 0.92rem;
+    line-height: 1.6;
+}
+
+.walkthrough-step strong {
+    color: var(--tx);
+}
+
+.walkthrough-step code {
+    background: rgba(124, 58, 237, 0.1);
+    color: var(--acc2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-family: 'Inter', monospace;
+}
+
+.walkthrough-tip {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: rgba(124, 58, 237, 0.06);
+    border-left: 3px solid var(--acc);
+    border-radius: 0 8px 8px 0;
+    font-size: 0.88rem;
+    color: var(--tx2);
+    line-height: 1.6;
+}
+
+.walkthrough-tip svg {
+    color: var(--acc);
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+/* =========================================
+   PRIVACY — Security Cards Grid
+   ========================================= */
+.privacy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.privacy-card {
+    background: var(--s1);
+    border: 1px solid var(--bd);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.2s;
+}
+
+.privacy-card:hover {
+    border-color: rgba(124, 58, 237, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.privacy-card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(124, 58, 237, 0.1);
+    color: var(--acc);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+
+.privacy-card h4 {
+    margin: 0 0 8px 0;
+    color: var(--tx);
+    font-size: 0.95rem;
+}
+
+.privacy-card p {
+    margin: 0;
+    color: var(--tx2);
+    font-size: 0.88rem;
+    line-height: 1.6;
+}
+
+.privacy-card code {
+    background: rgba(124, 58, 237, 0.1);
+    color: var(--acc2);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.85em;
+}
+
+.privacy-summary {
+    margin-top: 24px;
+    padding: 16px 20px;
+    background: rgba(16, 185, 129, 0.06);
+    border: 1px solid rgba(16, 185, 129, 0.15);
+    border-radius: 10px;
+    color: var(--tx2);
+    font-size: 0.92rem;
+    line-height: 1.6;
+}
+
+.privacy-summary strong {
+    color: var(--ok);
+}
+
+/* =========================================
+   FAQ
+   ========================================= */
 /* Spacing out the FAQ list so it doesn't feel cramped */
 .help-faq-list {
     list-style: none;
@@ -94,58 +361,33 @@
     gap: 20px;
 }
 
+.help-faq-list li {
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--bd);
+}
+
+.help-faq-list li:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
 .help-faq-list li strong {
     color: var(--tx);
-    font-size: 1.05rem;
+    font-size: 1.02rem;
 }
 
 .help-faq-list li p {
-    margin: 5px 0 0 0;
+    margin: 6px 0 0 0;
     color: var(--tx2);
+    font-size: 0.92rem;
 }
 
+/* =========================================
+   CONTACT
+   ========================================= */
 /* Just a little highlight for the support email */
 .help-email {
     color: var(--acc);
-}
-
-/* Simple fade-in animation so switching tabs feels smooth instead of jarring */
-@keyframes fade-in {
-    from {
-        opacity: 0;
-        transform: translateY(5px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Guide Grid for How to Use */
-.help-guide-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 15px;
-    margin-top: 20px;
-}
-
-.guide-card {
-    background: var(--s4);
-    padding: 15px;
-    border-radius: var(--rad-md, 8px);
-    border: 1px solid var(--bd);
-}
-
-.guide-card h4 {
-    margin: 0 0 10px 0;
-    color: var(--acc2);
-}
-
-.guide-card p {
-    margin: 0;
-    color: var(--tx2);
-    font-size: 0.95rem;
-    line-height: 1.5;
 }
 
 .help-contact-list {
@@ -175,4 +417,50 @@
 .help-link:hover {
     text-decoration: underline;
     color: var(--acc2);
+}
+
+/* =========================================
+   ANIMATIONS
+   ========================================= */
+/* Simple fade-in animation so switching tabs feels smooth instead of jarring */
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* =========================================
+   RESPONSIVE
+   ========================================= */
+@media (max-width: 640px) {
+    .help-container {
+        padding: 20px 12px;
+    }
+
+    .help-section {
+        padding: 20px 16px;
+    }
+
+    .walkthrough-phase {
+        padding-left: 40px;
+    }
+
+    .help-walkthrough::before {
+        left: 14px;
+    }
+
+    .phase-number {
+        width: 30px;
+        height: 30px;
+        font-size: 0.6rem;
+    }
+
+    .privacy-grid {
+        grid-template-columns: 1fr;
+    }
 }

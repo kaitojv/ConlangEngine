@@ -52,6 +52,7 @@ export const INITIAL_CONFIG = {
     customGlyphs: {},
     puaCounter: 57344,      
     customFontBase64: null, 
+    numeralBase: 10,
 };
 
 // IndexedDB Helper for handling massive font files without breaking local storage quotas
