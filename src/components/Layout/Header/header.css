@@ -189,4 +189,8 @@
     .hdr-left {
         gap: 8px;
     }
+    .hdr-badge {
+        padding: 4px 8px;
+        font-size: 0.65rem;
+    }
 }

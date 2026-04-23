@@ -276,12 +276,12 @@ export default function GlosserTab() {
                 
                 <Input value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="Enter conlang text here..." className="custom-font-text notranslate" />
                 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px' }}>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        <Button variant={readerMode === 'read' ? 'imp' : 'default'} onClick={() => setReaderMode('read')}><div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><BookOpen size={16} /> Reading Mode</div></Button>
-                        <Button variant={readerMode === 'gloss' ? 'imp' : 'default'} onClick={() => setReaderMode('gloss')}><div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><List size={16} /> IGT Gloss Mode</div></Button>
+                <div className="glosser-controls">
+                    <div className="glosser-mode-toggles">
+                        <Button variant={readerMode === 'read' ? 'imp' : 'default'} onClick={() => setReaderMode('read')}><div className="btn-content-flex"><BookOpen size={16} /> Reading Mode</div></Button>
+                        <Button variant={readerMode === 'gloss' ? 'imp' : 'default'} onClick={() => setReaderMode('gloss')}><div className="btn-content-flex"><List size={16} /> IGT Gloss Mode</div></Button>
                     </div>
-                    <Button onClick={handleProcess}><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Wand2 size={18} /> Process Text</div></Button>
+                    <Button onClick={handleProcess} className="glosser-process-btn"><div className="btn-content-flex"><Wand2 size={18} /> Process Text</div></Button>
                 </div>
             </Card>
 

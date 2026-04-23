@@ -74,6 +74,7 @@
 
 .ipa-chart-table {
     width: 100%;
+    min-width: 600px; /* Ensure table doesn't squish too much */
     border-collapse: separate;
     border-spacing: 4px;
     font-size: 0.9rem;
@@ -134,12 +135,13 @@
     display: flex;
     align-items: center;
     gap: 15px;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
 }
 
 .np-title {
     font-size: 0.8rem;
     color: var(--tx2);
-    width: 120px;
+    min-width: 100px; /* Changed from fixed width to min-width */
 }
 
 .np-sounds, .ipa-other-sounds {
