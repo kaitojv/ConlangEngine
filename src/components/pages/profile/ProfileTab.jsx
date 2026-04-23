@@ -64,8 +64,48 @@ export default function ProfileTab() {
 
     // Listen to Supabase to see if the user is currently logged in
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+        const checkLiveStatus = async (currentSession) => {
+            if (!currentSession) {
+                config.updateConfig({ isProActive: false });
+                return;
+            }
+
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('is_pro, live_until')
+                    .eq('id', currentSession.user.id)
+                    .single();
+
+                if (error) throw error;
+
+                let activeLive = false;
+                if (data) {
+                    if (data.is_pro) {
+                        activeLive = true;
+                    } else if (data.live_until) {
+                        const safeDateStr = data.live_until.replace(' ', 'T');
+                        activeLive = new Date(safeDateStr) > new Date();
+                    }
+                }
+                
+                config.updateConfig({ isProActive: activeLive });
+            } catch (err) {
+                console.error('Error verifying LIVE status:', err);
+                config.updateConfig({ isProActive: false });
+            }
+        };
+
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setSession(session);
+            checkLiveStatus(session);
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+            checkLiveStatus(session);
+        });
+
         return () => subscription.unsubscribe();
     }, []);
 
