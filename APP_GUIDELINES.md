@@ -38,7 +38,7 @@ Never use hardcoded colors. Always use the following CSS variables which are dyn
 - Ensure any changes to data structures are compatible with the Supabase profiles and project archives.
 
 ## 4. UI Components & UX
-- **Theme Injector & Presets**: Everything must follow the `themeInjector` and `themePresets` logic.
+- **Theme Injector & Presets**: Everything must follow the `themeInjector` and `themePresets` logic. **Never redefine theme arrays locally** in components; always import from `src/utils/themePresets.js`.
 - Use existing UI components from `src/components/UI` (Card, Button, etc.) for consistency.
 - Follow the "Premium Design" aesthetic: vibrant colors, glassmorphism, smooth animations, and curated typography.
 
