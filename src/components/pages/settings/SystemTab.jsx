@@ -263,39 +263,6 @@ export default function SystemTab() {
 
     return (
         <>
-            <Card>
-                <h2 className="flex sg-title"><Type /> Project Identity</h2>
-                <p>Define your language's basic metadata. This information is used for exports and project categorization.</p>
-                <div className="system-tab-container">
-                    <div className="input-group-system">
-                        <label><Type size={14} /> Conlang Name</label>
-                        <input 
-                            className="system-input" 
-                            value={conlangName} 
-                            onChange={(e) => updateConfig({ conlangName: e.target.value })} 
-                            placeholder="e.g. Neo-Latin"
-                        />
-                    </div>
-                    <div className="input-group-system">
-                        <label><User size={14} /> Author Name</label>
-                        <input 
-                            className="system-input" 
-                            value={authorName} 
-                            onChange={(e) => updateConfig({ authorName: e.target.value })} 
-                            placeholder="Your Name"
-                        />
-                    </div>
-                    <div className="input-group-system">
-                        <label><Info size={14} /> Description</label>
-                        <textarea 
-                            className="system-textarea" 
-                            value={description} 
-                            onChange={(e) => updateConfig({ description: e.target.value })} 
-                            placeholder="A brief summary of your conlang's goals and origins..."
-                        />
-                    </div>
-                </div>
-            </Card>
 
             <Card>
                 <h2 className='flex sg-title'><CaseLower /> Typography & Custom Font</h2>
