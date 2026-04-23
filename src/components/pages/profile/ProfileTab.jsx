@@ -244,6 +244,13 @@ export default function ProfileTab() {
             const safeConfig = sanitizeConfig(project.project_data.config || {});
             const safeLexicon = sanitizeLexicon(project.project_data.dictionary || []);
             
+            // Save to local project archive so it persists in the Workspaces tab
+            const saveProjectToArchive = useProjectStore.getState().saveProjectToArchive;
+            saveProjectToArchive(
+                { ...safeConfig, projectId: project.project_id },
+                safeLexicon
+            );
+
             setLexicon(safeLexicon);
             config.updateConfig(safeConfig);
             
@@ -310,7 +317,7 @@ export default function ProfileTab() {
         }
     };
 
-    // Retrieve cloud backups
+    // Retrieve cloud backups and save ALL of them into the local project archive
     const handlePullFromCloud = async () => {
         if (!session) return alert("You must be logged in to pull projects.");
         setSyncStatus('⏳ Fetching cloud projects...');
@@ -329,13 +336,27 @@ export default function ProfileTab() {
                 return;
             }
 
+            // Save ALL cloud projects to the local archive so they appear in the Workspaces tab
+            const saveProjectToArchive = useProjectStore.getState().saveProjectToArchive;
+            for (const project of projects) {
+                if (project.project_data) {
+                    const safeConfig = sanitizeConfig(project.project_data.config || {});
+                    const safeLexicon = sanitizeLexicon(project.project_data.dictionary || []);
+                    saveProjectToArchive(
+                        { ...safeConfig, projectId: project.project_id },
+                        safeLexicon
+                    );
+                }
+            }
+
             if (projects.length === 1) {
-                // If only one project, load it directly
+                // If only one project, load it directly as the active workspace
                 handleSelectProject(projects[0]);
             } else {
                 setCloudProjects(projects);
                 setProjectSelectorOpen(true);
-                setSyncStatus(''); 
+                setSyncStatus(`✅ Pulled ${projects.length} projects from cloud.`); 
+                setTimeout(() => setSyncStatus(''), 3000);
             }
         } catch (err) {
             console.error(err);
