@@ -1,4 +1,4 @@
-# ConlangEngine-Pro
+# ConlangEngine
 <div align="center">
   <h1>ConlangEngine</h1>
   <p><b>The Ultimate Local-First IDE for Language Creators</b></p>
