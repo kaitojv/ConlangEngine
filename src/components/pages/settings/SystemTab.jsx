@@ -272,8 +272,8 @@ export default function SystemTab() {
                 </p>
                 <div className='font-btns'>
 
-                    <label className='fontUp-btn btn-imp'>
-                        <input className='file-input' type="file" accept=".ttf,.otf,.woff,.woff2" onChange={handleFontUpload} ref={fileInputRef} />
+                    <label className='fontUp-btn'>
+                        <input className='file-input-hidden' type="file" accept=".ttf,.otf,.woff,.woff2" onChange={handleFontUpload} ref={fileInputRef} />
                         <h4>Upload Font</h4>
                     </label>
                     <Button variant='error' onClick={handleClearFont}>Remove Font</Button>
@@ -297,8 +297,8 @@ export default function SystemTab() {
                 <h2 className='flex sg-title'><Database /> Legacy Importer</h2>
                 <p>Import a JSON save file from the old version of Conlang Engine. This will convert your old data and overwrite your current active workspace.</p>
                 <div className='font-btns'>
-                    <label className='fontUp-btn btn-imp'>
-                        <input className='file-input' type="file" accept=".json" onClick={(e) => { e.target.value = null }} onChange={handleLegacyImport} ref={legacyInputRef} />
+                    <label className='fontUp-btn'>
+                        <input className='file-input-hidden' type="file" accept=".json" onClick={(e) => { e.target.value = null }} onChange={handleLegacyImport} ref={legacyInputRef} />
                         <h4>Import Legacy JSON</h4>
                     </label>
                 </div>

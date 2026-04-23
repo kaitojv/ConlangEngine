@@ -72,8 +72,8 @@
 }
 
 .theme-btn {
-    width: 42px;
-    height: 42px;
+    width: 35px;
+    height: 35px;
     border-radius: 50%;
     border: 3px solid var(--bd);
     transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -87,15 +87,68 @@
 /* Font Buttons */
 .font-btns {
     display: flex;
+    align-items: flex-end; /* Align with the bottom of the other button */
     gap: 15px;
     margin-top: 20px;
 }
 
 .fontUp-btn {
-    padding: 10px 20px;
-    background: var(--acc);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 24px; /* Matching btn-base padding */
+    background: var(--ok);
     color: white;
-    border-radius: 10px;
+    border-radius: var(--rad-sm); /* Matching btn-base radius */
     cursor: pointer;
     font-weight: 600;
+    transition: all 0.2s;
+    height: fit-content;
+    margin-top: 8px; /* Matching btn-base margin */
+}
+
+.fontUp-btn h4 {
+    margin: 0;
+    font-size: 1rem; /* Matching btn-base font size */
+    color: inherit;
+}
+
+.fontUp-btn:hover {
+    background: color-mix(in srgb, var(--ok) 85%, black);
+    transform: translateY(-2px);
+}
+
+.file-input-hidden {
+    display: none;
+}
+
+.pick-colors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.selector-name {
+    font-size: 0.9rem;
+    color: var(--tx2);
+}
+
+.color-selector {
+    width: 35px;
+    height: 35px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    cursor: pointer;
+}
+
+.color-selector::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.color-selector::-webkit-color-swatch {
+    border: 2px solid var(--bd);
+    border-radius: 8px;
 }
