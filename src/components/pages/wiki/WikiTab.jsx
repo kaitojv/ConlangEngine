@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
@@ -185,7 +186,11 @@ function LegacyWikiEditor({ content, onSave }) {
 
     useEffect(() => {
         if (editorRef.current && content !== editorRef.current.innerHTML) {
-            editorRef.current.innerHTML = content || '';
+            // SEC-1: Sanitize HTML to prevent XSS via shared/cloud projects
+            editorRef.current.innerHTML = DOMPurify.sanitize(content || '', {
+                ALLOWED_TAGS: ['b', 'i', 'u', 'a', 'span', 'p', 'br', 'div', 'h1', 'h2', 'h3', 'h4', 'strong', 'em', 'ul', 'ol', 'li'],
+                ALLOWED_ATTR: ['href', 'class', 'style', 'target']
+            });
         }
     }, [content]);
 

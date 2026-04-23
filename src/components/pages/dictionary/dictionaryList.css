@@ -35,38 +35,46 @@
 
 .search-input {
     width: 100%;
-    padding: 0.5rem 1rem 0.5rem 2.5rem;
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
     background-color: var(--s4);
     color: var(--tx);
     border: 1px solid var(--bd);
     border-radius: var(--rad-sm);
     outline: none;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
 }
 
 .search-input:focus {
     border-color: var(--acc);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 20%, transparent);
+    background-color: var(--s2);
+    box-shadow: 0 0 15px color-mix(in srgb, var(--acc) 15%, transparent);
 }
 
 .filter-select {
-    padding: 0.5rem;
+    padding: 0.75rem 1rem;
     background-color: var(--s4);
     color: var(--tx);
     border: 1px solid var(--bd);
-    border-radius: 0.375rem;
+    border-radius: var(--rad-sm);
     outline: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filter-select:hover {
+    border-color: var(--acc);
 }
 
 .alpha-filter-bar {
     display: flex;
-    flex-wrap: nowrap; /* Prevent wrapping on mobile */
-    overflow-x: auto; /* Enable horizontal scroll */
-    gap: 0.5rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 0.4rem;
     align-items: center;
     border-top: 1px solid var(--bd);
-    padding: 1rem 0.5rem;
-    scrollbar-width: none; /* Hide scrollbar for cleaner look */
+    padding: 1rem 1.25rem;
+    scrollbar-width: none;
 }
 
 .alpha-filter-bar::-webkit-scrollbar {
@@ -79,31 +87,35 @@
 }
 
 .alpha-btn {
-    padding: 0.25rem 0.75rem;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-    font-weight: bold;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 800;
     transition: all 0.2s;
-    background-color: var(--acc);
-    color: var(--tx);
-    border: none;
+    background-color: var(--s2);
+    color: var(--tx2);
+    border: 1px solid var(--bd);
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .alpha-btn:hover {
-    background-color: var(--acc2);
+    background-color: var(--s3);
+    color: var(--tx);
 }
 
 .alpha-btn.active {
-    background-color: var(--acc2);
-    color: #ffffff;
+    background-color: var(--acc);
+    color: white;
+    border-color: var(--acc);
+    box-shadow: 0 4px 10px color-mix(in srgb, var(--acc) 30%, transparent);
 }
 
 .list-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin: 2rem 0 1rem 0; /* More top margin to separate from filters */
+    margin: 2rem 0 1rem 0;
     padding: 0 0.5rem;
 }
 
@@ -116,11 +128,13 @@
 
 .list-total {
     background-color: var(--s4);
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.875rem;
-    font-weight: bold;
+    padding: 0.4rem 1rem;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    font-weight: 800;
     border: 1px solid var(--bd);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .list-total span {
@@ -129,10 +143,10 @@
 
 .empty-state {
     text-align: center;
-    padding: 4rem 1rem;
-    background-color: var(--hdr);
+    padding: 4rem 2rem;
+    background-color: var(--s4);
     border: 2px dashed var(--bd);
-    border-radius: 0.75rem;
+    border-radius: var(--rad);
     margin-top: 1rem;
     animation: fadeIn 0.3s ease-in-out;
 }
@@ -168,13 +182,18 @@
 }
 
 .dictionary-entry {
-    padding: 1.25rem;
-    transition: border-color 0.2s;
+    background: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad);
+    padding: 1.5rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     animation: slideInUp 0.3s ease-out backwards;
 }
 
 .dictionary-entry:hover {
     border-color: var(--acc);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
 }
 
 .entry-header {

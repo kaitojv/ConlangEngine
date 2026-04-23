@@ -85,7 +85,7 @@
   --acc2: #7c3aed;
   --acc3: #f5f3ff;
   --card: var(--s1);
-  --input: #ffffff;
+  --input: var(--s4);
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 

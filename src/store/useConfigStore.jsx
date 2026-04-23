@@ -35,6 +35,7 @@ export const INITIAL_CONFIG = {
     theme: 'dark',
     colors: {
         bg: '#0b0f19',
+        header: '#080812',
         s1: '#151a28',
         s2: '#1a2033',
         s3: '#1f283d',
@@ -45,6 +46,7 @@ export const INITIAL_CONFIG = {
         accent2: '#8b5cf6',
         accent3: '#4c1d95',
         border: 'rgba(255, 255, 255, 0.08)',
+        blur: '0px',
         glow: '#1a1638'
     },
     customGlyphs: {},

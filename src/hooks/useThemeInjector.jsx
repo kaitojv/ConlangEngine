@@ -19,7 +19,7 @@ export function useThemeInjector() {
         if (colors.s3) root.style.setProperty('--s3', colors.s3);
         if (colors.s4) root.style.setProperty('--s4', colors.s4);
         
-        // Backward compatibility for 'card'
+        // Backward compatibility: old presets used 'card' key, map it to --s4
         if (colors.card) root.style.setProperty('--s4', colors.card);
         
         // Texts and Accents

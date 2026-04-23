@@ -12,6 +12,7 @@ import { useProjectStore } from '../../../store/useProjectStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
 import { generateConlangPDF } from '../../../utils/pdfGenerator.jsx';
+import { sanitizeBackup } from '../../../utils/schemaValidator.jsx';
 
 export default function Header({ openMenu }) {
     const navigate = useNavigate();
@@ -88,7 +89,7 @@ export default function Header({ openMenu }) {
         URL.revokeObjectURL(url);
     };
 
-    // Read a JSON backup file and inject it directly into our global stores
+    // Read a JSON backup file, validate it, and safely inject into our global stores
     const handleLoad = (event) => {
         const file = event.target.files[0];
         if (!file) return;
@@ -96,19 +97,26 @@ export default function Header({ openMenu }) {
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
-                const data = JSON.parse(e.target.result);
-                if (data.config) useConfigStore.setState(data.config);
-                if (data.project) useProjectStore.setState(data.project);
-                if (data.lexicon) useLexiconStore.setState(data.lexicon);
+                const rawData = JSON.parse(e.target.result);
+                
+                // SEC-4: Validate and sanitize the backup through our schema validator
+                const data = sanitizeBackup(rawData);
+                
+                // BUG-1: Use proper store setters instead of raw setState
+                if (data.config) {
+                    useConfigStore.getState().setFullConfig(data.config);
+                }
+                if (data.lexicon) {
+                    useLexiconStore.getState().setLexicon(data.lexicon);
+                }
                 alert("Project loaded successfully!");
             } catch (err) {
                 console.error("Failed to parse save file:", err);
-                alert("Invalid save file! Ensure it is a valid JSON backup.");
+                alert(`Invalid save file! ${err.message || 'Ensure it is a valid JSON backup.'}`);
             }
         };
         
         reader.readAsText(file);
-        // Reset the input so the user can load the exact same file again if they want to
         event.target.value = ''; 
     };
 

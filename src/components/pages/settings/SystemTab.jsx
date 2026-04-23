@@ -26,13 +26,23 @@ export default function SystemTab() {
 
 
     const applyThemePreset = (preset) => {
-        updateConfig({ colors: { ...colors, ...preset } });
+        // Fully replace colors with preset to avoid stale keys from previous themes
+        updateConfig({ colors: preset });
     };
 
     const getSafeColor = (colorString, fallback) => {
-        if (typeof colorString === 'string' && colorString.startsWith('#')) {
-            const hexRegex = /^#([0-9A-F]{3}){1,2}$/i;
-        }
+        if (typeof colorString !== 'string') return fallback;
+        
+        // If it's already a hex, return it
+        if (colorString.startsWith('#')) return colorString;
+        
+        // If it's a gradient or rgba, try to find the first hex color within it for the color picker to show something valid
+        const hexMatch = colorString.match(/#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}/);
+        if (hexMatch) return hexMatch[0];
+
+        // If no hex found but it's a valid CSS color string (like rgba), we still can't use it in <input type="color">
+        // but we return it anyway for other uses, or fallback if it's for a picker.
+        // For simplicity in this app, we'll return the fallback if it's not a hex.
         return fallback; 
     };
 
@@ -244,6 +254,8 @@ export default function SystemTab() {
         reader.readAsText(file);
     };
 
+
+
     // Dark Themes
     const darkThemes = [
         {
@@ -289,19 +301,15 @@ export default function SystemTab() {
             preview: "linear-gradient(135deg, #050b06, #001f05)",
             colors: { 
                 bg: "#050b06", 
-                card: "#0a140b", 
+                s1: "#0a140b", 
+                s2: "#0d1f0e",
+                s3: "#122a13",
+                s4: "#030804",
                 header: "#030804", 
-
-                font: "#e8efe7", 
-                font2: "#1f8a11", 
-                accent: "#00ff41", 
-                accent2: "#20863a",
-
                 font: "#4af626", 
                 font2: "#1f8a11", 
                 accent: "#00ff41", 
                 accent2: "#00ff41",
-
                 accent3: "#0891b2",
                 border: "#124211", 
                 blur: "0px",
@@ -312,7 +320,10 @@ export default function SystemTab() {
             preview: "linear-gradient(135deg, #13071e, #2b1145)",
             colors: { 
                 bg: "#0f0518", 
-                card: "#1d0b30", 
+                s1: "#1d0b30", 
+                s2: "#2a1045",
+                s3: "#37155a",
+                s4: "#0a0312",
                 header: "#0a0312", 
                 font: "#f3e8ff", 
                 font2: "#c084fc", 
@@ -328,7 +339,10 @@ export default function SystemTab() {
             preview: "linear-gradient(135deg, #1d1b2e, #471d47, #0f223a)",
             colors: {
                 bg: "linear-gradient(120deg, #11101a 0%, #3b1745 45%, #0d2138 100%)",
-                card: "linear-gradient(135deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.01) 100%)",
+                s1: "linear-gradient(135deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.01) 100%)",
+                s2: "rgba(255, 255, 255, 0.05)",
+                s3: "rgba(255, 255, 255, 0.1)",
+                s4: "rgba(0, 0, 0, 0.2)",
                 header: "rgba(10, 10, 10, 0.25)",
                 font: "#ffffff",
                 font2: "rgba(235, 235, 245, 0.6)",
@@ -385,19 +399,22 @@ export default function SystemTab() {
         {
             name: "Nord Snow",
             preview: "#eceff4",
-            colors: { bg: "#eceff4", card: "#ffffff", header: "#e5e9f0", font: "#2e3440", font2: "#4c566a", accent: "#5e81ac", accent2: "#81a1c1", accent3: "#88c0d0", border: "#d8dee9", blur: "0px", glow: "rgba(94, 129, 172, 0.15)" }
+            colors: { bg: "#eceff4", s1: "#ffffff", s2: "#f3f4f7", s3: "#e5e9f0", s4: "#d8dee9", header: "#e5e9f0", font: "#2e3440", font2: "#4c566a", accent: "#5e81ac", accent2: "#81a1c1", accent3: "#88c0d0", border: "#d8dee9", blur: "0px", glow: "rgba(94, 129, 172, 0.15)" }
         },
         {
             name: "Rose Quartz",
             preview: "#fff1f2",
-            colors: { bg: "#fff1f2", card: "#fffbfa", header: "#ffe4e6", font: "#881337", font2: "#f43f5e", accent: "#e11d48", accent2: "#f43f5e", accent3: "#be123c", border: "#fecdd3", blur: "0px", glow: "rgba(225, 29, 72, 0.15)" }
+            colors: { bg: "#fff1f2", s1: "#fffbfa", s2: "#fff5f5", s3: "#ffe4e6", s4: "#fecdd3", header: "#ffe4e6", font: "#881337", font2: "#f43f5e", accent: "#e11d48", accent2: "#f43f5e", accent3: "#be123c", border: "#fecdd3", blur: "0px", glow: "rgba(225, 29, 72, 0.15)" }
         },
         {
             name: "Light Glass",
             preview: "linear-gradient(135deg, #e0c3fc, #8ec5fc)",
             colors: {
                 bg: "linear-gradient(120deg, #e0c3fc 0%, #8ec5fc 100%)",
-                card: "linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.3) 100%)",
+                s1: "linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.3) 100%)",
+                s2: "rgba(255, 255, 255, 0.4)",
+                s3: "rgba(255, 255, 255, 0.5)",
+                s4: "rgba(255, 255, 255, 0.8)",
                 header: "rgba(255, 255, 255, 0.5)",
                 font: "#1c1c1e",
                 font2: "rgba(28, 28, 30, 0.6)",

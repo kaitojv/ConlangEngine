@@ -7,6 +7,7 @@ import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import { Languages, Plus, Trash2, CheckCircle2, Lock } from 'lucide-react';
 import { supabase } from '@/utils/supabaseClient.js';
+import { sanitizeConfig, sanitizeLexicon } from '@/utils/schemaValidator.jsx';
 import './conlangsTab.css';
 
 export default function ConlangsTab() {
@@ -105,7 +106,7 @@ export default function ConlangsTab() {
     };
 
     const handleOpenProject = (id) => {
-        if (config.projectId === id) return; // Don't do anything if it's already open
+        if (config.projectId === id) return;
 
         const project = localProjects.find(p => p.id === id);
         if (!project) return;
@@ -113,14 +114,13 @@ export default function ConlangsTab() {
         // Save the current language before switching
         saveProjectToArchive(useConfigStore.getState(), useLexiconStore.getState().lexicon);
 
-        // Load the selected language into active memory
-        const loadedLexicon = project.project_data.dictionary;
-        const safeLexicon = Array.isArray(loadedLexicon) ? loadedLexicon : (loadedLexicon?.lexicon || []);
+        // SEC-5: Sanitize local project data before loading
+        const safeLexicon = sanitizeLexicon(project.project_data.dictionary);
+        const safeConfig = sanitizeConfig(project.project_data.config || {});
         
         setLexicon(safeLexicon);
-        setFullConfig(project.project_data.config || {});
+        setFullConfig(safeConfig);
         
-        // Take them home to see their newly loaded language
         navigate('/');
     };
 

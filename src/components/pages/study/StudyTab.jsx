@@ -236,7 +236,9 @@ export default function StudyTab() {
                     setQuizInput('');
                     setQuizFeedback('');
                     setMascotState('idle');
-                    setQuizDirection(deck[nextIdx].isNewPrompt ? 'toConlang' : (Math.random() > 0.5 ? 'toConlang' : 'toEnglish'));
+                    // BUG-3: Bounds check before accessing next deck item
+                    const nextWord = deck[nextIdx];
+                    setQuizDirection(nextWord?.isNewPrompt ? 'toConlang' : (Math.random() > 0.5 ? 'toConlang' : 'toEnglish'));
                 }
             }, 1200);
         } else {
@@ -246,11 +248,14 @@ export default function StudyTab() {
                 const updatedDeck = [...deck];
                 updatedDeck.push(currentWord);
                 setDeck(updatedDeck);
-                setCurrentIdx(currentIdx + 1);
+                const nextIdx = currentIdx + 1;
+                setCurrentIdx(nextIdx);
                 setQuizInput('');
                 setQuizFeedback('');
                 setMascotState('idle');
-                setQuizDirection(deck[currentIdx + 1].isNewPrompt ? 'toConlang' : (Math.random() > 0.5 ? 'toConlang' : 'toEnglish'));
+                // BUG-3: Bounds check before accessing next deck item
+                const nextWord = updatedDeck[nextIdx];
+                setQuizDirection(nextWord?.isNewPrompt ? 'toConlang' : (Math.random() > 0.5 ? 'toConlang' : 'toEnglish'));
             }, 2500);
         }
     };

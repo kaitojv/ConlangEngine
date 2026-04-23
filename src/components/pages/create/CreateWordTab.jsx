@@ -147,7 +147,8 @@ export default function CreateWordTab() {
     };
 
     // Spin up a live preview of how this word will interact with the language's grammar rules
-    const derivedWords = (() => {
+    // BUG-4: Memoize to avoid running the morphology engine on every render
+    const derivedWords = useMemo(() => {
         if (!word || !translation) return [];
 
         const results = [];
@@ -181,7 +182,7 @@ export default function CreateWordTab() {
         });
 
         return results;
-    })();
+    }, [word, translation, wordClass, grammarRules, verbMarker, vowels, normalizeToBase]);
 
     return (
         <div className="create-word-container">

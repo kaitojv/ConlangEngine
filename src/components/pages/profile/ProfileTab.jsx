@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useProjectStore } from '@/store/useProjectStore.jsx';
@@ -12,6 +12,7 @@ import './profileTab.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ALLOWED_REDIRECTS } from '../../../App.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
+import { sanitizeConfig, sanitizeLexicon } from '@/utils/schemaValidator.jsx';
 
 const BADGES = [
     { id: 'genesis', name: 'Genesis', desc: 'You started a new Conlang.', Icon: Sparkles },
@@ -81,12 +82,24 @@ export default function ProfileTab() {
         }
     }, [session, location.search, navigate]);
 
+    // BUG-5: Extract specific values to avoid re-running when unrelated config changes
+    const grammarRules = config.grammarRules;
+    const configStreak = config.streak;
+    const configWikiPages = config.wikiPages;
+    const configSyntaxOrder = config.syntaxOrder;
+    const configPhonologyTypes = config.phonologyTypes;
+    const configCustomFont = config.customFont;
+    const configCustomGlyphs = config.customGlyphs;
+    const configUnlockedBadges = config.unlockedBadges;
+    const unlockBadge = config.unlockBadge;
+    const logActivity = config.logActivity;
+
     // Check the user's progress and unlock any achievements they've earned
     useEffect(() => {
         const unlock = (id, name) => {
-            if (!config.unlockedBadges?.includes(id)) {
-                config.unlockBadge(id, name);
-                config.logActivity(`Unlocked achievement: ${name}!`);
+            if (!configUnlockedBadges?.includes(id)) {
+                unlockBadge(id, name);
+                logActivity(`Unlocked achievement: ${name}!`);
             }
         };
 
@@ -96,19 +109,19 @@ export default function ProfileTab() {
         if (wordCount >= 200) unlock('lexicographer', 'Lexicographer');
         if (wordCount >= 1000) unlock('master_linguist', 'Master Linguist');
 
-        if (config.grammarRules?.length >= 1) unlock('grammarian', 'Grammarian');
-        if (config.grammarRules?.length >= 5) unlock('morphologist', 'Morphologist');
+        if (grammarRules?.length >= 1) unlock('grammarian', 'Grammarian');
+        if (grammarRules?.length >= 5) unlock('morphologist', 'Morphologist');
 
         const uniqueTags = new Set(lexicon.flatMap(w => w.tags || [])).size;
         if (uniqueTags >= 10) unlock('semanticist', 'Semanticist');
         
-        if (config.streak >= 10) unlock('native_speaker', 'Native Speaker');
-        if (Object.keys(config.wikiPages || {}).length > 1) unlock('lore_keeper', 'Lore Keeper');
-        if (config.syntaxOrder !== 'SVO') unlock('syntactician', 'Syntactician');
+        if (configStreak >= 10) unlock('native_speaker', 'Native Speaker');
+        if (Object.keys(configWikiPages || {}).length > 1) unlock('lore_keeper', 'Lore Keeper');
+        if (configSyntaxOrder !== 'SVO') unlock('syntactician', 'Syntactician');
         if (localProjects.length > 1) unlock('multiverse', 'Multiverse');
-        if (config.phonologyTypes !== 'alphabetic') unlock('typologist', 'Typologist');
-        if (config.customFont || Object.keys(config.customGlyphs || {}).length > 0) unlock('calligrapher', 'Calligrapher');
-    }, [lexicon, config.grammarRules, config.streak]);
+        if (configPhonologyTypes !== 'alphabetic') unlock('typologist', 'Typologist');
+        if (configCustomFont || Object.keys(configCustomGlyphs || {}).length > 0) unlock('calligrapher', 'Calligrapher');
+    }, [lexicon, grammarRules, configStreak, configUnlockedBadges, configWikiPages, configSyntaxOrder, localProjects.length, configPhonologyTypes, configCustomFont, configCustomGlyphs, unlockBadge, logActivity]);
 
     // Crunch the numbers for the overall dictionary statistics
     const analytics = useMemo(() => {
@@ -187,14 +200,18 @@ export default function ProfileTab() {
 
     const handleSelectProject = (project) => {
         if (project && project.project_data) {
-            setLexicon(project.project_data.dictionary || []);
-            config.updateConfig(project.project_data.config || {});
+            // SEC-5: Sanitize cloud data before injecting into stores
+            const safeConfig = sanitizeConfig(project.project_data.config || {});
+            const safeLexicon = sanitizeLexicon(project.project_data.dictionary || []);
+            
+            setLexicon(safeLexicon);
+            config.updateConfig(safeConfig);
             
             if (project.project_data.wiki) {
                 config.updateConfig({ wikiPages: project.project_data.wiki });
             }
             setProjectSelectorOpen(false);
-            const projectName = project.project_data.config?.conlangName || 'Untitled Project';
+            const projectName = safeConfig.conlangName || 'Untitled Project';
             setSyncStatus(`✅ Loaded project: ${projectName}`);
             config.logActivity(`Pulled project '${projectName}' from cloud.`);
             setTimeout(() => setSyncStatus(''), 3000);
@@ -232,7 +249,9 @@ export default function ProfileTab() {
             config.updateConfig({ projectId: currentProjectId });
         }
 
-        const payload = { dictionary: lexicon, config: config, wiki: config.wikiPages || {} };
+        // BUG-2: Only serialize data fields, not Zustand action functions
+        const configData = sanitizeConfig(useConfigStore.getState());
+        const payload = { dictionary: lexicon, config: configData, wiki: config.wikiPages || {} };
         
         try {
             const { error } = await supabase.from('conlangs').upsert({ 
@@ -288,10 +307,10 @@ export default function ProfileTab() {
         if (!session) return alert("You must be logged in and push to cloud first to generate a link!");
         if (!config.projectId) return alert("Please push to cloud first to generate a link!");
         
-        const shareUrl = `${window.location.origin}${window.location.pathname}?view=${config.projectId}`;
+        const shareUrl = `${window.location.origin}/view/${config.projectId}`;
         try {
             await navigator.clipboard.writeText(shareUrl);
-            alert("🔗 Public Link Copied to Clipboard!");
+            alert("🔗 Public Reader Link Copied to Clipboard!\n\nAnyone with this link can view a read-only showcase of your conlang.");
         } catch (err) {
             alert("❌ Failed to copy link.");
         }
