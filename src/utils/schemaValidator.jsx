@@ -13,7 +13,7 @@ const VALID_CONFIG_KEYS = new Set([
     'grammarRules', 'verbMarker', 'cliticsRules', 'personRules',
     'wikiPages', 'streak', 'unlockedBadges', 'activity',
     'isProActive', 'lastStudyDate', 'customFont', 'theme',
-    'colors', 'customGlyphs', 'puaCounter', 'customFontBase64', 'numeralBase'
+    'colors', 'customGlyphs', 'puaCounter', 'customFontBase64', 'numeralBase', 'sentenceMaps'
 ]);
 
 /**
