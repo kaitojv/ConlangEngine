@@ -303,11 +303,17 @@ export default function ProfileTab() {
         }
     };
 
-    const handleShareLink = async () => {
-        if (!session) return alert("You must be logged in and push to cloud first to generate a link!");
-        if (!config.projectId) return alert("Please push to cloud first to generate a link!");
+        const handleShareLink = async () => {
+        if (!session) return alert("You must be logged in to generate a share link!");
         
-        const shareUrl = `${window.location.origin}/view/${config.projectId}`;
+        // Auto-push so the link actually points to something valid
+        await handlePushToCloud();
+        
+        // We ensure we have a projectId after the push
+        const currentProjectId = config.projectId || useConfigStore.getState().projectId;
+        if (!currentProjectId) return alert("❌ Error generating project ID.");
+
+        const shareUrl = `${window.location.origin}/view/${currentProjectId}`;
         try {
             await navigator.clipboard.writeText(shareUrl);
             alert("🔗 Public Reader Link Copied to Clipboard!\n\nAnyone with this link can view a read-only showcase of your conlang.");
@@ -349,12 +355,18 @@ export default function ProfileTab() {
                             <Button variant="save" className="share-btn" onClick={handleShareLink} title="Copy Public Link">
                                 <div className="btn-content"><Share2 size={16}/> Share Link</div>
                             </Button>
-                            <Button variant="default" className="push-btn" onClick={handlePushToCloud}>
-                                <div className="btn-content"><CloudUpload size={16}/> Push to Cloud</div>
-                            </Button>
-                            <Button variant="default" className="pull-btn" onClick={handlePullFromCloud}>
-                                <div className="btn-content"><CloudDownload size={16}/> Pull from Cloud</div>
-                            </Button>
+
+                            {config.isProActive && (
+                                <>
+                                    <Button variant="default" className="push-btn" onClick={handlePushToCloud}>
+                                        <div className="btn-content"><CloudUpload size={16}/> Push to Cloud</div>
+                                    </Button>
+                                    <Button variant="default" className="pull-btn" onClick={handlePullFromCloud}>
+                                        <div className="btn-content"><CloudDownload size={16}/> Pull from Cloud</div>
+                                    </Button>
+                                </>
+                            )}
+
                             <Button variant="error" className="signout-btn" onClick={handleLogout}>
                                 <div className="btn-content"><LogOut size={16}/> Sign Out</div>
                             </Button>
