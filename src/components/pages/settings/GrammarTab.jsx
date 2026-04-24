@@ -32,7 +32,8 @@ export default function GrammarTab(){
                     • <b>Sound Assimilation:</b> Use Regex for context-specific sound changes. Example: <code>n(?=[pb]) =&gt; m</code> (changes 'n' to 'm' before 'p' or 'b').<br />
                     • <b>Reduplication:</b> Capture groups and repeat them. Example: <code>^(.{2})(.*) =&gt; $1$1$2</code> (copies the first two letters).<br />
                     • <b>Deletion:</b> Leave the right side of the arrow empty. Example: <code>[aeiou]$ =&gt; </code> (deletes a trailing vowel).<br />
-                    • <b>Standalone Rules:</b> Check the <b>"Standalone"</b> box for inflections that should IGNORE Person/Class alignments (e.g., Passive Voice, Infinitives). They will conjugate independently in the Matrix without attaching pronouns.
+                    • <b>Standalone Rules:</b> Check the <b>"Standalone"</b> box for inflections that should IGNORE Person/Class alignments (e.g., Passive Voice, Infinitives). They will conjugate independently in the Matrix without attaching pronouns.<br />
+                    • <b>Rule Scoping:</b> Use the <b>Person Category</b> (in Dictionary Edit) or <b>Root Tag</b> (in Person Alignment) to filter which rules appear for specific words. This is perfect for separating 1st, 2nd, and 3rd person pronoun roots.
                 </Infobox>
                 
                 <div className="rules-wrapper">

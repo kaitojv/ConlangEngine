@@ -3,8 +3,8 @@ import { persist } from 'zustand/middleware';
 
 export const useLexiconStore = create(
     persist(
-        (set, get) => ({   
-            
+        (set, get) => ({
+
             lexicon: [],
 
             setLexicon: (newLexicon) => set({ lexicon: newLexicon }),
@@ -18,14 +18,14 @@ export const useLexiconStore = create(
                     translation: newWordData.translation,
                     tags: newWordData.tags || [],
                     ideogram: newWordData.ideogram || '',
-                    inflectionOverrides: {}, 
+                    inflectionOverrides: {},
                     createdAt: Date.now()
                 };
                 return { lexicon: [...(state.lexicon || []), newEntry] };
             }),
 
             updateWord: (id, updatedFields) => set((state) => ({
-                lexicon: (state.lexicon || []).map(word => 
+                lexicon: (state.lexicon || []).map(word =>
                     word.id === id ? { ...word, ...updatedFields } : word
                 )
             })),
@@ -43,11 +43,11 @@ export const useLexiconStore = create(
                 return currentLexicon.some(entry => {
                     const cleanDbWord = entry.word.replace(/\*/g, '').toLowerCase();
                     const cleanDbTrans = entry.translation.toLowerCase();
-                    return (word && cleanDbWord === cleanInputWord) || 
-                           (translation && cleanDbTrans === cleanInputTrans);
+                    return (word && cleanDbWord === cleanInputWord) ||
+                        (translation && cleanDbTrans === cleanInputTrans);
                 });
             }
-        }), 
+        }),
         { name: 'conlang-lexicon' }
     )
 );

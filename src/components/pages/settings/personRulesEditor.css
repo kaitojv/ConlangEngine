@@ -37,7 +37,7 @@
 
 .rules-column-headers {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 2fr 2fr auto; /* Matches rule-item grid */
+    grid-template-columns: 1fr 1fr 1fr 1.5fr 1.5fr 1.2fr 1.2fr auto; /* Matches rule-item grid */
     gap: 10px;
     padding: 0 10px; /* Align with rule-item padding */
     font-weight: 600;
@@ -56,7 +56,7 @@
 
 .rule-item {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 2fr 2fr auto; /* Person, Number, Gender, Free, Affix, Delete */
+    grid-template-columns: 1fr 1fr 1fr 1.5fr 1.5fr 1.2fr 1.2fr auto; /* Person, Number, Gender, Free, Affix, Applies, Tag, Delete */
     gap: 10px;
     align-items: center;
     padding: 10px;
@@ -136,7 +136,9 @@
     }
     .rule-item > *:nth-child(3), /* Gender */
     .rule-item > *:nth-child(4), /* Free Form */
-    .rule-item > *:nth-child(5) { /* Affix */
+    .rule-item > *:nth-child(5), /* Affix */
+    .rule-item > *:nth-child(6), /* Applies To */
+    .rule-item > *:nth-child(7) { /* Root Tag */
         grid-column: span 2; /* Make these span full width */
     }
     .btn-delete-rule {
@@ -150,11 +152,8 @@
     .rules-column-headers {
         grid-template-columns: 1fr 1fr;
     }
-    .rules-column-headers > *:nth-child(3), /* Gender */
-    .rules-column-headers > *:nth-child(4), /* Free Form */
-    .rules-column-headers > *:nth-child(5), /* Affix */
-    .rules-column-headers > *:nth-child(6) { /* Actions */
-        display: none; /* Hide on smaller screens to avoid clutter */
+    .rules-column-headers > *:nth-child(n+3) {
+        display: none; /* Hide most headers on smaller screens to avoid clutter */
     }
 }
 

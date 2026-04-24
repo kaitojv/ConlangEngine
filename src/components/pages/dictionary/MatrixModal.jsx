@@ -66,10 +66,26 @@ export default function MatrixModal({ wordObj }) {
     const personRules = useMemo(() => {
         const parsedPersons = getPersonRules(personsConfig);
         const liveClasses = liveWord.wordClass ? liveWord.wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
+        const wordTags = (liveWord.tags || []).map(t => t.toLowerCase());
         
         const filtered = parsedPersons.filter(person => {
+            // 1. Existing appliesTo class filter
             const applies = person.appliesTo ? person.appliesTo.split(',').map(c => c.trim().toLowerCase()) : ['all'];
-            return applies.includes('all') || liveClasses.some(lc => applies.includes(lc));
+            const classMatch = applies.includes('all') || liveClasses.some(lc => applies.includes(lc));
+            if (!classMatch) return false;
+
+            // 2. Option A: rootTag filter
+            if (person.rootTag && person.rootTag.trim() !== '') {
+                if (!wordTags.includes(person.rootTag.toLowerCase())) return false;
+            }
+
+            // 3. Option B: personCategory filter
+            if (liveWord.personCategory && liveWord.personCategory.trim() !== '') {
+                // Only filter if the person rule has a specific person set that doesn't match
+                if (person.person && person.person !== liveWord.personCategory) return false;
+            }
+
+            return true;
         });
 
         return [{ name: 'BASE', affix: '', freeForm: '', appliesTo: 'all' }, ...filtered];

@@ -17,9 +17,9 @@ export default function EditWordModal({ wordObj, onClose }) {
 
     // Bundle all the form fields into one neat state object
     const [formData, setFormData] = useState({
-        word: '', ipa: '', wordClass: '', translation: '', tags: '', ideogram: ''
+        word: '', ipa: '', wordClass: '', translation: '', tags: '', ideogram: '', personCategory: ''
     });
-    const { word, ipa, wordClass, translation, tags, ideogram } = formData;
+    const { word, ipa, wordClass, translation, tags, ideogram, personCategory } = formData;
 
     const updateField = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
 
@@ -32,7 +32,8 @@ export default function EditWordModal({ wordObj, onClose }) {
                 wordClass: wordObj.wordClass || '',
                 translation: wordObj.translation || '',
                 tags: Array.isArray(wordObj.tags) ? wordObj.tags.join(', ') : (typeof wordObj.tags === 'string' ? wordObj.tags : ''),
-                ideogram: wordObj.ideogram || ''
+                ideogram: wordObj.ideogram || '',
+                personCategory: wordObj.personCategory || ''
             });
         }
     }, [wordObj]);
@@ -63,14 +64,15 @@ export default function EditWordModal({ wordObj, onClose }) {
 
         const processedTags = tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
 
-        updateWord(wordObj.id, {
-            word: safeWord,
-            ipa: ipa.trim(),
-            wordClass: wordClass.trim(), // Kept exact case for flexibility
-            translation: cleanInputTrans,
-            tags: processedTags,
-            ideogram: ideogram.trim()
-        });
+            updateWord(wordObj.id, {
+                word: safeWord,
+                ipa: ipa.trim(),
+                wordClass: wordClass.trim(), // Kept exact case for flexibility
+                translation: cleanInputTrans,
+                tags: processedTags,
+                ideogram: ideogram.trim(),
+                personCategory: personCategory.trim()
+            });
 
         alert("Word updated successfully!");
         onClose(); 
@@ -132,6 +134,22 @@ export default function EditWordModal({ wordObj, onClose }) {
                     />
                 </div>
             )}
+
+            <div>
+                <Input 
+                    label="Person Category (for pronouns)"
+                    value={personCategory}
+                    onChange={(e) => updateField('personCategory', e.target.value)}
+                    list="person-cat-options"
+                    placeholder="e.g. 1st, 2nd, 3rd"
+                />
+                <datalist id="person-cat-options">
+                    <option value="1st" />
+                    <option value="2nd" />
+                    <option value="3rd" />
+                    <option value="4th" />
+                </datalist>
+            </div>
 
             <div>
                 <Input 

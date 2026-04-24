@@ -46,9 +46,9 @@ export default function PersonRulesEditor() {
                 const freeAffixParts = parts[1].trim().split('/');
                 const freeForm = freeAffixParts[0]?.trim() || '';
                 const affix = freeAffixParts[1]?.trim() || '';
-                
+
                 // New appliesTo field for Person Rules
-                const appliesTo = 'all'; 
+                const appliesTo = 'all';
 
                 return { id, person, number, gender, freeForm, affix, appliesTo };
             }).filter(Boolean); // Filter out any nulls from failed parsing
@@ -139,8 +139,9 @@ export default function PersonRulesEditor() {
                 <span>Free Form</span>
                 <span>Affix</span>
                 <span>Applies To</span>
+                <span>Root Tag</span>
                 {/* Empty span for the delete button column */}
-                <span></span> 
+                <span></span>
             </div>
 
             <div className="rules-list">
@@ -195,6 +196,14 @@ export default function PersonRulesEditor() {
                             placeholder="e.g. noun, verb"
                             value={rule.appliesTo || 'all'}
                             onChange={(e) => handleRuleChange(rule.id, 'appliesTo', e.target.value.toLowerCase())}
+                        />
+
+                        <input
+                            type="text"
+                            className="rule-input"
+                            placeholder="e.g. 1p, anim"
+                            value={rule.rootTag || ''}
+                            onChange={(e) => handleRuleChange(rule.id, 'rootTag', e.target.value.toLowerCase())}
                         />
 
                         <button type="button" className="btn-delete-rule" onClick={() => deleteRule(rule.id)}>

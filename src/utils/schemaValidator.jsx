@@ -63,7 +63,7 @@ export function sanitizeLexicon(rawLexicon) {
         translation: entry.translation,
         tags: Array.isArray(entry.tags) ? entry.tags.filter(t => typeof t === 'string') : [],
         ideogram: typeof entry.ideogram === 'string' ? entry.ideogram : '',
-        inflectionOverrides: (entry.inflectionOverrides && typeof entry.inflectionOverrides === 'object') 
+        inflectionOverrides: (entry.inflectionOverrides && typeof entry.inflectionOverrides === 'object')
             ? entry.inflectionOverrides : {},
         createdAt: typeof entry.createdAt === 'number' ? entry.createdAt : Date.now()
     }));
