@@ -5,6 +5,7 @@ import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
+import { Save } from 'lucide-react';
 import './editModal.css';
 
 export default function EditWordModal({ wordObj, onClose }) {
