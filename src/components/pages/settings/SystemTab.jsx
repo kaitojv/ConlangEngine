@@ -196,16 +196,65 @@ export default function SystemTab() {
             try {
                 const oldData = JSON.parse(e.target.result);
 
-                if (!oldData.config && !oldData.dictionary) {
-                    alert("This doesn't look like a valid legacy save file.");
+                // ── Detect format: current export vs. true legacy ──
+                const isCurrentFormat = oldData.project && Array.isArray(oldData.project.localProjects);
+
+                if (!isCurrentFormat && !oldData.config && !oldData.dictionary) {
+                    alert("This doesn't look like a valid save file.");
                     return;
                 }
 
-                if (!window.confirm("⚠️ This will overwrite your CURRENT workspace with the legacy data. Make sure you have backed up your current work. Proceed?")) {
+                if (!window.confirm("⚠️ This will overwrite your CURRENT workspace with the imported data. Make sure you have backed up your current work. Proceed?")) {
                     event.target.value = '';
                     return;
                 }
 
+                // ── Current-format import ──
+                if (isCurrentFormat) {
+                    // Pick the first project in the archive as the active workspace
+                    const firstProject = oldData.project.localProjects[0];
+                    const projectData = firstProject?.project_data;
+
+                    if (!projectData || !projectData.config) {
+                        alert("The file contains no valid project data.");
+                        return;
+                    }
+
+                    // Restore the active config (prefer the nested project config over the top-level one)
+                    const importedConfig = { ...INITIAL_CONFIG, ...projectData.config };
+                    // Also merge any top-level config fields that may be more recent
+                    if (oldData.config) {
+                        Object.keys(oldData.config).forEach(key => {
+                            if (key in INITIAL_CONFIG && oldData.config[key] !== undefined) {
+                                importedConfig[key] = oldData.config[key];
+                            }
+                        });
+                    }
+
+                    // Dictionary is already in the current schema — use directly
+                    const importedLexicon = projectData.dictionary || [];
+
+                    setFullConfig(importedConfig);
+                    setLexicon(importedLexicon);
+
+                    // Restore ALL archived projects so multi-project exports are fully preserved
+                    const projectStore = useProjectStore.getState();
+                    oldData.project.localProjects.forEach(proj => {
+                        if (proj.id && proj.project_data) {
+                            projectStore.saveProjectToArchive(
+                                proj.project_data.config,
+                                proj.project_data.dictionary || []
+                            );
+                        }
+                    });
+
+                    const wordCount = importedLexicon.length;
+                    const projectCount = oldData.project.localProjects.length;
+                    alert(`Project imported successfully!\n${wordCount} dictionary entries loaded.\n${projectCount} project(s) restored to your workspace archive.`);
+                    return;
+                }
+
+                // ── Legacy-format import (old Conlang Engine) ──
                 const currentConfig = useConfigStore.getState();
                 const newConfig = { ...INITIAL_CONFIG, projectId: currentConfig.projectId };
 
@@ -249,8 +298,8 @@ export default function SystemTab() {
                 alert("Legacy project imported successfully! Your grammar and dictionary are now updated.");
 
             } catch (err) {
-                console.error("Legacy import failed:", err);
-                alert("Failed to parse legacy save file. Ensure it is valid JSON.");
+                console.error("Import failed:", err);
+                alert("Failed to parse save file. Ensure it is valid JSON.");
             } finally {
                 if (legacyInputRef.current) legacyInputRef.current.value = '';
             }
