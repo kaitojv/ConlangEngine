@@ -45,9 +45,11 @@ const validateAlphabetic = (word, consonants, vowels, syllablePattern) => {
     let tempWord = checkWord;
 
     // Remove valid vowels and consonants to see if any alien characters remain
-    [...vList, ...cList].forEach(char => {
-        tempWord = tempWord.replace(new RegExp(char, 'gi'), '');
-    });
+    const inventoryList = [...vList, ...cList].sort((a, b) => b.length - a.length);
+    const invPattern = inventoryList.map(i => i.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+    if (invPattern) {
+        tempWord = tempWord.replace(new RegExp(invPattern, 'gi'), '');
+    }
 
     if (tempWord.length > 0) {
         return { valid: false, reason: `Contains invalid characters: "${tempWord}". Check your Consonants/Vowels settings.` };
@@ -58,9 +60,24 @@ const validateAlphabetic = (word, consonants, vowels, syllablePattern) => {
 
     let cvString = checkWord;
     
-    // Replace all digraphs and letters with 'V' or 'C'
-    vList.forEach(v => { cvString = cvString.replace(new RegExp(v, 'gi'), 'V'); });
-    cList.forEach(c => { cvString = cvString.replace(new RegExp(c, 'gi'), 'C'); });
+    // Create a combined inventory sorted by length to handle digraphs in one pass
+    // This prevents placeholders like 'V' from being overwritten by a consonant 'v'
+    const allTokens = [
+        ...vList.map(v => ({ text: v, type: 'V' })),
+        ...cList.map(c => ({ text: c, type: 'C' }))
+    ].sort((a, b) => b.text.length - a.text.length);
+
+    const pattern = allTokens
+        .map(t => t.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+        .join('|');
+
+    if (pattern) {
+        const tokenRegex = new RegExp(pattern, 'gi');
+        cvString = checkWord.replace(tokenRegex, (match) => {
+            const token = allTokens.find(t => t.text.toLowerCase() === match.toLowerCase());
+            return token ? token.type : match;
+        });
+    }
 
     // Parse user's pattern (e.g., "CVC, CV" -> /^(CVC|CV)+$/i )
     const patterns = syllablePattern.split(',').map(p => p.trim().toUpperCase()).filter(Boolean);
