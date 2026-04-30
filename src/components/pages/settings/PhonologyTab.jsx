@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
+import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
@@ -8,7 +9,8 @@ import SyllabaryManager from '../../UI/SyllabaryManager/SyllabaryManager.jsx';
 import BlockManager from '../../UI/BlockManager/BlockManager.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import applySoundChanges from '../../../utils/applysoundchanges.jsx';
-import { Info, AudioLines, Hourglass, Eye } from 'lucide-react';
+import { Info, AudioLines, Hourglass, Eye, BookCheck } from 'lucide-react';
+import toast from 'react-hot-toast';
 import './phonologyTab.css'
 
 export default function PhonologyTab() {
@@ -19,10 +21,16 @@ export default function PhonologyTab() {
     const historicalRules = useConfigStore((state) => state.historicalRules) || '';
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const updateConfig = useConfigStore((state) => state.updateConfig);
+
+    // Lexicon store — needed to permanently apply sound changes
+    const rawLexicon = useLexiconStore((state) => state.lexicon);
+    const lexicon = Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []);
+    const updateWord = useLexiconStore((state) => state.updateWord);
     
     // Local state to handle the real-time sound evolution preview
     const [testWords, setTestWords] = useState('');
     const [previewResults, setPreviewResults] = useState([]);
+    const [showApplyConfirm, setShowApplyConfirm] = useState(false);
 
     // Run the user's test words through the sound change engine
     const handlePreview = () => {
@@ -32,6 +40,37 @@ export default function PhonologyTab() {
         }
         const results = applySoundChanges(testWords, historicalRules);
         setPreviewResults(results);
+    };
+
+    // Permanently apply all sound-change rules to every word in the lexicon
+    const handleApplyToDictionary = () => {
+        if (!historicalRules.trim()) {
+            toast.error('No rules to apply. Write some rules first.');
+            return;
+        }
+        if (lexicon.length === 0) {
+            toast.error('Your dictionary is empty.');
+            return;
+        }
+
+        let changed = 0;
+        lexicon.forEach((entry) => {
+            const safeWord = entry.word.replace(/\*/g, '');
+            const results = applySoundChanges(safeWord, historicalRules);
+            if (results.length > 0 && results[0].evolved !== safeWord) {
+                // Preserve any leading * (root marker)
+                const prefix = entry.word.startsWith('*') ? '*' : '';
+                updateWord(entry.id, { word: prefix + results[0].evolved });
+                changed++;
+            }
+        });
+
+        setShowApplyConfirm(false);
+        if (changed > 0) {
+            toast.success(`✅ Applied rules to ${changed} word${changed !== 1 ? 's' : ''} in your dictionary.`);
+        } else {
+            toast(`No words were changed — the rules may not match any stored phonemes.`, { icon: 'ℹ️' });
+        }
     };
    
     return (
@@ -124,6 +163,29 @@ export default function PhonologyTab() {
                     value={historicalRules}
                     onChange={(e) => updateConfig({ historicalRules: e.target.value })}
                 />
+
+                {/* Apply to Dictionary — destructive action, gated behind a confirmation */}
+                {!showApplyConfirm ? (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+                        <Button variant="save" onClick={() => setShowApplyConfirm(true)}>
+                            <BookCheck size={16} /> Apply to Dictionary
+                        </Button>
+                    </div>
+                ) : (
+                    <div className="apply-confirm-box">
+                        <p className="apply-confirm-text">
+                            ⚠️ This will <strong>permanently rewrite</strong> the stored phoneme spelling of every matching word. This cannot be undone. Are you sure?
+                        </p>
+                        <div className="apply-confirm-actions">
+                            <Button variant="error" onClick={handleApplyToDictionary}>
+                                Yes, apply to all {lexicon.length} words
+                            </Button>
+                            <Button variant="edit" onClick={() => setShowApplyConfirm(false)}>
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                )}
 
                 <div className="preview-container">
                     <label className="preview-label">Test your rules</label>
