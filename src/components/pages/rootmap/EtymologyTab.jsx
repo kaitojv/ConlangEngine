@@ -51,7 +51,7 @@ export default function EtymologyTab() {
 
         // Now, find all grammar rules that actually apply to this specific part of speech
         const applicableRules = grammarRules.filter(rule => {
-            const allowedClasses = rule.appliesTo.split(',').map(c => c.trim().toLowerCase());
+            const allowedClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
             return allowedClasses.includes('all') || targetClasses.some(tc => allowedClasses.includes(tc));
         });
 

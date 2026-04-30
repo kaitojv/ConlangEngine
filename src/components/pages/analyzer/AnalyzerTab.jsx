@@ -152,7 +152,7 @@ export default function AnalyzerTab() {
 
     const handleRoleChange = (wordIndex, role) => {
         const newWords = [...analyzedWords];
-        newWords[wordIndex].manualRole = role;
+        newWords[wordIndex].manualRole = role || null;
         setAnalyzedWords(newWords);
     };
 

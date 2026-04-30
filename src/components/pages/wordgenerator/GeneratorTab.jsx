@@ -93,7 +93,7 @@ export default function GeneratorTab() {
         }
 
         const applicableRules = grammarRules.filter(rule => {
-            const classes = rule.appliesTo.split(',').map(c => c.trim().toLowerCase());
+            const classes = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
             return classes.includes('all') || classes.includes(generatedClass.toLowerCase());
         });
 
