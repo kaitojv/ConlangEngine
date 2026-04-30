@@ -22,8 +22,9 @@ export default function applySoundChanges(wordString, rulesString) {
         rules.forEach(({ pattern, replacement }) => {
             try {
                 const regex = new RegExp(pattern, 'g');
-                if (regex.test(evolvedWord)) {
-                    evolvedWord = evolvedWord.replace(regex, replacement);
+                const newWord = evolvedWord.replace(regex, replacement);
+                if (newWord !== evolvedWord) {
+                    evolvedWord = newWord;
                     steps.push(`${pattern} => ${evolvedWord}`);
                 }
             } catch (e) {

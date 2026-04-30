@@ -181,7 +181,18 @@ export default function AnalyzerTab() {
             if (finalRole === 'V') {
                 const isPersonMarked = parse.rules.some(r => {
                     const n = r.name.toUpperCase();
-                    return n.match(/^[123][SP]/) || (config.personRules && config.personRules.toUpperCase().includes(n));
+                    if (n.match(/^[123][SP]/)) return true;
+                    // personRules can be a legacy string or a modern array of objects
+                    if (typeof config.personRules === 'string') {
+                        return config.personRules.toUpperCase().includes(n);
+                    }
+                    if (Array.isArray(config.personRules)) {
+                        return config.personRules.some(p => 
+                            (p.name && p.name.toUpperCase().includes(n)) ||
+                            (p.person && p.person.toUpperCase().includes(n))
+                        );
+                    }
+                    return false;
                 });
                 if (isPersonMarked) sentenceHasHiddenSubject = true;
             }

@@ -13,7 +13,8 @@ const VALID_CONFIG_KEYS = new Set([
     'grammarRules', 'verbMarker', 'cliticsRules', 'personRules',
     'wikiPages', 'streak', 'unlockedBadges', 'activity',
     'isProActive', 'lastStudyDate', 'customFont', 'theme',
-    'colors', 'customGlyphs', 'puaCounter', 'customFontBase64', 'numeralBase', 'sentenceMaps'
+    'colors', 'customGlyphs', 'puaCounter', 'customFontBase64', 'numeralBase', 'sentenceMaps',
+    'generatorMarkers'
 ]);
 
 /**
@@ -63,6 +64,7 @@ export function sanitizeLexicon(rawLexicon) {
         translation: entry.translation,
         tags: Array.isArray(entry.tags) ? entry.tags.filter(t => typeof t === 'string') : [],
         ideogram: typeof entry.ideogram === 'string' ? entry.ideogram : '',
+        personCategory: typeof entry.personCategory === 'string' ? entry.personCategory : '',
         inflectionOverrides: (entry.inflectionOverrides && typeof entry.inflectionOverrides === 'object')
             ? entry.inflectionOverrides : {},
         createdAt: typeof entry.createdAt === 'number' ? entry.createdAt : Date.now()

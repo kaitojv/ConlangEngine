@@ -54,10 +54,10 @@ export default function Settings() {
                 {activeTab === 'numerals' && (
                     <NumeralTab />
                 )}
-                </div>
                 {activeTab === 'system' && (
                     <SystemTab />
                 )}
+                </div>
                 </div>
             </div>
             

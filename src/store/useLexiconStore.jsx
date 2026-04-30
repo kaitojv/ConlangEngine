@@ -18,6 +18,7 @@ export const useLexiconStore = create(
                     translation: newWordData.translation,
                     tags: newWordData.tags || [],
                     ideogram: newWordData.ideogram || '',
+                    personCategory: newWordData.personCategory || '',
                     inflectionOverrides: {},
                     createdAt: Date.now()
                 };
