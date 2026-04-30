@@ -69,17 +69,31 @@
 .alpha-filter-bar {
     display: flex;
     flex-wrap: nowrap;
-    overflow-x: auto;
+    overflow-x: scroll;
     gap: 0.4rem;
     align-items: center;
     border-top: 1px solid var(--bd);
-    padding: 1rem 1.25rem;
-    scrollbar-width: none;
+    padding: 1rem 30px 0.6rem 30px;
+    margin: 0 -30px -30px -30px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--acc) var(--s4);
 }
 
 .alpha-filter-bar::-webkit-scrollbar {
-    display: none;
+    height: 4px;
 }
+
+.alpha-filter-bar::-webkit-scrollbar-track {
+    background: var(--s4);
+    border-radius: 99px;
+}
+
+.alpha-filter-bar::-webkit-scrollbar-thumb {
+    background: var(--acc);
+    border-radius: 99px;
+}
+
 
 .alpha-icon {
     color: var(--tx2);
