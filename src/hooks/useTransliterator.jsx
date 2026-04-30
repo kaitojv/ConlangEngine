@@ -48,8 +48,8 @@ export function useTransliterator() {
             if (sound.includes('=')) {
                 const [base, text] = sound.split('=').map(s => s.trim());
                 if (base && text) {
-                    mapToText[base] = text;
-                    mapToBase[text] = base;
+                    mapToText[base.toLowerCase()] = text;
+                    mapToBase[text] = base.toLowerCase();
                 }
             }
         });
@@ -85,12 +85,29 @@ export function useTransliterator() {
                 result = out;
             }
 
-            // Apply custom "=" mappings on top
+            // Apply custom "=" mappings on top (longest-match-first to avoid
+            // single-char keys like 'k' eating the start of digraphs like 'ks')
             if (Object.keys(mapToText).length > 0) {
-                for (const [base, text] of Object.entries(mapToText)) {
-                    const regex = new RegExp(base, 'g');
-                    result = result.replace(regex, text);
+                const sortedEntries = Object.entries(mapToText)
+                    .sort((a, b) => b[0].length - a[0].length);
+                let out = '';
+                let i = 0;
+                while (i < result.length) {
+                    let matched = false;
+                    for (const [base, text] of sortedEntries) {
+                        if (result.startsWith(base, i)) {
+                            out += text;
+                            i += base.length;
+                            matched = true;
+                            break;
+                        }
+                    }
+                    if (!matched) {
+                        out += result[i];
+                        i++;
+                    }
                 }
+                result = out;
             }
             
             return result;
