@@ -63,8 +63,12 @@ function App(){
   const safeFontBase64 = useMemo(() => {
     if (typeof customFontBase64 !== 'string') return null;
     if (!customFontBase64.startsWith('data:')) return null;
-    // Strip any potential injection attempts — only allow base64 data URI characters
-    if (/[{};<>]/.test(customFontBase64)) return null;
+    // Only validate the base64 payload — the data URI prefix legitimately contains semicolons
+    // e.g. "data:font/truetype;charset=utf-8;base64,<payload>"
+    const payloadMatch = customFontBase64.match(/;base64,(.*)$/);
+    if (!payloadMatch) return null;
+    // Base64 payload may only contain A-Za-z0-9+/= characters
+    if (!/^[A-Za-z0-9+/=]+$/.test(payloadMatch[1])) return null;
     return customFontBase64;
   }, [customFontBase64]);
 

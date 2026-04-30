@@ -54,6 +54,15 @@ export const INITIAL_CONFIG = {
     customFontBase64: null, 
     numeralBase: 10,
     sentenceMaps: [],
+    // Per-class word markers used by the generator (separate from the grammar rules engine)
+    generatorMarkers: {
+        noun: '',
+        verb: '',      // Initially mirrors verbMarker, but can be overridden
+        adjective: '',
+        adverb: '',
+        pronoun: '',
+        particle: '',
+    },
 };
 
 // IndexedDB Helper for handling massive font files without breaking local storage quotas

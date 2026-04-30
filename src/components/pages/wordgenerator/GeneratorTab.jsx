@@ -10,7 +10,7 @@ import { applyRuleToWord } from '@/utils/morphologyEngine.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
 import { commonWords } from '@/components/pages/wordgenerator/commonWords.jsx';
-import { Wand2, Send, Dna, BookCopy, SkipForward, Check } from 'lucide-react';
+import { Wand2, Send, Dna, BookCopy, SkipForward, Check, Settings2, Download } from 'lucide-react';
 import './generatorTab.css';
 
 
@@ -25,6 +25,10 @@ export default function GeneratorTab() {
     const vowels = useConfigStore((state) => state.vowels);
     const verbMarker = useConfigStore((state) => state.verbMarker);
     const cliticsRules = useConfigStore((state) => state.cliticsRules);
+    const generatorMarkers = useConfigStore((state) => state.generatorMarkers) || {};
+    const updateConfig = useConfigStore((state) => state.updateConfig);
+    
+    const [showMarkerConfig, setShowMarkerConfig] = useState(false);
     
     // UI State for different modes
     const [isFillMode, setIsFillMode] = useState(false);
@@ -35,7 +39,6 @@ export default function GeneratorTab() {
     };
 
     const handleSendToCreateWord = () => {
-        // Redirects to the Create Word tab and passes the generated word via React Router state
         navigate('/create', { 
             state: { 
                 prefillWord: generatedWord, 
@@ -43,6 +46,33 @@ export default function GeneratorTab() {
                 prefillClass: generatedClass 
             } 
         });
+    };
+
+    // Import markers from grammar rules — picks the first rule that applies uniquely to each class.
+    // Verbs are always sourced from the dedicated verbMarker setting, never from grammar rules
+    // (which contain inflections like past tense, not the base class marker).
+    const handleImportFromGrammar = () => {
+        const CLASSES = ['noun', 'adjective', 'adverb', 'pronoun', 'particle'];
+        const imported = { ...generatorMarkers };
+
+        CLASSES.forEach(cls => {
+            // Only import a rule whose name exactly matches the class (e.g. "noun" rule → noun marker)
+            const specificRule = grammarRules.find(r =>
+                r.name.trim().toLowerCase() === cls && r.affix
+            );
+            if (specificRule) {
+                imported[cls] = specificRule.affix;
+            }
+        });
+
+        // Verb marker always comes from the dedicated verbMarker setting, not grammar rules
+        imported.verb = verbMarker ? verbMarker.split(',')[0].trim() : (imported.verb || '');
+
+        updateConfig({ generatorMarkers: imported });
+    };
+
+    const handleMarkerChange = (cls, value) => {
+        updateConfig({ generatorMarkers: { ...generatorMarkers, [cls]: value } });
     };
 
     // Generate the live preview of declensions/conjugations
@@ -110,6 +140,46 @@ export default function GeneratorTab() {
                 </div>
                 <Button onClick={handleGenerate}><div className="generator-btn-content"><Wand2 size={18} /> Generate Word</div></Button>
 
+                {/* ── Class Marker Config ── */}
+                <div className="marker-config-section">
+                    <button
+                        className="marker-config-toggle"
+                        onClick={() => setShowMarkerConfig(v => !v)}
+                    >
+                        <Settings2 size={15} />
+                        Class Markers
+                        <span className="marker-config-arrow">{showMarkerConfig ? '▲' : '▼'}</span>
+                    </button>
+
+                    {showMarkerConfig && (
+                        <div className="marker-config-panel">
+                            <div className="marker-config-header">
+                                <p className="marker-config-desc">
+                                    Set a suffix/prefix that the generator appends per word class. 
+                                    Use the import button to auto-fill from your Grammar Tab rules.
+                                </p>
+                                <Button variant="edit" onClick={handleImportFromGrammar}>
+                                    <Download size={14} /> Import from Grammar
+                                </Button>
+                            </div>
+                            <div className="marker-config-grid">
+                                {Object.entries(generatorMarkers).map(([cls, marker]) => (
+                                    <div key={cls} className="marker-config-row">
+                                        <label className="marker-config-label">{cls.charAt(0).toUpperCase() + cls.slice(1)}</label>
+                                        <input
+                                            type="text"
+                                            className="generator-input marker-config-input"
+                                            value={marker}
+                                            onChange={e => handleMarkerChange(cls, e.target.value)}
+                                            placeholder="e.g. -ki or none"
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
                 <div className="fill-mode-prompt" style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
                     <Button variant="edit" onClick={() => setIsFillMode(true)}>
                         <BookCopy size={18} /> Fill Mode
@@ -119,6 +189,7 @@ export default function GeneratorTab() {
                     </Button>
                 </div>
             </Card>
+
 
             {generatedWord && (
                 <Card>

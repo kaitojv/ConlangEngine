@@ -43,9 +43,13 @@ export default function DictionaryList() {
 
     // Extract all the unique first letters from the dictionary so we can build our A-Z quick jump bar
     const firstLetters = useMemo(() => {
-        const letters = new Set(lexicon.map(w => w.word.replace(/\*/g, '').charAt(0).toUpperCase()));
+        const letters = new Set(lexicon.map(w => {
+            const cleanWord = w.word.replace(/\*/g, '');
+            const displayWord = transliterate(cleanWord, lexicon);
+            return displayWord ? displayWord.charAt(0).toUpperCase() : '';
+        }).filter(Boolean));
         return [...letters].sort();
-    }, [lexicon]);
+    }, [lexicon, transliterate]);
 
     // Do the same for word classes (Noun, Verb, etc.) to populate the dropdown
     const uniqueClasses = useMemo(() => {
@@ -81,8 +85,9 @@ export default function DictionaryList() {
 
         if (filters.letter !== 'all') {
             result = result.filter(e => {
-                const cleanWord = e.word.replace(/\*/g, '').toUpperCase();
-                return cleanWord.startsWith(filters.letter.toUpperCase());
+                const cleanWord = e.word.replace(/\*/g, '');
+                const displayWord = transliterate(cleanWord, lexicon).toUpperCase();
+                return displayWord.startsWith(filters.letter.toUpperCase());
             });
         }
 
@@ -92,7 +97,7 @@ export default function DictionaryList() {
         else if (filters.sort === 'za') result.sort((a, b) => b.word.replace(/\*/g, '').localeCompare(a.word.replace(/\*/g, '')));
 
         return result;
-    }, [lexicon, filters]);
+    }, [lexicon, filters, transliterate]);
 
     // Quick action to bin a word
     const handleDelete = (id) => {

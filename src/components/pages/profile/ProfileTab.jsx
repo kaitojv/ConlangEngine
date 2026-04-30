@@ -238,6 +238,23 @@ export default function ProfileTab() {
         }
     };
 
+    const handleResetPassword = async () => {
+        if (!email) {
+            setAuthStatus({ msg: '❌ Please enter your email address.', type: 'err' });
+            return;
+        }
+        setAuthStatus({ msg: '⏳ Sending reset link...', type: 'tx2' });
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin + '/update-password'
+            });
+            if (error) throw error;
+            setAuthStatus({ msg: '✅ Reset link sent! Check your inbox.', type: 'ok' });
+        } catch (error) {
+            setAuthStatus({ msg: `❌ Error: ${error.message}`, type: 'err' });
+        }
+    };
+
     const handleSelectProject = (project) => {
         if (project && project.project_data) {
             // SEC-5: Sanitize cloud data before injecting into stores
@@ -434,17 +451,33 @@ export default function ProfileTab() {
                         </div>
                     ) : (
                         <div className="login-form">
-                            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="login-input" />
-                            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="login-input" />
-                            <Button variant="imp" onClick={() => { setAuthMode('login'); handleAuth(); }}>Login</Button>
-                            <Button variant="default" onClick={() => { setAuthMode('signup'); handleAuth(); }}>Sign Up</Button>
-                            <div className="login-divider">— OR CONTINUE WITH —</div>
-                            <div className="social-row">
-
-                                <Button variant="default" className="social-btn" onClick={() => handleOAuth('google')} title="Google"><Globe size={18} /></Button>
-                                <Button variant="default" className="social-btn" onClick={() => handleOAuth('github')} title="GitHub"><GitBranch size={18} /></Button>
-
-                            </div>
+                            {authMode === 'forgot' ? (
+                                <>
+                                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email to reset password" className="login-input" />
+                                    <Button variant="imp" onClick={handleResetPassword}>Send Reset Link</Button>
+                                    <Button variant="default" onClick={() => { setAuthMode('login'); setAuthStatus({msg:'', type:''}); }}>Back to Login</Button>
+                                </>
+                            ) : (
+                                <>
+                                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="login-input" />
+                                    <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="login-input" />
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-5px', marginBottom: '10px' }}>
+                                        <span 
+                                            style={{ fontSize: '0.8rem', color: 'var(--acc)', cursor: 'pointer', textDecoration: 'underline' }}
+                                            onClick={() => { setAuthMode('forgot'); setAuthStatus({msg:'', type:''}); }}
+                                        >
+                                            Forgot Password?
+                                        </span>
+                                    </div>
+                                    <Button variant="imp" onClick={() => { setAuthMode('login'); handleAuth(); }}>Login</Button>
+                                    <Button variant="default" onClick={() => { setAuthMode('signup'); handleAuth(); }}>Sign Up</Button>
+                                    <div className="login-divider">— OR CONTINUE WITH —</div>
+                                    <div className="social-row">
+                                        <Button variant="default" className="social-btn" onClick={() => handleOAuth('google')} title="Google"><Globe size={18} /></Button>
+                                        <Button variant="default" className="social-btn" onClick={() => handleOAuth('github')} title="GitHub"><GitBranch size={18} /></Button>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     )}
                 </div>

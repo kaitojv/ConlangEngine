@@ -208,9 +208,6 @@ export default function CreateWordTab() {
                             onChange={(e) => updateField('ipa', e.target.value)}
                             placeholder="/ma'kin/"
                         />
-                        <div style={{ marginTop: '-10px', marginBottom: '10px' }}>
-                            <IpaChart onSelect={(char) => updateField('ipa', ipa + char)} />
-                        </div>
                     </div>
                     <div>
                         <Input 
@@ -233,6 +230,11 @@ export default function CreateWordTab() {
                             <option value="preposition" />
                         </datalist>
                     </div>
+                </div>
+
+                {/* IPA chart spans the full card width so it doesn't overflow the column grid */}
+                <div style={{ marginBottom: '1rem' }}>
+                    <IpaChart onSelect={(char) => updateField('ipa', ipa + char)} />
                 </div>
 
                 {phonologyTypes === 'logographic' && (

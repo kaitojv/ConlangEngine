@@ -193,3 +193,90 @@
     gap: 1rem;
     margin-top: 1.5rem;
 }
+
+/* ── Class Marker Config Panel ── */
+.marker-config-section {
+    margin-top: 20px;
+    border-top: 1px solid var(--bd);
+    padding-top: 16px;
+}
+
+.marker-config-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    color: var(--tx2);
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.5px;
+}
+
+.marker-config-toggle:hover {
+    background: var(--s2);
+    color: var(--tx);
+    border-color: var(--acc);
+}
+
+.marker-config-arrow {
+    margin-left: auto;
+    font-size: 0.7rem;
+    opacity: 0.6;
+}
+
+.marker-config-panel {
+    margin-top: 14px;
+    background: var(--s1);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad);
+    padding: 16px 20px;
+    animation: fadeIn 0.2s ease;
+}
+
+.marker-config-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.marker-config-desc {
+    color: var(--tx2);
+    font-size: 0.85rem;
+    margin: 0;
+    flex: 1;
+    line-height: 1.5;
+}
+
+.marker-config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+}
+
+.marker-config-row {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.marker-config-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--tx2);
+}
+
+.marker-config-input {
+    margin: 0;
+    padding: 8px 10px;
+    font-size: 0.9rem;
+}

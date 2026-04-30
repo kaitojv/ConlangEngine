@@ -9,6 +9,7 @@ export function useWordGenerator() {
     const vowels = useConfigStore((state) => state.vowels);
     const syllablePattern = useConfigStore((state) => state.syllablePattern);
     const verbMarker = useConfigStore((state) => state.verbMarker);
+    const generatorMarkers = useConfigStore((state) => state.generatorMarkers) || {};
 
     // 2. Local state to hold the currently generated word data
     const [generatedWord, setGeneratedWord] = useState('');
@@ -100,10 +101,16 @@ export function useWordGenerator() {
             }
         }
 
-        // Add Verb Marker if applicable (Strip any leading hyphens from the marker)
-        if (classFinal === 'verb' && verbMarker) {
-            const cleanMarker = verbMarker.split(',')[0].trim().replace(/^-/, ''); 
-            if (!orthResult.endsWith(cleanMarker)) {
+        // Apply the per-class marker from generatorMarkers.
+        // For verbs, fall back to the legacy verbMarker if generatorMarkers.verb is not set.
+        const markerForClass = generatorMarkers[classFinal];
+        const resolvedMarker = (markerForClass !== undefined && markerForClass !== '')
+            ? markerForClass
+            : (classFinal === 'verb' ? verbMarker : '');
+
+        if (resolvedMarker) {
+            const cleanMarker = resolvedMarker.split(',')[0].trim().replace(/^-/, '');
+            if (cleanMarker && !orthResult.endsWith(cleanMarker)) {
                 orthResult += cleanMarker;
                 ipaResult += cleanMarker;
             }
@@ -116,7 +123,7 @@ export function useWordGenerator() {
 
         // Return the object in case the caller wants to use it immediately
         return { word: orthResult, ipa: ipaResult, wordClass: classFinal };
-    }, [phonologyTypes, syllabaryMap, consonants, vowels, syllablePattern, verbMarker]);
+    }, [phonologyTypes, syllabaryMap, consonants, vowels, syllablePattern, verbMarker, generatorMarkers]);
 
     return { generatedWord, generatedIpa, generatedClass, generateWord };
 }

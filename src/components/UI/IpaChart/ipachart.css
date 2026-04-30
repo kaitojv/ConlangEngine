@@ -269,6 +269,7 @@
 /* General Toggle Button */
 .ipa-btn-toggle {
     width: 100%;
+    max-width: 320px;
     margin-top: 10px;
     padding: 12px;
     border-radius: var(--rad-sm);

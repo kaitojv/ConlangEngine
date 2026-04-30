@@ -1,4 +1,5 @@
 // src/hooks/useTransliterator.jsx
+import React from 'react';
 import { useConfigStore } from '../store/useConfigStore.jsx';
 
 const SCRIPT_MAPS = {
@@ -56,7 +57,7 @@ export function useTransliterator() {
     };
 
     // 1. FROM MEMORY TO SCREEN (For rendering the dictionary list beautifully)
-    const transliterate = (word, lexicon = []) => {
+    const transliterate = React.useCallback((word, lexicon = []) => {
         if (!word) return "";
         let cleanWord = word.replace(/\*/g, '').toLowerCase();
 
@@ -118,10 +119,10 @@ export function useTransliterator() {
         }
 
         return cleanWord;
-    };
+    }, [phonologyTypes, alphabeticScript, syllabaryMap, consonants, vowels]);
 
     // 2. FROM KEYBOARD TO MEMORY (The Normalizer that protects against bugs)
-    const normalizeToBase = (word) => {
+    const normalizeToBase = React.useCallback((word) => {
         if (!word) return "";
         if (phonologyTypes !== 'alphabetic' && phonologyTypes) return word;
 
@@ -145,7 +146,7 @@ export function useTransliterator() {
         }
 
         return baseWord;
-    };
+    }, [phonologyTypes, alphabeticScript, consonants, vowels]);
 
     return { transliterate, normalizeToBase };
 }
