@@ -14,15 +14,35 @@
     scrollbar-gutter: stable;
 }
 
-.ipa-section-title {
-    font-size: 1.1rem;
-    font-weight: bold;
+.ipa-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
     color: var(--tx);
     border-bottom: 2px solid var(--bd);
     padding-bottom: 8px;
     margin: 10px 0;
+    transition: color 0.2s;
+}
+
+.ipa-section-header:hover {
+    color: var(--acc);
+}
+
+.ipa-section-header .lucide {
+    color: inherit;
+}
+
+.ipa-section-title {
+    font-size: 1.1rem;
+    font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 1px;
+    margin: 0;
+    border-bottom: none;
+    padding-bottom: 0;
 }
 
 .ipa-wrapper {
@@ -277,4 +297,16 @@
     font-weight: bold;
     letter-spacing: 0.5px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+/* Diacritics */
+.ipa-diacritics-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.diacritic-ph {
+    font-size: 1.2rem;
+    letter-spacing: 1px;
 }

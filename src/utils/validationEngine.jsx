@@ -33,38 +33,48 @@ const validateSyllabic = (word, syllabaryMap) => {
 /**
  * Validates inventory and CV structure for Alphabetic languages.
  */
-const validateAlphabetic = (word, consonants, vowels, syllablePattern) => {
+const validateAlphabetic = (word, consonants, vowels, syllablePattern, otherPhonemes, otherPhonemeMapping, skipSyllableValidation) => {
     const cList = extractInventory(consonants);
     const vList = extractInventory(vowels);
+    const oList = extractInventory(otherPhonemes);
     
-    if (cList.length === 0 && vList.length === 0) return { valid: true }; // No rules set yet
+    if (cList.length === 0 && vList.length === 0 && oList.length === 0) return { valid: true }; // No rules set yet
 
     // 1. CHARACTER INVENTORY VALIDATION
     // Remove allowed universal characters (spaces, hyphens, apostrophes)
     let checkWord = word.replace(/[\s\-\*']/g, ''); 
     let tempWord = checkWord;
 
-    // Remove valid vowels and consonants to see if any alien characters remain
-    const inventoryList = [...vList, ...cList].sort((a, b) => b.length - a.length);
+    // Remove valid vowels, consonants, and others to see if any alien characters remain
+    const inventoryList = [...vList, ...cList, ...oList].sort((a, b) => b.length - a.length);
     const invPattern = inventoryList.map(i => i.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
     if (invPattern) {
         tempWord = tempWord.replace(new RegExp(invPattern, 'gi'), '');
     }
 
     if (tempWord.length > 0) {
-        return { valid: false, reason: `Contains invalid characters: "${tempWord}". Check your Consonants/Vowels settings.` };
+        // Extract unique invalid characters for quick-fix actions
+        const invalidChars = [...new Set(tempWord.split(''))];
+        return { 
+            valid: false, 
+            reason: `Contains invalid characters: "${tempWord}". Check your Consonants/Vowels settings.`,
+            type: 'invalid_chars',
+            invalidChars
+        };
     }
 
     // 2. SYLLABLE PATTERN (CV) VALIDATION
-    if (!syllablePattern) return { valid: true };
+    if (!syllablePattern || skipSyllableValidation) return { valid: true };
 
     let cvString = checkWord;
+    const mappingChar = otherPhonemeMapping ? otherPhonemeMapping.toUpperCase().trim() : 'X';
     
     // Create a combined inventory sorted by length to handle digraphs in one pass
     // This prevents placeholders like 'V' from being overwritten by a consonant 'v'
     const allTokens = [
         ...vList.map(v => ({ text: v, type: 'V' })),
-        ...cList.map(c => ({ text: c, type: 'C' }))
+        ...cList.map(c => ({ text: c, type: 'C' })),
+        ...oList.map(o => ({ text: o, type: mappingChar }))
     ].sort((a, b) => b.text.length - a.text.length);
 
     const pattern = allTokens
@@ -86,7 +96,12 @@ const validateAlphabetic = (word, consonants, vowels, syllablePattern) => {
         const patternRegex = new RegExp(regexStr, 'i');
         
         if (!patternRegex.test(cvString)) {
-            return { valid: false, reason: `Does not match your Syllable Pattern (${syllablePattern}). Detected structure: [${cvString}]` };
+            return { 
+                valid: false, 
+                reason: `Does not match your Syllable Pattern (${syllablePattern}). Detected structure: [${cvString}]`,
+                type: 'invalid_pattern',
+                detectedPattern: cvString
+            };
         }
     }
 
@@ -99,7 +114,16 @@ const validateAlphabetic = (word, consonants, vowels, syllablePattern) => {
 export function validateNewWord(word, configStoreData) {
     if (!word) return { valid: false, reason: "Word is empty." };
 
-    const { phonologyTypes, consonants, vowels, syllablePattern, syllabaryMap } = configStoreData;
+    const { 
+        phonologyTypes, 
+        consonants, 
+        vowels, 
+        syllablePattern, 
+        syllabaryMap,
+        otherPhonemes,
+        otherPhonemeMapping,
+        skipSyllableValidation
+    } = configStoreData;
 
     // Logographic languages bypass phonetic structure validation for the ideogram itself, 
     // but the romanization (word) should technically still follow alphabetic rules.
@@ -108,5 +132,13 @@ export function validateNewWord(word, configStoreData) {
     } 
     
     // Default to Alphabetic rules for 'alphabetic' and 'logographic' (to validate the romanization)
-    return validateAlphabetic(word, consonants, vowels, syllablePattern);
+    return validateAlphabetic(
+        word, 
+        consonants, 
+        vowels, 
+        syllablePattern, 
+        otherPhonemes, 
+        otherPhonemeMapping, 
+        skipSyllableValidation
+    );
 }

@@ -58,7 +58,7 @@ export default function MatrixModal({ wordObj }) {
         const liveClasses = liveWord.wordClass ? liveWord.wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
         
         return grammarRules.filter(rule => {
-            const classes = rule.appliesTo.split(',').map(c => c.trim().toLowerCase());
+            const classes = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
             return classes.includes('all') || liveClasses.some(lc => classes.includes(lc));
         });
     }, [liveWord, grammarRules]);
@@ -335,7 +335,7 @@ export default function MatrixModal({ wordObj }) {
                                                                 setDerivationTranslation('');
                                                                 
                                                                 // Smartly default the target class based on the grammar rule
-                                                                const ruleClasses = rule.appliesTo.split(',').map(c => c.trim().toLowerCase());
+                                                                const ruleClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
                                                                 if (ruleClasses.includes('all')) {
                                                                     setDerivationClass(liveWord.wordClass ? liveWord.wordClass.split(',')[0].trim().toLowerCase() : 'noun');
                                                                 } else {

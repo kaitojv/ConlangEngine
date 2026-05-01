@@ -155,6 +155,12 @@
     color: var(--acc2);
 }
 
+.list-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
 .empty-state {
     text-align: center;
     padding: 4rem 2rem;
@@ -181,6 +187,13 @@
     color: var(--tx2);
     max-width: 24rem;
     margin: 0 auto 1.5rem;
+}
+
+.empty-state-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
 }
 
 .empty-state-search {

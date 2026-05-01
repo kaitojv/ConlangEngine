@@ -7,7 +7,7 @@ import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import Modal from '@/components/UI/Modal/Modal.jsx';
-import { CloudUpload, CloudDownload, Trophy, Activity, User, LogOut, Globe, MessageCircle, BookOpen, Crown, Cog, Puzzle, Tags, Flame, GitBranch, Share2, Heart, Coffee, PieChart, Sparkles, Book, Library, BrainCircuit, ScrollText, Network, Ear, ArrowLeftRight, Layers, Volume2, PenTool, Shapes, Download, Trash2 } from 'lucide-react';
+import { CloudUpload, CloudDownload, Trophy, Activity, User, LogOut, Globe, MessageCircle, BookOpen, Crown, Cog, Puzzle, Tags, Flame, GitBranch, Share2, Heart, Coffee, PieChart, Sparkles, Book, Library, BrainCircuit, ScrollText, Network, Ear, ArrowLeftRight, Layers, Volume2, PenTool, Shapes, Download, Trash2, Edit2 } from 'lucide-react';
 import './profileTab.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ALLOWED_REDIRECTS } from '../../../App.jsx';
@@ -485,6 +485,33 @@ export default function ProfileTab() {
                 {syncStatus && <div className={`auth-status-msg ${syncStatus.includes('❌') ? 'text-err' : 'text-tx'}`}>{syncStatus}</div>}
             </Card>
 
+            {/* Profile Settings Card — Author Name & Email */}
+            <Card className="profile-settings-card">
+                <h3 className="section-title mb-20"><Edit2 /> Profile Settings</h3>
+                <div className="profile-settings-grid">
+                    <div>
+                        <Input
+                            label="Display Name / Alias"
+                            value={config.authorName || ''}
+                            onChange={(e) => config.updateConfig({ authorName: e.target.value })}
+                            placeholder="Your author name..."
+                        />
+                        <p className="profile-settings-hint">This name appears on the homepage greeting and exported PDFs.</p>
+                    </div>
+                    {session && (
+                        <div>
+                            <Input
+                                label="Email"
+                                value={session.user.email || ''}
+                                disabled
+                                readOnly
+                            />
+                            <p className="profile-settings-hint">Email is managed through your account provider and cannot be changed here.</p>
+                        </div>
+                    )}
+                </div>
+            </Card>
+
             {!config.isProActive && (
                 <Card>
                     <div className="free-tier-wrapper">
@@ -494,11 +521,11 @@ export default function ProfileTab() {
                         <div className="free-tier-content">
                             <h3 className="free-tier-title">Conlang Engine LIVE</h3>
                             <p className="free-tier-desc">
-                                Support the project to unlock <b>Cloud Sync</b> and <b>Unlimited Workspaces</b>.
+                                Support the project to unlock <b>Cloud Sync</b> and <b>Unlimited Workspaces</b>. Starting at <b>$5 USD/month</b>.
                             </p>
                             <div className="free-tier-actions">
 
-                                <Button variant="default" className="support-btn" onClick={() => window.open('https://patreon.com', '_blank')}>
+                                <Button variant="default" className="support-btn" onClick={() => window.open('https://patreon.com/kaitosz', '_blank')}>
                                     <div className="btn-content"><Heart size={14}/> Support on Patreon</div>
                                 </Button>
                                 <Button variant="default" className="support-btn support-alt" onClick={() => window.open('https://ko-fi.com/kaitosz', '_blank')}>

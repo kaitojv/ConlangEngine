@@ -14,7 +14,9 @@ const VALID_CONFIG_KEYS = new Set([
     'wikiPages', 'streak', 'unlockedBadges', 'activity',
     'isProActive', 'lastStudyDate', 'customFont', 'theme',
     'colors', 'customGlyphs', 'puaCounter', 'customFontBase64', 'numeralBase', 'sentenceMaps',
-    'generatorMarkers'
+    'generatorMarkers',
+    'customWordClasses', 'customTags',
+    'otherPhonemes', 'otherPhonemeMapping', 'skipSyllableValidation'
 ]);
 
 /**
@@ -71,10 +73,8 @@ export function sanitizeLexicon(rawLexicon) {
     }));
 }
 
-/**
- * Validates the full backup structure used by Save/Load in the Header.
- * Returns a sanitized copy of the data with only valid fields.
- */
+/** Validates the full backup structure used by Save/Load in the Header.
+ Returns a sanitized copy of the data with only valid fields. */
 export function sanitizeBackup(data) {
     if (!data || typeof data !== 'object') {
         throw new Error('Invalid backup file: not a valid JSON object.');

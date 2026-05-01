@@ -19,6 +19,9 @@ export const INITIAL_CONFIG = {
     consonants:'p, t, k, m, n, s, l, r',
     vowels:'a, e, i, o, u',
     syllablePattern: 'CVC, VC, CV...',
+    otherPhonemes: '',
+    otherPhonemeMapping: 'X',
+    skipSyllableValidation: false,
     historicalRules:'^(.{2})(.*)',
     syllabaryMap: {},
     grammarRules: [],
@@ -63,6 +66,9 @@ export const INITIAL_CONFIG = {
         pronoun: '',
         particle: '',
     },
+    // User-defined parts of speech and semantic tags that persist across sessions
+    customWordClasses: [],
+    customTags: [],
 };
 
 // IndexedDB Helper for handling massive font files without breaking local storage quotas
@@ -126,6 +132,36 @@ export const useConfigStore = create(
             },
 
             incrementPuaCounter: () => set((state) => ({ puaCounter: state.puaCounter + 1 })),
+
+            addCustomWordClass: (cls) => set((state) => {
+                const list = state.customWordClasses || [];
+                const normalized = cls.trim().toLowerCase();
+                if (!normalized || list.includes(normalized)) return {};
+                return { customWordClasses: [...list, normalized] };
+            }),
+
+            removeCustomWordClass: (cls) => set((state) => ({
+                customWordClasses: (state.customWordClasses || []).filter(c => c !== cls)
+            })),
+
+            renameCustomWordClass: (oldName, newName) => set((state) => ({
+                customWordClasses: (state.customWordClasses || []).map(c => c === oldName ? newName.trim().toLowerCase() : c)
+            })),
+
+            addCustomTag: (tag) => set((state) => {
+                const list = state.customTags || [];
+                const normalized = tag.trim().toLowerCase();
+                if (!normalized || list.includes(normalized)) return {};
+                return { customTags: [...list, normalized] };
+            }),
+
+            removeCustomTag: (tag) => set((state) => ({
+                customTags: (state.customTags || []).filter(t => t !== tag)
+            })),
+
+            renameCustomTag: (oldName, newName) => set((state) => ({
+                customTags: (state.customTags || []).map(t => t === oldName ? newName.trim().toLowerCase() : t)
+            })),
             
             saveWikiPage: (pageId, content) => set((state) => {
                 const existing = state.wikiPages[pageId];

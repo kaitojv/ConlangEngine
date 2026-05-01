@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
@@ -7,7 +8,7 @@ import Card from '../../UI/Card/Card.jsx';
 import Modal from '../../UI/Modal/Modal.jsx'
 import MatrixModal from './MatrixModal.jsx';
 import EditWordModal from './EditModal.jsx';
-import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2 } from 'lucide-react';
+import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './dictionaryList.css';
 
@@ -17,6 +18,7 @@ export default function DictionaryList() {
     const lexicon = Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []);
     const deleteWord = useLexiconStore((state) => state.deleteWord);
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
+    const navigate = useNavigate();
     
     // Spin up the transliterator to convert base words into the language's custom script
     const { transliterate } = useTransliterator();
@@ -196,9 +198,14 @@ export default function DictionaryList() {
                 <span className="list-title">
                     Lexicon Entries
                 </span>
-                <span className="list-total">
-                    Total: <span className="text-[var(--acc2)]">{filteredLexicon.length}</span>
-                </span>
+                <div className="list-header-actions">
+                    <span className="list-total">
+                        Total: <span className="text-[var(--acc2)]">{filteredLexicon.length}</span>
+                    </span>
+                    <Button variant="edit" className="btn-sm" onClick={() => navigate('/create')}>
+                        <PlusCircle size={14} /> Create Word
+                    </Button>
+                </div>
             </div>
 
             {lexicon.length === 0 && (
@@ -206,6 +213,14 @@ export default function DictionaryList() {
                     <Hash className="empty-icon" size={48} />
                     <h3>Your lexicon is empty</h3>
                     <p>Every great language starts with a single word. Let's create your first root.</p>
+                    <div className="empty-state-actions">
+                        <Button variant="save" onClick={() => navigate('/create')}>
+                            <PlusCircle size={16} /> Create First Word
+                        </Button>
+                        <Button variant="default" onClick={() => navigate('/settings')}>
+                            <Settings2 size={16} /> Configure Phonology
+                        </Button>
+                    </div>
                 </div>
             )}
 

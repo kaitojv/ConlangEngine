@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
-import './ipachart.css'
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import './ipachart.css';
 import Button from '../Buttons/Buttons';
 
 const COLUMNS = ['Bilabial', 'Labiodental', 'Dental', 'Alveolar', 'Postalveolar', 'Retroflex', 'Palatal', 'Velar', 'Uvular', 'Pharyngeal', 'Glottal'];
@@ -36,8 +37,36 @@ const VOWELS = [
     { label: 'Open', sounds: ['a','ɶ',null,null,'ɑ','ɒ'] },
 ];
 
+const SUPRASEGMENTALS = [
+    { title: 'Stress & Length', sounds: ['ˈ', 'ˌ', 'ː', 'ˑ'] },
+    { title: 'Tone & Intonation', sounds: ['˥', '˦', '˧', '˨', '˩', '↗', '↘'] },
+    { title: 'Boundaries', sounds: ['|', '‖', '.', '‿'] },
+];
+
+const DIACRITICS = [
+    { title: 'Voicing', sounds: ['̥', '̬'] },
+    { title: 'Aspiration', sounds: ['ʰ'] },
+    { title: 'Nasalization', sounds: ['̃'] },
+    { title: 'Labialization', sounds: ['ʷ'] },
+    { title: 'Palatalization', sounds: ['ʲ'] },
+    { title: 'Velarization', sounds: ['ˠ'] },
+    { title: 'Pharyngealization', sounds: ['ˤ'] },
+    { title: 'Syllabic', sounds: ['̩'] },
+    { title: 'Release', sounds: ['̚'] },
+];
+
 export default function IpaChart({ consonants = '', setConsonants, vowels = '', setVowels, onSelect, alwaysOpen }) {
     const [isOpen, setIsOpen] = useState(false);
+    const [collapsed, setCollapsed] = useState({
+        pulmonic: true,
+        nonPulmonic: true,
+        vowels: true,
+        suprasegmentals: true
+    });
+
+    const toggleSection = (section) => {
+        setCollapsed(prev => ({ ...prev, [section]: !prev[section] }));
+    };
     
     const handleClick = (phoneme, type) => {
         if (!phoneme) return;
@@ -90,39 +119,54 @@ export default function IpaChart({ consonants = '', setConsonants, vowels = '', 
             {(isOpen || alwaysOpen) && (
                 <div className="ipa-map-wrap">
                     {/* PULMONIC CONSONANTS */}
-                    <h3 className="ipa-section-title">Pulmonic Consonants</h3>
-                    <div className="ipa-wrapper">
-                        <table className="ipa-chart-table">
-                            <thead>
-                                <tr>
-                                    <th></th>
-                                    {COLUMNS.map(col => <th key={col}>{col}</th>)}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {PULMONIC.map((rowData, i) => (
-                                    <tr key={rowData.row}>
-                                        <th>{rowData.row}</th>
-                                        {rowData.cells.map((cell, j) => (
-                                            <td key={j} className={!cell ? 'imp' : ''}>
-                                                {cell && (
-                                                    <div className="ipa-cell">
-                                                        {renderPh(cell[0], 'cons')}
-                                                        {renderPh(cell[1], 'cons')}
-                                                    </div>
-                                                )}
-                                            </td>
+                    <div className="ipa-collapsible-section">
+                        <div className="ipa-section-header" onClick={() => toggleSection('pulmonic')}>
+                            {collapsed.pulmonic ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
+                            <h3 className="ipa-section-title">Pulmonic Consonants</h3>
+                        </div>
+                        
+                        {!collapsed.pulmonic && (
+                            <div className="ipa-wrapper">
+                                <table className="ipa-chart-table">
+                                    <thead>
+                                        <tr>
+                                            <th></th>
+                                            {COLUMNS.map(col => <th key={col}>{col}</th>)}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {PULMONIC.map((rowData, i) => (
+                                            <tr key={rowData.row}>
+                                                <th>{rowData.row}</th>
+                                                {rowData.cells.map((cell, j) => (
+                                                    <td key={j} className={!cell ? 'imp' : ''}>
+                                                        {cell && (
+                                                            <div className="ipa-cell">
+                                                                {renderPh(cell[0], 'cons')}
+                                                                {renderPh(cell[1], 'cons')}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                ))}
+                                            </tr>
                                         ))}
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
 
                     {/* NON-PULMONIC & OTHER */}
-                    <div className="ipa-extra-sections">
-                        <div className="ipa-extra-box">
-                            <h3 className="ipa-section-title">Non-Pulmonic</h3>
+                    <div className="ipa-collapsible-section">
+                        <div className="ipa-section-header" onClick={() => toggleSection('nonPulmonic')}>
+                            {collapsed.nonPulmonic ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
+                            <h3 className="ipa-section-title">Non-Pulmonic & Co-articulated</h3>
+                        </div>
+                        
+                        {!collapsed.nonPulmonic && (
+                            <div className="ipa-extra-sections">
+                                <div className="ipa-extra-box">
+                                    <h3 className="ipa-subsection-title">Non-Pulmonic</h3>
                             <div className="ipa-non-pulmonic">
                                 {NON_PULMONIC.map(group => (
                                     <div key={group.title} className="np-group">
@@ -141,11 +185,19 @@ export default function IpaChart({ consonants = '', setConsonants, vowels = '', 
                                 {OTHER_CONSONANTS.map(s => renderPh(s, 'cons'))}
                             </div>
                         </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* VOWEL TRAPEZOID */}
-                    <h3 className="ipa-section-title">Vowels</h3>
-                    <div className="ipa-vowel-container">
+                    <div className="ipa-collapsible-section">
+                        <div className="ipa-section-header" onClick={() => toggleSection('vowels')}>
+                            {collapsed.vowels ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
+                            <h3 className="ipa-section-title">Vowels</h3>
+                        </div>
+                        
+                        {!collapsed.vowels && (
+                            <div className="ipa-vowel-container">
                         <div className="vowel-headers">
                             <span>Front</span>
                             <span>Central</span>
@@ -196,6 +248,57 @@ export default function IpaChart({ consonants = '', setConsonants, vowels = '', 
                                 );
                             })}
                         </div>
+                    </div>
+                        )}
+                    </div>
+
+                    {/* SUPRASEGMENTALS & DIACRITICS */}
+                    <div className="ipa-collapsible-section">
+                        <div className="ipa-section-header" onClick={() => toggleSection('suprasegmentals')}>
+                            {collapsed.suprasegmentals ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
+                            <h3 className="ipa-section-title">Suprasegmentals & Diacritics</h3>
+                        </div>
+
+                        {!collapsed.suprasegmentals && (
+                            <div className="ipa-extra-sections">
+                                <div className="ipa-extra-box">
+                                    <h3 className="ipa-subsection-title">Suprasegmentals</h3>
+                            <div className="ipa-non-pulmonic">
+                                {SUPRASEGMENTALS.map(group => (
+                                    <div key={group.title} className="np-group">
+                                        <span className="np-title">{group.title}</span>
+                                        <div className="np-sounds">
+                                            {group.sounds.map(s => renderPh(s, 'cons'))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="ipa-extra-box">
+                            <h3 className="ipa-section-title">Diacritics</h3>
+                            <div className="ipa-diacritics-grid">
+                                {DIACRITICS.map(group => (
+                                    <div key={group.title} className="np-group">
+                                        <span className="np-title">{group.title}</span>
+                                        <div className="np-sounds">
+                                            {group.sounds.map(s => (
+                                                <span
+                                                    key={s}
+                                                    className="ph diacritic-ph"
+                                                    onClick={() => handleClick(s, 'cons')}
+                                                    title={`${group.title}: ◌${s}`}
+                                                >
+                                                    ◌{s}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

@@ -15,6 +15,12 @@
     margin-top: 8px;
 }
 
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    margin-top: 0;
+}
+
 /* Click effects */
 .btn-base:active {
     transform: scale(0.95);

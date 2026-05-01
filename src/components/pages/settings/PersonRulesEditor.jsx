@@ -193,16 +193,18 @@ export default function PersonRulesEditor() {
                         <input
                             type="text"
                             className="rule-input"
-                            placeholder="e.g. noun, verb"
-                            value={rule.appliesTo || 'all'}
+                            placeholder="all"
+                            value={rule.appliesTo || ''}
+                            list="applies-to-options"
                             onChange={(e) => handleRuleChange(rule.id, 'appliesTo', e.target.value.toLowerCase())}
                         />
 
                         <input
                             type="text"
                             className="rule-input"
-                            placeholder="e.g. 1p, anim"
+                            placeholder="Optional tag"
                             value={rule.rootTag || ''}
+                            list="root-tag-options"
                             onChange={(e) => handleRuleChange(rule.id, 'rootTag', e.target.value.toLowerCase())}
                         />
 
@@ -236,6 +238,21 @@ export default function PersonRulesEditor() {
                 <option value="Anim">Animate</option>
                 <option value="Inan">Inanimate</option>
             </datalist>
+            <datalist id="applies-to-options">
+                <option value="all">Applies to All</option>
+                <option value="noun">Nouns Only</option>
+                <option value="verb">Verbs Only</option>
+                <option value="adj">Adjectives Only</option>
+                <option value="adv">Adverbs Only</option>
+                <option value="pronoun">Pronouns Only</option>
+            </datalist>
+            <datalist id="root-tag-options">
+                <option value="1p">1st Person Root</option>
+                <option value="2p">2nd Person Root</option>
+                <option value="3p">3rd Person Root</option>
+                <option value="anim">Animate Roots</option>
+                <option value="inan">Inanimate Roots</option>
+            </datalist>
 
             <button type="button" className="btn-add-rule" onClick={addRule}>
                 <Plus size={16} /> Add Rule
@@ -244,18 +261,16 @@ export default function PersonRulesEditor() {
             <Infobox className="mt-15">
                 <b>Pro Tip:</b> Define how each person is represented.
                 <br /><br />
-                <b>Person/Number/Gender:</b> Select the grammatical person, number (Singular, Plural, Bilabial/Dual), and optional gender.
+                <b>Person/Number/Gender:</b> Select the grammatical person, number (Singular, Plural, Dual), and optional gender.
                 <br />
                 <b>Free Form:</b> The free-standing pronoun (e.g., "I", "you").
                 <br />
-                <b>Affix:</b> The bound morpheme. Use hyphens to indicate position:
-                <ul>
-                    <li><code>-affix</code> for suffixes (e.g., <code>-m</code>)</li>
-                    <li><code>affix-</code> for prefixes (e.g., <code>s-</code>)</li>
-                    <li><code>-affix-</code> for infixes (e.g., <code>-ma-</code>)</li>
-                    <li><code>-affix-@position</code> for infixes with specific placement (e.g., <code>-ma-@V</code> for after the first vowel).</li>
-                </ul>
+                <b>Affix:</b> The bound morpheme (e.g., <code>-m</code>).
                 <br />
+                <b>Applies To:</b> Filters which word classes use this rule. Set to <code>all</code> (default) to apply to everything, or specify <code>verb</code> if this affix only appears on verbs.
+                <br />
+                <b>Root Tag:</b> Advanced scoping. If you have multiple pronoun roots in your dictionary, use this tag to link this specific rule to words that share the same tag.
+                <br /><br />
                 This structured mapping will help the Syntax Analyzer and Inflection Matrix!
             </Infobox>
         </div>

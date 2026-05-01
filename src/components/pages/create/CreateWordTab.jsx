@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
@@ -16,18 +16,37 @@ import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
 import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
 import toast from 'react-hot-toast';
 
+// Standard POS options that always show in the dropdown
+const STANDARD_WORD_CLASSES = [
+    'noun', 'verb', 'adjective', 'adverb', 'pronoun',
+    'particle', 'conjunction', 'preposition'
+];
+
 export default function CreateWordTab() {
     const location = useLocation();
     const { normalizeToBase, transliterate } = useTransliterator();
 
+    // Track which input field the IPA chart should paste into
+    const activeFieldRef = useRef('ipa'); // default to IPA field
+
     // Global stores
     const addWord = useLexiconStore((state) => state.addWord);
     const checkDuplicate = useLexiconStore((state) => state.checkDuplicate);
-    const { phonologyTypes, grammarRules, vowels, verbMarker } = useConfigStore(useShallow(state => ({
+    const lexicon = useLexiconStore((state) => state.lexicon) || [];
+    const { phonologyTypes, grammarRules, vowels, consonants, syllablePattern, verbMarker,
+            customWordClasses, customTags, addCustomWordClass, addCustomTag,
+            updateConfig } = useConfigStore(useShallow(state => ({
         phonologyTypes: state.phonologyTypes,
         grammarRules: state.grammarRules,
         vowels: state.vowels,
-        verbMarker: state.verbMarker
+        consonants: state.consonants,
+        syllablePattern: state.syllablePattern,
+        verbMarker: state.verbMarker,
+        customWordClasses: state.customWordClasses || [],
+        customTags: state.customTags || [],
+        addCustomWordClass: state.addCustomWordClass,
+        addCustomTag: state.addCustomTag,
+        updateConfig: state.updateConfig
     })));
     
     // Let's track all our input fields in one neat object
@@ -49,6 +68,31 @@ export default function CreateWordTab() {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
+    // Build the merged POS list: standard + custom (deduplicated)
+    const allWordClasses = useMemo(() => {
+        const merged = new Set([...STANDARD_WORD_CLASSES]);
+        customWordClasses.forEach(cls => merged.add(cls));
+        // Also add any unique classes found in the existing lexicon
+        lexicon.forEach(w => {
+            if (w.wordClass) {
+                w.wordClass.split(',').forEach(cls => {
+                    const clean = cls.trim().toLowerCase();
+                    if (clean) merged.add(clean);
+                });
+            }
+        });
+        return [...merged].sort();
+    }, [customWordClasses, lexicon]);
+
+    // Build the merged tags list for autocomplete
+    const allTags = useMemo(() => {
+        const merged = new Set(customTags);
+        lexicon.forEach(w => {
+            if (w.tags) w.tags.forEach(tag => merged.add(tag.toLowerCase()));
+        });
+        return [...merged].sort();
+    }, [customTags, lexicon]);
+
     // If the user generated a word in the Generator Tab and clicked "Add to Dictionary", we catch it here
     useEffect(() => {
         if (location.state?.prefillWord) {
@@ -63,6 +107,34 @@ export default function CreateWordTab() {
 
     const isDuplicate = checkDuplicate(word, translation) && (word !== '' || translation !== '');
 
+    // Handle IPA chart character selection - paste into the active field
+    const handleIpaSelect = (char) => {
+        const field = activeFieldRef.current;
+        updateField(field, formData[field] + char);
+    };
+
+    // Quick-fix action: add invalid characters to consonants or vowels
+    const handleAddCharsToInventory = (chars, type) => {
+        const currentList = type === 'consonants' ? consonants : vowels;
+        const arr = currentList.trim() ? currentList.trim().split(',').map(s => s.trim()) : [];
+        chars.forEach(ch => {
+            if (!arr.includes(ch)) arr.push(ch);
+        });
+        updateConfig({ [type]: arr.join(', ') });
+        toast.success(`Added "${chars.join(', ')}" to ${type}.`);
+    };
+
+    // Quick-fix action: add detected pattern to syllable patterns
+    const handleAddPattern = (pattern) => {
+        const current = syllablePattern || '';
+        const arr = current.split(',').map(p => p.trim().toUpperCase()).filter(Boolean);
+        if (!arr.includes(pattern.toUpperCase())) {
+            arr.push(pattern.toUpperCase());
+        }
+        updateConfig({ syllablePattern: arr.join(', ') });
+        toast.success(`Added "${pattern.toUpperCase()}" to syllable patterns.`);
+    };
+
     const saveConfirmedWord = (safeWord, cleanTrans, processedTags) => {
         addWord({
             word: safeWord,
@@ -72,6 +144,12 @@ export default function CreateWordTab() {
             tags: processedTags,
             ideogram: ideogram.trim()
         });
+
+        // Persist any new custom POS/tags
+        if (wordClass && !STANDARD_WORD_CLASSES.includes(wordClass.toLowerCase())) {
+            addCustomWordClass(wordClass);
+        }
+        processedTags.forEach(tag => addCustomTag(tag));
 
         // Reset the form for the next word
         setFormData({ word: '', ipa: '', wordClass: 'noun', translation: '', tags: '', ideogram: '' });
@@ -105,11 +183,34 @@ export default function CreateWordTab() {
                     <strong>⚠️ Phono-Syntax Warning</strong>
                     <span>{validation.reason}</span>
                     <p style={{fontSize: '0.9rem', color: 'var(--tx2)'}}>Do you want to save it as an irregular exception anyway?</p>
-                    <div style={{display: 'flex', gap: '10px', marginTop: '5px'}}>
+                    <div style={{display: 'flex', gap: '8px', marginTop: '5px', flexWrap: 'wrap'}}>
                         <button onClick={() => {
                             toast.dismiss(t.id);
                             saveConfirmedWord(safeWord, cleanTrans, processedTags);
                         }} style={{padding: '5px 10px', background: 'var(--err)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Save Anyway</button>
+                        
+                        {/* Quick Fix: Add invalid characters to inventory */}
+                        {validation.type === 'invalid_chars' && validation.invalidChars && (
+                            <>
+                                <button onClick={() => {
+                                    toast.dismiss(t.id);
+                                    handleAddCharsToInventory(validation.invalidChars, 'consonants');
+                                }} style={{padding: '5px 10px', background: 'var(--acc)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Add to Consonants</button>
+                                <button onClick={() => {
+                                    toast.dismiss(t.id);
+                                    handleAddCharsToInventory(validation.invalidChars, 'vowels');
+                                }} style={{padding: '5px 10px', background: 'var(--acc2)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Add to Vowels</button>
+                            </>
+                        )}
+
+                        {/* Quick Fix: Add detected pattern to syllable patterns */}
+                        {validation.type === 'invalid_pattern' && validation.detectedPattern && (
+                            <button onClick={() => {
+                                toast.dismiss(t.id);
+                                handleAddPattern(validation.detectedPattern);
+                            }} style={{padding: '5px 10px', background: 'var(--acc)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Add to Syllable Patterns</button>
+                        )}
+
                         <button onClick={() => toast.dismiss(t.id)} style={{padding: '5px 10px', background: 'var(--s2)', color: 'var(--tx)', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Cancel</button>
                     </div>
                 </div>
@@ -126,7 +227,7 @@ export default function CreateWordTab() {
                 const rule = grammarRules.find(r => r.name === item.ruleName);
                 let targetClass = wordClass; // Fallback
                 if (rule) {
-                    const ruleClasses = rule.appliesTo.split(',').map(c => c.trim().toLowerCase());
+                    const ruleClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
                     if (!ruleClasses.includes('all')) {
                         targetClass = ruleClasses[0]; // Use the specific class the rule applies to
                     } else if (wordClass.includes(',')) {
@@ -157,7 +258,7 @@ export default function CreateWordTab() {
         const currentClasses = wordClass ? wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
 
         grammarRules.forEach(rule => {
-            const ruleClasses = rule.appliesTo.split(',').map(c => c.trim().toLowerCase());
+            const ruleClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
             
             if (ruleClasses.includes('all') || currentClasses.some(cc => ruleClasses.includes(cc))) {
                 let base = safeBaseWord;
@@ -197,6 +298,7 @@ export default function CreateWordTab() {
                             label="WORD (CONLANG)" 
                             value={word}
                             onChange={(e) => updateField('word', e.target.value)}
+                            onFocus={() => { activeFieldRef.current = 'word'; }}
                             placeholder="e.g., makin"
                             className="custom-font-text notranslate"
                         />
@@ -206,6 +308,7 @@ export default function CreateWordTab() {
                             label="IPA (OPTIONAL)" 
                             value={ipa}
                             onChange={(e) => updateField('ipa', e.target.value)}
+                            onFocus={() => { activeFieldRef.current = 'ipa'; }}
                             placeholder="/ma'kin/"
                         />
                     </div>
@@ -218,23 +321,21 @@ export default function CreateWordTab() {
                             list="word-classes"
                         />
                         
-                        {/* The datalist provides native browser autocomplete suggestions */}
+                        {/* Merged datalist: standard + user-defined classes */}
                         <datalist id="word-classes">
-                            <option value="noun" />
-                            <option value="verb" />
-                            <option value="adjective" />
-                            <option value="adverb" />
-                            <option value="pronoun" />
-                            <option value="particle" />
-                            <option value="conjunction" />
-                            <option value="preposition" />
+                            {allWordClasses.map(cls => (
+                                <option key={cls} value={cls} />
+                            ))}
                         </datalist>
                     </div>
                 </div>
 
                 {/* IPA chart spans the full card width so it doesn't overflow the column grid */}
                 <div style={{ marginBottom: '1rem' }}>
-                    <IpaChart onSelect={(char) => updateField('ipa', ipa + char)} />
+                    <p style={{ fontSize: '0.75rem', color: 'var(--tx2)', marginBottom: '6px' }}>
+                        IPA Chart pastes into: <strong style={{ color: 'var(--acc)' }}>{activeFieldRef.current === 'word' ? 'Word' : 'IPA'}</strong> field. Click a field above to change target.
+                    </p>
+                    <IpaChart onSelect={handleIpaSelect} />
                 </div>
 
                 {phonologyTypes === 'logographic' && (
@@ -276,7 +377,14 @@ export default function CreateWordTab() {
                         value={tags}
                         onChange={(e) => updateField('tags', e.target.value)}
                         placeholder="Ex: nature, abstract, emotion (comma separated)"
+                        list="semantic-tags"
                     />
+                    {/* Autocomplete from previously used tags */}
+                    <datalist id="semantic-tags">
+                        {allTags.map(tag => (
+                            <option key={tag} value={tag} />
+                        ))}
+                    </datalist>
                 </div>
 
                 {word && translation && grammarRules.length > 0 && (

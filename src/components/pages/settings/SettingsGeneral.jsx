@@ -7,7 +7,7 @@ import { Lightbulb, WholeWord, Bolt } from 'lucide-react'
 
 export default function SettingsGeneral() {
     const conlangName = useConfigStore((state) => state.conlangName);
-    const authorName = useConfigStore((state) => state.authorName);
+
     const description = useConfigStore((state) => state.description) || '';
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const alphabeticScript = useConfigStore((state) => state.alphabeticScript);
@@ -23,12 +23,7 @@ export default function SettingsGeneral() {
                 <p className="flex items-center gap-2"><Lightbulb /> Set the base identity of your conlang here. Changing the typology will unlock different tools in the engine.</p>
             </Infobox>
 
-            <Input 
-                label="User Name / Alias" 
-                placeholder="e.g., Your username here..."
-                value={authorName}
-                onChange={(e) => updateConfig({ authorName: e.target.value })}
-            />
+
 
             <Input 
                 label="Language Name" 

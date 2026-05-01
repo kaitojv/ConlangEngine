@@ -114,6 +114,7 @@
     font-size: 1em;
     transition: background-color 0.2s ease;
     margin-top: 10px;
+    white-space: nowrap;
 }
 
 .btn-add-rule:hover {

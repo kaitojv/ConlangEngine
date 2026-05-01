@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import FloatingBackground from './FloatingBackground.jsx';
-import { Sunrise, Sun, Moon, Sparkles, Settings2, BookA, PlusCircle, BrainCircuit, Flame, ArrowRight, Bookmark, Library } from 'lucide-react';
+import { Sunrise, Sun, Moon, Sparkles, Settings2, BookA, PlusCircle, BrainCircuit, Flame, ArrowRight, Bookmark, Library, HelpCircle, Heart, Coffee } from 'lucide-react';
 import Card from '@/components/UI/Card/Card.jsx';
 import './home.css';
 
@@ -111,6 +111,9 @@ export default function Home() {
                     <button onClick={() => navigate('/dictionary')} className="btn btn-base btn-secondary">
                         <BookA size={18} /> Open Dictionary
                     </button>
+                    <button onClick={() => navigate('/help')} className="btn btn-base btn-secondary">
+                        <HelpCircle size={18} /> Build Guide
+                    </button>
                 </div>
             </Card> 
 
@@ -191,6 +194,19 @@ export default function Home() {
                     <p>Document your phonology, syntax rules, and worldbuilding lore.</p>
                     <div className="widget-footer">
                         Open Wiki <ArrowRight size={16} />
+                    </div>
+                </Card>
+
+                {/* Support the Project */}
+                <Card className="interactive-card support-card">
+                    <h3>
+                        <Heart size={24} /> Support the Project
+                    </h3>
+                    <p>Help keep Conlang Engine alive and unlock <b>Cloud Sync</b> + <b>Unlimited Workspaces</b>.</p>
+                    <div className="support-card-actions">
+                        <button onClick={() => window.open('https://ko-fi.com/kaitosz', '_blank')} className="support-link-btn">
+                            <Coffee size={14} /> Ko-fi
+                        </button>
                     </div>
                 </Card>
 

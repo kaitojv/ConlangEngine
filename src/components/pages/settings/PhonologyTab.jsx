@@ -18,6 +18,9 @@ export default function PhonologyTab() {
     const consonants = useConfigStore((state) => state.consonants) || '';
     const vowels = useConfigStore((state) => state.vowels) || '';
     const syllablePattern = useConfigStore((state) => state.syllablePattern) || '';
+    const otherPhonemes = useConfigStore((state) => state.otherPhonemes) || '';
+    const otherPhonemeMapping = useConfigStore((state) => state.otherPhonemeMapping) || 'X';
+    const skipSyllableValidation = useConfigStore((state) => state.skipSyllableValidation) || false;
     const historicalRules = useConfigStore((state) => state.historicalRules) || '';
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const updateConfig = useConfigStore((state) => state.updateConfig);
@@ -107,12 +110,41 @@ export default function PhonologyTab() {
                     setVowels={(val) => updateConfig({ vowels: val })} 
                 />
 
+                <div className="sg-input-group phonology-split-group">
+                    <div className="phonology-flex-1">
+                        <Input 
+                            label="Other Phonemes (Tones, Clicks, Particles)" 
+                            placeholder="e.g., ˥, ˦, ʘ, particle..."
+                            value={otherPhonemes}
+                            onChange={(e) => updateConfig({ otherPhonemes: e.target.value })}
+                        />
+                    </div>
+                    <div className="phonology-fixed-width">
+                        <Input 
+                            label="Mapping Char" 
+                            placeholder="e.g., X"
+                            value={otherPhonemeMapping}
+                            onChange={(e) => updateConfig({ otherPhonemeMapping: e.target.value })}
+                        />
+                    </div>
+                </div>
+
                 <Input
                     label="Syllable Pattern"
                     placeholder="e.g., CV, CVC, VCV..."
                     value={syllablePattern}
                     onChange={(e) => updateConfig({ syllablePattern: e.target.value })}
+                    disabled={skipSyllableValidation}
                 />
+                
+                <label className="flex items-center gap-2 phonology-checkbox-label">
+                    <input 
+                        type="checkbox" 
+                        checked={skipSyllableValidation}
+                        onChange={(e) => updateConfig({ skipSyllableValidation: e.target.checked })}
+                    />
+                    Skip Syllable Pattern Validation
+                </label>
             </Card>
 
             {phonologyTypes === 'syllabic' && (

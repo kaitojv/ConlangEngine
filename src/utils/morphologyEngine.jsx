@@ -1,32 +1,44 @@
 // src/utils/morphologyEngine.jsx
 
+// Helper to parse complex affix strings like "-ma-@V" or "re-"
+const parseAffix = (affixStr) => {
+    if (!affixStr) return null;
+    // Regex matches: [startHyphen] [morpheme] [endHyphen] [@positionTag]
+    const match = affixStr.match(/^([-=])?([^-=@]+)([-=])?(?:@(\w+))?$/);
+    if (!match) return { clean: affixStr.replace(/^-|-$/g, ''), type: 'unknown' };
+
+    const [_, hasStart, morpheme, hasEnd, position] = match;
+    let type = 'suffix'; // Default
+    if (hasStart && hasEnd) type = 'infix';
+    else if (hasEnd) type = 'prefix';
+    else if (hasStart) type = 'suffix';
+
+    return { clean: morpheme, type, position };
+};
+
 // Placeholder for stripAffix - actual implementation would be more complex
 export const stripAffix = (word, affixRule) => {
-    // Example: if affixRule is '-s', check if word ends with 's' and return word without 's'
-    // This is a simplified placeholder.
     if (!affixRule || !word) return null;
 
     // Reversing arbitrary regex transformations (like n => m) is mathematically 
     // impossible without a dictionary of underlying forms, so we skip them in the basic analyzer.
-    if (affixRule.includes('=>')) {
-        return null;
-    }
+    if (affixRule.includes('=>')) return null;
 
-    const cleanAffix = affixRule.replace(/^-|-$/g, ''); // Remove leading/trailing hyphens for matching
-    if (affixRule.startsWith('-') && !affixRule.endsWith('-')) { // Suffix
-        if (word.endsWith(cleanAffix)) {
-            return word.slice(0, word.length - cleanAffix.length);
-        }
-    } else if (affixRule.endsWith('-') && !affixRule.startsWith('-')) { // Prefix
-        if (word.startsWith(cleanAffix)) {
-            return word.slice(cleanAffix.length);
-        }
-    } else if (affixRule.startsWith('-') && affixRule.endsWith('-')) { // Infix (simple check for now)
-        // For infixes, this logic would be much more complex, depending on @position
-        // For now, a very basic check: if the affix is *in* the word
-        const parts = word.split(cleanAffix);
-        if (parts.length > 1) {
-            return parts.join(''); // Remove the infix
+    const parsed = parseAffix(affixRule);
+    if (!parsed) return null;
+
+    const { clean, type } = parsed;
+
+    if (type === 'suffix') {
+        if (word.endsWith(clean)) return word.slice(0, word.length - clean.length);
+    } else if (type === 'prefix') {
+        if (word.startsWith(clean)) return word.slice(clean.length);
+    } else if (type === 'infix') {
+        // For infixes, we just remove the first occurrence of the morpheme
+        // This is a simplification but works for general analysis
+        const idx = word.indexOf(clean);
+        if (idx > 0 && idx < word.length - clean.length) {
+            return word.slice(0, idx) + word.slice(idx + clean.length);
         }
     }
     return null;
@@ -34,10 +46,31 @@ export const stripAffix = (word, affixRule) => {
 
 // Placeholder for applyRuleToWord - actual implementation would be more complex
 export const applyRuleToWord = (baseWord, rule, grammarRules, vowels) => {
-    // This is a simplified placeholder.
-    // In a real scenario, this would apply the rule's affix to the baseWord
-    // considering rule.type, rule.affix, rule.position, etc.
     if (!baseWord || !rule || !rule.affix) return baseWord;
+
+    // 0. Enforce Allomorph Conditions (After Vowel / After Consonant)
+    if (rule.condition && rule.condition !== 'always') {
+        const vowelList = vowels ? vowels.split(',').map(v => v.trim().split('=')[0].toLowerCase()) : [];
+        const parsed = parseAffix(rule.affix);
+        const type = parsed ? parsed.type : 'suffix';
+        
+        // Find the attachment point
+        let attachmentChar = '';
+        if (type === 'prefix') {
+            attachmentChar = baseWord.charAt(0).toLowerCase();
+        } else if (type === 'suffix') {
+            attachmentChar = baseWord.slice(-1).toLowerCase();
+        } else {
+            // Infixes are complex, but usually attach relative to the first vowel/consonant anyway. 
+            // We'll fall back to checking the first character to be safe.
+            attachmentChar = baseWord.charAt(0).toLowerCase();
+        }
+
+        const isVowel = vowelList.includes(attachmentChar);
+
+        if (rule.condition === 'vowel' && !isVowel) return null;
+        if (rule.condition === 'consonant' && isVowel) return null;
+    }
 
     // 1. Check for Regex replacement patterns (e.g. "n(?=[pb]) => m")
     if (rule.affix.includes('=>')) {
@@ -56,28 +89,34 @@ export const applyRuleToWord = (baseWord, rule, grammarRules, vowels) => {
         }
     }
 
-    const cleanAffix = rule.affix.replace(/^-|-$/g, '');
+    const parsed = parseAffix(rule.affix);
+    if (!parsed) return baseWord;
 
-    if (rule.affix.startsWith('-') && !rule.affix.endsWith('-')) { // Suffix
-        return baseWord + cleanAffix;
-    } else if (rule.affix.endsWith('-') && !rule.affix.startsWith('-')) { // Prefix
-        return cleanAffix + baseWord;
-    } else if (rule.affix.startsWith('-') && rule.affix.endsWith('-')) { // Infix
-        // Simplified infix application: just insert in the middle or at a specific position
-        const positionMatch = rule.affix.match(/@(\w+)/);
-        if (positionMatch && positionMatch[1] === 'V' && vowels) {
-            // Find first vowel and insert after it
-            const vowelList = vowels.split(',').map(v => v.trim());
+    const { clean, type, position } = parsed;
+
+    if (type === 'suffix') {
+        return baseWord + clean;
+    } else if (type === 'prefix') {
+        return clean + baseWord;
+    } else if (type === 'infix') {
+        // 1. Handle @V position (after first vowel)
+        if (position === 'V' && vowels) {
+            const vowelList = vowels.split(',').map(v => v.trim().split('=')[0]); // Use IPA part of "u=ú"
             for (let i = 0; i < baseWord.length; i++) {
-                if (vowelList.includes(baseWord[i])) {
-                    return baseWord.slice(0, i + 1) + cleanAffix + baseWord.slice(i + 1);
+                if (vowelList.includes(baseWord[i].toLowerCase())) {
+                    return baseWord.slice(0, i + 1) + clean + baseWord.slice(i + 1);
                 }
             }
         }
-        // Default to middle if no specific position or vowel found
+        
+        // 2. Handle @C position (after first consonant)
+        // (Optional expansion, but good for completeness)
+        
+        // Default: Insert in the absolute middle
         const middle = Math.floor(baseWord.length / 2);
-        return baseWord.slice(0, middle) + cleanAffix + baseWord.slice(middle);
+        return baseWord.slice(0, middle) + clean + baseWord.slice(middle);
     }
+    
     return baseWord;
 };
 
