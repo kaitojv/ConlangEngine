@@ -17,7 +17,7 @@ export default function SyllabaryManager() {
   const [newSylVal, setNewSylVal] = useState('');
   const [drawingForSyl, setDrawingForSyl] = useState(null);
 
-  const {consonants, vowels, syllabaryMap, updateConfig} = useConfigStore();
+  const {consonants, vowels, otherPhonemes, syllabaryMap, updateConfig} = useConfigStore();
 
   const parseList = (str) => str.split(',')
   .map(s=>{
@@ -29,6 +29,7 @@ export default function SyllabaryManager() {
 
   const consList = ["", ...parseList(consonants)];
   const vowList = parseList(vowels);
+  const otherList = parseList(otherPhonemes || '');
 
   const handleUpdateSyllable = (key, val) => {
         updateConfig({ 
@@ -68,6 +69,7 @@ export default function SyllabaryManager() {
         </div>
 
         {viewMode === 'grid' && (
+            <>
                 <div className="sm-table-wrapper">
                     <table className="sm-table">
                         <thead className="sm-thead">
@@ -105,6 +107,38 @@ export default function SyllabaryManager() {
                         </tbody>
                     </table>
                 </div>
+                
+                {otherList.length > 0 && (
+                    <div className="sm-table-wrapper" style={{ marginTop: '20px' }}>
+                        <h4 className="sg-title" style={{ marginBottom: '10px' }}>Other Phonemes (Standalone)</h4>
+                        <table className="sm-table">
+                            <tbody>
+                                <tr className="sm-tr">
+                                    {otherList.map(p => (
+                                        <th key={p} className="sm-th">{p}</th>
+                                    ))}
+                                </tr>
+                                <tr className="sm-tr">
+                                    {otherList.map(p => {
+                                        const savedChar = syllabaryMap[p] || "";
+                                        return (
+                                            <td key={p} className="sm-td">
+                                                <input 
+                                                    type="text" 
+                                                    className="sm-grid-input custom-font-text" 
+                                                    placeholder={p}
+                                                    value={savedChar}
+                                                    onChange={(e) => handleUpdateSyllable(p, e.target.value)}
+                                                />
+                                            </td>
+                                        )
+                                    })}
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </>
             )}
 
             {viewMode === 'list' && (

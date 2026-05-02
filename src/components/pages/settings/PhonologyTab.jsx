@@ -23,6 +23,7 @@ export default function PhonologyTab() {
     const skipSyllableValidation = useConfigStore((state) => state.skipSyllableValidation) || false;
     const historicalRules = useConfigStore((state) => state.historicalRules) || '';
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
+    const syllabificationAlgorithm = useConfigStore((state) => state.syllabificationAlgorithm) || 'ltr';
     const updateConfig = useConfigStore((state) => state.updateConfig);
 
     // Lexicon store — needed to permanently apply sound changes
@@ -145,6 +146,23 @@ export default function PhonologyTab() {
                     />
                     Skip Syllable Pattern Validation
                 </label>
+
+                {(phonologyTypes === 'syllabic' || phonologyTypes === 'featural_block') && (
+                    <div style={{ marginTop: '15px' }}>
+                        <label className="form-label" style={{ display: 'block', marginBottom: '5px' }}>Syllabification Algorithm (for ambiguous words)</label>
+                        <select 
+                            style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--bd)', backgroundColor: 'var(--bg)', color: 'var(--tx)' }}
+                            value={syllabificationAlgorithm}
+                            onChange={(e) => updateConfig({ syllabificationAlgorithm: e.target.value })}
+                        >
+                            <option value="ltr">Left-to-Right Greedy (cras = cra + s)</option>
+                            <option value="rtl">Right-to-Left Greedy (cras = cr + as)</option>
+                        </select>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginTop: '5px' }}>
+                            You can also use a period <code>.</code> in your dictionary to explicitly force a syllable split (e.g., <code>cr.as</code>).
+                        </p>
+                    </div>
+                )}
             </Card>
 
             {phonologyTypes === 'syllabic' && (

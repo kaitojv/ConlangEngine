@@ -14,6 +14,15 @@ export const INITIAL_CONFIG = {
         layoutTemplate: '2top1bottom', 
         slotMapping: ['Initial', 'Vowel', 'Final']
     },
+    blockTemplates: [
+        {
+            id: 'default',
+            maxChars: 3,
+            layoutTemplate: '2top1bottom',
+            slotMapping: ['Initial', 'Vowel', 'Final']
+        }
+    ],
+    syllabificationAlgorithm: 'ltr',
     syntaxOrder:'SVO',
     writingDirection: 'ltr',
     consonants:'p, t, k, m, n, s, l, r',

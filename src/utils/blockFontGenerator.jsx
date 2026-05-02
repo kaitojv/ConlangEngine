@@ -29,6 +29,10 @@ export const blockLayoutMatrices = {
         { scale: 0.45, tx: 82.5, ty: 10 },
         { scale: 0.45, tx: 82.5, ty: 155 }
     ],
+    '1inside1outside': [
+        { scale: 0.9, tx: 15, ty: 15 },
+        { scale: 0.35, tx: 97.5, ty: 97.5 }
+    ],
     '2x2grid': [
         { scale: 0.45, tx: 10, ty: 10 },
         { scale: 0.45, tx: 155, ty: 10 },
@@ -60,7 +64,7 @@ const generateCombinations = (lists, prefix = []) => {
 };
 
 export const generateBlockFontData = async (config) => {
-    const { consonants, vowels, blockSettings, featuralComponents, customGlyphs, puaCounter } = config;
+    const { consonants, vowels, otherPhonemes, blockSettings, blockTemplates, featuralComponents, customGlyphs, puaCounter } = config;
     
     if (!featuralComponents || Object.keys(featuralComponents).length === 0) {
         throw new Error("You must draw at least some base characters first!");
@@ -68,72 +72,103 @@ export const generateBlockFontData = async (config) => {
 
     const consList = ["", ...parseList(consonants)];
     const vowList = parseList(vowels);
+    const otherList = parseList(otherPhonemes || '');
 
-    const slotMapping = blockSettings.slotMapping || [];
-    const maxChars = blockSettings.maxChars || 3;
-    const layoutKey = blockSettings.layoutTemplate || '2top1bottom';
-    const matrix = blockLayoutMatrices[layoutKey];
-
-    if (!matrix || matrix.length < maxChars) {
-        throw new Error("Invalid layout configuration.");
-    }
-
-    // Determine the lists to combine
-    const listsToCombine = [];
-    for (let i = 0; i < maxChars; i++) {
-        let slot = slotMapping[i];
-        let source;
-        if (typeof slot === 'string') {
-            source = i === 1 ? 'vowels' : 'consonants';
-        } else if (slot && slot.source) {
-            source = slot.source;
-        } else {
-            source = i === 1 ? 'vowels' : 'consonants';
+    const activeTemplates = blockTemplates || (blockSettings ? [
+        {
+            id: 'legacy',
+            maxChars: blockSettings.maxChars || 3,
+            layoutTemplate: blockSettings.layoutTemplate || '2top1bottom',
+            slotMapping: blockSettings.slotMapping || []
         }
-        listsToCombine.push(source === 'vowels' ? vowList : consList);
-    }
+    ] : []);
 
-    const allCombinations = generateCombinations(listsToCombine);
+    if (activeTemplates.length === 0) {
+        throw new Error("No block templates found.");
+    }
 
     let compilerGlyphs = { ...customGlyphs };
     let newSyllabaryMap = {};
     let currentPua = puaCounter;
 
-    for (const combo of allCombinations) {
-        const syllableStr = combo.join('');
-        if (!syllableStr) continue; // Skip totally empty blocks
+    for (const template of activeTemplates) {
+        const slotMapping = template.slotMapping || [];
+        const maxChars = template.maxChars || 3;
+        const layoutKey = template.layoutTemplate || '2top1bottom';
+        const matrix = blockLayoutMatrices[layoutKey];
 
-        const combinedStrokes = [];
-
-        // For each component in the block
-        for (let i = 0; i < combo.length; i++) {
-            const char = combo[i];
-            if (!char) continue; // Empty consonant slot, skip drawing
-
-            const strokes = featuralComponents[char];
-            if (!strokes) continue; // User hasn't drawn this character yet
-
-            const transform = matrix[i];
-
-            // Apply scaling and translation to each point in the strokes
-            const transformedStrokes = strokes.map(stroke => 
-                stroke.map(point => ({
-                    x: Number(((point.x * transform.scale) + transform.tx).toFixed(1)),
-                    y: Number(((point.y * transform.scale) + transform.ty).toFixed(1))
-                }))
-            );
-
-            combinedStrokes.push(...transformedStrokes);
+        if (!matrix || matrix.length < maxChars) {
+            console.warn(`Invalid layout configuration for template ${template.id}.`);
+            continue;
         }
 
-        if (combinedStrokes.length > 0) {
-            compilerGlyphs[currentPua] = combinedStrokes;
-            newSyllabaryMap[syllableStr] = String.fromCharCode(currentPua);
-            currentPua++;
+        // Determine the lists to combine for this template
+        const listsToCombine = [];
+        for (let i = 0; i < maxChars; i++) {
+            let slot = slotMapping[i];
+            let source;
+            if (typeof slot === 'string') {
+                source = i === 1 ? 'vowels' : 'consonants';
+            } else if (slot && slot.source) {
+                source = slot.source;
+            } else {
+                source = i === 1 ? 'vowels' : 'consonants';
+            }
+            
+            let targetList = consList;
+            if (source === 'vowels') targetList = vowList;
+            if (source === 'otherPhonemes') targetList = otherList;
+            
+            listsToCombine.push(targetList);
+        }
+
+        const allCombinations = generateCombinations(listsToCombine);
+
+        for (const combo of allCombinations) {
+            const syllableStr = combo.join('');
+            if (!syllableStr) continue; // Skip totally empty blocks
+            
+            // If another template already generated this syllable (e.g. CV vs CVC clash), the LAST template wins.
+            // Or we could let the first template win? Let's let the last one overwrite if there's a clash.
+            
+            const combinedStrokes = [];
+
+            for (let i = 0; i < combo.length; i++) {
+                const char = combo[i];
+                if (!char) continue;
+
+                const strokes = featuralComponents[char];
+                if (!strokes) continue;
+
+                const transform = matrix[i];
+
+                const transformedStrokes = strokes.map(stroke => 
+                    stroke.map(point => ({
+                        x: Number(((point.x * transform.scale) + transform.tx).toFixed(1)),
+                        y: Number(((point.y * transform.scale) + transform.ty).toFixed(1))
+                    }))
+                );
+
+                combinedStrokes.push(...transformedStrokes);
+            }
+
+            if (combinedStrokes.length > 0) {
+                // If this syllable was already generated by an earlier template, we could reuse the PUA
+                // But it's safer to just overwrite the map and use a new PUA (orphaning the old one in customGlyphs)
+                // Actually, if it exists, let's just overwrite the strokes at the existing PUA.
+                const existingChar = newSyllabaryMap[syllableStr];
+                if (existingChar) {
+                    const existingPua = existingChar.charCodeAt(0);
+                    compilerGlyphs[existingPua] = combinedStrokes;
+                } else {
+                    compilerGlyphs[currentPua] = combinedStrokes;
+                    newSyllabaryMap[syllableStr] = String.fromCharCode(currentPua);
+                    currentPua++;
+                }
+            }
         }
     }
 
-    // Compile the actual font
     const base64Font = await compileFont(compilerGlyphs);
 
     return {

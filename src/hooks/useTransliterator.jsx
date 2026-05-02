@@ -33,6 +33,7 @@ export function useTransliterator() {
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const alphabeticScript = useConfigStore((state) => state.alphabeticScript);
     const syllabaryMap = useConfigStore((state) => state.syllabaryMap) || {};
+    const syllabificationAlgorithm = useConfigStore((state) => state.syllabificationAlgorithm) || 'ltr';
     
     // Fetching consonants and vowels from Settings
     const consonants = useConfigStore((state) => state.consonants) || '';
@@ -116,19 +117,54 @@ export function useTransliterator() {
 
         if (phonologyTypes === 'syllabic' || phonologyTypes === 'featural_block') {
             const syllables = Object.keys(syllabaryMap).sort((a, b) => b.length - a.length);
-            let out = "";
-            let i = 0;
-            while (i < cleanWord.length) {
-                let match = null;
-                for (let syl of syllables) {
-                    if (cleanWord.startsWith(syl, i) && syllabaryMap[syl]) {
-                        match = syl; break;
+            
+            // Explicit boundary logic + LTR/RTL parsing
+            const blocks = cleanWord.split('.');
+            let finalOut = "";
+
+            blocks.forEach(block => {
+                let out = "";
+                if (syllabificationAlgorithm === 'rtl') {
+                    // Right-to-Left Greedy Match
+                    let i = block.length;
+                    while (i > 0) {
+                        let match = null;
+                        for (let syl of syllables) {
+                            if (i - syl.length >= 0 && block.substring(i - syl.length, i) === syl && syllabaryMap[syl]) {
+                                match = syl; break;
+                            }
+                        }
+                        if (match) { 
+                            out = syllabaryMap[match] + out; 
+                            i -= match.length; 
+                        } else { 
+                            out = block[i - 1] + out; 
+                            i--; 
+                        }
+                    }
+                } else {
+                    // Left-to-Right Greedy Match (Default)
+                    let i = 0;
+                    while (i < block.length) {
+                        let match = null;
+                        for (let syl of syllables) {
+                            if (block.startsWith(syl, i) && syllabaryMap[syl]) {
+                                match = syl; break;
+                            }
+                        }
+                        if (match) { 
+                            out += syllabaryMap[match]; 
+                            i += match.length; 
+                        } else { 
+                            out += block[i]; 
+                            i++; 
+                        }
                     }
                 }
-                if (match) { out += syllabaryMap[match]; i += match.length; } 
-                else { out += cleanWord[i]; i++; }
-            }
-            return out;
+                finalOut += out;
+            });
+            
+            return finalOut;
         }
 
         if (phonologyTypes === 'logographic') {
@@ -137,7 +173,7 @@ export function useTransliterator() {
         }
 
         return cleanWord;
-    }, [phonologyTypes, alphabeticScript, syllabaryMap, consonants, vowels]);
+    }, [phonologyTypes, alphabeticScript, syllabaryMap, consonants, vowels, syllabificationAlgorithm]);
 
     // 2. FROM KEYBOARD TO MEMORY (The Normalizer that protects against bugs)
     const normalizeToBase = React.useCallback((word) => {

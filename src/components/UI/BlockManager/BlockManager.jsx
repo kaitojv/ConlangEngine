@@ -10,8 +10,24 @@ import './blockManager.css';
 
 export default function BlockManager() {
     const config = useConfigStore();
-    const { consonants, vowels, blockSettings, featuralComponents, updateConfig } = config;
+    const { consonants, vowels, otherPhonemes, blockSettings, blockTemplates, featuralComponents, updateConfig } = config;
     const [drawingForComp, setDrawingForComp] = useState(null);
+
+    const activeTemplates = blockTemplates || (blockSettings ? [
+        {
+            id: 'legacy',
+            maxChars: blockSettings.maxChars || 3,
+            layoutTemplate: blockSettings.layoutTemplate || '2top1bottom',
+            slotMapping: blockSettings.slotMapping || []
+        }
+    ] : [
+        {
+            id: 'default',
+            maxChars: 3,
+            layoutTemplate: '2top1bottom',
+            slotMapping: [{label:'Initial', source:'consonants'}, {label:'Vowel', source:'vowels'}, {label:'Final', source:'consonants'}]
+        }
+    ]);
 
     const parseList = (str) => str.split(',')
         .map(s => {
@@ -21,27 +37,40 @@ export default function BlockManager() {
         })
         .filter(Boolean);
 
-    const allComponents = [...new Set([...parseList(consonants), ...parseList(vowels)])];
+    const allComponents = [...new Set([...parseList(consonants), ...parseList(vowels), ...parseList(otherPhonemes || '')])];
 
-    const handleUpdateSettings = (key, val) => {
+    const handleAddTemplate = () => {
+        const newTemplate = {
+            id: `template-${Date.now()}`,
+            maxChars: 2,
+            layoutTemplate: '2horizontal',
+            slotMapping: [{label:'Consonant', source:'consonants'}, {label:'Vowel', source:'vowels'}]
+        };
+        updateConfig({ blockTemplates: [...activeTemplates, newTemplate] });
+    };
+
+    const handleRemoveTemplate = (id) => {
+        if (activeTemplates.length === 1) return alert("You must have at least one template.");
+        updateConfig({ blockTemplates: activeTemplates.filter(t => t.id !== id) });
+    };
+
+    const handleUpdateTemplate = (id, field, val) => {
         updateConfig({
-            blockSettings: { ...blockSettings, [key]: val }
+            blockTemplates: activeTemplates.map(t => t.id === id ? { ...t, [field]: val } : t)
         });
     };
 
-    const handleUpdateSlotMapping = (index, field, val) => {
-        const newMapping = [...(blockSettings.slotMapping || [])];
-        
-        // Convert legacy string to proper object if necessary
-        let currentSlot = newMapping[index];
-        if (typeof currentSlot === 'string') {
-            currentSlot = { label: currentSlot, source: index === 1 ? 'vowels' : 'consonants' };
-        } else if (!currentSlot) {
-            currentSlot = { label: `Slot ${index+1}`, source: index === 1 ? 'vowels' : 'consonants' };
-        }
-
-        newMapping[index] = { ...currentSlot, [field]: val };
-        handleUpdateSettings('slotMapping', newMapping);
+    const handleUpdateSlotMapping = (templateId, index, field, val) => {
+        updateConfig({
+            blockTemplates: activeTemplates.map(t => {
+                if (t.id !== templateId) return t;
+                const newMapping = [...(t.slotMapping || [])];
+                let currentSlot = newMapping[index] || { label: `Slot ${index+1}`, source: index === 1 ? 'vowels' : 'consonants' };
+                if (typeof currentSlot === 'string') currentSlot = { label: currentSlot, source: index === 1 ? 'vowels' : 'consonants' };
+                newMapping[index] = { ...currentSlot, [field]: val };
+                return { ...t, slotMapping: newMapping };
+            })
+        });
     };
 
     const generateBlockFont = async () => {
@@ -60,16 +89,12 @@ export default function BlockManager() {
     };
 
     const handleSaveDrawing = (strokes) => {
-        // We bypass the standard "save to PUA" inside FontStudio by intercepting it or handling the strokes
-        // But FontStudio currently calls `compileFont` and adds to `customGlyphs`.
-        // We will just steal the strokes and save them to `featuralComponents`
         updateConfig({
             featuralComponents: { ...featuralComponents, [drawingForComp]: strokes }
         });
         setDrawingForComp(null);
     };
 
-    // Layout templates definition
     const layouts = {
         '2top1bottom': { name: '2 Top, 1 Bottom', slots: 3 },
         '1top2bottom': { name: '1 Top, 2 Bottom', slots: 3 },
@@ -77,78 +102,95 @@ export default function BlockManager() {
         '3horizontal': { name: '3 Horizontal', slots: 3 },
         '2horizontal': { name: '2 Horizontal', slots: 2 },
         '2vertical': { name: '2 Vertical', slots: 2 },
+        '1inside1outside': { name: '1 Inside, 1 Outside', slots: 2 },
         '2x2grid': { name: '2x2 Grid', slots: 4 }
     };
-
-    const currentLayout = layouts[blockSettings.layoutTemplate] || layouts['2top1bottom'];
 
     return (
         <>
             <Card>
-                <div className="bm-settings-row">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label className="form-label"><Settings2 size={14} style={{display:'inline', marginBottom:'-2px'}}/> Characters per Block</label>
-                        <select 
-                            className="bm-select"
-                            value={blockSettings.maxChars || 3}
-                            onChange={(e) => handleUpdateSettings('maxChars', parseInt(e.target.value))}
-                        >
-                            <option value={2}>2 Characters</option>
-                            <option value={3}>3 Characters</option>
-                            <option value={4}>4 Characters</option>
-                        </select>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <label className="form-label"><Grid3X3 size={14} style={{display:'inline', marginBottom:'-2px'}}/> Layout Template</label>
-                        <select 
-                            className="bm-select"
-                            value={blockSettings.layoutTemplate || '2top1bottom'}
-                            onChange={(e) => handleUpdateSettings('layoutTemplate', e.target.value)}
-                        >
-                            {Object.entries(layouts).map(([key, data]) => {
-                                if (data.slots === (blockSettings.maxChars || 3)) {
-                                    return <option key={key} value={key}>{data.name}</option>
-                                }
-                                return null;
-                            })}
-                        </select>
-                    </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                    <h3 className="sg-title" style={{ margin: 0 }}>Block Templates</h3>
+                    <Button variant="save" onClick={handleAddTemplate}>+ Add Template</Button>
                 </div>
+                
+                {activeTemplates.map((template, tIndex) => (
+                    <div key={template.id} style={{ padding: '15px', border: '1px solid var(--bd)', borderRadius: '8px', marginBottom: '15px', position: 'relative' }}>
+                        <h4 style={{ marginBottom: '15px', color: 'var(--tx)' }}>Template {tIndex + 1}</h4>
+                        
+                        {activeTemplates.length > 1 && (
+                            <div style={{ position: 'absolute', top: '15px', right: '15px' }}>
+                                <Button variant="error-sm" onClick={() => handleRemoveTemplate(template.id)}>Remove</Button>
+                            </div>
+                        )}
 
-                <div style={{ marginTop: '20px' }}>
-                    <h4 style={{ marginBottom: '10px' }}>Slot Mapping (Define roles)</h4>
-                    <div className="bm-slot-grid">
-                        {Array.from({ length: blockSettings.maxChars || 3 }).map((_, i) => {
-                            let slot = (blockSettings.slotMapping || [])[i];
-                            if (typeof slot === 'string') {
-                                slot = { label: slot, source: i === 1 ? 'vowels' : 'consonants' };
-                            } else if (!slot) {
-                                slot = { label: ['Initial', 'Vowel', 'Final', 'Tone'][i] || `Slot ${i+1}`, source: i === 1 ? 'vowels' : 'consonants' };
-                            }
-                            return (
-                                <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                    <label className="form-label">Slot {i + 1} Name</label>
-                                    <input 
-                                        className="bm-slot-input"
-                                        placeholder={`Slot ${i+1}`}
-                                        value={slot.label || ''}
-                                        onChange={(e) => handleUpdateSlotMapping(i, 'label', e.target.value)}
-                                    />
-                                    <select 
-                                        className="bm-select" 
-                                        style={{ width: '100px', fontSize: '0.8rem', padding: '4px' }}
-                                        value={slot.source || (i === 1 ? 'vowels' : 'consonants')}
-                                        onChange={(e) => handleUpdateSlotMapping(i, 'source', e.target.value)}
-                                    >
-                                        <option value="consonants">Consonants</option>
-                                        <option value="vowels">Vowels</option>
-                                    </select>
-                                </div>
-                            );
-                        })}
+                        <div className="bm-settings-row">
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                <label className="form-label"><Settings2 size={14} style={{display:'inline', marginBottom:'-2px'}}/> Characters per Block</label>
+                                <select 
+                                    className="bm-select"
+                                    value={template.maxChars || 3}
+                                    onChange={(e) => handleUpdateTemplate(template.id, 'maxChars', parseInt(e.target.value))}
+                                >
+                                    <option value={2}>2 Characters</option>
+                                    <option value={3}>3 Characters</option>
+                                    <option value={4}>4 Characters</option>
+                                </select>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                <label className="form-label"><Grid3X3 size={14} style={{display:'inline', marginBottom:'-2px'}}/> Layout</label>
+                                <select 
+                                    className="bm-select"
+                                    value={template.layoutTemplate || '2top1bottom'}
+                                    onChange={(e) => handleUpdateTemplate(template.id, 'layoutTemplate', e.target.value)}
+                                >
+                                    {Object.entries(layouts).map(([key, data]) => {
+                                        if (data.slots === (template.maxChars || 3)) {
+                                            return <option key={key} value={key}>{data.name}</option>
+                                        }
+                                        return null;
+                                    })}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: '20px' }}>
+                            <h5 style={{ marginBottom: '10px' }}>Slot Mapping (Define roles)</h5>
+                            <div className="bm-slot-grid">
+                                {Array.from({ length: template.maxChars || 3 }).map((_, i) => {
+                                    let slot = (template.slotMapping || [])[i];
+                                    if (typeof slot === 'string') {
+                                        slot = { label: slot, source: i === 1 ? 'vowels' : 'consonants' };
+                                    } else if (!slot) {
+                                        slot = { label: ['Initial', 'Vowel', 'Final', 'Tone'][i] || `Slot ${i+1}`, source: i === 1 ? 'vowels' : 'consonants' };
+                                    }
+                                    return (
+                                        <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                            <label className="form-label">Slot {i + 1} Name</label>
+                                            <input 
+                                                className="bm-slot-input"
+                                                placeholder={`Slot ${i+1}`}
+                                                value={slot.label || ''}
+                                                onChange={(e) => handleUpdateSlotMapping(template.id, i, 'label', e.target.value)}
+                                            />
+                                            <select 
+                                                className="bm-select" 
+                                                style={{ width: '100px', fontSize: '0.8rem', padding: '4px' }}
+                                                value={slot.source || (i === 1 ? 'vowels' : 'consonants')}
+                                                onChange={(e) => handleUpdateSlotMapping(template.id, i, 'source', e.target.value)}
+                                            >
+                                                <option value="consonants">Consonants</option>
+                                                <option value="vowels">Vowels</option>
+                                                <option value="otherPhonemes">Other Phonemes</option>
+                                            </select>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
-                </div>
+                ))}
             </Card>
 
             <Card>
