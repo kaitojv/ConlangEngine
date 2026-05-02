@@ -99,10 +99,8 @@ export default function NumeralTab() {
             {/* Base Selector */}
             <Card>
                 <h2 className="flex sg-title"><Hash /> Numeral System</h2>
-                <Infobox>
-                    <p className="flex items-center gap-2">
-                        <Lightbulb /> Many conlangs use non-decimal bases. Mayan used Base-20 (vigesimal), Babylonian used Base-60, and many cultures use Base-12 (duodecimal). Choose your conlang's number base here.
-                    </p>
+                <Infobox title="Numeral System Guide">
+                    Many conlangs use non-decimal bases. Mayan used Base-20 (vigesimal), Babylonian used Base-60, and many cultures use Base-12 (duodecimal). Choose your conlang's number base here.
                 </Infobox>
 
                 <div className="numeral-base-selector">
@@ -130,8 +128,7 @@ export default function NumeralTab() {
                                 const v = parseInt(e.target.value);
                                 if (v >= 2 && v <= 36) updateConfig({ numeralBase: v });
                             }}
-                            className="fi"
-                            style={{ width: '100px' }}
+                            className="fi num-custom-base-input"
                         />
                     </div>
                     <p className="base-info">
@@ -174,7 +171,7 @@ export default function NumeralTab() {
             {/* Calculator */}
             <Card>
                 <h2 className="flex sg-title"><Calculator /> Base-{numeralBase} Calculator</h2>
-                <p style={{ color: 'var(--tx2)', marginBottom: '16px' }}>
+                <p className="numeral-calc-desc">
                     Perform math directly in your conlang's number system.
                 </p>
                 <div className="calc-row">

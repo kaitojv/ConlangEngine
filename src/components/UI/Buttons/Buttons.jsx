@@ -10,6 +10,8 @@ export default function Button({ variant = 'save', children, className = '', ...
     ipa: 'ipa',
     error: 'error',
     import: 'import',
+    toggle: 'toggle',
+    'toggle-active': 'toggle-active',
     default: 'default'
   })[variant] || 'save';
   

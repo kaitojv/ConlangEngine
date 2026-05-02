@@ -1,0 +1,95 @@
+.fs-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.fs-header {
+    text-align: center;
+}
+
+.fs-title {
+    margin: 0;
+    color: var(--tx);
+}
+
+.fs-subtitle {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--tx2);
+}
+
+.fs-canvas-wrapper {
+    position: relative;
+    border: 2px solid var(--bd);
+    border-radius: 8px;
+    backgroundColor: var(--s1);
+    overflow: hidden;
+}
+
+.fs-canvas-grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: linear-gradient(var(--bd) 1px, transparent 1px), linear-gradient(90deg, var(--bd) 1px, transparent 1px);
+    background-size: 20px 20px;
+    opacity: 0.5;
+}
+
+.fs-canvas {
+    display: block;
+    touch-action: none;
+}
+
+.fs-controls {
+    display: flex;
+    gap: 8px;
+    width: 300px;
+    justify-content: space-between;
+}
+
+.fs-brush-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fs-brush-label {
+    font-size: 0.8rem;
+    color: var(--tx2);
+}
+
+.fs-brush-slider {
+    width: 80px;
+}
+
+.fs-action-btns {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.fs-btn-full {
+    flex: 1;
+}
+
+.fs-btn-save {
+    font-weight: bold;
+}
+
+.fs-undo-btn, .fs-clear-btn {
+    display: none;
+}
+
+.fs-button-group {
+    display: flex;
+    gap: 8px;
+}
+
+.fs-tool-btn {
+    padding: 6px 12px;
+    height: 36px;
+    margin-top: 0;
+}

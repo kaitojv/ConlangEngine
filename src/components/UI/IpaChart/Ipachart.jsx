@@ -111,7 +111,7 @@ export default function IpaChart({ consonants = '', setConsonants, vowels = '', 
     return (
         <div className='ipa-chart-container'>
             {!alwaysOpen && (
-                <Button className='ipa-btn-toggle' onClick={() => setIsOpen(!isOpen)} variant={isOpen ? "default" : "save"}>
+                <Button className='ipa-btn-toggle' onClick={() => setIsOpen(!isOpen)} variant={isOpen ? "default" : "ipa"}>
                     {isOpen ? 'Close IPA Chart' : 'Interactive Visual IPA Chart'}
                 </Button>
             )}

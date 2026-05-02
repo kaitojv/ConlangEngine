@@ -83,8 +83,7 @@ export default function PhonologyTab() {
             <Card>
                 <h2 className="flex sg-title"><AudioLines /> Sounds & Orthography</h2>
                 
-                <Infobox>
-                    <b>Phonology & Orthography Guide:</b><br />
+                <Infobox title="Phonology & Orthography Guide">
                     • <b>Basic Sounds:</b> Type your IPA phonemes separated by commas (e.g., <code>p, t, k, m, ṇ</code>).<br />
                     • <b>Custom Orthography (=):</b> If a sound is written differently in your romanization or native script, map it using the format <code>IPA=Text</code>. <br />
                     <i>Example:</i> If the sound /ʃ/ is written as '<b>თ</b>' and a trill /r/ as '<b>რ</b>', you should type: <code>ʃ=თ, r=რ</code>. This exact mapping is what allows the <b>Interactive Reader</b> and the <b>TTS Audio</b> to correctly pronounce your custom letters!
@@ -138,29 +137,36 @@ export default function PhonologyTab() {
                     disabled={skipSyllableValidation}
                 />
                 
-                <label className="flex items-center gap-2 phonology-checkbox-label">
-                    <input 
-                        type="checkbox" 
-                        checked={skipSyllableValidation}
-                        onChange={(e) => updateConfig({ skipSyllableValidation: e.target.checked })}
-                    />
-                    Skip Syllable Pattern Validation
-                </label>
+                {phonologyTypes === 'alphabetic' && (
+                    <label className="flex items-center gap-2 phonology-checkbox-label">
+                        <input 
+                            type="checkbox" 
+                            checked={skipSyllableValidation}
+                            onChange={(e) => updateConfig({ skipSyllableValidation: e.target.checked })}
+                        />
+                        Skip Syllable Pattern Validation
+                    </label>
+                )}
 
                 {(phonologyTypes === 'syllabic' || phonologyTypes === 'featural_block') && (
-                    <div style={{ marginTop: '15px' }}>
-                        <label className="form-label" style={{ display: 'block', marginBottom: '5px' }}>Syllabification Algorithm (for ambiguous words)</label>
+                    <div className="settings-section-wrapper">
+                        <label className="form-label settings-label-block">Syllabification Algorithm (for ambiguous words)</label>
+                        <Infobox title="How Syllabification Works">
+                            <b>Ambiguous words:</b><br />
+                            If your Syllabary contains blocks for <code>cra</code>, <code>s</code>, <code>cr</code>, and <code>as</code>, and you type the word <code>cras</code>:<br /><br />
+                            • <b>Left-to-Right:</b> Scans from the beginning. Finds <code>cra</code> (longest match), then <code>s</code>. Result = <code>cra</code> + <code>s</code>.<br />
+                            • <b>Right-to-Left:</b> Scans from the end. Finds <code>as</code> (longest match), then <code>cr</code>. Result = <code>cr</code> + <code>as</code>.<br /><br />
+                            <b>Explicit Boundaries:</b><br />
+                            If you want to force a split that goes against the algorithm, use a period <code>.</code> in your dictionary entry. For example, typing <code>cr.as</code> guarantees it will be split as <code>cr</code> and <code>as</code>.
+                        </Infobox>
                         <select 
-                            style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--bd)', backgroundColor: 'var(--bg)', color: 'var(--tx)' }}
+                            className="settings-select-full"
                             value={syllabificationAlgorithm}
                             onChange={(e) => updateConfig({ syllabificationAlgorithm: e.target.value })}
                         >
-                            <option value="ltr">Left-to-Right Greedy (cras = cra + s)</option>
-                            <option value="rtl">Right-to-Left Greedy (cras = cr + as)</option>
+                            <option value="ltr">Left-to-Right Greedy</option>
+                            <option value="rtl">Right-to-Left Greedy</option>
                         </select>
-                        <p style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginTop: '5px' }}>
-                            You can also use a period <code>.</code> in your dictionary to explicitly force a syllable split (e.g., <code>cr.as</code>).
-                        </p>
                     </div>
                 )}
             </Card>
@@ -179,32 +185,27 @@ export default function PhonologyTab() {
 
             <Card>
                 <h2 className="flex sg-title"><Hourglass /> Historical Sound Changer</h2>
-                <p className="phonology-desc">
+                <p className="settings-description">
                     Evolve your language natively. Write rules line by line using Regex format: 
                     <code> pattern =&gt; replacement</code>
                 </p>
                 
-                <details className="details-tab">
-                    <summary className="summary-tab">
-                        <Info size={18} /> View Rule Formatting Guide
-                    </summary>
-                    <div className="info-tab">
-                        <b>Basic Replacement:</b><br />
+                <Infobox title="View Rule Formatting Guide">
+                    <b>Basic Replacement:</b><br />
                     <span>p =&gt; b</span> (Turns all 'p's into 'b's)<br />
                     <span>ch =&gt; თ</span> (Replaces specific digraphs with characters)<br /><br />
 
-                        <b>Environmental (Contextual):</b><br />
+                    <b>Environmental (Contextual):</b><br />
                     <span>k(?=[ie]) =&gt; tS</span> ('k' becomes 'tS' ONLY before 'i' or 'e')<br />
                     <span>(?&lt;=[aeiou])s =&gt; z</span> ('s' becomes 'z' ONLY after a vowel)<br /><br />
 
-                        <b>Positional Changes:</b><br />
+                    <b>Positional Changes:</b><br />
                     <span>^a =&gt; e</span> (Changes 'a' to 'e' ONLY at the START of a word)<br />
                     <span>m$ =&gt; n</span> (Changes 'm' to 'n' ONLY at the END of a word)<br /><br />
 
-                        <b>Advanced (Reduplication):</b><br />
+                    <b>Advanced (Reduplication):</b><br />
                     <span>^(.{2})(.*) =&gt; $1$1$2</span> (Duplicates the first two letters)
-                    </div>
-                </details>
+                </Infobox>
                 
                 <textarea 
                     className="textarea-phonology" 
@@ -216,8 +217,8 @@ export default function PhonologyTab() {
 
                 {/* Apply to Dictionary — destructive action, gated behind a confirmation */}
                 {!showApplyConfirm ? (
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
-                        <Button variant="save" onClick={() => setShowApplyConfirm(true)}>
+                    <div className="pt-button-row">
+                        <Button variant="edit" onClick={() => setShowApplyConfirm(true)}>
                             <BookCheck size={16} /> Apply to Dictionary
                         </Button>
                     </div>

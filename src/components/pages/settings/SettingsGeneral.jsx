@@ -19,9 +19,9 @@ export default function SettingsGeneral() {
             
             <h2 className="flex sg-title"> <Bolt/>Basic Settings</h2>
             
-            <Infobox>
-                <p className="flex items-center gap-2"><Lightbulb /> Set the base identity of your conlang here. Changing the typology will unlock different tools in the engine.</p>
-            </Infobox>
+            <p className="settings-description">
+                Set the base identity of your conlang here. Changing the typology will unlock different tools in the engine.
+            </p>
 
 
 
@@ -35,8 +35,7 @@ export default function SettingsGeneral() {
             <div className="sg-input-group">
                 <label className="form-label">Description & Lore</label>
                 <textarea 
-                    className="fi" 
-                    style={{ minHeight: '120px', resize: 'vertical', paddingTop: '12px' }}
+                    className="fi sg-textarea-lore" 
                     placeholder="Describe the philosophy, history, or core rules of your conlang..."
                     value={description}
                     onChange={(e) => updateConfig({ description: e.target.value })}
@@ -46,7 +45,7 @@ export default function SettingsGeneral() {
             <div className="sg-input-group">
                 <label className="form-label">Language Typology</label>
                 <select 
-                    className="fi" 
+                    className="fi settings-select-full" 
                     value={phonologyTypes}
                     onChange={(e) => updateConfig({ phonologyTypes: e.target.value })}
                 >
@@ -61,7 +60,7 @@ export default function SettingsGeneral() {
                 <div className="sg-input-group">
                     <label className="form-label">Pre-existing Script Mapping</label>
                     <select 
-                        className="fi" 
+                        className="fi settings-select-full" 
                         value={alphabeticScript || 'latin'}
                         onChange={(e) => updateConfig({ alphabeticScript: e.target.value })}
                     >
@@ -74,9 +73,7 @@ export default function SettingsGeneral() {
                 </div>
             )}
             
-            <Infobox>
-
-                <div className="flex items-center gap-2"><WholeWord /> <b>Writing System Guide:</b></div>  
+            <Infobox title="Writing System Guide">
                 • <b>Alphabetic:</b> Standard root-based system. Uses your consonants, vowels, and syllable patterns. Maps to various scripts.<br />
                 • <b>Syllabic:</b> Unlocks the Syllabary Manager.<br />
                 • <b>Featural Block:</b> Unlocks the Block Manager. Dynamically composes syllables into square blocks.<br />

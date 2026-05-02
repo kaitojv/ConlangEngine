@@ -132,6 +132,10 @@ export default function PersonRulesEditor() {
                 </button>
             </div>
 
+            <p className="settings-description">
+                Alignments allow you to define how your grammar changes based on the <b>Person</b> (1st, 2nd, 3rd) or <b>Noun Class</b> (Animate, Inanimate, etc.). Define both the standalone pronoun (Free Form) and the suffix/prefix (Affix), and specify which word classes use each rule.
+            </p>
+
             <div className="rules-column-headers">
                 <span>Person</span>
                 <span>Number</span>
@@ -258,8 +262,8 @@ export default function PersonRulesEditor() {
                 <Plus size={16} /> Add Rule
             </button>
 
-            <Infobox className="mt-15">
-                <b>Pro Tip:</b> Define how each person is represented.
+            <Infobox title="Pronoun & Affix Guide">
+                Define how each person is represented.
                 <br /><br />
                 <b>Person/Number/Gender:</b> Select the grammatical person, number (Singular, Plural, Dual), and optional gender.
                 <br />

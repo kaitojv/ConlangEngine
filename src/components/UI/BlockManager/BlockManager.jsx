@@ -4,7 +4,8 @@ import Card from '../Card/Card.jsx';
 import Button from '../Buttons/Buttons.jsx';
 import Modal from '../Modal/Modal.jsx';
 import FontStudioModal from '../Fontstudio/FontStudio.jsx';
-import { Brush, Grid3X3, Settings2 } from 'lucide-react';
+import Infobox from '../Infobox/Infobox.jsx';
+import { Brush, Grid3X3, Settings2, Info, Layers, Trash2 } from 'lucide-react';
 import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
 import './blockManager.css';
 
@@ -102,6 +103,7 @@ export default function BlockManager() {
         '3horizontal': { name: '3 Horizontal', slots: 3 },
         '2horizontal': { name: '2 Horizontal', slots: 2 },
         '2vertical': { name: '2 Vertical', slots: 2 },
+        '1outside1inside': { name: '1 Outside, 1 Inside', slots: 2 },
         '1inside1outside': { name: '1 Inside, 1 Outside', slots: 2 },
         '2x2grid': { name: '2x2 Grid', slots: 4 }
     };
@@ -109,24 +111,35 @@ export default function BlockManager() {
     return (
         <>
             <Card>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                    <h3 className="sg-title" style={{ margin: 0 }}>Block Templates</h3>
+                <div className="bm-header">
+                    <h2 className="sg-title"><Layers size={20} className="bm-icon-inline"/> Block Templates</h2>
                     <Button variant="save" onClick={handleAddTemplate}>+ Add Template</Button>
                 </div>
                 
+                <Infobox title="How to combine Syllables or Radicals">
+                    <b>Want to combine full syllables instead of consonants/vowels?</b><br />
+                    If you have roots like <code>"ka"</code> and <code>"ta"</code> and want to combine them into <code>"kata"</code>:<br />
+                    1. Type your roots into the <b>Other Phonemes</b> box in the Sounds tab.<br />
+                    2. They will appear as base characters below. Draw their strokes.<br />
+                    3. Set Slot 1 and Slot 2 to <b>Other Phonemes</b>.<br />
+                    The compiler will automatically generate all combinations (like <code>ka</code><code>ka</code>, <code>ka</code><code>ta</code>, etc.).
+                </Infobox>
+                
                 {activeTemplates.map((template, tIndex) => (
-                    <div key={template.id} style={{ padding: '15px', border: '1px solid var(--bd)', borderRadius: '8px', marginBottom: '15px', position: 'relative' }}>
-                        <h4 style={{ marginBottom: '15px', color: 'var(--tx)' }}>Template {tIndex + 1}</h4>
+                    <div key={template.id} className="bm-template-card">
+                        <h4 className="bm-template-title">Template {tIndex + 1}</h4>
                         
                         {activeTemplates.length > 1 && (
-                            <div style={{ position: 'absolute', top: '15px', right: '15px' }}>
-                                <Button variant="error-sm" onClick={() => handleRemoveTemplate(template.id)}>Remove</Button>
+                            <div className="bm-template-remove">
+                                <Button variant="error" className="btn-sm" onClick={() => handleRemoveTemplate(template.id)}>
+                                    <Trash2 size={14} /> Remove
+                                </Button>
                             </div>
                         )}
 
                         <div className="bm-settings-row">
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                <label className="form-label"><Settings2 size={14} style={{display:'inline', marginBottom:'-2px'}}/> Characters per Block</label>
+                            <div className="bm-input-group">
+                                <label className="form-label"><Settings2 size={14} className="bm-icon-inline"/> Characters per Block</label>
                                 <select 
                                     className="bm-select"
                                     value={template.maxChars || 3}
@@ -138,8 +151,8 @@ export default function BlockManager() {
                                 </select>
                             </div>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                <label className="form-label"><Grid3X3 size={14} style={{display:'inline', marginBottom:'-2px'}}/> Layout</label>
+                            <div className="bm-input-group">
+                                <label className="form-label"><Grid3X3 size={14} className="bm-icon-inline"/> Layout</label>
                                 <select 
                                     className="bm-select"
                                     value={template.layoutTemplate || '2top1bottom'}
@@ -155,8 +168,8 @@ export default function BlockManager() {
                             </div>
                         </div>
 
-                        <div style={{ marginTop: '20px' }}>
-                            <h5 style={{ marginBottom: '10px' }}>Slot Mapping (Define roles)</h5>
+                        <div className="bm-slot-section">
+                            <h5>Slot Mapping (Define roles)</h5>
                             <div className="bm-slot-grid">
                                 {Array.from({ length: template.maxChars || 3 }).map((_, i) => {
                                     let slot = (template.slotMapping || [])[i];
@@ -166,7 +179,7 @@ export default function BlockManager() {
                                         slot = { label: ['Initial', 'Vowel', 'Final', 'Tone'][i] || `Slot ${i+1}`, source: i === 1 ? 'vowels' : 'consonants' };
                                     }
                                     return (
-                                        <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                        <div key={i} className="bm-input-group">
                                             <label className="form-label">Slot {i + 1} Name</label>
                                             <input 
                                                 className="bm-slot-input"
@@ -175,8 +188,7 @@ export default function BlockManager() {
                                                 onChange={(e) => handleUpdateSlotMapping(template.id, i, 'label', e.target.value)}
                                             />
                                             <select 
-                                                className="bm-select" 
-                                                style={{ width: '100px', fontSize: '0.8rem', padding: '4px' }}
+                                                className="bm-select bm-select-small"
                                                 value={slot.source || (i === 1 ? 'vowels' : 'consonants')}
                                                 onChange={(e) => handleUpdateSlotMapping(template.id, i, 'source', e.target.value)}
                                             >
@@ -194,9 +206,13 @@ export default function BlockManager() {
             </Card>
 
             <Card>
-                <h3 className="sg-title">Base Characters</h3>
-                <p style={{ marginBottom: '15px' }}>Draw the base shape for each character once. The Font Compiler will automatically scale and stack them according to your block rules.</p>
+                <h2 className="sg-title"><Brush size={20} className="bm-icon-inline"/> Base Characters</h2>
+                <p className="bm-p-margin">Draw the base shape for each character once. The Font Compiler will automatically scale and stack them according to your block rules.</p>
                 
+                <Infobox title="Hangul-style Base Characters">
+                    Draw each base character (consonant, vowel, or radical) exactly once. The engine will automatically scale and reposition these drawings based on your layout templates to create the final blocks.
+                </Infobox>
+
                 <div className="bm-components-list">
                     {allComponents.map(comp => (
                         <div key={comp} className="bm-component-card">
@@ -204,25 +220,25 @@ export default function BlockManager() {
                             <div className="bm-component-symbol custom-font-text">
                                 {/* Preview drawn strokes if available, else placeholder */}
                                 {featuralComponents[comp] ? (
-                                    <svg viewBox="0 0 300 300" width="40" height="40" style={{ stroke: 'var(--tx)', fill: 'none', strokeWidth: 10, strokeLinecap: 'round', strokeLinejoin: 'round' }}>
+                                    <svg viewBox="0 0 300 300" width="40" height="40" className="bm-svg-preview">
                                         {featuralComponents[comp].map((stroke, i) => (
                                             <path key={i} d={`M ${stroke.map(p => `${p.x} ${p.y}`).join(' L ')}`} />
                                         ))}
                                     </svg>
                                 ) : '∅'}
                             </div>
-                            <Button variant="edit-sm" onClick={() => setDrawingForComp(comp)}>
-                                <Brush size={14} /> Draw
+                            <Button variant="edit" className="btn-icon" onClick={() => setDrawingForComp(comp)}>
+                                <Brush size={16} />
                             </Button>
                         </div>
                     ))}
                 </div>
 
-                <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid var(--bd)' }}>
+                <div className="bm-compile-section">
                     <Button variant="save" onClick={generateBlockFont}>
                         Compile Block Font
                     </Button>
-                    <p style={{ marginTop: '10px', fontSize: '0.85rem', color: 'var(--tx2)' }}>
+                    <p className="bm-compile-help">
                         This will mathematically combine all possible valid blocks based on your slots and generate a functional font mapping.
                     </p>
                 </div>

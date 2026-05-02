@@ -269,3 +269,12 @@
         text-align: center;
     }
 }
+
+.numeral-calc-desc {
+    color: var(--tx2);
+    margin-bottom: 16px;
+}
+
+.num-custom-base-input {
+    width: 100px;
+}

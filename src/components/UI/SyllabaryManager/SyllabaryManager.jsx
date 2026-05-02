@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useConfigStore } from "@/store/useConfigStore";
-import { LayoutGrid, List, Brush } from "lucide-react";
+import { LayoutGrid, List, Brush, Info, Trash2 } from "lucide-react";
 import React from 'react'
 import Card from "../Card/Card.jsx";
 import Button from "../Buttons/Buttons.jsx";
 import './syllabaryManager.css';
 import Modal from "../Modal/Modal.jsx";
 import FontStudioModal from "../Fontstudio/FontStudio.jsx";
+import Infobox from "../Infobox/Infobox.jsx";
 
 
 export default function SyllabaryManager() {
@@ -53,6 +54,17 @@ export default function SyllabaryManager() {
     return (
     <>
         <Card>
+        <div className="bm-header">
+            <h2 className="sg-title"><LayoutGrid size={20} className="sm-title-icon"/> Syllabary Grid</h2>
+        </div>
+        <p className="bm-p-margin">Map your syllables to characters. You can draw custom characters or paste existing Unicode symbols.</p>
+
+        <Infobox title="How to use the Syllabary">
+            • <b>Grid View:</b> Quickly map CV (Consonant-Vowel) combinations. Empty cells default to the syllable text itself.<br />
+            • <b>List View:</b> Add complex syllables (like CVC or CCC) that don't fit in the standard grid.<br />
+            • <b>Custom Fonts:</b> Click the <b>Draw</b> button in List View to create your own unique character shapes!
+        </Infobox>
+
         <div className="sm-toggle-group">
             <Button 
                 variant={viewMode === 'grid' ? 'toggle-active' : 'toggle'}
@@ -109,8 +121,9 @@ export default function SyllabaryManager() {
                 </div>
                 
                 {otherList.length > 0 && (
-                    <div className="sm-table-wrapper" style={{ marginTop: '20px' }}>
-                        <h4 className="sg-title" style={{ marginBottom: '10px' }}>Other Phonemes (Standalone)</h4>
+                <div className="sm-mt-20">
+                    <h4 className="sm-subtitle"><Info size={14}/> Other Phonemes (Standalone)</h4>
+                    <div className="sm-table-wrapper">
                         <table className="sm-table">
                             <tbody>
                                 <tr className="sm-tr">
@@ -137,6 +150,7 @@ export default function SyllabaryManager() {
                             </tbody>
                         </table>
                     </div>
+                </div>
                 )}
             </>
             )}
@@ -158,7 +172,7 @@ export default function SyllabaryManager() {
                             value={newSylVal}
                             onChange={(e) => setNewSylVal(e.target.value)}
                         />
-                        <Button variant="save" onClick={handleAddSyllable}>
+                        <Button variant="edit" onClick={handleAddSyllable}>
                             + Add
                         </Button>
                     </div>
@@ -174,10 +188,12 @@ export default function SyllabaryManager() {
                                         <span className="sm-list-card-key">{key}</span>
                                     </div>
                                     <div className="sm-list-card-actions">
-                                    <Button variant="edit-sm" onClick={() => setDrawingForSyl(key)}>
-                                        <Brush size={14} />
-                                    </Button>
-                                    <Button variant="error-sm" onClick={() => handleRemoveSyllable(key)}>✖</Button>
+                                        <Button variant="edit" className="btn-icon" onClick={() => setDrawingForSyl(key)}>
+                                            <Brush size={16} />
+                                        </Button>
+                                        <Button variant="error" className="btn-icon" onClick={() => handleRemoveSyllable(key)}>
+                                            <Trash2 size={16} />
+                                        </Button>
                                     </div>
                                 </div>
                             ))

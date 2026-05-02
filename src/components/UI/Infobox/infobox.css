@@ -1,8 +1,41 @@
-/* src/components/ui/InfoBox/InfoBox.css */
+/* src/components/UI/Infobox/infobox.css */
 
+.details-tab {
+    margin-bottom: 20px; 
+    background: color-mix(in srgb, var(--acc) 8%, transparent); 
+    border: 1px dashed color-mix(in srgb, var(--acc) 40%, transparent); 
+    border-radius: var(--rad); 
+    padding: 12px; 
+    cursor: pointer; 
+    transition: all 0.3s ease;
+}
 
+.summary-tab {
+    font-size: 0.85rem; 
+    color: var(--acc); 
+    font-weight: 800; 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    outline: none; 
+    list-style: none;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-tab {
+    margin-top: 12px;
+    font-size: 0.825rem; 
+    color: var(--tx2); 
+    line-height: 1.6; 
+    cursor: text; 
+    border-top: 1px solid color-mix(in srgb, var(--acc) 20%, transparent); 
+    padding-top: 10px;
+}
+
+/* Legacy support for direct .infobox usage if needed */
 .infobox {
-  background: rgba(124, 58, 237, 0.05); 
+    background: color-mix(in srgb, var(--acc) 5%, transparent); 
     border-left: 4px solid var(--acc);
     padding: 15px 20px; 
     border-radius: 0 var(--rad-sm) var(--rad-sm) 0;
@@ -10,10 +43,4 @@
     color: var(--tx2); 
     margin: 20px 0;
     line-height: 1.6;
-    width: 100%;
-    flex-basis: 100%;
-}
-
-.infobox strong {
-  color: var(--tx);
 }

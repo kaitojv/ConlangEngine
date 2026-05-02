@@ -141,3 +141,27 @@
     display: flex;
     gap: 8px;
 }
+
+.sm-title-icon {
+    margin-right: 8px;
+}
+
+.sm-mt-20 {
+    margin-top: 32px;
+}
+
+.sm-mb-10 {
+    margin-bottom: 10px;
+}
+
+.sm-subtitle {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--tx2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}

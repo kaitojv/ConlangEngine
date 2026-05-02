@@ -7,6 +7,7 @@ import { Palette, CaseLower, Database } from 'lucide-react';
 import { useConfigStore, INITIAL_CONFIG } from '../../../store/useConfigStore.jsx';
 import { useProjectStore } from '../../../store/useProjectStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
+import { compileFont } from '../../../utils/fontCompiler.jsx';
 import opentype from 'opentype.js';
 import { DARK_THEMES, LIGHT_THEMES } from '../../../utils/themePresets.js';
 import { Info, User, Type } from 'lucide-react';
@@ -22,6 +23,7 @@ export default function SystemTab() {
     const customFontBase64 = useConfigStore((state) => state.customFontBase64);
     const customFont = useConfigStore((state) => state.customFont);
     const customGlyphs = useConfigStore((state) => state.customGlyphs) || {};
+    const syllabaryMap = useConfigStore((state) => state.syllabaryMap) || {};
     const setFullConfig = useConfigStore((state) => state.setFullConfig);
     const updateConfig = useConfigStore((state) => state.updateConfig);
     const setLexicon = useLexiconStore((state) => state.setLexicon);
@@ -90,16 +92,17 @@ export default function SystemTab() {
 
     const handleDownloadFont = () => {
         const hasCustomGlyphs = Object.keys(customGlyphs).length > 0;
+        const fontToDownload = customFont || customFontBase64;
 
-        if (!customFont && !hasCustomGlyphs) {
+        if (!fontToDownload && !hasCustomGlyphs) {
             alert("No custom font to download. Upload a font or draw characters in the Syllabary first.");
             return;
         }
 
-        if (customFont) {
-            // Download the uploaded font
+        if (fontToDownload) {
+            // Download the uploaded or compiled font
             const a = document.createElement('a');
-            a.href = customFont;
+            a.href = fontToDownload;
             a.download = `${conlangName || 'MyConlang'}_CustomFont.ttf`;
             document.body.appendChild(a);
             a.click();
@@ -107,71 +110,25 @@ export default function SystemTab() {
             return;
         }
 
-        // Generate and download a font from drawn custom glyphs
-        try {
-            const notdefGlyph = new opentype.Glyph({
-                name: '.notdef',
-                unicode: 0,
-                advanceWidth: 650,
-                path: new opentype.Path()
-            });
+        // Generate and download a font from drawn custom glyphs (Fallback if not compiled yet)
+        const generateAndDownload = async () => {
+            try {
+                const base64Font = await compileFont(customGlyphs, syllabaryMap);
+                if (!base64Font) throw new Error("Compiler returned null");
 
-            const glyphs = [notdefGlyph];
+                const a = document.createElement('a');
+                a.href = base64Font;
+                a.download = `${conlangName || 'MyConlang'}_Syllabary.ttf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } catch (err) {
+                console.error("Font generation error:", err);
+                alert("Failed to generate custom font from Syllabary.");
+            }
+        };
 
-            const fontAscender = 800; // Corresponds to the font's ascender property.
-
-            Object.entries(customGlyphs).forEach(([char, data]) => {
-                let path;
-
-                // Create a path object from the stored data.
-                if (typeof data === 'string' && data.trim() !== '') {
-                    // Use opentype's robust SVG path parser. It converts all commands to absolute.
-                    path = opentype.Path.fromSVG(data);
-                } else if (Array.isArray(data) && data.length > 0) {
-                    path = new opentype.Path();
-                    path.commands = data;
-                } else if (data && data.commands && data.commands.length > 0) {
-                    path = new opentype.Path();
-                    path.commands = data.commands;
-                } else {
-                    // Skip if data is empty or in an unknown format
-                    return;
-                }
-
-                // The drawing canvas (likely SVG) has Y-axis pointing down, but font glyphs have Y-axis pointing up.
-                // We need to flip the Y coordinates of all points in the path.
-                // We flip it around the font's baseline. The ascender value is a good reference for the top.
-                // New Y = ascender - Old Y.
-                // This assumes the drawing canvas has a height that maps 1:1 to the font's em-size.
-                path.commands.forEach(cmd => {
-                    if (cmd.y !== undefined) cmd.y = fontAscender - cmd.y;
-                    if (cmd.y1 !== undefined) cmd.y1 = fontAscender - cmd.y1;
-                    if (cmd.y2 !== undefined) cmd.y2 = fontAscender - cmd.y2;
-                });
-
-                const glyph = new opentype.Glyph({
-                    name: char,
-                    unicode: parseInt(char, 10),
-                    advanceWidth: 650,
-                    path: path
-                });
-                glyphs.push(glyph);
-            });
-
-            const font = new opentype.Font({
-                familyName: conlangName || 'MyConlang',
-                styleName: 'Regular',
-                unitsPerEm: 1000,
-                ascender: 800,
-                descender: -200,
-                glyphs: glyphs
-            });
-
-            font.download(`${conlangName || 'MyConlang'}_Syllabary.otf`);
-        } catch (err) {
-            console.error("Font generation error:", err);
-            alert("Failed to generate custom font from Syllabary.");
-        }
+        generateAndDownload();
     };
 
     const handleWipeWorkspace = () => {
@@ -330,16 +287,7 @@ export default function SystemTab() {
                 <div className='font-status'>
                     <p>{customFont
                         ? "✅ Custom font is currently active!"
-                        : Object.keys(customGlyphs).length > 0
-                            ? `✅ You have ${Object.keys(customGlyphs).length} custom glyphs ready to export!`
-                            : "❌ No custom font uploaded."}</p>
-                </div>
-                <div className='export-font-box'>
-                    <p>Export your custom symbols as a real font file to use on your OS, Word, Photoshop, etc.</p>
-                    <Button variant='cancel' onClick={handleDownloadFont}>
-                        <span> Download Custom Font (.ttf)
-                        </span>
-                    </Button>
+                        : "❌ No custom font uploaded."}</p>
                 </div>
             </Card>
             <Card>

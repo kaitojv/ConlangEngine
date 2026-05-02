@@ -60,3 +60,39 @@
     color: var(--tx2);
     cursor: pointer;
 }
+
+.config-content-wrapper {
+    margin-top: 20px;
+}
+
+.sg-textarea-lore {
+    min-height: 120px;
+    resize: vertical;
+    padding-top: 12px;
+}
+
+.settings-section-wrapper {
+    margin-top: 15px;
+}
+
+.settings-label-block {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.settings-select-full {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid var(--bd);
+    background-color: var(--bg);
+    color: var(--tx);
+    margin-bottom: 15px;
+}
+
+.settings-description {
+    font-size: 0.9rem;
+    color: var(--tx2);
+    margin-bottom: 20px;
+    line-height: 1.5;
+}

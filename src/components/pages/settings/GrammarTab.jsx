@@ -24,8 +24,7 @@ export default function GrammarTab(){
             <Card>
                 <h2 className="flex sg-title"><TextInitial /> Grammatical Rules & Inflections</h2>
                 
-                <Infobox>
-                    <b>Morphology &amp; Inflection Guide:</b><br />
+                <Infobox title="Morphology & Inflection Guide">
                     • <b>Prefixes &amp; Suffixes:</b> Use a hyphen to indicate where the root connects. <i>Prefix:</i> <code>ir-</code> | <i>Suffix:</i> <code>-s</code>.<br />
                     • <b>Infixes:</b> Use <code>-affix-@position</code>. Example: <code>-ma-@V</code> (inserts after the first vowel).<br />
                     • <b>Templatic Roots:</b> For triconsonantal roots, use Regex with the <code>=&gt;</code> operator (e.g., <code>(.)(.)(.) =&gt; $1a$2a$3</code>).<br />
@@ -45,8 +44,7 @@ export default function GrammarTab(){
             <Card>
                 <h2 className="flex sg-title"><TextAlignStart /> Syntax & Word Order</h2>
                 
-                <Infobox>
-                    <b>Syntax &amp; Analyzer Guide:</b><br />
+                <Infobox title="Syntax & Analyzer Guide">
                     • <b>Verb Base Marker:</b> Define how your verbs typically end (e.g., <i>-ar</i> or <i>-er</i>). The Engine will use this to warn you if you create a verb that does not match this ending, helping you maintain consistency.<br />
                     • <b>Clitics:</b> List particles that attach to words but function independently in syntax (like English <i>'s</i> or <i>'ll</i>), separated by commas. The Analyzer will detach them behind the scenes to parse the sentence structure correctly.
                 </Infobox>

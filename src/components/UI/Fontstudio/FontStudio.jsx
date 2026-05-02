@@ -2,9 +2,9 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
-
-//'
-
+import { Undo2, Trash2, Save } from 'lucide-react';
+import Button from '../Buttons/Buttons.jsx';
+import './fontStudio.css';
 
 export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
     const canvasRef = useRef(null);
@@ -13,7 +13,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
     const [currentStroke, setCurrentStroke] = useState([]);
     const [brushSize, setBrushSize] = useState(5);
 
-    const { customGlyphs, puaCounter, addCustomGlyph, incrementPuaCounter } = useConfigStore();
+    const { customGlyphs, puaCounter, addCustomGlyph, incrementPuaCounter, syllabaryMap } = useConfigStore();
 
     // Redraw the canvas whenever strokes change (for Undo support)
     useEffect(() => {
@@ -97,7 +97,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
         const updatedGlyphDb = { ...customGlyphs, [charCode]: strokes };
         
         // 2. Compile the font
-        const base64Font = await compileFont(updatedGlyphDb);
+        const base64Font = await compileFont(updatedGlyphDb, syllabaryMap);
         
         // 3. Save everything to Zustand
         if (base64Font) {
@@ -110,21 +110,21 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-            <div style={{ textAlign: 'center' }}>
-                <h3 style={{ margin: 0, color: 'var(--tx)' }}>Drawing: <span className="custom-font-text">{targetLabel}</span></h3>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--tx2)' }}>Draw your custom ideogram below.</p>
+        <div className="fs-container">
+            <div className="fs-header">
+                <h3 className="fs-title">Drawing: <span className="custom-font-text">{targetLabel}</span></h3>
+                <p className="fs-subtitle">Draw your custom ideogram below.</p>
             </div>
 
-            <div style={{ position: 'relative', border: '2px solid var(--bd)', borderRadius: '8px', backgroundColor: 'var(--s1)', overflow: 'hidden' }}>
+            <div className="fs-canvas-wrapper">
                 {/* Visual Blueprint Background Lines */}
-                <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', backgroundImage: 'linear-gradient(var(--bd) 1px, transparent 1px), linear-gradient(90deg, var(--bd) 1px, transparent 1px)', backgroundSize: '20px 20px', opacity: 0.5 }}></div>
+                <div className="fs-canvas-grid"></div>
                 
                 <canvas
                     ref={canvasRef}
                     width={300}
                     height={300}
-                    style={{ display: 'block', touchAction: 'none' }}
+                    className="fs-canvas"
                     onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
@@ -132,26 +132,32 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
                 />
             </div>
 
-            <div style={{ display: 'flex', gap: '8px', width: '300px', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--tx2)' }}>Brush:</span>
+            <div className="fs-controls">
+                <div className="fs-brush-control">
+                    <span className="fs-brush-label">Brush:</span>
                     <input 
                         type="range" 
                         min="2" max="15" 
                         value={brushSize} 
                         onChange={(e) => setBrushSize(parseInt(e.target.value))} 
-                        style={{ width: '80px' }}
+                        className="fs-brush-slider"
                     />
                 </div>
-                <div>
-                    <button onClick={handleUndo} style={{ padding: '6px 12px', background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: '4px', cursor: 'pointer', marginRight: '4px' }}>↩️ Undo</button>
-                    <button onClick={handleClear} style={{ padding: '6px 12px', background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: '4px', cursor: 'pointer', color: 'var(--err)' }}>🗑️ Clear</button>
+                <div className="fs-button-group">
+                    <Button variant="default" onClick={handleUndo} className="fs-tool-btn">
+                        <Undo2 size={16} /> Undo
+                    </Button>
+                    <Button variant="cancel" onClick={handleClear} className="fs-tool-btn">
+                        <Trash2 size={16} /> Clear
+                    </Button>
                 </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '8px' }}>
-                <button onClick={onCancel} style={{ flex: 1, padding: '12px', background: 'transparent', border: '1px solid var(--bd)', color: 'var(--tx2)', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
-                <button onClick={handleSave} style={{ flex: 1, padding: '12px', background: 'var(--acc)', border: 'none', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>💾 Save Glyph</button>
+            <div className="fs-action-btns">
+                <Button variant="cancel" className="fs-btn-full" onClick={onCancel}>Cancel</Button>
+                <Button variant="edit" className="fs-btn-full fs-btn-save" onClick={handleSave}>
+                    <Save size={18} /> Save Glyph
+                </Button>
             </div>
         </div>
     );

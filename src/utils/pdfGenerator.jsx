@@ -1,5 +1,56 @@
-// We keep this massive HTML template here so it doesn't clutter up our beautiful React components!
+// Construct the HTML layout for the document
 export const generateConlangPDF = (config, lexicon) => {
+    // --- Transliteration Helper (Synced with useTransliterator) ---
+    const transliterate = (word) => {
+        if (!word) return "";
+        let cleanWord = word.replace(/\*/g, '').toLowerCase();
+        const { phonologyTypes, syllabaryMap = {}, syllabificationAlgorithm = 'ltr' } = config;
+
+        if (phonologyTypes === 'syllabic' || phonologyTypes === 'featural_block') {
+            const syllables = Object.keys(syllabaryMap).sort((a, b) => b.length - a.length);
+            const blocks = cleanWord.split('.');
+            let finalOut = "";
+
+            blocks.forEach(block => {
+                let out = "";
+                if (syllabificationAlgorithm === 'rtl') {
+                    let i = block.length;
+                    while (i > 0) {
+                        let match = null;
+                        for (let syl of syllables) {
+                            if (i - syl.length >= 0 && block.substring(i - syl.length, i) === syl && syllabaryMap[syl]) {
+                                match = syl; break;
+                            }
+                        }
+                        if (match) { out = syllabaryMap[match] + out; i -= match.length; } 
+                        else { out = block[i - 1] + out; i--; }
+                    }
+                } else {
+                    let i = 0;
+                    while (i < block.length) {
+                        let match = null;
+                        for (let syl of syllables) {
+                            if (block.startsWith(syl, i) && syllabaryMap[syl]) {
+                                match = syl; break;
+                            }
+                        }
+                        if (match) { out += syllabaryMap[match]; i += match.length; } 
+                        else { out += block[i]; i++; }
+                    }
+                }
+                finalOut += out;
+            });
+            return finalOut;
+        }
+
+        if (phonologyTypes === 'logographic') {
+            const dictEntry = lexicon.find(e => e.word.replace(/\*/g, '').toLowerCase() === cleanWord);
+            return (dictEntry && dictEntry.ideogram) ? dictEntry.ideogram : cleanWord; 
+        }
+
+        return cleanWord;
+    };
+
     // Pop open a new window for the print preview
     const printWindow = window.open('', '', 'height=900,width=800');
     if (!printWindow) {
@@ -13,12 +64,12 @@ export const generateConlangPDF = (config, lexicon) => {
         <head>
             <title>${config.conlangName || 'Conlang'} - Reference Document</title>
             <style>
-                ${config.customFontBase64 ? `
+                ${(config.customFont || config.customFontBase64) ? `
                 @font-face {
-                    font-family: 'ConlangCustomFont';
-                    src: url('${config.customFontBase64}') format('truetype');
+                    font-family: 'ConlangFont';
+                    src: url('${(config.customFont || config.customFontBase64).replace('charset=utf-8;', '')}') format('truetype');
                 }
-                .custom-font { font-family: 'ConlangCustomFont', sans-serif; }
+                .custom-font { font-family: 'ConlangFont', sans-serif !important; }
                 ` : ''}
                 body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; padding: 20px; }
                 h1 { color: #111; text-align: center; border-bottom: 2px solid #222; padding-bottom: 10px; margin-bottom: 5px; }
@@ -106,7 +157,8 @@ export const generateConlangPDF = (config, lexicon) => {
                     ${lexicon.map(w => `
                         <tr>
                             <td>
-                                <span class="custom-font" style="font-size: 1.1em;"><strong>${w.word.replace(/\*/g, '')}</strong></span>
+                                <span class="custom-font" style="font-size: 1.1em;"><strong>${transliterate(w.word)}</strong></span>
+                                ${config.phonologyTypes !== 'alphabetic' ? `<br/><small style="color: #666;">[${w.word.replace(/\*/g, '')}]</small>` : ''}
                                 ${w.ideogram ? `<br/><span style="font-size: 1.4em;" class="custom-font">${w.ideogram}</span>` : ''}
                             </td>
                             <td>${w.ipa ? `/${w.ipa}/` : ''}</td>

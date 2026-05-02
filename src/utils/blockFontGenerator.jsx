@@ -29,9 +29,13 @@ export const blockLayoutMatrices = {
         { scale: 0.45, tx: 82.5, ty: 10 },
         { scale: 0.45, tx: 82.5, ty: 155 }
     ],
-    '1inside1outside': [
+    '1outside1inside': [
         { scale: 0.9, tx: 15, ty: 15 },
         { scale: 0.35, tx: 97.5, ty: 97.5 }
+    ],
+    '1inside1outside': [
+        { scale: 0.35, tx: 97.5, ty: 97.5 },
+        { scale: 0.9, tx: 15, ty: 15 }
     ],
     '2x2grid': [
         { scale: 0.45, tx: 10, ty: 10 },
@@ -64,7 +68,7 @@ const generateCombinations = (lists, prefix = []) => {
 };
 
 export const generateBlockFontData = async (config) => {
-    const { consonants, vowels, otherPhonemes, blockSettings, blockTemplates, featuralComponents, customGlyphs, puaCounter } = config;
+    const { consonants, vowels, otherPhonemes, blockSettings, blockTemplates, featuralComponents, customGlyphs, puaCounter = 0xE000 } = config;
     
     if (!featuralComponents || Object.keys(featuralComponents).length === 0) {
         throw new Error("You must draw at least some base characters first!");
@@ -169,7 +173,15 @@ export const generateBlockFontData = async (config) => {
         }
     }
 
-    const base64Font = await compileFont(compilerGlyphs);
+    // 3. Add base featural components to the font (mapped to Latin characters)
+    Object.entries(featuralComponents).forEach(([char, strokes]) => {
+        if (char.length === 1) {
+            const charCode = char.charCodeAt(0);
+            compilerGlyphs[charCode] = strokes;
+        }
+    });
+
+    const base64Font = await compileFont(compilerGlyphs, newSyllabaryMap);
 
     return {
         syllabaryMap: newSyllabaryMap,

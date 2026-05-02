@@ -314,7 +314,7 @@ const FAQ = () => (
     </div>
 );
 
-// The Contact section tells users how to reach out for support or feedback
+// Community & Contact
 const Contact = () => (
     <div className="help-section">
         <h3 className="help-section-title"><Mail className="help-icon" /> Contact & Community</h3>
@@ -327,6 +327,46 @@ const Contact = () => (
     </div>
 );
 
+// Global Hotkeys Guide
+const Hotkeys = () => (
+    <div className="help-section">
+        <h3 className="help-section-title"><Sparkles className="help-icon" /> Keyboard Shortcuts</h3>
+        <p className="help-section-subtitle">Navigate ConlangEngine at lightning speed with these global hotkeys.</p>
+        
+        <div className="hotkeys-grid">
+            <div className="hotkey-item">
+                <kbd className="hotkey-kbd">Alt</kbd> + <kbd className="hotkey-kbd">D</kbd>
+                <span className="hotkey-desc">Open Dictionary</span>
+            </div>
+            <div className="hotkey-item">
+                <kbd className="hotkey-kbd">Alt</kbd> + <kbd className="hotkey-kbd">A</kbd>
+                <span className="hotkey-desc">Create New Word</span>
+            </div>
+            <div className="hotkey-item">
+                <kbd className="hotkey-kbd">Alt</kbd> + <kbd className="hotkey-kbd">G</kbd>
+                <span className="hotkey-desc">Word Generator</span>
+            </div>
+            <div className="hotkey-item">
+                <kbd className="hotkey-kbd">Alt</kbd> + <kbd className="hotkey-kbd">H</kbd>
+                <span className="hotkey-desc">Return Home</span>
+            </div>
+            <div className="hotkey-item">
+                <kbd className="hotkey-kbd">Alt</kbd> + <kbd className="hotkey-kbd">S</kbd>
+                <span className="hotkey-desc">Quick Settings</span>
+            </div>
+            <div className="hotkey-item">
+                <kbd className="hotkey-kbd">Ctrl</kbd> + <kbd className="hotkey-kbd">S</kbd>
+                <span className="hotkey-desc">Save / Download Backup</span>
+            </div>
+        </div>
+
+        <div className="walkthrough-tip" style={{ marginTop: '30px' }}>
+            <Lightbulb size={14} />
+            <span>Note: On macOS, use the <kbd className="hotkey-kbd">Option</kbd> key instead of <kbd className="hotkey-kbd">Alt</kbd>.</span>
+        </div>
+    </div>
+);
+
 export default function HelpTab() {
     // We use this state to remember which tab the user is currently looking at
     const [activeTab, setActiveTab] = useState('about');
@@ -336,6 +376,7 @@ export default function HelpTab() {
         switch (activeTab) {
             case 'about': return <About />;
             case 'how-to-use': return <HowToUse />;
+            case 'hotkeys': return <Hotkeys />;
             case 'privacy': return <Privacy />;
             case 'faq': return <FAQ />;
             case 'contact': return <Contact />;
@@ -360,6 +401,12 @@ export default function HelpTab() {
                         className={`help-nav-btn ${activeTab === 'how-to-use' ? 'active' : ''}`}
                     >
                         <BookOpen size={18} /> Build Guide
+                    </Button>
+                    <Button 
+                        onClick={() => setActiveTab('hotkeys')} 
+                        className={`help-nav-btn ${activeTab === 'hotkeys' ? 'active' : ''}`}
+                    >
+                        <Sparkles size={18} /> Hotkeys
                     </Button>
                     <Button 
                         onClick={() => setActiveTab('privacy')} 

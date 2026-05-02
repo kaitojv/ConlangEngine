@@ -21,6 +21,15 @@
     margin-top: 0;
 }
 
+.btn-icon {
+    padding: 8px;
+    aspect-ratio: 1 / 1;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    margin-top: 0;
+}
+
 /* Click effects */
 .btn-base:active {
     transform: scale(0.95);
@@ -65,10 +74,10 @@
 }
 
 .btn-ipa {
-    background: var(--ok);
+    background: var(--acc);
     color: #fff;
 }
-.btn-ipa:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3); }
+.btn-ipa:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 4px 12px color-mix(in srgb, var(--acc) 30%, transparent); }
 
 .btn-error {
     background-color: var(--err);
@@ -84,8 +93,31 @@
     background: var(--acc2);
     color: #fff;
 }
+
 .btn-import:hover {
     filter: brightness(1.1);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-toggle {
+    background: var(--s2);
+    color: var(--tx2);
+    border: 1px solid var(--bd);
+}
+
+.btn-toggle:hover {
+    background: var(--s3);
+    color: var(--tx);
+}
+
+.btn-toggle-active {
+    background: var(--acc);
+    color: white;
+    box-shadow: 0 4px 10px color-mix(in srgb, var(--acc) 30%, transparent);
+}
+
+.btn-toggle-active:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px);
 }

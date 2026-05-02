@@ -94,3 +94,84 @@
     font-size: 0.7rem;
     color: var(--tx2);
 }
+
+.bm-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.bm-header-title {
+    margin: 0;
+    font-weight: 800;
+}
+
+.bm-template-card {
+    padding: 15px;
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.bm-template-title {
+    margin-bottom: 15px;
+    color: var(--tx);
+}
+
+.bm-template-remove {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+}
+
+.bm-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.bm-icon-inline {
+    display: inline;
+    margin-bottom: -2px;
+    margin-right: 8px;
+}
+
+.bm-slot-section {
+    margin-top: 20px;
+}
+
+.bm-slot-section h5 {
+    margin-bottom: 10px;
+}
+
+.bm-select-small {
+    width: 100px;
+    font-size: 0.8rem;
+    padding: 4px;
+}
+
+.bm-p-margin {
+    margin-bottom: 15px;
+}
+
+.bm-svg-preview {
+    stroke: var(--tx);
+    fill: none;
+    stroke-width: 10px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.bm-compile-section {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--bd);
+}
+
+.bm-compile-help {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    color: var(--tx2);
+}

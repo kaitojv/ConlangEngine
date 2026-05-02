@@ -41,7 +41,7 @@ export default function Settings() {
                     ))}
                 </div>
 
-                <div className="config-content" style={{ marginTop: '20px' }}>
+                <div className="config-content config-content-wrapper">
                 {activeTab === 'general' && (
                     <SettingsGeneral />
                 )}
