@@ -7,7 +7,6 @@ import { Palette, CaseLower, Database } from 'lucide-react';
 import { useConfigStore, INITIAL_CONFIG } from '../../../store/useConfigStore.jsx';
 import { useProjectStore } from '../../../store/useProjectStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
-import { compileFont } from '../../../utils/fontCompiler.jsx';
 import opentype from 'opentype.js';
 import { DARK_THEMES, LIGHT_THEMES } from '../../../utils/themePresets.js';
 import { Info, User, Type } from 'lucide-react';
@@ -23,7 +22,6 @@ export default function SystemTab() {
     const customFontBase64 = useConfigStore((state) => state.customFontBase64);
     const customFont = useConfigStore((state) => state.customFont);
     const customGlyphs = useConfigStore((state) => state.customGlyphs) || {};
-    const syllabaryMap = useConfigStore((state) => state.syllabaryMap) || {};
     const setFullConfig = useConfigStore((state) => state.setFullConfig);
     const updateConfig = useConfigStore((state) => state.updateConfig);
     const setLexicon = useLexiconStore((state) => state.setLexicon);
@@ -90,46 +88,7 @@ export default function SystemTab() {
         }
     };
 
-    const handleDownloadFont = () => {
-        const hasCustomGlyphs = Object.keys(customGlyphs).length > 0;
-        const fontToDownload = customFont || customFontBase64;
 
-        if (!fontToDownload && !hasCustomGlyphs) {
-            alert("No custom font to download. Upload a font or draw characters in the Syllabary first.");
-            return;
-        }
-
-        if (fontToDownload) {
-            // Download the uploaded or compiled font
-            const a = document.createElement('a');
-            a.href = fontToDownload;
-            a.download = `${conlangName || 'MyConlang'}_CustomFont.ttf`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            return;
-        }
-
-        // Generate and download a font from drawn custom glyphs (Fallback if not compiled yet)
-        const generateAndDownload = async () => {
-            try {
-                const base64Font = await compileFont(customGlyphs, syllabaryMap);
-                if (!base64Font) throw new Error("Compiler returned null");
-
-                const a = document.createElement('a');
-                a.href = base64Font;
-                a.download = `${conlangName || 'MyConlang'}_Syllabary.ttf`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-            } catch (err) {
-                console.error("Font generation error:", err);
-                alert("Failed to generate custom font from Syllabary.");
-            }
-        };
-
-        generateAndDownload();
-    };
 
     const handleWipeWorkspace = () => {
         const isConfirmed = window.confirm("Are you ABSOLUTELY sure you want to delete your current local project? This will permanently delete all your lexicon, grammar rules, and settings.");
@@ -287,8 +246,11 @@ export default function SystemTab() {
                 <div className='font-status'>
                     <p>{customFont
                         ? "✅ Custom font is currently active!"
-                        : "❌ No custom font uploaded."}</p>
+                        : Object.keys(customGlyphs).length > 0
+                            ? `✅ You have ${Object.keys(customGlyphs).length} custom glyphs ready to export!`
+                            : "❌ No custom font uploaded."}</p>
                 </div>
+
             </Card>
             <Card>
                 <h2 className='flex sg-title'><Database /> Legacy Importer</h2>

@@ -8,6 +8,7 @@ export default function Button({ variant = 'save', children, className = '', ...
     edit: 'edit',
     cancel: 'cancel',
     ipa: 'ipa',
+    listen: 'listen',
     error: 'error',
     import: 'import',
     toggle: 'toggle',

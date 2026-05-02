@@ -13,10 +13,12 @@ import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
 import { generateConlangPDF } from '../../../utils/pdfGenerator.jsx';
 import { sanitizeBackup } from '../../../utils/schemaValidator.jsx';
+import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 
 export default function Header({ openMenu }) {
     const navigate = useNavigate();
     const fileInputRef = useRef(null);
+    const { transliterate } = useTransliterator();
     
     const [session, setSession] = useState(null);
     const [isLive, setIsLive] = useState(false);
@@ -124,7 +126,14 @@ export default function Header({ openMenu }) {
     const handleGeneratePDF = () => {
         const config = useConfigStore.getState();
         const lexicon = useLexiconStore.getState().lexicon || [];
-        generateConlangPDF(config, lexicon);
+        
+        // Transliterate lexicon for PDF to ensure custom scripts appear
+        const transliteratedLexicon = lexicon.map(w => ({
+            ...w,
+            displayWord: transliterate(w.word.replace(/\*/g, ''), lexicon)
+        }));
+
+        generateConlangPDF(config, transliteratedLexicon);
     };
 
     return (

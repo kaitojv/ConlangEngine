@@ -79,17 +79,20 @@
     font-weight: bold;
 }
 
-.fs-undo-btn, .fs-clear-btn {
-    display: none;
-}
-
-.fs-button-group {
-    display: flex;
-    gap: 8px;
-}
-
-.fs-tool-btn {
+.fs-undo-btn {
     padding: 6px 12px;
-    height: 36px;
-    margin-top: 0;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 4px;
+}
+
+.fs-clear-btn {
+    padding: 6px 12px;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--err);
 }

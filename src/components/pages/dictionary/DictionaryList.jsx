@@ -291,7 +291,7 @@ export default function DictionaryList() {
 
                             <div className="entry-actions">
                                 <Button 
-                                    variant="ipa" 
+                                    variant="listen" 
                                     onClick={() => handleListen(entry.ipa || safeWord)}
                                 >
                                     <Volume2 size={14} /> Listen

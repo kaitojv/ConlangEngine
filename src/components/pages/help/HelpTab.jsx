@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Info, BookOpen, HelpCircle, Mail, Shield, ChevronRight, Lightbulb, Sparkles, PenTool, BookA, Settings2, Wand2, BrainCircuit, Globe, Lock, Database, Eye, Download } from 'lucide-react';
+import { Info, BookOpen, HelpCircle, Mail, Shield, ChevronRight, Lightbulb, Sparkles, PenTool, BookA, Settings2, Wand2, BrainCircuit, Globe, Lock, Database, Eye, Download, Keyboard } from 'lucide-react';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import './helptab.css';
 
@@ -314,7 +314,41 @@ const FAQ = () => (
     </div>
 );
 
-// Community & Contact
+// Keyboard Shortcuts section
+const Shortcuts = () => (
+    <div className="help-section">
+        <h3 className="help-section-title"><Keyboard className="help-icon" /> Keyboard Shortcuts</h3>
+        <p>Speed up your workflow with these global hotkeys. These work from anywhere in the app (unless you are typing in an input field).</p>
+        <div className="shortcuts-grid">
+            <div className="shortcut-item">
+                <span className="shortcut-key">Alt + H</span>
+                <span className="shortcut-desc">Go to Home</span>
+            </div>
+            <div className="shortcut-item">
+                <span className="shortcut-key">Alt + D</span>
+                <span className="shortcut-desc">Open Dictionary</span>
+            </div>
+            <div className="shortcut-item">
+                <span className="shortcut-key">Alt + C</span>
+                <span className="shortcut-desc">Create New Word</span>
+            </div>
+            <div className="shortcut-item">
+                <span className="shortcut-key">Alt + G</span>
+                <span className="shortcut-desc">Open Generator</span>
+            </div>
+            <div className="shortcut-item">
+                <span className="shortcut-key">Alt + A</span>
+                <span className="shortcut-desc">Open Text Analyzer</span>
+            </div>
+            <div className="shortcut-item">
+                <span className="shortcut-key">Alt + S</span>
+                <span className="shortcut-desc">Open Settings</span>
+            </div>
+        </div>
+    </div>
+);
+
+// The Contact section tells users how to reach out for support or feedback
 const Contact = () => (
     <div className="help-section">
         <h3 className="help-section-title"><Mail className="help-icon" /> Contact & Community</h3>
@@ -327,46 +361,6 @@ const Contact = () => (
     </div>
 );
 
-// Global Hotkeys Guide
-const Hotkeys = () => (
-    <div className="help-section">
-        <h3 className="help-section-title"><Sparkles className="help-icon" /> Keyboard Shortcuts</h3>
-        <p className="help-section-subtitle">Navigate ConlangEngine at lightning speed with these global hotkeys.</p>
-        
-        <div className="hotkeys-grid">
-            <div className="hotkey-item">
-                <kbd className="hotkey-kbd">Alt</kbd> + <kbd className="hotkey-kbd">D</kbd>
-                <span className="hotkey-desc">Open Dictionary</span>
-            </div>
-            <div className="hotkey-item">
-                <kbd className="hotkey-kbd">Alt</kbd> + <kbd className="hotkey-kbd">A</kbd>
-                <span className="hotkey-desc">Create New Word</span>
-            </div>
-            <div className="hotkey-item">
-                <kbd className="hotkey-kbd">Alt</kbd> + <kbd className="hotkey-kbd">G</kbd>
-                <span className="hotkey-desc">Word Generator</span>
-            </div>
-            <div className="hotkey-item">
-                <kbd className="hotkey-kbd">Alt</kbd> + <kbd className="hotkey-kbd">H</kbd>
-                <span className="hotkey-desc">Return Home</span>
-            </div>
-            <div className="hotkey-item">
-                <kbd className="hotkey-kbd">Alt</kbd> + <kbd className="hotkey-kbd">S</kbd>
-                <span className="hotkey-desc">Quick Settings</span>
-            </div>
-            <div className="hotkey-item">
-                <kbd className="hotkey-kbd">Ctrl</kbd> + <kbd className="hotkey-kbd">S</kbd>
-                <span className="hotkey-desc">Save / Download Backup</span>
-            </div>
-        </div>
-
-        <div className="walkthrough-tip" style={{ marginTop: '30px' }}>
-            <Lightbulb size={14} />
-            <span>Note: On macOS, use the <kbd className="hotkey-kbd">Option</kbd> key instead of <kbd className="hotkey-kbd">Alt</kbd>.</span>
-        </div>
-    </div>
-);
-
 export default function HelpTab() {
     // We use this state to remember which tab the user is currently looking at
     const [activeTab, setActiveTab] = useState('about');
@@ -376,9 +370,9 @@ export default function HelpTab() {
         switch (activeTab) {
             case 'about': return <About />;
             case 'how-to-use': return <HowToUse />;
-            case 'hotkeys': return <Hotkeys />;
             case 'privacy': return <Privacy />;
             case 'faq': return <FAQ />;
+            case 'shortcuts': return <Shortcuts />;
             case 'contact': return <Contact />;
             default: return <About />;
         }
@@ -403,12 +397,6 @@ export default function HelpTab() {
                         <BookOpen size={18} /> Build Guide
                     </Button>
                     <Button 
-                        onClick={() => setActiveTab('hotkeys')} 
-                        className={`help-nav-btn ${activeTab === 'hotkeys' ? 'active' : ''}`}
-                    >
-                        <Sparkles size={18} /> Hotkeys
-                    </Button>
-                    <Button 
                         onClick={() => setActiveTab('privacy')} 
                         className={`help-nav-btn ${activeTab === 'privacy' ? 'active' : ''}`}
                     >
@@ -419,6 +407,12 @@ export default function HelpTab() {
                         className={`help-nav-btn ${activeTab === 'faq' ? 'active' : ''}`}
                     >
                         <HelpCircle size={18} /> FAQ
+                    </Button>
+                    <Button 
+                        onClick={() => setActiveTab('shortcuts')} 
+                        className={`help-nav-btn ${activeTab === 'shortcuts' ? 'active' : ''}`}
+                    >
+                        <Keyboard size={18} /> Shortcuts
                     </Button>
                     <Button 
                         onClick={() => setActiveTab('contact')} 

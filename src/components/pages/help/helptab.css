@@ -423,55 +423,6 @@
    ANIMATIONS
    ========================================= */
 /* Simple fade-in animation so switching tabs feels smooth instead of jarring */
-/* =========================================
-   HOTKEYS — Shortcut Guide
-   ========================================= */
-.hotkeys-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 16px;
-    margin-top: 20px;
-}
-
-.hotkey-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: var(--s1);
-    border: 1px solid var(--bd);
-    padding: 14px 18px;
-    border-radius: 12px;
-    transition: all 0.2s;
-}
-
-.hotkey-item:hover {
-    border-color: var(--acc);
-    background: var(--s2);
-}
-
-.hotkey-kbd {
-    display: inline-block;
-    padding: 4px 10px;
-    font-size: 0.85rem;
-    font-family: 'Inter', sans-serif;
-    font-weight: 700;
-    line-height: 1;
-    color: var(--tx);
-    background: var(--s3);
-    border: 1px solid var(--bd);
-    border-bottom: 3px solid var(--bd);
-    border-radius: 6px;
-    min-width: 32px;
-    text-align: center;
-    box-shadow: 0 1px 0 rgba(0,0,0,0.2);
-}
-
-.hotkey-desc {
-    font-size: 0.95rem;
-    color: var(--tx2);
-    margin-left: auto;
-}
-
 @keyframes fade-in {
     from {
         opacity: 0;
@@ -486,6 +437,45 @@
 /* =========================================
    RESPONSIVE
    ========================================= */
+/* =========================================
+   SHORTCUTS — Keyboard Grid
+   ========================================= */
+.shortcuts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.shortcut-item {
+    background: var(--s1);
+    border: 1px solid var(--bd);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    text-align: center;
+}
+
+.shortcut-key {
+    background: var(--s3);
+    color: var(--tx);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-family: 'Inter', monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
+    border: 1px solid var(--bd);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.shortcut-desc {
+    color: var(--tx2);
+    font-size: 0.85rem;
+}
+
 @media (max-width: 640px) {
     .help-container {
         padding: 20px 12px;

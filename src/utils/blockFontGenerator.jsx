@@ -68,7 +68,7 @@ const generateCombinations = (lists, prefix = []) => {
 };
 
 export const generateBlockFontData = async (config) => {
-    const { consonants, vowels, otherPhonemes, blockSettings, blockTemplates, featuralComponents, customGlyphs, puaCounter = 0xE000 } = config;
+    const { consonants, vowels, otherPhonemes, blockSettings, blockTemplates, featuralComponents, customGlyphs, puaCounter } = config;
     
     if (!featuralComponents || Object.keys(featuralComponents).length === 0) {
         throw new Error("You must draw at least some base characters first!");
@@ -173,15 +173,7 @@ export const generateBlockFontData = async (config) => {
         }
     }
 
-    // 3. Add base featural components to the font (mapped to Latin characters)
-    Object.entries(featuralComponents).forEach(([char, strokes]) => {
-        if (char.length === 1) {
-            const charCode = char.charCodeAt(0);
-            compilerGlyphs[charCode] = strokes;
-        }
-    });
-
-    const base64Font = await compileFont(compilerGlyphs, newSyllabaryMap);
+    const base64Font = await compileFont(compilerGlyphs);
 
     return {
         syllabaryMap: newSyllabaryMap,

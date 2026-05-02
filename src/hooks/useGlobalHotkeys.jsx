@@ -12,15 +12,14 @@ export function useGlobalHotkeys() {
                 return;
             }
 
-            // Navigation hotkeys (Alt + Key)
-            if (e.altKey && !e.ctrlKey) {
+            if (e.altKey) {
                 switch (e.key.toLowerCase()) {
                     case 'd':
                         e.preventDefault();
                         navigate('/dictionary');
                         toast.success("Opened Dictionary", { id: 'hotkey-nav' });
                         break;
-                    case 'a':
+                    case 'c':
                         e.preventDefault();
                         navigate('/create');
                         toast.success("Opened Create Word", { id: 'hotkey-nav' });
@@ -35,6 +34,11 @@ export function useGlobalHotkeys() {
                         navigate('/');
                         toast.success("Opened Home", { id: 'hotkey-nav' });
                         break;
+                    case 'a':
+                        e.preventDefault();
+                        navigate('/analyzer');
+                        toast.success("Opened Analyzer", { id: 'hotkey-nav' });
+                        break;
                     case 's':
                         e.preventDefault();
                         navigate('/settings');
@@ -43,14 +47,6 @@ export function useGlobalHotkeys() {
                     default:
                         break;
                 }
-            }
-
-            // Action hotkeys (Ctrl + Key)
-            if (e.ctrlKey && e.key.toLowerCase() === 's') {
-                // If there's a global save function, we could trigger it here
-                // For now, let's just show a tip that it's auto-saved or triggers backup
-                // e.preventDefault();
-                // toast.success("Project Saved", { id: 'hotkey-save' });
             }
         };
 

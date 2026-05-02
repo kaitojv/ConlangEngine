@@ -2,8 +2,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
-import { Undo2, Trash2, Save } from 'lucide-react';
 import Button from '../Buttons/Buttons.jsx';
+import { RotateCcw, Trash2 } from 'lucide-react';
 import './fontStudio.css';
 
 export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
@@ -13,7 +13,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
     const [currentStroke, setCurrentStroke] = useState([]);
     const [brushSize, setBrushSize] = useState(5);
 
-    const { customGlyphs, puaCounter, addCustomGlyph, incrementPuaCounter, syllabaryMap } = useConfigStore();
+    const { customGlyphs, puaCounter, addCustomGlyph, incrementPuaCounter } = useConfigStore();
 
     // Redraw the canvas whenever strokes change (for Undo support)
     useEffect(() => {
@@ -97,7 +97,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
         const updatedGlyphDb = { ...customGlyphs, [charCode]: strokes };
         
         // 2. Compile the font
-        const base64Font = await compileFont(updatedGlyphDb, syllabaryMap);
+        const base64Font = await compileFont(updatedGlyphDb);
         
         // 3. Save everything to Zustand
         if (base64Font) {
@@ -143,11 +143,11 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
                         className="fs-brush-slider"
                     />
                 </div>
-                <div className="fs-button-group">
-                    <Button variant="default" onClick={handleUndo} className="fs-tool-btn">
-                        <Undo2 size={16} /> Undo
+                <div className="fs-controls-group">
+                    <Button variant="default" className="btn-sm" onClick={handleUndo}>
+                        <RotateCcw size={16} /> Undo
                     </Button>
-                    <Button variant="cancel" onClick={handleClear} className="fs-tool-btn">
+                    <Button variant="default" className="btn-sm fs-clear-btn" onClick={handleClear}>
                         <Trash2 size={16} /> Clear
                     </Button>
                 </div>
@@ -155,9 +155,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
 
             <div className="fs-action-btns">
                 <Button variant="cancel" className="fs-btn-full" onClick={onCancel}>Cancel</Button>
-                <Button variant="edit" className="fs-btn-full fs-btn-save" onClick={handleSave}>
-                    <Save size={18} /> Save Glyph
-                </Button>
+                <Button variant="edit" className="fs-btn-full fs-btn-save" onClick={handleSave}>💾 Save Glyph</Button>
             </div>
         </div>
     );

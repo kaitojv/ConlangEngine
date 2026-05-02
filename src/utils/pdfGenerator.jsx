@@ -1,131 +1,5 @@
-// Construct the HTML layout for the document
+// We keep this massive HTML template here so it doesn't clutter up our beautiful React components!
 export const generateConlangPDF = (config, lexicon) => {
-    // --- Transliteration Helper (Synced with useTransliterator) ---
-    const SCRIPT_MAPS = {
-        runic: {
-            'f': 'ᚠ', 'u': 'ᚢ', 'th': 'ᚦ', 'a': 'ᚨ', 'r': 'ᚱ', 'k': 'ᚲ', 'g': 'ᚷ', 'w': 'ᚹ',
-            'h': 'ᚺ', 'n': 'ᚾ', 'i': 'ᛁ', 'j': 'ᛃ', 'ei': 'ᛇ', 'p': 'ᛈ', 'z': 'ᛉ', 's': 'ᛊ',
-            't': 'ᛏ', 'b': 'ᛒ', 'e': 'ᛖ', 'm': 'ᛗ', 'l': 'ᛚ', 'ng': 'ᛜ', 'd': 'ᛞ', 'o': 'ᛟ'
-        },
-        cyrillic: {
-            'shch': 'щ', 'sh': 'ш', 'zh': 'ж', 'ch': 'ч', 'ts': 'ц', 'ya': 'я', 'yu': 'ю',
-            'a': 'а', 'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д', 'e': 'е', 'z': 'з', 'i': 'и',
-            'k': 'к', 'l': 'л', 'm': 'м', 'n': 'н', 'o': 'о', 'p': 'п', 'r': 'р', 's': 'с',
-            't': 'т', 'u': 'у', 'f': 'ф', 'h': 'х', 'y': 'ы'
-        },
-        greek: {
-            'th': 'θ', 'ph': 'φ', 'ch': 'χ', 'ps': 'ψ',
-            'a': 'α', 'b': 'β', 'g': 'γ', 'd': 'δ', 'e': 'ε', 'z': 'ζ', 'h': 'η', 'i': 'ι',
-            'k': 'κ', 'l': 'λ', 'm': 'μ', 'n': 'ν', 'x': 'ξ', 'o': 'ο', 'p': 'π', 'r': 'ρ',
-            's': 'σ', 't': 'τ', 'y': 'υ', 'w': 'ω'
-        },
-        georgian: {
-            'ts': 'ც', 'dz': 'ძ', 'ch': 'ჩ', 'j': 'ჯ', 'sh': 'შ', 'zh': 'ჟ', 'gh': 'ღ', 'kh': 'ხ',
-            'ph': 'ფ',
-            'a': 'ა', 'b': 'ბ', 'g': 'გ', 'd': 'დ', 'e': 'ე', 'v': 'ვ', 'z': 'ზ', 't': 'თ',
-            'i': 'ი', 'k': 'კ', 'l': 'ლ', 'm': 'მ', 'n': 'ნ', 'o': 'ო', 'p': 'პ', 'r': 'რ',
-            's': 'ს', 'u': 'უ', 'q': 'ქ', 'h': 'ჰ'
-        }
-    };
-
-    const transliterate = (word) => {
-        if (!word) return "";
-        let cleanWord = word.replace(/\*/g, '').toLowerCase();
-        const { phonologyTypes, alphabeticScript, syllabaryMap = {}, syllabificationAlgorithm = 'ltr', consonants = '', vowels = '' } = config;
-
-        if (phonologyTypes === 'syllabic' || phonologyTypes === 'featural_block') {
-            const syllables = Object.keys(syllabaryMap).sort((a, b) => b.length - a.length);
-            const blocks = cleanWord.split('.');
-            let finalOut = "";
-
-            blocks.forEach(block => {
-                let out = "";
-                if (syllabificationAlgorithm === 'rtl') {
-                    let i = block.length;
-                    while (i > 0) {
-                        let match = null;
-                        for (let syl of syllables) {
-                            if (i - syl.length >= 0 && block.substring(i - syl.length, i) === syl && syllabaryMap[syl]) {
-                                match = syl; break;
-                            }
-                        }
-                        if (match) { out = syllabaryMap[match] + out; i -= match.length; } 
-                        else { out = block[i - 1] + out; i--; }
-                    }
-                } else {
-                    let i = 0;
-                    while (i < block.length) {
-                        let match = null;
-                        for (let syl of syllables) {
-                            if (block.startsWith(syl, i) && syllabaryMap[syl]) {
-                                match = syl; break;
-                            }
-                        }
-                        if (match) { out += syllabaryMap[match]; i += match.length; } 
-                        else { out += block[i]; i++; }
-                    }
-                }
-                finalOut += out;
-            });
-            return finalOut;
-        }
-
-        if (phonologyTypes === 'logographic') {
-            const dictEntry = lexicon.find(e => e.word.replace(/\*/g, '').toLowerCase() === cleanWord);
-            return (dictEntry && dictEntry.ideogram) ? dictEntry.ideogram : cleanWord; 
-        }
-
-        // --- Alphabetic Mode (Standard Script + p=P mapping) ---
-        let result = cleanWord;
-        
-        // 1. Script Map (Greek, Runic, etc.)
-        if (alphabeticScript && alphabeticScript !== 'latin') {
-            const scriptMap = SCRIPT_MAPS[alphabeticScript] || {};
-            const sortedKeys = Object.keys(scriptMap).sort((a, b) => b.length - a.length);
-            let out = "";
-            let i = 0;
-            while (i < result.length) {
-                let match = null;
-                for (let key of sortedKeys) {
-                    if (result.startsWith(key, i)) {
-                        match = key; break;
-                    }
-                }
-                if (match) { out += scriptMap[match]; i += match.length; } 
-                else { out += result[i]; i++; }
-            }
-            result = out;
-        }
-
-        // 2. Custom "=" mappings from consonants/vowels settings
-        const allSounds = `${consonants},${vowels}`.split(',');
-        const mapToText = {};
-        allSounds.forEach(sound => {
-            if (sound.includes('=')) {
-                const [base, text] = sound.split('=').map(s => s.trim());
-                if (base && text) mapToText[base.toLowerCase()] = text;
-            }
-        });
-
-        if (Object.keys(mapToText).length > 0) {
-            const sortedEntries = Object.entries(mapToText).sort((a, b) => b[0].length - a[0].length);
-            let out = '';
-            let i = 0;
-            while (i < result.length) {
-                let matched = false;
-                for (const [base, text] of sortedEntries) {
-                    if (result.startsWith(base, i)) {
-                        out += text; i += base.length; matched = true; break;
-                    }
-                }
-                if (!matched) { out += result[i]; i++; }
-            }
-            result = out;
-        }
-
-        return result;
-    };
-
     // Pop open a new window for the print preview
     const printWindow = window.open('', '', 'height=900,width=800');
     if (!printWindow) {
@@ -141,10 +15,10 @@ export const generateConlangPDF = (config, lexicon) => {
             <style>
                 ${(config.customFont || config.customFontBase64) ? `
                 @font-face {
-                    font-family: 'ConlangFont';
-                    src: url('${(config.customFont || config.customFontBase64).replace('charset=utf-8;', '')}') format('truetype');
+                    font-family: 'ConlangCustomFont';
+                    src: url('${config.customFont || config.customFontBase64}') format('truetype');
                 }
-                .custom-font { font-family: 'ConlangFont', sans-serif !important; }
+                .custom-font { font-family: 'ConlangCustomFont', 'Arial', sans-serif; }
                 ` : ''}
                 body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; padding: 20px; }
                 h1 { color: #111; text-align: center; border-bottom: 2px solid #222; padding-bottom: 10px; margin-bottom: 5px; }
@@ -232,8 +106,7 @@ export const generateConlangPDF = (config, lexicon) => {
                     ${lexicon.map(w => `
                         <tr>
                             <td>
-                                <span class="custom-font" style="font-size: 1.1em;"><strong>${transliterate(w.word)}</strong></span>
-                                ${config.phonologyTypes !== 'alphabetic' ? `<br/><small style="color: #666;">[${w.word.replace(/\*/g, '')}]</small>` : ''}
+                                <span class="custom-font" style="font-size: 1.1em;"><strong>${w.displayWord || w.word.replace(/\*/g, '')}</strong></span>
                                 ${w.ideogram ? `<br/><span style="font-size: 1.4em;" class="custom-font">${w.ideogram}</span>` : ''}
                             </td>
                             <td>${w.ipa ? `/${w.ipa}/` : ''}</td>
