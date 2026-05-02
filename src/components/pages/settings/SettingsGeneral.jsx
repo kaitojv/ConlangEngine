@@ -1,9 +1,9 @@
-// src/pages/SettingsGeneral.jsx
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
-import { Lightbulb, WholeWord, Bolt } from 'lucide-react'
+import { Bolt } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function SettingsGeneral() {
     const conlangName = useConfigStore((state) => state.conlangName);
@@ -12,6 +12,34 @@ export default function SettingsGeneral() {
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const alphabeticScript = useConfigStore((state) => state.alphabeticScript);
     const updateConfig = useConfigStore((state) => state.updateConfig);
+
+    const handleTypologyChange = (newType) => {
+        if (newType === phonologyTypes) return;
+
+        toast((t) => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span style={{ fontWeight: 'bold', color: 'var(--err)' }}>⚠️ Warning: Changing Typology</span>
+                <span>Switching modes (e.g., Hangul to Syllabic) may break how your current dictionary words are rendered. We highly recommend <b>saving a backup</b> first.</span>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                    <button 
+                        onClick={() => {
+                            updateConfig({ phonologyTypes: newType });
+                            toast.dismiss(t.id);
+                        }}
+                        style={{ background: 'var(--acc)', color: 'white', border: 'none', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer' }}
+                    >
+                        Change Anyway
+                    </button>
+                    <button 
+                        onClick={() => toast.dismiss(t.id)}
+                        style={{ background: 'var(--s3)', color: 'var(--tx)', border: 'none', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer' }}
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        ), { duration: 6000, id: 'typology-warning' });
+    };
 
     return (        
         
@@ -47,7 +75,7 @@ export default function SettingsGeneral() {
                 <select 
                     className="fi settings-select-full" 
                     value={phonologyTypes}
-                    onChange={(e) => updateConfig({ phonologyTypes: e.target.value })}
+                    onChange={(e) => handleTypologyChange(e.target.value)}
                 >
                     <option value="alphabetic">Alphabetic / Root-based</option>
                     <option value="syllabic">Syllabic (Grid-based)</option>

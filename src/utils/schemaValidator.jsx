@@ -16,7 +16,8 @@ const VALID_CONFIG_KEYS = new Set([
     'colors', 'customGlyphs', 'puaCounter', 'customFontBase64', 'numeralBase', 'sentenceMaps',
     'generatorMarkers',
     'customWordClasses', 'customTags',
-    'otherPhonemes', 'otherPhonemeMapping', 'skipSyllableValidation'
+    'otherPhonemes', 'otherPhonemeMapping', 'skipSyllableValidation',
+    'syllabificationAlgorithm', 'blockTemplates'
 ]);
 
 /**

@@ -121,7 +121,10 @@ export const useConfigStore = create(
         (set) => ({
             ...INITIAL_CONFIG,
 
-            setFullConfig: (newConfig) => set(() => ({ ...INITIAL_CONFIG, ...newConfig })),
+            setFullConfig: (newConfig) => {
+                if (newConfig.customFontBase64) saveFontToDB(newConfig.customFontBase64);
+                set(() => ({ ...INITIAL_CONFIG, ...newConfig }));
+            },
             
             // Cleanup utility to wipe bloated legacy state
             purgeBloatedGlyphs: () => set((state) => {
