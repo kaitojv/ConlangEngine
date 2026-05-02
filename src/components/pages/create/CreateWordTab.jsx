@@ -218,6 +218,29 @@ export default function CreateWordTab() {
             return;
         }
 
+        const currentClasses = wordClass ? wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
+        if (currentClasses.includes('verb') && verbMarker) {
+            const markers = verbMarker.split(',').map(m => m.trim().replace(/^-/, ''));
+            const match = markers.find(m => safeWord.endsWith(m));
+            if (!match) {
+                toast.custom((t) => (
+                    <div style={{ background: 'var(--s4)', color: 'var(--tx)', padding: '15px', borderRadius: '8px', border: '1px solid var(--err)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <strong>⚠️ Verb Marker Missing</strong>
+                        <span>This word is marked as a verb, but it doesn't end with any of your defined verb markers ({verbMarker}).</span>
+                        <p style={{fontSize: '0.9rem', color: 'var(--tx2)'}}>Do you want to save it anyway?</p>
+                        <div style={{display: 'flex', gap: '8px', marginTop: '5px', flexWrap: 'wrap'}}>
+                            <button onClick={() => {
+                                toast.dismiss(t.id);
+                                saveConfirmedWord(safeWord, cleanTrans, processedTags);
+                            }} style={{padding: '5px 10px', background: 'var(--err)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Save Anyway</button>
+                            <button onClick={() => toast.dismiss(t.id)} style={{padding: '5px 10px', background: 'var(--s2)', color: 'var(--tx)', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Cancel</button>
+                        </div>
+                    </div>
+                ), { duration: Infinity });
+                return;
+            }
+        }
+
         saveConfirmedWord(safeWord, cleanTrans, processedTags);
 
         // Also save any selected derivations
@@ -263,12 +286,7 @@ export default function CreateWordTab() {
             if (ruleClasses.includes('all') || currentClasses.some(cc => ruleClasses.includes(cc))) {
                 let base = safeBaseWord;
                 
-                // If it's a verb, we strip the infinitive marker before applying affixes
-                if (currentClasses.includes('verb') && verbMarker) {
-                    const markers = verbMarker.split(',').map(m => m.trim().replace(/^-/, ''));
-                    const match = markers.find(m => base.endsWith(m));
-                    if (match) base = base.slice(0, -match.length);
-                }
+                // Verb markers are no longer stripped, they only act as a validation warning during creation
 
                 const result = applyRuleToWord(base, rule, grammarRules, vowels);
 

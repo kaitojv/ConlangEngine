@@ -41,13 +41,7 @@ export default function EtymologyTab() {
             if (matchedClitic) baseWord = baseWord.slice(0, -matchedClitic.length);
         }
         
-        // If it's a verb, we should also strip the infinitive marker before conjugating it
-        const targetClasses = targetWord.wordClass ? targetWord.wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
-        if (targetClasses.includes('verb') && verbMarker) {
-            const markers = verbMarker.split(',').map(m => m.trim().replace(/^-/, '')).filter(Boolean);
-            const matchedMarker = markers.find(m => baseWord.endsWith(m));
-            if (matchedMarker) baseWord = baseWord.slice(0, -matchedMarker.length);
-        }
+        // Verb markers are no longer stripped, they only act as a validation warning during creation
 
         // Now, find all grammar rules that actually apply to this specific part of speech
         const applicableRules = grammarRules.filter(rule => {

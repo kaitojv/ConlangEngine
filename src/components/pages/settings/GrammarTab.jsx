@@ -47,7 +47,7 @@ export default function GrammarTab(){
                 
                 <Infobox>
                     <b>Syntax &amp; Analyzer Guide:</b><br />
-                    • <b>Verb Base Marker:</b> If your dictionary stores verbs in their infinitive form (e.g., ending in <i>-ar</i> or <i>-er</i>), put that ending here. The Engine will intelligently strip this marker off before applying any conjugations in the Universal Matrix.<br />
+                    • <b>Verb Base Marker:</b> Define how your verbs typically end (e.g., <i>-ar</i> or <i>-er</i>). The Engine will use this to warn you if you create a verb that does not match this ending, helping you maintain consistency.<br />
                     • <b>Clitics:</b> List particles that attach to words but function independently in syntax (like English <i>'s</i> or <i>'ll</i>), separated by commas. The Analyzer will detach them behind the scenes to parse the sentence structure correctly.
                 </Infobox>
                 

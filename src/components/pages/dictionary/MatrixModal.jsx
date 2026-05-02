@@ -42,13 +42,7 @@ export default function MatrixModal({ wordObj }) {
             if (matchedClitic) base = base.slice(0, -matchedClitic.length);
         }
 
-        // If it's a verb, we strip the infinitive marker before applying affixes
-        const liveClasses = liveWord.wordClass ? liveWord.wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
-        if (liveClasses.includes('verb') && verbMarker) {
-            const markers = verbMarker.split(',').map(m => m.trim().replace(/^-/, '')).filter(Boolean);
-            const matchedMarker = markers.find(m => base.endsWith(m));
-            if (matchedMarker) base = base.slice(0, -matchedMarker.length);
-        }
+        // Verb markers are no longer stripped, they only act as a validation warning during creation
 
         return base;
     }, [liveWord, cliticsRules, verbMarker]);
