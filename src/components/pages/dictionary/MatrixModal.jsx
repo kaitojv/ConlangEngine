@@ -3,17 +3,21 @@ import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { applyRuleToWord, getPersonRules } from '@/utils/morphologyEngine.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
-import { Lightbulb, Edit2, Save } from 'lucide-react';
+import { Lightbulb, Edit2, Save, Download } from 'lucide-react';
+import { exportTextAsSVG } from '@/utils/svgExporter.jsx';
 import './matrixmodal.css';
 
 export default function MatrixModal({ wordObj }) {
     // Grab the language settings and dictionary from our global stores
     const grammarRules = useConfigStore((state) => state.grammarRules) || [];
     const vowels = useConfigStore((state) => state.vowels);
+    const consonants = useConfigStore((state) => state.consonants);
+    const otherPhonemes = useConfigStore((state) => state.otherPhonemes);
     const verbMarker = useConfigStore((state) => state.verbMarker);
     const cliticsRules = useConfigStore((state) => state.cliticsRules);
     const personsConfig = useConfigStore((state) => state.personRules); 
     const syntaxOrder = useConfigStore((state) => state.syntaxOrder) || 'SVO';
+    const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
 
     const lexicon = useLexiconStore((state) => state.lexicon);
     const updateWord = useLexiconStore((state) => state.updateWord);
@@ -105,7 +109,7 @@ export default function MatrixModal({ wordObj }) {
     };
 
     const generateInflection = (rule, person) => {
-        let generatedResult = applyRuleToWord(cleanBaseWord, rule, grammarRules, vowels);
+        let generatedResult = applyRuleToWord(cleanBaseWord, rule, grammarRules, vowels, consonants, otherPhonemes);
 
         if (generatedResult && !rule.standalone && person.name !== 'BASE') {
             const useFree = (conjugationMode === 'free' && person.freeForm) || (!person.affix && person.freeForm);
@@ -121,7 +125,7 @@ export default function MatrixModal({ wordObj }) {
                     generatedResult = `${person.freeForm} ${generatedResult}`;
                 }
             } else if (useAffix) {
-                generatedResult = applyRuleToWord(generatedResult, person, grammarRules, vowels);
+                generatedResult = applyRuleToWord(generatedResult, person, grammarRules, vowels, consonants, otherPhonemes);
             }
         }
 
@@ -157,7 +161,7 @@ export default function MatrixModal({ wordObj }) {
                         <>
                             <span className="matrix-base-label">Base Root</span>
                             <div className="matrix-base-display-wrapper">
-                                <div className="matrix-base-word notranslate custom-font-text">
+                                <div className={`matrix-base-word notranslate custom-font-text ${phonologyTypes === 'featural_block' ? 'featural-block-render' : ''}`}>
                                     {transliterate(liveWord.word)}
                                 </div>
                                 {liveWord.ipa && (
@@ -318,28 +322,39 @@ export default function MatrixModal({ wordObj }) {
                                                 />
                                             ) : (
                                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                    <span className={`notranslate matrix-output custom-font-text ${manualValue ? 'overridden' : ''}`}>
+                                                    <span className={`notranslate matrix-output custom-font-text ${manualValue ? 'overridden' : ''} ${phonologyTypes === 'featural_block' ? 'featural-block-render' : ''}`}>
                                                         {finalWordToDisplay ? transliterate(finalWordToDisplay) : <span className="matrix-invalid">Invalid</span>}
                                                     </span>
                                                     {finalWordToDisplay && (
-                                                        <button 
-                                                            className="matrix-quick-save-btn"
-                                                            onClick={() => {
-                                                                setDerivationToSave({ word: finalWordToDisplay, ruleName: rule.name, personName: person.name });
-                                                                setDerivationTranslation('');
-                                                                
-                                                                // Smartly default the target class based on the grammar rule
-                                                                const ruleClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
-                                                                if (ruleClasses.includes('all')) {
-                                                                    setDerivationClass(liveWord.wordClass ? liveWord.wordClass.split(',')[0].trim().toLowerCase() : 'noun');
-                                                                } else {
-                                                                    setDerivationClass(ruleClasses[0]); // Default to the first class this rule applies to
-                                                                }
-                                                            }}
-                                                            title="Save to Lexicon"
-                                                        >
-                                                            +
-                                                        </button>
+                                                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                                            {phonologyTypes !== 'alphabetic' && (
+                                                                <button 
+                                                                    className="matrix-quick-save-btn"
+                                                                    onClick={() => exportTextAsSVG(transliterate(finalWordToDisplay), `${finalWordToDisplay}.svg`)}
+                                                                    title="Download SVG"
+                                                                >
+                                                                    <Download size={14} />
+                                                                </button>
+                                                            )}
+                                                            <button 
+                                                                className="matrix-quick-save-btn"
+                                                                onClick={() => {
+                                                                    setDerivationToSave({ word: finalWordToDisplay, ruleName: rule.name, personName: person.name });
+                                                                    setDerivationTranslation('');
+                                                                    
+                                                                    // Smartly default the target class based on the grammar rule
+                                                                    const ruleClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
+                                                                    if (ruleClasses.includes('all')) {
+                                                                        setDerivationClass(liveWord.wordClass ? liveWord.wordClass.split(',')[0].trim().toLowerCase() : 'noun');
+                                                                    } else {
+                                                                        setDerivationClass(ruleClasses[0]); // Default to the first class this rule applies to
+                                                                    }
+                                                                }}
+                                                                title="Save to Lexicon"
+                                                            >
+                                                                +
+                                                            </button>
+                                                        </div>
                                                     )}
                                                 </div>
                                             )}

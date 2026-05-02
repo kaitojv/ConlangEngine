@@ -8,7 +8,8 @@ import Card from '../../UI/Card/Card.jsx';
 import Modal from '../../UI/Modal/Modal.jsx'
 import MatrixModal from './MatrixModal.jsx';
 import EditWordModal from './EditModal.jsx';
-import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2 } from 'lucide-react';
+import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download } from 'lucide-react';
+import { exportTextAsSVG } from '../../../utils/svgExporter.jsx';
 import toast from 'react-hot-toast';
 import './dictionaryList.css';
 
@@ -239,7 +240,7 @@ export default function DictionaryList() {
                         <Card key={entry.id} className="dictionary-entry">
                             <div className="entry-header">
                                 <div className="entry-words">
-                                    <span className="notranslate entry-main-word custom-font-text">
+                                    <span className={`notranslate entry-main-word custom-font-text ${phonologyTypes === 'featural_block' ? 'featural-block-render' : ''}`}>
                                         {displayWord}
                                     </span>
                                     
@@ -310,6 +311,16 @@ export default function DictionaryList() {
                                 >
                                     <Trash2 size={14} /> Delete
                                 </Button>
+
+                                {phonologyTypes !== 'alphabetic' && (
+                                    <Button 
+                                        variant="default" 
+                                        onClick={() => exportTextAsSVG(displayWord, `${safeWord}.svg`)}
+                                        title="Download SVG"
+                                    >
+                                        <Download size={14} />
+                                    </Button>
+                                )}
 
                                 <div className="action-matrix">
                                     <Button 

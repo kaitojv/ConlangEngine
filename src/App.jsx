@@ -75,8 +75,15 @@ function App(){
   // SEC-3: Allowlist writingDirection to prevent CSS injection
   const VALID_DIRECTIONS = ['ltr', 'rtl', 'vertical-rl', 'vertical-lr'];
   const writingDirection = VALID_DIRECTIONS.includes(rawWritingDirection) ? rawWritingDirection : 'ltr';
+  const projectId = useConfigStore(state => state.projectId);
+  const rehydrateBloat = useConfigStore(state => state.rehydrateBloat);
+  const isRehydrating = useConfigStore(state => state.isRehydrating);
   const purgeBloatedGlyphs = useConfigStore(state => state.purgeBloatedGlyphs);
   
+  React.useEffect(() => {
+      if (projectId) rehydrateBloat();
+  }, [projectId, rehydrateBloat]);
+
   React.useEffect(() => {
       if (purgeBloatedGlyphs) purgeBloatedGlyphs();
   }, [purgeBloatedGlyphs]);
@@ -87,19 +94,6 @@ function App(){
 
   return (
     <>
-    {safeFontBase64 && (
-            <style>
-                {`
-                    @font-face {
-                        font-family: 'ConlangFont';
-                        src: url('${safeFontBase64.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,')}') format('truetype');
-                    }
-                    .custom-font-text {
-                        font-family: 'ConlangFont', sans-serif !important;
-                    }
-                `}
-            </style>
-        )}
 
     {/* Automatically updates writing direction for all conlang text */}
     <style>
@@ -126,6 +120,28 @@ function App(){
       </Suspense>
     ) : (
       <>
+      {isRehydrating && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: 'rgba(11, 15, 25, 0.9)',
+          backdropFilter: 'blur(10px)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          color: 'var(--tx)'
+        }}>
+          <div className="btn-loading" style={{ width: '40px', height: '40px', borderRadius: '50%', border: '3px solid var(--acc)', borderTopColor: 'transparent', animation: 'spin 1s linear infinite' }}></div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          <h2 style={{ marginTop: '20px', fontWeight: '800' }}>Rehydrating Project...</h2>
+          <p style={{ color: 'var(--tx2)', fontSize: '0.9rem' }}>Loading large font and glyph data from your database.</p>
+        </div>
+      )}
 
     <div className="App">
       <Header openMenu={() => setOpenMenu(true)} />

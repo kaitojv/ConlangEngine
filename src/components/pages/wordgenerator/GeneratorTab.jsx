@@ -23,6 +23,8 @@ export default function GeneratorTab() {
     // Pull global state required for the Derivations Preview
     const grammarRules = useConfigStore((state) => state.grammarRules) || [];
     const vowels = useConfigStore((state) => state.vowels);
+    const consonants = useConfigStore((state) => state.consonants);
+    const otherPhonemes = useConfigStore((state) => state.otherPhonemes);
     const verbMarker = useConfigStore((state) => state.verbMarker);
     const cliticsRules = useConfigStore((state) => state.cliticsRules);
     const generatorMarkers = useConfigStore((state) => state.generatorMarkers) || {};
@@ -98,7 +100,7 @@ export default function GeneratorTab() {
         });
 
         return applicableRules.map(rule => {
-            const result = applyRuleToWord(base, rule, grammarRules, vowels);
+            const result = applyRuleToWord(base, rule, grammarRules, vowels, consonants, otherPhonemes);
             return { name: rule.name, result };
         });
     }, [generatedWord, generatedClass, grammarRules, vowels, verbMarker, cliticsRules]);

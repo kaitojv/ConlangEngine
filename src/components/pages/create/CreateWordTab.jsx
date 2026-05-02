@@ -33,13 +33,14 @@ export default function CreateWordTab() {
     const addWord = useLexiconStore((state) => state.addWord);
     const checkDuplicate = useLexiconStore((state) => state.checkDuplicate);
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
-    const { phonologyTypes, grammarRules, vowels, consonants, syllablePattern, verbMarker,
+    const { phonologyTypes, grammarRules, vowels, consonants, otherPhonemes, syllablePattern, verbMarker,
             customWordClasses, customTags, addCustomWordClass, addCustomTag,
             updateConfig } = useConfigStore(useShallow(state => ({
         phonologyTypes: state.phonologyTypes,
         grammarRules: state.grammarRules,
         vowels: state.vowels,
         consonants: state.consonants,
+        otherPhonemes: state.otherPhonemes,
         syllablePattern: state.syllablePattern,
         verbMarker: state.verbMarker,
         customWordClasses: state.customWordClasses || [],
@@ -288,7 +289,7 @@ export default function CreateWordTab() {
                 
                 // Verb markers are no longer stripped, they only act as a validation warning during creation
 
-                const result = applyRuleToWord(base, rule, grammarRules, vowels);
+                const result = applyRuleToWord(base, rule, grammarRules, vowels, consonants, otherPhonemes);
 
                 if (result) {
                     results.push({

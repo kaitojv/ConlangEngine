@@ -22,10 +22,15 @@
 }
 
 .matrix-base-word {
-    font-size: 1.875rem;
-    font-weight: bold;
-    color: var(--acc3);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--acc);
     margin-top: 0.25rem;
+}
+
+.matrix-base-word.featural-block-render {
+    font-size: 3.5rem;
+    font-weight: normal;
 }
 
 .matrix-word-class-badge {
@@ -231,6 +236,11 @@
     font-size: 1.1rem;
     font-weight: bold;
     color: var(--acc2);
+}
+
+.matrix-output.featural-block-render {
+    font-size: 2.2rem;
+    font-weight: normal;
 }
 
 .matrix-output.overridden {

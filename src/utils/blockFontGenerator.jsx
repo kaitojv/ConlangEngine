@@ -2,46 +2,46 @@ import { compileFont } from './fontCompiler.jsx';
 
 export const blockLayoutMatrices = {
     '2top1bottom': [
-        { scale: 0.45, tx: 10, ty: 10 },
-        { scale: 0.45, tx: 155, ty: 10 },
-        { scale: 0.45, tx: 82.5, ty: 155 }
+        { scale: 0.48, tx: 5, ty: 5 },
+        { scale: 0.48, tx: 125, ty: 5 },
+        { scale: 0.48, tx: 65, ty: 125 }
     ],
     '1top2bottom': [
-        { scale: 0.45, tx: 82.5, ty: 10 },
-        { scale: 0.45, tx: 10, ty: 155 },
-        { scale: 0.45, tx: 155, ty: 155 }
+        { scale: 0.48, tx: 65, ty: 5 },
+        { scale: 0.48, tx: 5, ty: 125 },
+        { scale: 0.48, tx: 125, ty: 125 }
     ],
     '1left2right': [
-        { scale: 0.45, tx: 10, ty: 82.5 },
-        { scale: 0.45, tx: 155, ty: 10 },
-        { scale: 0.45, tx: 155, ty: 155 }
+        { scale: 0.48, tx: 5, ty: 65 },
+        { scale: 0.48, tx: 125, ty: 5 },
+        { scale: 0.48, tx: 125, ty: 125 }
     ],
     '3horizontal': [
-        { scale: 0.3, tx: 10, ty: 105 },
-        { scale: 0.3, tx: 105, ty: 105 },
-        { scale: 0.3, tx: 200, ty: 105 }
+        { scale: 0.32, tx: 5, ty: 85 },
+        { scale: 0.32, tx: 85, ty: 85 },
+        { scale: 0.32, tx: 165, ty: 85 }
     ],
     '2horizontal': [
-        { scale: 0.45, tx: 10, ty: 82.5 },
-        { scale: 0.45, tx: 155, ty: 82.5 }
+        { scale: 0.48, tx: 5, ty: 65 },
+        { scale: 0.48, tx: 125, ty: 65 }
     ],
     '2vertical': [
-        { scale: 0.45, tx: 82.5, ty: 10 },
-        { scale: 0.45, tx: 82.5, ty: 155 }
+        { scale: 0.48, tx: 65, ty: 5 },
+        { scale: 0.48, tx: 65, ty: 125 }
     ],
     '1outside1inside': [
-        { scale: 0.9, tx: 15, ty: 15 },
-        { scale: 0.35, tx: 97.5, ty: 97.5 }
+        { scale: 0.99, tx: 1.25, ty: 1.25 },
+        { scale: 0.45, tx: 68.75, ty: 68.75 }
     ],
     '1inside1outside': [
-        { scale: 0.35, tx: 97.5, ty: 97.5 },
-        { scale: 0.9, tx: 15, ty: 15 }
+        { scale: 0.45, tx: 68.75, ty: 68.75 },
+        { scale: 0.99, tx: 1.25, ty: 1.25 }
     ],
     '2x2grid': [
-        { scale: 0.45, tx: 10, ty: 10 },
-        { scale: 0.45, tx: 155, ty: 10 },
-        { scale: 0.45, tx: 10, ty: 155 },
-        { scale: 0.45, tx: 155, ty: 155 }
+        { scale: 0.48, tx: 5, ty: 5 },
+        { scale: 0.48, tx: 125, ty: 5 },
+        { scale: 0.48, tx: 5, ty: 125 },
+        { scale: 0.48, tx: 125, ty: 125 }
     ]
 };
 
@@ -93,7 +93,10 @@ export const generateBlockFontData = async (config) => {
 
     let compilerGlyphs = { ...customGlyphs };
     let newSyllabaryMap = {};
-    let currentPua = puaCounter;
+    
+    // Move block font generation to Plane 15 PUA (0xF0000) to avoid BMP collisions and overflow.
+    // BMP PUA only has 6,400 slots, whereas Plane 15 has 65k+.
+    let currentPua = Math.max(puaCounter, 983040); 
 
     for (const template of activeTemplates) {
         const slotMapping = template.slotMapping || [];
@@ -162,11 +165,11 @@ export const generateBlockFontData = async (config) => {
                 // Actually, if it exists, let's just overwrite the strokes at the existing PUA.
                 const existingChar = newSyllabaryMap[syllableStr];
                 if (existingChar) {
-                    const existingPua = existingChar.charCodeAt(0);
+                    const existingPua = existingChar.codePointAt(0);
                     compilerGlyphs[existingPua] = combinedStrokes;
                 } else {
                     compilerGlyphs[currentPua] = combinedStrokes;
-                    newSyllabaryMap[syllableStr] = String.fromCharCode(currentPua);
+                    newSyllabaryMap[syllableStr] = String.fromCodePoint(currentPua);
                     currentPua++;
                 }
             }

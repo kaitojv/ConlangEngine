@@ -13,6 +13,7 @@ export default function BlockManager() {
     const config = useConfigStore();
     const { consonants, vowels, otherPhonemes, blockSettings, blockTemplates, featuralComponents, updateConfig } = config;
     const [drawingForComp, setDrawingForComp] = useState(null);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     const activeTemplates = blockTemplates || (blockSettings ? [
         {
@@ -75,7 +76,33 @@ export default function BlockManager() {
     };
 
     const generateBlockFont = async () => {
+        // PRE-FLIGHT CHECK: Calculate total possible combinations to warn about memory/storage bloat
+        let totalCombos = 0;
+        const vListLen = parseList(vowels).length;
+        const cListLen = parseList(consonants).length + 1; // +1 for optional empty initial/final
+        const oListLen = parseList(otherPhonemes || '').length;
+
+        for (const template of activeTemplates) {
+            const maxChars = template.maxChars || 3;
+            const slotMapping = template.slotMapping || [];
+            let combosForTemplate = 1;
+            for (let i = 0; i < maxChars; i++) {
+                let slot = slotMapping[i];
+                let source = (slot && slot.source) ? slot.source : (i === 1 ? 'vowels' : 'consonants');
+                if (source === 'vowels') combosForTemplate *= vListLen;
+                else if (source === 'consonants') combosForTemplate *= cListLen;
+                else if (source === 'otherPhonemes') combosForTemplate *= oListLen;
+            }
+            totalCombos += combosForTemplate;
+        }
+
+        if (totalCombos > 10000) {
+            const confirmed = window.confirm(`⚠️ Warning: Your configuration will generate approximately ${totalCombos.toLocaleString()} unique blocks. This may take a moment to compile and consume significant memory. Continue?`);
+            if (!confirmed) return;
+        }
+
         try {
+            setIsGenerating(true);
             const newData = await generateBlockFontData(config);
             updateConfig({
                 syllabaryMap: newData.syllabaryMap,
@@ -86,6 +113,8 @@ export default function BlockManager() {
             alert("Block Font generated successfully! " + Object.keys(newData.syllabaryMap).length + " blocks created.");
         } catch (e) {
             alert(e.message);
+        } finally {
+            setIsGenerating(false);
         }
     };
 
@@ -235,11 +264,19 @@ export default function BlockManager() {
                 </div>
 
                 <div className="bm-compile-section">
-                    <Button variant="save" onClick={generateBlockFont}>
-                        Compile Block Font
+                    <Button 
+                        variant="save" 
+                        onClick={generateBlockFont} 
+                        disabled={isGenerating}
+                        className={isGenerating ? 'btn-loading' : ''}
+                    >
+                        {isGenerating ? 'Generating Font... Please Wait' : 'Compile Block Font'}
                     </Button>
                     <p className="bm-compile-help">
-                        This will mathematically combine all possible valid blocks based on your slots and generate a functional font mapping.
+                        {isGenerating 
+                            ? "DO NOT REFRESH OR CLOSE. The browser may seem unresponsive while calculating thousands of glyph combinations."
+                            : "This will mathematically combine all possible valid blocks based on your slots and generate a functional font mapping."
+                        }
                     </p>
                 </div>
             </Card>

@@ -239,8 +239,14 @@
 
 .entry-main-word {
     font-size: 1.5rem;
-    font-weight: bold;
-    color: var(--acc3);
+    font-weight: 700;
+    color: var(--acc2);
+}
+
+.entry-main-word.featural-block-render {
+    font-size: 3.5rem;
+    font-weight: normal;
+    line-height: 1.1;
 }
 
 .entry-base-word {

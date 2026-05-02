@@ -45,31 +45,37 @@ export const stripAffix = (word, affixRule) => {
 };
 
 // Placeholder for applyRuleToWord - actual implementation would be more complex
-export const applyRuleToWord = (baseWord, rule, grammarRules, vowels) => {
+export const applyRuleToWord = (baseWord, rule, grammarRules, vowels, consonants, otherPhonemes) => {
     if (!baseWord || !rule || !rule.affix) return baseWord;
 
-    // 0. Enforce Allomorph Conditions (After Vowel / After Consonant)
+    // 0. Enforce Allomorph Conditions (After Vowel / After Consonant / After Other)
     if (rule.condition && rule.condition !== 'always') {
-        const vowelList = vowels ? vowels.split(',').map(v => v.trim().split('=')[0].toLowerCase()) : [];
+        const vowelList = vowels ? vowels.split(',').map(v => v.trim().split('=')[0].toLowerCase()).filter(Boolean) : [];
+        const consList = consonants ? consonants.split(',').map(c => c.trim().split('=')[0].toLowerCase()).filter(Boolean) : [];
+        const otherList = otherPhonemes ? otherPhonemes.split(',').map(o => o.trim().split('=')[0].toLowerCase()).filter(Boolean) : [];
+        
         const parsed = parseAffix(rule.affix);
         const type = parsed ? parsed.type : 'suffix';
-        
-        // Find the attachment point
-        let attachmentChar = '';
-        if (type === 'prefix') {
-            attachmentChar = baseWord.charAt(0).toLowerCase();
-        } else if (type === 'suffix') {
-            attachmentChar = baseWord.slice(-1).toLowerCase();
-        } else {
-            // Infixes are complex, but usually attach relative to the first vowel/consonant anyway. 
-            // We'll fall back to checking the first character to be safe.
-            attachmentChar = baseWord.charAt(0).toLowerCase();
-        }
+        const isAtStart = type === 'prefix';
+        const wordLow = baseWord.toLowerCase();
 
-        const isVowel = vowelList.includes(attachmentChar);
+        // Helper to check if any phoneme from a list matches at the edge
+        const checkAtEdge = (list) => {
+            const sorted = [...list].sort((a, b) => b.length - a.length);
+            for (const p of sorted) {
+                if (isAtStart ? wordLow.startsWith(p) : wordLow.endsWith(p)) return true;
+            }
+            return false;
+        };
+
+        const isVowel = checkAtEdge(vowelList);
+        const isOther = checkAtEdge(otherList);
+        // Consonant is either explicitly in the list OR just not a vowel/other
+        const isCons = checkAtEdge(consList) || (!isVowel && !isOther);
 
         if (rule.condition === 'vowel' && !isVowel) return null;
-        if (rule.condition === 'consonant' && isVowel) return null;
+        if (rule.condition === 'consonant' && !isCons) return null;
+        if (rule.condition === 'other' && !isOther) return null;
     }
 
     // 1. Check for Regex replacement patterns (e.g. "n(?=[pb]) => m")

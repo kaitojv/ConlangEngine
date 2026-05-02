@@ -61,6 +61,7 @@ export const RuleRow = ({ rule, onUpdate, onDelete }) => {
             <option value="always">Always</option>
             <option value="vowel">After Vowel</option>
             <option value="consonant">After Cons</option>
+            <option value="other">After Other</option>
           </select>
         </div>
       </div>

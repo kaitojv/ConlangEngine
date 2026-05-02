@@ -3,7 +3,8 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
 import Button from '../Buttons/Buttons.jsx';
-import { RotateCcw, Trash2 } from 'lucide-react';
+import { RotateCcw, Trash2, Download } from 'lucide-react';
+import { exportStrokesAsSVG } from '../../../utils/svgExporter.jsx';
 import './fontStudio.css';
 
 export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
@@ -104,7 +105,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
             addCustomGlyph(charCode, strokes, base64Font);
             
             // 4. Give the generated Unicode character and the strokes back to the parent component!
-            const newChar = String.fromCharCode(charCode);
+            const newChar = String.fromCodePoint(charCode);
             onSave(newChar, strokes);
         }
     };
@@ -155,6 +156,13 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
 
             <div className="fs-action-btns">
                 <Button variant="cancel" className="fs-btn-full" onClick={onCancel}>Cancel</Button>
+                <Button 
+                    variant="default" 
+                    className="fs-btn-full" 
+                    onClick={() => exportStrokesAsSVG(strokes, `${targetLabel || 'glyph'}.svg`)}
+                >
+                    <Download size={16} /> Export SVG
+                </Button>
                 <Button variant="edit" className="fs-btn-full fs-btn-save" onClick={handleSave}>💾 Save Glyph</Button>
             </div>
         </div>

@@ -62,8 +62,9 @@ export const INITIAL_CONFIG = {
         glow: '#1a1638'
     },
     customGlyphs: {},
-    puaCounter: 57344,      
-    customFontBase64: null, 
+    puaCounter: 57344,
+    customFontBase64: null,
+    isRehydrating: false,
     numeralBase: 10,
     sentenceMaps: [],
     // Per-class word markers used by the generator (separate from the grammar rules engine)
@@ -80,34 +81,49 @@ export const INITIAL_CONFIG = {
     customTags: [],
 };
 
-// IndexedDB Helper for handling massive font files without breaking local storage quotas
+// IndexedDB Helper for handling massive data without breaking local storage quotas
 const DB_NAME = 'ConlangEngineDB';
-const STORE_NAME = 'fonts';
+const STORE_NAME = 'bloat';
 
-const saveFontToDB = (fontBase64) => {
+const saveLargeDataToDB = (projectId, data) => {
     return new Promise((resolve) => {
-        const req = indexedDB.open(DB_NAME, 1);
-        req.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME);
+        if (!projectId) return resolve(false);
+        const req = indexedDB.open(DB_NAME, 2);
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME);
+            }
+        };
         req.onsuccess = (e) => {
             try {
                 const db = e.target.result;
                 const tx = db.transaction(STORE_NAME, 'readwrite');
-                tx.objectStore(STORE_NAME).put(fontBase64, 'customFontBase64');
+                const store = tx.objectStore(STORE_NAME);
+                
+                // Get existing data to merge
+                const getReq = store.get(projectId);
+                getReq.onsuccess = () => {
+                    const existing = getReq.result || {};
+                    store.put({ ...existing, ...data }, projectId);
+                };
+                
                 tx.oncomplete = () => resolve(true);
             } catch (err) { resolve(false); }
         };
     });
 };
 
-export const loadFontFromDB = () => {
+const loadLargeDataFromDB = (projectId) => {
     return new Promise((resolve) => {
-        const req = indexedDB.open(DB_NAME, 1);
-        req.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE_NAME);
+        if (!projectId) return resolve(null);
+        const req = indexedDB.open(DB_NAME, 2);
         req.onsuccess = (e) => {
             try {
                 const db = e.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) return resolve(null);
                 const tx = db.transaction(STORE_NAME, 'readonly');
-                const getReq = tx.objectStore(STORE_NAME).get('customFontBase64');
+                const getReq = tx.objectStore(STORE_NAME).get(projectId);
                 getReq.onsuccess = () => resolve(getReq.result);
                 getReq.onerror = () => resolve(null);
             } catch (err) { resolve(null); }
@@ -121,8 +137,36 @@ export const useConfigStore = create(
         (set) => ({
             ...INITIAL_CONFIG,
 
+            rehydrateBloat: async () => {
+                const { projectId } = useConfigStore.getState();
+                if (!projectId) return;
+                set({ isRehydrating: true });
+                try {
+                    const bloat = await loadLargeDataFromDB(projectId);
+                    if (bloat) {
+                        const font = bloat.customFontBase64 || bloat.customFont || null;
+                        set(() => ({
+                            customFont: font,
+                            customFontBase64: font,
+                            syllabaryMap: bloat.syllabaryMap || {},
+                            customGlyphs: bloat.customGlyphs || {}
+                        }));
+                    }
+                } finally {
+                    set({ isRehydrating: false });
+                }
+            },
+
             setFullConfig: (newConfig) => {
-                if (newConfig.customFontBase64) saveFontToDB(newConfig.customFontBase64);
+                const projectId = newConfig.projectId || useConfigStore.getState().projectId;
+                if (projectId) {
+                    const bloat = {};
+                    if (newConfig.customFontBase64) bloat.customFontBase64 = newConfig.customFontBase64;
+                    if (newConfig.customFont) bloat.customFont = newConfig.customFont;
+                    if (newConfig.syllabaryMap) bloat.syllabaryMap = newConfig.syllabaryMap;
+                    if (newConfig.customGlyphs) bloat.customGlyphs = newConfig.customGlyphs;
+                    if (Object.keys(bloat).length > 0) saveLargeDataToDB(projectId, bloat);
+                }
                 set(() => ({ ...INITIAL_CONFIG, ...newConfig }));
             },
             
@@ -135,10 +179,19 @@ export const useConfigStore = create(
             }),
 
             addCustomGlyph: (charCode, strokesArray, base64Font) => {
-                if (base64Font) saveFontToDB(base64Font);
+                const { projectId } = useConfigStore.getState();
+                if (projectId) {
+                    const bloat = { customGlyphs: { ...useConfigStore.getState().customGlyphs, [charCode]: strokesArray } };
+                    if (base64Font) {
+                        bloat.customFontBase64 = base64Font;
+                        bloat.customFont = base64Font;
+                    }
+                    saveLargeDataToDB(projectId, bloat);
+                }
                 set((state) => ({
                     customGlyphs: { ...state.customGlyphs, [charCode]: strokesArray },
                     customFontBase64: base64Font,
+                    customFont: base64Font,
                     activity: [{ text: `Created custom glyph (${charCode})`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15)
                 }));
             },
@@ -227,25 +280,30 @@ export const useConfigStore = create(
                 let newActivity = [...(state.activity || [])];
                 
                 // Prevent spamming the timeline with rapid identical updates (e.g., dragging a color picker)
-                if (newActivity.length > 0 && newActivity[0].text === text) {
-                    const lastTime = new Date(newActivity[0].time).getTime();
-                    if (Date.now() - lastTime < 60000) { // 1 minute debounce window
-                        newActivity[0].time = now;
-                        if (newConfig.customFontBase64) saveFontToDB(newConfig.customFontBase64);
-                        return { ...newConfig, activity: newActivity };
+                newActivity = [{ text, time: now }, ...newActivity].slice(0, 15);
+                
+                if (state.projectId) {
+                    const bloat = {};
+                    if (newConfig.customFontBase64) {
+                        bloat.customFontBase64 = newConfig.customFontBase64;
+                        bloat.customFont = newConfig.customFontBase64;
+                    } else if (newConfig.customFont) {
+                        bloat.customFont = newConfig.customFont;
+                        bloat.customFontBase64 = newConfig.customFont;
                     }
+                    if (newConfig.syllabaryMap) bloat.syllabaryMap = newConfig.syllabaryMap;
+                    if (newConfig.customGlyphs) bloat.customGlyphs = newConfig.customGlyphs;
+                    if (Object.keys(bloat).length > 0) saveLargeDataToDB(state.projectId, bloat);
                 }
 
-                newActivity = [{ text, time: now }, ...newActivity].slice(0, 15);
-                if (newConfig.customFontBase64) saveFontToDB(newConfig.customFontBase64);
                 return { ...newConfig, activity: newActivity };
             }),
         }),
         {
             name: 'conlang-config',
             partialize: (state) => {
-                // Exclude customFontBase64 from being saved to localStorage (quota limit)
-                const { customFontBase64, ...rest } = state;
+                // Exclude large fields from localStorage (quota limit)
+                const { customFontBase64, customFont, syllabaryMap, customGlyphs, ...rest } = state;
                 return rest;
             }
         }

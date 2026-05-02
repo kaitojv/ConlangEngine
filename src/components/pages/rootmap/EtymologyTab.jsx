@@ -15,6 +15,8 @@ export default function EtymologyTab() {
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
     const grammarRules = useConfigStore((state) => state.grammarRules) || [];
     const vowels = useConfigStore((state) => state.vowels);
+    const consonants = useConfigStore((state) => state.consonants);
+    const otherPhonemes = useConfigStore((state) => state.otherPhonemes);
     const verbMarker = useConfigStore((state) => state.verbMarker);
     const cliticsRules = useConfigStore((state) => state.cliticsRules);
 
@@ -51,7 +53,7 @@ export default function EtymologyTab() {
 
         // Finally, apply each rule to the base word and build our list of generated derivations
         return applicableRules.reduce((acc, rule) => {
-            const result = applyRuleToWord(baseWord, rule, grammarRules, vowels);
+            const result = applyRuleToWord(baseWord, rule, grammarRules, vowels, consonants, otherPhonemes);
             if (result) {
                 acc.push({ ruleName: rule.name, word: result });
             }
