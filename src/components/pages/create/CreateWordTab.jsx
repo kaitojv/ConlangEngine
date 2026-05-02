@@ -27,7 +27,7 @@ export default function CreateWordTab() {
     const { normalizeToBase, transliterate } = useTransliterator();
 
     // Track which input field the IPA chart should paste into
-    const activeFieldRef = useRef('ipa'); // default to IPA field
+    const [activeField, setActiveField] = useState('ipa'); // default to IPA field
 
     // Global stores
     const addWord = useLexiconStore((state) => state.addWord);
@@ -110,8 +110,7 @@ export default function CreateWordTab() {
 
     // Handle IPA chart character selection - paste into the active field
     const handleIpaSelect = (char) => {
-        const field = activeFieldRef.current;
-        updateField(field, formData[field] + char);
+        updateField(activeField, formData[activeField] + char);
     };
 
     // Quick-fix action: add invalid characters to consonants or vowels
@@ -317,7 +316,7 @@ export default function CreateWordTab() {
                             label="WORD (CONLANG)" 
                             value={word}
                             onChange={(e) => updateField('word', e.target.value)}
-                            onFocus={() => { activeFieldRef.current = 'word'; }}
+                            onFocus={() => setActiveField('word')}
                             placeholder="e.g., makin"
                             className="custom-font-text notranslate"
                         />
@@ -327,7 +326,7 @@ export default function CreateWordTab() {
                             label="IPA (OPTIONAL)" 
                             value={ipa}
                             onChange={(e) => updateField('ipa', e.target.value)}
-                            onFocus={() => { activeFieldRef.current = 'ipa'; }}
+                            onFocus={() => setActiveField('ipa')}
                             placeholder="/ma'kin/"
                         />
                     </div>
@@ -352,7 +351,7 @@ export default function CreateWordTab() {
                 {/* IPA chart spans the full card width so it doesn't overflow the column grid */}
                 <div style={{ marginBottom: '1rem' }}>
                     <p style={{ fontSize: '0.75rem', color: 'var(--tx2)', marginBottom: '6px' }}>
-                        IPA Chart pastes into: <strong style={{ color: 'var(--acc)' }}>{activeFieldRef.current === 'word' ? 'Word' : 'IPA'}</strong> field. Click a field above to change target.
+                        IPA Chart pastes into: <strong style={{ color: 'var(--acc)' }}>{activeField === 'word' ? 'Word' : 'IPA'}</strong> field. Click a field above to change target.
                     </p>
                     <IpaChart onSelect={handleIpaSelect} />
                 </div>

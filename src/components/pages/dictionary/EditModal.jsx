@@ -32,7 +32,7 @@ export default function EditWordModal({ wordObj, onClose }) {
     const { normalizeToBase } = useTransliterator();
 
     // Track which field the IPA chart should paste into
-    const activeFieldRef = useRef('ipa');
+    const [activeField, setActiveField] = useState('ipa');
 
     // Bundle all the form fields into one neat state object
     const [formData, setFormData] = useState({
@@ -83,8 +83,7 @@ export default function EditWordModal({ wordObj, onClose }) {
 
     // Handle IPA chart character selection - paste into the active field
     const handleIpaSelect = (char) => {
-        const field = activeFieldRef.current;
-        updateField(field, formData[field] + char);
+        updateField(activeField, formData[activeField] + char);
     };
 
     // Quick-fix: add invalid characters to consonants or vowels
@@ -212,7 +211,7 @@ export default function EditWordModal({ wordObj, onClose }) {
                         label="Word (Conlang)" 
                         value={word}
                         onChange={(e) => updateField('word', e.target.value)}
-                        onFocus={() => { activeFieldRef.current = 'word'; }}
+                        onFocus={() => setActiveField('word')}
                         className="custom-font-text notranslate"
                     />
                 </div>
@@ -222,11 +221,11 @@ export default function EditWordModal({ wordObj, onClose }) {
                         label="IPA (Optional)" 
                         value={ipa}
                         onChange={(e) => updateField('ipa', e.target.value)}
-                        onFocus={() => { activeFieldRef.current = 'ipa'; }}
+                        onFocus={() => setActiveField('ipa')}
                     />
                     <div style={{ marginTop: '-10px', marginBottom: '10px' }}>
                         <p style={{ fontSize: '0.7rem', color: 'var(--tx2)', marginBottom: '4px' }}>
-                            IPA Chart pastes into: <strong style={{ color: 'var(--acc)' }}>{activeFieldRef.current === 'word' ? 'Word' : 'IPA'}</strong>
+                            IPA Chart pastes into: <strong style={{ color: 'var(--acc)' }}>{activeField === 'word' ? 'Word' : 'IPA'}</strong>
                         </p>
                         <IpaChart onSelect={handleIpaSelect} />
                     </div>
