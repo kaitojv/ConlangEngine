@@ -6,7 +6,7 @@ import { validateNewWord } from '@/utils/validationEngine.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
-import { Save, X, Plus } from 'lucide-react';
+import { Search, Volume2, Save, Trash2, X, Link as LinkIcon, GitBranch, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './lexiconEditModal.css';
 
@@ -29,18 +29,28 @@ export default function LexiconEditModal({ wordObj, onClose }) {
     const consonants = useConfigStore((state) => state.consonants);
     const vowels = useConfigStore((state) => state.vowels);
     const syllablePattern = useConfigStore((state) => state.syllablePattern);
-    const { normalizeToBase } = useTransliterator();
-
-    // Track which field the IPA chart should paste into
-    const [activeField, setActiveField] = useState('ipa');
+    
+    const [activeField, setActiveField] = useState('word');
 
     // Bundle all the form fields into one neat state object
     const [formData, setFormData] = useState({
         word: '', ipa: '', wordClass: '', translation: '', tags: [], ideogram: '', personCategory: ''
     });
     const [tagInput, setTagInput] = useState('');
-    const [activeToastId, setActiveToastId] = useState(null);
     const { word, ipa, wordClass, translation, tags, ideogram, personCategory } = formData;
+
+    const grammarRules = useConfigStore(state => state.grammarRules) || [];
+    const parentWord = useMemo(() => {
+        if (!wordObj.parentRootId) return null;
+        return lexicon.find(w => w.id === wordObj.parentRootId);
+    }, [wordObj.parentRootId, lexicon]);
+
+    const derivationRule = useMemo(() => {
+        if (!wordObj.derivationRuleId) return null;
+        return grammarRules.find(r => r.id === wordObj.derivationRuleId);
+    }, [wordObj.derivationRuleId, grammarRules]);
+
+    const { transliterate, normalizeToBase } = useTransliterator();
 
     const updateField = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
 
@@ -114,10 +124,16 @@ export default function LexiconEditModal({ wordObj, onClose }) {
 
     const handleAddTag = (tag) => {
         const cleanTag = tag.trim().toLowerCase();
-        if (cleanTag && !formData.tags.includes(cleanTag)) {
+        if (!cleanTag) return;
+        if (!formData.tags.includes(cleanTag)) {
             updateField('tags', [...formData.tags, cleanTag]);
-            setTagInput('');
         }
+        setTagInput('');
+    };
+
+    const handleClearTags = () => {
+        updateField('tags', []);
+        setTagInput('');
     };
 
     const removeTag = (tagToRemove) => {
@@ -125,9 +141,7 @@ export default function LexiconEditModal({ wordObj, onClose }) {
     };
 
     const showValidationToast = (content) => {
-        if (activeToastId) toast.dismiss(activeToastId);
-        const newId = toast.custom(content, { duration: Infinity });
-        setActiveToastId(newId);
+        toast.custom(content, { duration: Infinity, id: 'validation-toast' });
     };
 
     // Validate everything before saving changes to the lexicon
@@ -202,45 +216,70 @@ export default function LexiconEditModal({ wordObj, onClose }) {
         proceedToValidation(safeWord, cleanInputTrans, processedTags, doSave);
     };
 
-    const proceedToValidation = (safeWord, cleanInputTrans, processedTags, doSave) => {
+    const proceedToValidation = (safeWord, cleanInputTrans, processedTags, doSave, charIndex = 0) => {
         const validation = validateNewWord(safeWord, useConfigStore.getState());
 
         if (!validation.valid) {
+            // Handle multiple invalid characters sequentially
+            if (validation.type === 'invalid_chars') {
+                const char = validation.invalidChars[charIndex];
+                
+                // If we've processed all individual characters, proceed to the final save
+                if (!char) {
+                    return doSave();
+                }
+
+                showValidationToast((t) => (
+                    <div className="custom-toast-v">
+                        <strong className="char-violation-title">⚠️ Character Violation: "{char}"</strong>
+                        <span>The character "{char}" is not in your Phoneme settings. How should we handle it?</span>
+                        <div className="toast-actions-v char-violation-actions">
+                            <button onClick={() => {
+                                toast.dismiss(t.id);
+                                handleAddCharsToInventory([char], 'consonants');
+                                setTimeout(() => proceedToValidation(safeWord, cleanInputTrans, processedTags, doSave, charIndex + 1), 100);
+                            }} className="btn-v btn-acc-v">Add to Consonants</button>
+                            
+                            <button onClick={() => {
+                                toast.dismiss(t.id);
+                                handleAddCharsToInventory([char], 'vowels');
+                                setTimeout(() => proceedToValidation(safeWord, cleanInputTrans, processedTags, doSave, charIndex + 1), 100);
+                            }} className="btn-v btn-acc2-v">Add to Vowels</button>
+
+                            <button onClick={() => {
+                                toast.dismiss(t.id);
+                                // Skip this character but keep going with the next one
+                                setTimeout(() => proceedToValidation(safeWord, cleanInputTrans, processedTags, doSave, charIndex + 1), 100);
+                            }} className="btn-v btn-err-v">Save as Irregular</button>
+                            
+                            <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                        </div>
+                        <div className="char-violation-progress">
+                            {validation.invalidChars.length > 1 && `(Character ${charIndex + 1} of ${validation.invalidChars.length})`}
+                        </div>
+                    </div>
+                ));
+                return;
+            }
+
+            // Pattern validation
             showValidationToast((t) => (
                 <div className="custom-toast-v">
                     <strong>⚠️ Phono-Syntax Warning</strong>
                     <span>{validation.reason}</span>
-                    <p style={{fontSize: '0.9rem', color: 'var(--tx2)'}}>Do you want to save it as an irregular exception anyway?</p>
+                    <p className="pattern-warning-p">Do you want to save it as an irregular exception anyway?</p>
                     <div className="toast-actions-v">
                         <button onClick={() => {
                             toast.dismiss(t.id);
                             doSave();
                         }} className="btn-v btn-err-v">Save Anyway</button>
-
-                        {validation.type === 'invalid_chars' && validation.invalidChars && (
-                            <>
-                                <button onClick={() => {
-                                    toast.dismiss(t.id);
-                                    handleAddCharsToInventory(validation.invalidChars, 'consonants');
-                                }} className="btn-v btn-acc-v">Add to Consonants</button>
-                                <button onClick={() => {
-                                    toast.dismiss(t.id);
-                                    handleAddCharsToInventory(validation.invalidChars, 'vowels');
-                                }} className="btn-v btn-acc2-v">Add to Vowels</button>
-                                <button onClick={() => {
-                                    toast.dismiss(t.id);
-                                    handleAddCharsToInventory(validation.invalidChars, 'otherPhonemes');
-                                }} className="btn-v btn-acc3-v">Add to Others</button>
-                            </>
-                        )}
-
+                        
                         {validation.type === 'invalid_pattern' && validation.detectedPattern && (
                             <button onClick={() => {
                                 toast.dismiss(t.id);
                                 handleAddPattern(validation.detectedPattern, safeWord, cleanInputTrans, processedTags);
-                            }} className="btn-v btn-acc-v">Add to patterns & Save</button>
+                            }} className="btn-v btn-acc-v">Add as Syllable Pattern</button>
                         )}
-
                         <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
                     </div>
                 </div>
@@ -274,9 +313,9 @@ export default function LexiconEditModal({ wordObj, onClose }) {
                         onChange={(e) => updateField('ipa', e.target.value)}
                         onFocus={() => setActiveField('ipa')}
                     />
-                    <div style={{ marginTop: '-10px', marginBottom: '10px' }}>
-                        <p style={{ fontSize: '0.7rem', color: 'var(--tx2)', marginBottom: '4px' }}>
-                            IPA Chart pastes into: <strong style={{ color: 'var(--acc)' }}>{activeField === 'word' ? 'Word' : 'IPA'}</strong>
+                    <div className="ipa-chart-status-wrap">
+                        <p className="ipa-chart-status">
+                            IPA Chart pastes into: <strong className="ipa-active-field">{activeField === 'word' ? 'Word' : 'IPA'}</strong>
                         </p>
                         <IpaChart onSelect={handleIpaSelect} />
                     </div>
@@ -341,7 +380,7 @@ export default function LexiconEditModal({ wordObj, onClose }) {
             </div>
 
             <div>
-                <label className="input-label">Semantic Tags</label>
+                <label className="form-label">Semantic Tags</label>
                 <div className="tags-chip-container">
                     {formData.tags.map(tag => (
                         <span key={tag} className="tag-chip">
@@ -349,12 +388,16 @@ export default function LexiconEditModal({ wordObj, onClose }) {
                             <X size={12} onClick={() => removeTag(tag)} className="tag-remove-icon" />
                         </span>
                     ))}
-                    <div className="tag-input-wrapper">
-                        <input 
-                            type="text"
-                            className="tag-inner-input"
+                    <div className="tag-input-wrap">
+                        <Input 
+                            placeholder={formData.tags.length === 0 ? "Add tags..." : ""}
                             value={tagInput}
                             onChange={(e) => setTagInput(e.target.value)}
+                            onInput={(e) => {
+                                if (allTags.includes(e.target.value.toLowerCase())) {
+                                    handleAddTag(e.target.value);
+                                }
+                            }}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' || e.key === ',') {
                                     e.preventDefault();
@@ -362,9 +405,22 @@ export default function LexiconEditModal({ wordObj, onClose }) {
                                 }
                             }}
                             onBlur={() => handleAddTag(tagInput)}
-                            placeholder={formData.tags.length === 0 ? "Add tags..." : ""}
                             list="edit-semantic-tags"
-                        />
+                            className="tag-input-field"
+                        >
+                            {tagInput && (
+                                <button 
+                                    className="clear-input-btn" 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setTagInput('');
+                                    }}
+                                    title="Clear Tag Input"
+                                >
+                                    <X size={14} />
+                                </button>
+                            )}
+                        </Input>
                         <Plus size={16} className="tag-add-icon" onClick={() => handleAddTag(tagInput)} />
                     </div>
                 </div>
@@ -373,6 +429,35 @@ export default function LexiconEditModal({ wordObj, onClose }) {
                         <option key={tag} value={tag} />
                     ))}
                 </datalist>
+
+                {/* Etymology & Genealogy Section */}
+                {(parentWord || derivationRule) && (
+                    <div className="edit-modal-section etymology-section">
+                        <div className="etymology-header">
+                            <GitBranch size={16} />
+                            <span className="etymology-title">Etymology & Genealogy</span>
+                        </div>
+                        <div className="etymology-content">
+                            {parentWord && (
+                                <div className="etymology-row">
+                                    <span className="etymology-label">Derived from:</span>
+                                    <div className="etymology-value">
+                                        <span className="custom-font-text notranslate etymology-parent-word">{transliterate(parentWord.word)}</span> 
+                                        <span className="etymology-parent-trans">({parentWord.translation})</span>
+                                    </div>
+                                </div>
+                            )}
+                            {derivationRule && (
+                                <div className="etymology-row">
+                                    <span className="etymology-label">Grammar Rule:</span>
+                                    <span className="etymology-rule-badge">
+                                        {derivationRule.name} ({derivationRule.affix})
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
             <Button 

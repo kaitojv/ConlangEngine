@@ -16,3 +16,85 @@
     padding: 12px;
     margin-top: 10px;
 }
+
+.tag-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.tag-add-icon {
+    cursor: pointer;
+    color: var(--acc);
+    flex-shrink: 0;
+}
+
+.etymology-section {
+    margin-top: 20px;
+    padding: 15px;
+    background: var(--s1);
+    border-radius: 8px;
+    border: 1px solid var(--bd);
+    margin-bottom: 20px;
+}
+
+.etymology-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    color: var(--acc2);
+}
+
+.etymology-title {
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.etymology-content {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.etymology-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.etymology-label {
+    font-size: 0.9rem;
+    color: var(--tx2);
+}
+
+.etymology-value {
+    font-size: 0.85rem;
+    padding: 4px 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--s2);
+    border-radius: 6px;
+    border: 1px solid var(--bd);
+}
+
+.etymology-parent-word {
+    color: var(--acc);
+}
+
+.etymology-parent-trans {
+    color: var(--tx3);
+}
+
+.etymology-rule-badge {
+    font-size: 0.9rem;
+    color: var(--tx);
+    font-weight: 600;
+    background: var(--s3);
+    padding: 2px 8px;
+    border-radius: 4px;
+}

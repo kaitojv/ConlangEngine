@@ -126,7 +126,6 @@ export default function PersonRulesEditor() {
     return (
         <div className="person-rules-editor">
             <div className="person-rules-header">
-                <label className="input-label">Pronoun / Affix Mapping</label>
                 <button type="button" className="btn-auto-fill" onClick={handleAutoFill} title="Auto-fill with standard 1st, 2nd, 3rd person layout">
                     <Wand2 size={16} /> Auto-Fill Preset
                 </button>
@@ -262,21 +261,7 @@ export default function PersonRulesEditor() {
                 <Plus size={16} /> Add Rule
             </button>
 
-            <Infobox title="Pronoun & Affix Guide">
-                Define how each person is represented.
-                <br /><br />
-                <b>Person/Number/Gender:</b> Select the grammatical person, number (Singular, Plural, Dual), and optional gender.
-                <br />
-                <b>Free Form:</b> The free-standing pronoun (e.g., "I", "you").
-                <br />
-                <b>Affix:</b> The bound morpheme (e.g., <code>-m</code>).
-                <br />
-                <b>Applies To:</b> Filters which word classes use this rule. Set to <code>all</code> (default) to apply to everything, or specify <code>verb</code> if this affix only appears on verbs.
-                <br />
-                <b>Root Tag:</b> Advanced scoping. If you have multiple pronoun roots in your dictionary, use this tag to link this specific rule to words that share the same tag.
-                <br /><br />
-                This structured mapping will help the Syntax Analyzer and Inflection Matrix!
-            </Infobox>
+
         </div>
     );
 }

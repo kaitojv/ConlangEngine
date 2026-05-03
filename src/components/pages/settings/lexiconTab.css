@@ -1,0 +1,103 @@
+.lexicon-settings-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.search-bar-management {
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.search-icon-m {
+    position: absolute;
+    right: 12px;
+    top: 10px;
+    color: var(--tx3);
+    pointer-events: none;
+}
+
+.management-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.management-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.pos-title { color: var(--acc2); }
+.tag-title { color: var(--acc); }
+
+.add-management-item {
+    margin-bottom: 0.5rem;
+    display: flex;
+    gap: 8px;
+}
+
+.management-add-input {
+    flex: 1;
+    background: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    color: var(--tx);
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.management-add-input:focus {
+    border-color: var(--acc);
+}
+
+.add-mgmt-btn {
+    padding: 4px 12px !important;
+}
+
+.management-list {
+    background: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.management-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--bd);
+}
+
+.management-item:last-child { border-bottom: none; }
+
+.item-name { font-weight: 600; color: var(--tx); }
+
+.item-actions { display: flex; gap: 10px; color: var(--tx3); }
+
+.item-actions svg { cursor: pointer; transition: color 0.2s; }
+
+.item-actions svg:hover { color: var(--acc); }
+
+.edit-inline { display: flex; align-items: center; gap: 8px; flex: 1; }
+
+.edit-inline input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--acc);
+    border-radius: 4px;
+    color: var(--tx);
+    padding: 2px 8px;
+    outline: none;
+}
+
+.icon-save { color: var(--ok); cursor: pointer; }
+
+.icon-cancel { color: var(--err); cursor: pointer; }

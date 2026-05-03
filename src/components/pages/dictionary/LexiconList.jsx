@@ -8,6 +8,7 @@ import Card from '../../UI/Card/Card.jsx';
 import Modal from '../../UI/Modal/Modal.jsx'
 import LexiconEditModal from './LexiconEditModal.jsx';
 import MatrixModal from './MatrixModal.jsx';
+import Infobox from '../../UI/Infobox/Infobox.jsx';
 import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download, X } from 'lucide-react';
 import { exportTextAsSVG } from '../../../utils/svgExporter.jsx';
 import toast from 'react-hot-toast';
@@ -111,7 +112,7 @@ export default function LexiconList() {
 
         if (filters.tag !== 'all') {
             result = result.filter(e => 
-                e.tags && e.tags.some(tag => tag.toLowerCase() === filters.tag.toLowerCase())
+                (e.tags && e.tags.some(tag => tag.toLowerCase() === filters.tag.toLowerCase()))
             );
         }
 
@@ -125,7 +126,7 @@ export default function LexiconList() {
 
         if (filters.letter !== 'all') {
             result = result.filter(e => {
-                const cleanWord = e.word.replace(/\*/g, '');
+                const cleanWord = e.word.replace(/[\*\-]/g, '');
                 const displayWord = transliterate(cleanWord, lexicon).toUpperCase();
                 return displayWord.startsWith(filters.letter.toUpperCase());
             });
@@ -142,16 +143,16 @@ export default function LexiconList() {
     // Quick action to bin a word
     const handleDelete = (id) => {
         toast.custom((t) => (
-            <div style={{ background: 'var(--s4)', color: 'var(--tx)', padding: '15px', borderRadius: '8px', border: '1px solid var(--err)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div className="delete-toast-container">
                 <strong>⚠️ Delete Word</strong>
                 <span>Are you sure you want to delete this root?</span>
-                <div style={{display: 'flex', gap: '10px', marginTop: '5px'}}>
+                <div className="delete-toast-actions">
                     <button onClick={() => {
                         toast.dismiss(t.id);
                         deleteWord(id);
                         toast.success("Word deleted.");
-                    }} style={{padding: '5px 10px', background: 'var(--err)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Delete</button>
-                    <button onClick={() => toast.dismiss(t.id)} style={{padding: '5px 10px', background: 'var(--s2)', color: 'var(--tx)', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Cancel</button>
+                    }} className="delete-toast-btn">Delete</button>
+                    <button onClick={() => toast.dismiss(t.id)} className="delete-cancel-btn">Cancel</button>
                 </div>
             </div>
         ), { duration: Infinity });
@@ -189,7 +190,6 @@ export default function LexiconList() {
                             <X 
                                 className="clear-search-icon" 
                                 size={16} 
-                                style={{ position: 'absolute', right: '12px', top: '10px', cursor: 'pointer', color: 'var(--tx3)' }}
                                 onClick={() => updateFilter('search', '')}
                             />
                         )}
@@ -229,7 +229,38 @@ export default function LexiconList() {
                             </option>
                         ))}
                     </select>
+                    <label className="bound-toggle">
+                        <input 
+                            type="checkbox" 
+                            className="bound-checkbox"
+                            checked={showBoundMorphemes}
+                            onChange={(e) => setShowBoundMorphemes(e.target.checked)}
+                        />
+                        Show Affixes
+                    </label>
                 </div>
+
+                {/* Active Filters Bar */}
+                {(filters.search || filters.tag !== 'all' || filters.type !== 'all' || filters.letter !== 'all') && (
+                    <div className="active-filters-bar">
+                        <span className="filters-label">Active Filters:</span>
+                        {filters.tag !== 'all' && (
+                            <span className="tag-chip" onClick={() => updateFilter('tag', 'all')}>#{filters.tag} <X size={12} /></span>
+                        )}
+                        {filters.type !== 'all' && (
+                            <span className="tag-chip type-filter-chip" onClick={() => updateFilter('type', 'all')}>{filters.type} <X size={12} /></span>
+                        )}
+                        {filters.letter !== 'all' && (
+                            <span className="tag-chip letter-filter-chip" onClick={() => updateFilter('letter', 'all')}>Starts with {filters.letter} <X size={12} /></span>
+                        )}
+                        <button 
+                            className="btn-v btn-sec-v clear-filters-btn" 
+                            onClick={() => setFilters({ search: '', tag: 'all', type: 'all', letter: 'all', sort: 'newest' })}
+                        >
+                            Clear All
+                        </button>
+                    </div>
+                )}
 
                 <div className="alpha-filter-bar">
                     <Filter size={16} className="alpha-icon" />
@@ -255,23 +286,21 @@ export default function LexiconList() {
                 <span className="list-title">
                     Lexicon Entries
                 </span>
-                <div className="list-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer', color: 'var(--tx2)' }}>
-                        <input 
-                            type="checkbox" 
-                            checked={showBoundMorphemes} 
-                            onChange={(e) => setShowBoundMorphemes(e.target.checked)} 
-                        />
-                        Show Bound Morphemes
-                    </label>
+                <div className="list-header-actions">
                     <span className="list-total">
-                        Total: <span style={{ color: 'var(--acc2)', fontWeight: 'bold' }}>{filteredLexicon.length}</span>
+                        Total: <span className="list-total-count">{filteredLexicon.length}</span>
                     </span>
                     <Button variant="edit" className="btn-sm" onClick={() => navigate('/create')}>
                         <PlusCircle size={14} /> Create Word
                     </Button>
                 </div>
             </div>
+
+            <Infobox title="Lexicon Pro Tips">
+                • <b>Search:</b> You can search by word, translation, or even tag (e.g. "#aquatic").<br />
+                • <b>Filtering:</b> Use the alphabetic bar to quickly jump to words starting with a specific letter.<br />
+                • <b>Affixes:</b> Enable "Show Affixes" to see bound morphemes like prefixes and suffixes in the list.
+            </Infobox>
 
             {lexicon.length === 0 && (
                 <div className="empty-state">
@@ -321,7 +350,7 @@ export default function LexiconList() {
                                     )}
                                 </div>
                                 
-                                <div className="word-classes-wrapper" style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                <div className="word-classes-wrapper classes-preview-wrap">
                                     {entry.wordClass ? entry.wordClass.split(',').map((cls, idx) => {
                                         const cleanCls = cls.trim();
                                         const safeClassBadge = cleanCls.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
@@ -401,12 +430,18 @@ export default function LexiconList() {
             </div>
 
             {visibleCount < filteredLexicon.length && (
-                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', marginBottom: '40px' }}>
+                <div className="load-more-wrap">
                     <Button variant="edit" onClick={() => setVisibleCount(prev => prev + 50)}>
                         Load More ({filteredLexicon.length - visibleCount} remaining)
                     </Button>
                 </div>
             )}
+
+            <Infobox title="Lexicon Pro Tips">
+                • <b>Stacked Filters:</b> Combine multiple tags, keywords, and letters to find specific word groups.<br />
+                • <b>Matrix Power:</b> Use the Matrix button to generate and save derivations (plurals, verb forms, etc.) in bulk.<br />
+                • <b>Genealogy:</b> Derived words link to their root automatically. See a word's origin in its Edit modal.
+            </Infobox>
 
             <Modal isOpen={!!selectedWordForMatrix} onClose={() => setSelectedWordForMatrix(null)} title="Word Inflection Matrix">
                 <MatrixModal key={selectedWordForMatrix?.id} wordObj={selectedWordForMatrix} />

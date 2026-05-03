@@ -6,7 +6,9 @@ import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import { Search, Edit, Trash2, Check, X, Tag, BookOpen } from 'lucide-react';
+import Infobox from '../../UI/Infobox/Infobox.jsx';
 import toast from 'react-hot-toast';
+import './lexiconTab.css';
 
 export default function LexiconTab() {
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
@@ -171,28 +173,36 @@ export default function LexiconTab() {
     const filteredTags = allTags.filter(t => t.includes(searchTerm.toLowerCase()));
 
     return (
-        <div className="lexicon-settings-tab">
-            <header className="settings-section-header">
-                <h3>Global Lexicon Management</h3>
-                <p>Manage your Parts of Speech and Semantic Tags globally. Renaming or deleting here will update all lexicon entries.</p>
-            </header>
+        <Card className="lexicon-settings-tab">
+            <h2 className="flex sg-title">
+                <BookOpen /> Global Lexicon Management
+            </h2>
+            <p className="settings-description">
+                Manage your Parts of Speech and Semantic Tags globally. Renaming or deleting here will update all lexicon entries.
+            </p>
 
-            <div className="search-bar-management" style={{ marginBottom: '1.5rem' }}>
+            <Infobox title="Lexicon Management Tips">
+                • <b>Global Rename:</b> Renaming a Part of Speech or Tag here will automatically update every single word in your lexicon.<br />
+                • <b>Custom Classes:</b> Add unique categories (like "classifier" or "ideophone") to make your grammar matrix more precise.<br />
+                • <b>Clean Slate:</b> Deleting a category here removes it from all words globally. Use this to prune unused tags.
+            </Infobox>
+
+            <div className="search-bar-management">
                 <Input 
                     placeholder="Search for a POS or Tag..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 >
-                    <Search className="search-icon-m" size={18} style={{ position: 'absolute', right: '12px', top: '10px', color: 'var(--tx3)' }} />
+                    <Search className="search-icon-m" size={18} />
                 </Input>
             </div>
 
-            <div className="management-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+            <div className="management-grid">
                 <section>
-                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem', color: 'var(--acc2)' }}>
+                    <h4 className="management-title pos-title">
                         <BookOpen size={18} /> Parts of Speech ({filteredPOS.length})
                     </h4>
-                    <div className="add-management-item" style={{ marginBottom: '0.5rem', display: 'flex', gap: '8px' }}>
+                    <div className="add-management-item">
                         <input 
                             className="management-add-input"
                             placeholder="New POS (e.g. classifier)"
@@ -200,7 +210,7 @@ export default function LexiconTab() {
                             onChange={(e) => setNewPOS(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleAddPOS()}
                         />
-                        <Button variant="save" onClick={handleAddPOS} className="btn-sm" style={{ padding: '4px 12px' }}>Add</Button>
+                        <Button variant="save" onClick={handleAddPOS} className="btn-sm add-mgmt-btn">Add</Button>
                     </div>
                     <div className="management-list">
                         {filteredPOS.map(pos => (
@@ -231,10 +241,10 @@ export default function LexiconTab() {
                 </section>
 
                 <section>
-                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem', color: 'var(--acc)' }}>
+                    <h4 className="management-title tag-title">
                         <Tag size={18} /> Semantic Tags ({filteredTags.length})
                     </h4>
-                    <div className="add-management-item" style={{ marginBottom: '0.5rem', display: 'flex', gap: '8px' }}>
+                    <div className="add-management-item">
                         <input 
                             className="management-add-input"
                             placeholder="New Tag (e.g. aquatic)"
@@ -242,7 +252,7 @@ export default function LexiconTab() {
                             onChange={(e) => setNewTag(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
                         />
-                        <Button variant="save" onClick={handleAddTag} className="btn-sm" style={{ padding: '4px 12px' }}>Add</Button>
+                        <Button variant="save" onClick={handleAddTag} className="btn-sm add-mgmt-btn">Add</Button>
                     </div>
                     <div className="management-list">
                         {filteredTags.map(tag => (
@@ -272,54 +282,6 @@ export default function LexiconTab() {
                     </div>
                 </section>
             </div>
-
-            <style dangerouslySetInnerHTML={{ __html: `
-                .management-list {
-                    background: var(--s4);
-                    border: 1px solid var(--bd);
-                    border-radius: var(--rad-sm);
-                    max-height: 400px;
-                    overflow-y: auto;
-                }
-                .management-item {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 0.75rem 1rem;
-                    border-bottom: 1px solid var(--bd);
-                }
-                .management-item:last-child { border-bottom: none; }
-                .item-name { font-weight: 600; color: var(--tx); }
-                .item-actions { display: flex; gap: 10px; color: var(--tx3); }
-                .item-actions svg { cursor: pointer; transition: color 0.2s; }
-                .item-actions svg:hover { color: var(--acc); }
-                .edit-inline { display: flex; align-items: center; gap: 8px; flex: 1; }
-                .edit-inline input {
-                    flex: 1;
-                    background: var(--bg);
-                    border: 1px solid var(--acc);
-                    border-radius: 4px;
-                    color: var(--tx);
-                    padding: 2px 8px;
-                    outline: none;
-                }
-                .icon-save { color: var(--ok); cursor: pointer; }
-                .icon-cancel { color: var(--err); cursor: pointer; }
-                .management-add-input {
-                    flex: 1;
-                    background: var(--s4);
-                    border: 1px solid var(--bd);
-                    border-radius: var(--rad-sm);
-                    color: var(--tx);
-                    padding: 6px 12px;
-                    font-size: 0.9rem;
-                    outline: none;
-                    transition: border-color 0.2s;
-                }
-                .management-add-input:focus {
-                    border-color: var(--acc);
-                }
-            `}} />
-        </div>
+        </Card>
     );
 }

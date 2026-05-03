@@ -86,43 +86,48 @@ export default function SettingsGeneral() {
             </div>
 
             {phonologyTypes === 'alphabetic' && (
-                <div className="sg-input-group">
-                    <label className="form-label">Pre-existing Script Mapping</label>
-                    <select 
-                        className="fi settings-select-full" 
-                        value={alphabeticScript || 'latin'}
-                        onChange={(e) => updateConfig({ alphabeticScript: e.target.value })}
-                    >
-                        <option value="latin">Latin (Default)</option>
-                        <option value="cyrillic">Cyrillic</option>
-                        <option value="greek">Greek</option>
-                        <option value="runic">Runic</option>
-                        <option value="georgian">Georgian</option>
-                    </select>
-                </div>
+                <>
+                    <div className="sg-input-group">
+                        <label className="form-label">Pre-existing Script Mapping</label>
+                        <select 
+                            className="fi settings-select-full" 
+                            value={alphabeticScript || 'latin'}
+                            onChange={(e) => updateConfig({ alphabeticScript: e.target.value })}
+                        >
+                            <option value="latin">Latin (Default)</option>
+                            <option value="cyrillic">Cyrillic</option>
+                            <option value="greek">Greek</option>
+                            <option value="runic">Runic</option>
+                            <option value="georgian">Georgian</option>
+                        </select>
+                    </div>
+                    <Infobox title="Writing System Guide">
+                        • <b>Alphabetic:</b> Standard root-based system. Uses your consonants, vowels, and syllable patterns. Maps to various scripts.<br />
+                        • <b>Syllabic:</b> Unlocks the Syllabary Manager.<br />
+                        • <b>Featural Block:</b> Unlocks the Block Manager. Dynamically composes syllables into square blocks.<br />
+                        • <b>Logographic:</b> Whole words become symbols.
+                    </Infobox>
+                </>
             )}
 
-            <div className="sg-input-group" style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid var(--bd)' }}>
-                <label className="cb-wrap" style={{ justifyContent: 'flex-end', gap: '12px', cursor: 'pointer' }}>
+            <div className="sg-footer-settings">
+                <label className="cb-wrap auto-return-row">
                     <input 
                         type="checkbox" 
-                        className="check-rule"
-                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        className="check-rule-sm"
                         checked={!!autoReturnToLexicon}
                         onChange={(e) => updateConfig({ autoReturnToLexicon: e.target.checked })}
                     />
-                    <span style={{ fontSize: '1rem', color: 'var(--tx)', fontWeight: '600' }}>Auto-return to Lexicon after word creation</span>
+                    <span className="auto-return-label">Auto-return to Lexicon after word creation</span>
                 </label>
-                <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginTop: '8px' }}>
+                <p className="auto-return-desc">
                     If enabled, the app will automatically navigate back to the lexicon list after you successfully save a new root.
                 </p>
             </div>
-            
-            <Infobox title="Writing System Guide">
-                • <b>Alphabetic:</b> Standard root-based system. Uses your consonants, vowels, and syllable patterns. Maps to various scripts.<br />
-                • <b>Syllabic:</b> Unlocks the Syllabary Manager.<br />
-                • <b>Featural Block:</b> Unlocks the Block Manager. Dynamically composes syllables into square blocks.<br />
-                • <b>Logographic:</b> Whole words become symbols.
+
+            <Infobox title="Workflow Tips">
+                • <b>Auto-return:</b> Enable this to jump back to the Lexicon immediately after saving a new root.<br />
+                • <b>Genealogy:</b> Use "Target POS" in grammar rules to automatically categorize derived words (e.g., Noun to Adjective).
             </Infobox>
 
         </Card>

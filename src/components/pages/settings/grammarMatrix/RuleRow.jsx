@@ -79,6 +79,26 @@ export const RuleRow = ({ rule, onUpdate, onDelete, allWordClasses }) => {
             <option value="other">After Other</option>
           </select>
         </div>
+
+        <div className="form-group">
+          <label className="rule-label">Target POS</label>
+          <input 
+            type="text" 
+            name="targetPOS" 
+            className="fi" 
+            value={rule.targetPOS || ''} 
+            onChange={handleChange} 
+            placeholder="Inherit" 
+            spellCheck="false" 
+            list={`target-pos-list-${rule.id}`}
+          />
+          <datalist id={`target-pos-list-${rule.id}`}>
+            <option value="" />
+            {(allWordClasses || []).map(cls => (
+              <option key={cls} value={cls} />
+            ))}
+          </datalist>
+        </div>
       </div>
 
       <div className="rule-footer">

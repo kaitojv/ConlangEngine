@@ -310,3 +310,26 @@
     font-size: 1.2rem;
     letter-spacing: 1px;
 }
+
+.vowel-trapezoid {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    position: relative;
+    width: 100%;
+}
+
+.vowel-trapezoid-svg {
+    position: absolute;
+    top: 24px;
+    bottom: 24px;
+    left: 80px;
+    width: calc(100% - 80px);
+    height: calc(100% - 48px);
+    z-index: 0;
+    pointer-events: none;
+}
+
+.vowel-cell-group {
+    left: var(--v-left, 50%);
+}

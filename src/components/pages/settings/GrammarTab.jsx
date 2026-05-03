@@ -32,6 +32,7 @@ export default function GrammarTab(){
                     • <b>Reduplication:</b> Capture groups and repeat them. Example: <code>^(.{2})(.*) =&gt; $1$1$2</code> (copies the first two letters).<br />
                     • <b>Deletion:</b> Leave the right side of the arrow empty. Example: <code>[aeiou]$ =&gt; </code> (deletes a trailing vowel).<br />
                     • <b>Standalone Rules:</b> Check the <b>"Standalone"</b> box for inflections that should IGNORE Person/Class alignments (e.g., Passive Voice, Infinitives). They will conjugate independently in the Matrix without attaching pronouns.<br />
+                    • <b>Target POS:</b> Automatically change the word class of derived words (e.g., from Noun to Adjective) when this rule is applied.<br />
                     • <b>Rule Scoping:</b> Use the <b>Person Category</b> (in Lexicon Edit) or <b>Root Tag</b> (in Person Alignment) to filter which rules appear for specific words. This is perfect for separating 1st, 2nd, and 3rd person pronoun roots.
                 </Infobox>
                 
@@ -100,7 +101,15 @@ export default function GrammarTab(){
             {/* --- ALIGNMENT & PRONOUNS --- */}
             <Card>
                 <h2 className="flex sg-title"><Users /> Person & Class Alignment</h2>
-                {/* Replace the old Input with the new PersonRulesEditor component */}
+                <Infobox title="Pronoun & Affix Guide">
+                    Define how each grammatical person (1st, 2nd, 3rd) or noun class is represented.
+                    <br /><br />
+                    • <b>Person/Number/Gender:</b> Select the grammatical category. Use "Person" for pronouns and "Noun Class" for noun alignments.<br />
+                    • <b>Free Form:</b> The standalone pronoun word (e.g., "I", "you").<br />
+                    • <b>Affix:</b> The bound morpheme that attaches to roots (e.g., <code>-m</code>).<br />
+                    • <b>Applies To:</b> Filters which word classes use this rule. Set to <code>all</code> (default) or specify <code>verb</code> for verbal conjugations.<br />
+                    • <b>Root Tag:</b> Advanced scoping. Link this rule to dictionary words that share a specific tag.
+                </Infobox>
                 <PersonRulesEditor />
             </Card>
             

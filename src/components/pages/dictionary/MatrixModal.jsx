@@ -5,6 +5,7 @@ import { applyRuleToWord, getPersonRules } from '@/utils/morphologyEngine.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { Lightbulb, Edit2, Save, Download } from 'lucide-react';
 import { exportTextAsSVG } from '@/utils/svgExporter.jsx';
+import toast from 'react-hot-toast';
 import './matrixmodal.css';
 
 export default function MatrixModal({ wordObj }) {
@@ -92,6 +93,17 @@ export default function MatrixModal({ wordObj }) {
     const hasNonStandaloneRules = applicableRules.some(rule => !rule.standalone); // Rules that need person/class
     const hasStandaloneRules = applicableRules.some(rule => rule.standalone); // Rules that don't need person/class
     const hasDualConjugation = personRules.some(p => p.affix && p.freeForm); // Check if any person rule has both affix and free form
+
+    // Scan for existing derivations in the lexicon to prevent duplicates
+    const existingDerivationsMap = useMemo(() => {
+        const map = {};
+        lexicon.forEach(entry => {
+            if (entry.parentRootId === liveWord.id && entry.derivationRuleId) {
+                map[entry.derivationRuleId] = entry;
+            }
+        });
+        return map;
+    }, [lexicon, liveWord.id]);
 
     const showPersonColumn = personRules.length > 1 && hasNonStandaloneRules;
 
@@ -212,15 +224,15 @@ export default function MatrixModal({ wordObj }) {
             </div>
 
             {derivationToSave && (
-                <div style={{ background: 'var(--s2)', padding: '15px', borderRadius: '8px', marginBottom: '15px', border: '1px solid var(--acc)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                        <h4 style={{ margin: 0, color: 'var(--tx)' }}>
-                            Save Derived Word: <span className="custom-font-text notranslate" style={{ color: 'var(--acc)', fontSize: '1.2em', marginLeft: '5px' }}>{transliterate(derivationToSave.word)}</span>
+                <div className="matrix-quick-save-row">
+                    <div className="matrix-quick-save-header">
+                        <h4 className="matrix-quick-save-title">
+                            Save Derived Word: <span className="custom-font-text notranslate matrix-quick-save-word">{transliterate(derivationToSave.word)}</span>
                         </h4>
-                        <button onClick={() => setDerivationToSave(null)} style={{ background: 'none', border: 'none', color: 'var(--tx3)', cursor: 'pointer', fontSize: '0.9rem' }}>Cancel</button>
+                        <button onClick={() => setDerivationToSave(null)} className="matrix-quick-save-cancel">Cancel</button>
                     </div>
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                        <div style={{ flex: 2 }}>
+                    <div className="matrix-quick-save-form">
+                        <div className="matrix-quick-save-trans-wrap">
                             <input 
                                 type="text" 
                                 className="fi" 
@@ -230,7 +242,7 @@ export default function MatrixModal({ wordObj }) {
                                 autoFocus
                             />
                         </div>
-                        <div style={{ flex: 1 }}>
+                        <div className="matrix-quick-save-class-wrap">
                             <select className="fi" value={derivationClass} onChange={e => setDerivationClass(e.target.value)}>
                                 <option value="noun">Noun</option>
                                 <option value="verb">Verb</option>
@@ -251,10 +263,16 @@ export default function MatrixModal({ wordObj }) {
                         <button 
                             className="btn-save btn-base" 
                             onClick={() => {
-                                if (!derivationTranslation.trim()) return alert("Translation required");
-                                addWord({ word: derivationToSave.word, wordClass: derivationClass, translation: derivationTranslation.trim() });
+                                if (!derivationTranslation.trim()) return toast.error("Translation required");
+                                addWord({ 
+                                    word: derivationToSave.word, 
+                                    wordClass: derivationClass, 
+                                    translation: derivationTranslation.trim(),
+                                    parentRootId: liveWord.id,
+                                    derivationRuleId: derivationToSave.ruleId
+                                });
                                 setDerivationToSave(null);
-                                alert("Saved to lexicon!");
+                                toast.success("Saved to lexicon!");
                             }}
                         >
                             Save
@@ -321,12 +339,15 @@ export default function MatrixModal({ wordObj }) {
                                                     onChange={(e) => handleOverrideChange(overrideKey, e.target.value)}
                                                 />
                                             ) : (
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                    <span className={`notranslate matrix-output custom-font-text ${manualValue ? 'overridden' : ''} ${phonologyTypes === 'featural_block' ? 'featural-block-render' : ''}`}>
+                                                <div className="matrix-cell-content">
+                                                    <span className={`notranslate matrix-output custom-font-text ${manualValue ? 'overridden' : ''} ${phonologyTypes === 'featural_block' ? 'featural-block-render' : ''} ${existingDerivationsMap[rule.id] ? 'existing-derivation' : ''}`}>
                                                         {finalWordToDisplay ? transliterate(finalWordToDisplay) : <span className="matrix-invalid">Invalid</span>}
                                                     </span>
+                                                    {existingDerivationsMap[rule.id] && !manualValue && (
+                                                        <span className="existing-badge" title="Already in Lexicon">✓</span>
+                                                    )}
                                                     {finalWordToDisplay && (
-                                                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                                        <div className="matrix-cell-actions">
                                                             {phonologyTypes !== 'alphabetic' && (
                                                                 <button 
                                                                     className="matrix-quick-save-btn"
@@ -339,15 +360,27 @@ export default function MatrixModal({ wordObj }) {
                                                             <button 
                                                                 className="matrix-quick-save-btn"
                                                                 onClick={() => {
-                                                                    setDerivationToSave({ word: finalWordToDisplay, ruleName: rule.name, personName: person.name });
+                                                                    if (existingDerivationsMap[rule.id]) {
+                                                                        return toast.error(`This derivation (${finalWordToDisplay}) is already in your Lexicon.`);
+                                                                    }
+                                                                    setDerivationToSave({ 
+                                                                        word: finalWordToDisplay, 
+                                                                        ruleName: rule.name, 
+                                                                        ruleId: rule.id,
+                                                                        personName: person.name 
+                                                                    });
                                                                     setDerivationTranslation('');
                                                                     
                                                                     // Smartly default the target class based on the grammar rule
-                                                                    const ruleClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
-                                                                    if (ruleClasses.includes('all')) {
-                                                                        setDerivationClass(liveWord.wordClass ? liveWord.wordClass.split(',')[0].trim().toLowerCase() : 'noun');
+                                                                    if (rule.targetPOS) {
+                                                                        setDerivationClass(rule.targetPOS);
                                                                     } else {
-                                                                        setDerivationClass(ruleClasses[0]); // Default to the first class this rule applies to
+                                                                        const ruleClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
+                                                                        if (ruleClasses.includes('all')) {
+                                                                            setDerivationClass(liveWord.wordClass ? liveWord.wordClass.split(',')[0].trim().toLowerCase() : 'noun');
+                                                                        } else {
+                                                                            setDerivationClass(ruleClasses[0]); // Default to the first class this rule applies to
+                                                                        }
                                                                     }
                                                                 }}
                                                                 title="Save to Lexicon"
@@ -375,4 +408,4 @@ export default function MatrixModal({ wordObj }) {
             )}
         </div>
     );
-}  
+}

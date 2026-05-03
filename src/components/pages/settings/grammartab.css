@@ -23,7 +23,7 @@
 
 .rule-grid{
     display: grid;
-    grid-template-columns: 1fr 1.5fr 1fr 1fr;
+    grid-template-columns: 1fr 1.5fr 1fr 1fr 1fr;
     gap: 15px;
     align-items: start;
     margin-bottom: 20px;

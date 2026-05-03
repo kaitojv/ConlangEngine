@@ -337,3 +337,109 @@
         transform: translateY(0);
     }
 }
+
+.lexicon-entry {
+    margin-bottom: 15px;
+    transition: all 0.2s;
+}
+
+.lexicon-entry:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.clear-search-icon {
+    position: absolute;
+    right: 12px;
+    top: 10px;
+    cursor: pointer;
+    color: var(--tx3);
+}
+
+.bound-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--tx2);
+    user-select: none;
+}
+
+.active-filters-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.filters-label {
+    font-size: 0.85rem;
+    color: var(--tx2);
+    font-weight: 600;
+}
+
+.clear-filters-btn {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+}
+
+.list-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.list-total-count {
+    color: var(--acc2);
+    font-weight: bold;
+}
+
+.classes-preview-wrap {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.load-more-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    margin-bottom: 40px;
+}
+
+.delete-toast-container {
+    background: var(--s4);
+    color: var(--tx);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--err);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.delete-toast-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.delete-toast-btn {
+    padding: 5px 10px;
+    background: var(--err);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.delete-cancel-btn {
+    padding: 5px 10px;
+    background: var(--s2);
+    color: var(--tx);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}

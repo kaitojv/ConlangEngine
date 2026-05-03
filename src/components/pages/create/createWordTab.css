@@ -195,3 +195,86 @@
     cursor: pointer;
 }
 
+.ipa-chart-status {
+    font-size: 0.75rem;
+    color: var(--tx2);
+    margin-bottom: 6px;
+}
+
+.ipa-active-field {
+    color: var(--acc);
+}
+
+.tag-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.tag-add-icon {
+    cursor: pointer;
+    color: var(--acc);
+    flex-shrink: 0;
+}
+
+.deriv-item-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    margin-right: 10px;
+}
+
+.deriv-check-icon {
+    color: var(--bg);
+}
+
+.create-actions-wrap {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.create-save-main {
+    flex: 2;
+}
+
+.create-view-lexicon {
+    flex: 1;
+}
+
+/* Toast Component Styles */
+.toast-inner-flex {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toast-view-btn {
+    background: var(--acc);
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.char-violation-title {
+    color: var(--err);
+}
+
+.char-violation-actions {
+    margin-top: 12px;
+}
+
+.char-violation-progress {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--tx3);
+}
+
+.pattern-warning-p {
+    font-size: 0.9rem;
+    color: var(--tx2);
+}

@@ -96,3 +96,37 @@
     margin-bottom: 20px;
     line-height: 1.5;
 }
+
+.sg-footer-settings {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--bd);
+}
+
+.auto-return-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.check-rule-sm {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.auto-return-label {
+    font-size: 1rem;
+    color: var(--tx);
+    font-weight: 600;
+}
+
+.auto-return-desc {
+    font-size: 0.85rem;
+    color: var(--tx2);
+    margin-top: 8px;
+    margin-left: 30px;
+}
+

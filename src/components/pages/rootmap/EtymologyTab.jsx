@@ -46,6 +46,7 @@ export default function EtymologyTab() {
         // Verb markers are no longer stripped, they only act as a validation warning during creation
 
         // Now, find all grammar rules that actually apply to this specific part of speech
+        const targetClasses = (targetWord.wordClass || '').split(',').map(c => c.trim().toLowerCase());
         const applicableRules = grammarRules.filter(rule => {
             const allowedClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
             return allowedClasses.includes('all') || targetClasses.some(tc => allowedClasses.includes(tc));

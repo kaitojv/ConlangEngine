@@ -277,3 +277,23 @@
     background: var(--acc);
     color: var(--bg);
 }
+
+.existing-derivation {
+    color: var(--acc) !important;
+    text-shadow: 0 0 10px rgba(124, 58, 237, 0.3);
+}
+
+.existing-badge {
+    color: var(--acc);
+    font-size: 0.9rem;
+    font-weight: bold;
+    margin-left: 5px;
+    background: rgba(124, 58, 237, 0.1);
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1px solid var(--acc);
+}

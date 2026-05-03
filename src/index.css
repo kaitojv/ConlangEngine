@@ -136,6 +136,7 @@ body {
 }
 
 /* Global typography */
+
 h1, h2, h3, h4 {
   color: var(--tx);
   line-height: 1.2;
@@ -148,6 +149,15 @@ h2 {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.sg-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.5rem;
+  color: var(--acc);
+  margin-bottom: 25px;
 }
 
 h3 {
@@ -424,4 +434,3 @@ select option {
 .input-wrapper:hover .clear-input-btn {
     opacity: 1;
 }
-

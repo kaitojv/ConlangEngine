@@ -109,7 +109,7 @@ export default function Home() {
                         <Settings2 size={18} /> Configure Grammar
                     </button>
                     <button onClick={() => navigate('/create')} className="btn btn-base btn-secondary">
-                        <PlusCircle size={18} /> Add New Root
+                        <PlusCircle size={18} /> Expand Lexicon
                     </button>
                     <button onClick={() => navigate('/lexicon')} className="btn btn-base btn-secondary">
                         <BookA size={18} /> Open Lexicon

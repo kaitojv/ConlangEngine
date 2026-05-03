@@ -100,7 +100,14 @@ export default function IpaChart({ consonants = '', setConsonants, vowels = '', 
             <span 
                 key={phoneme}
                 className={`ph ${isSelected(phoneme, type) ? 'selected' : ''}`} 
-                onClick={() => handleClick(phoneme, type)}
+                onClick={(e) => {
+                    e.preventDefault();
+                    handleClick(phoneme, type);
+                }}
+                onTouchEnd={(e) => {
+                    e.preventDefault();
+                    handleClick(phoneme, type);
+                }}
                 title={`Select ${phoneme}`}
             >
                 {phoneme}
@@ -203,8 +210,8 @@ export default function IpaChart({ consonants = '', setConsonants, vowels = '', 
                             <span>Central</span>
                             <span>Back</span>
                         </div>
-                        <div className="vowel-trapezoid" style={{ position: 'relative' }}>
-                            <svg style={{ position: 'absolute', top: '24px', bottom: '24px', left: '80px', width: 'calc(100% - 80px)', height: 'calc(100% - 48px)', zIndex: 0, pointerEvents: 'none' }}>
+                        <div className="vowel-trapezoid">
+                            <svg className="vowel-trapezoid-svg">
                                 {/* Outer Trapezoid */}
                                 <polygon points="10%,0 90%,0 90%,100% 50%,100%" fill="none" stroke="var(--bd)" strokeWidth="2" />
                                 {/* Central Line */}
@@ -225,21 +232,21 @@ export default function IpaChart({ consonants = '', setConsonants, vowels = '', 
                                         <span className="vowel-row-label">{row.label}</span>
                                         
                                         {(row.sounds[0] || row.sounds[1]) && (
-                                            <div className="vowel-cell-group front" style={{ left: `${frontLeft}%` }}>
+                                            <div className="vowel-cell-group front" style={{ '--v-left': `${frontLeft}%` }}>
                                                 {renderPh(row.sounds[0], 'vow')}
                                                 {renderPh(row.sounds[1], 'vow')}
                                             </div>
                                         )}
                                         
                                         {(row.sounds[2] || row.sounds[3]) && (
-                                            <div className="vowel-cell-group central" style={{ left: `${centralLeft}%` }}>
+                                            <div className="vowel-cell-group central" style={{ '--v-left': `${centralLeft}%` }}>
                                                 {renderPh(row.sounds[2], 'vow')}
                                                 {renderPh(row.sounds[3], 'vow')}
                                             </div>
                                         )}
 
                                         {(row.sounds[4] || row.sounds[5]) && (
-                                            <div className="vowel-cell-group back" style={{ left: `${backLeft}%` }}>
+                                            <div className="vowel-cell-group back" style={{ '--v-left': `${backLeft}%` }}>
                                                 {renderPh(row.sounds[4], 'vow')}
                                                 {renderPh(row.sounds[5], 'vow')}
                                             </div>

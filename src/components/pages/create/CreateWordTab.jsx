@@ -14,6 +14,7 @@ import './createWordTab.css';
 import Modal from '../../UI/Modal/Modal.jsx';
 import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
 import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
+import Infobox from '../../UI/Infobox/Infobox.jsx';
 import toast from 'react-hot-toast';
 
 // Standard POS options that always show in the dropdown
@@ -29,7 +30,6 @@ export default function CreateWordTab() {
 
     // Track which input field the IPA chart should paste into
     const [activeField, setActiveField] = useState('ipa'); // default to IPA field
-    const [activeToastId, setActiveToastId] = useState(null);
     const [tagInput, setTagInput] = useState('');
 
     // Global stores
@@ -148,10 +148,16 @@ export default function CreateWordTab() {
 
     const handleAddTag = (tag) => {
         const cleanTag = tag.trim().toLowerCase();
-        if (cleanTag && !formData.tags.includes(cleanTag)) {
+        if (!cleanTag) return;
+        if (!formData.tags.includes(cleanTag)) {
             updateField('tags', [...formData.tags, cleanTag]);
-            setTagInput('');
         }
+        setTagInput('');
+    };
+
+    const handleClearTags = () => {
+        updateField('tags', []);
+        setTagInput('');
     };
 
     const removeTag = (tagToRemove) => {
@@ -159,7 +165,11 @@ export default function CreateWordTab() {
     };
 
     const saveConfirmedWord = (safeWord, cleanTrans, processedTags) => {
+        const rootId = Date.now() + Math.random();
+
+        // 1. Save the main root
         addWord({
+            id: rootId,
             word: safeWord,
             ipa: ipa.trim(),
             wordClass: wordClass,
@@ -168,7 +178,40 @@ export default function CreateWordTab() {
             ideogram: ideogram.trim()
         });
 
-        // Persist any new custom POS/tags
+        // 2. Save any selected derivations
+        derivedWords.forEach((item, idx) => {
+            if (selectedDerivs[idx]) {
+                const rule = grammarRules.find(r => r.name === item.ruleName);
+                
+                // Determine the best class for the derivation
+                let targetClass = wordClass; // Fallback
+                if (rule) {
+                    if (rule.targetPOS) {
+                        targetClass = rule.targetPOS;
+                    } else {
+                        const ruleClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
+                        if (!ruleClasses.includes('all')) {
+                            targetClass = ruleClasses[0]; 
+                        } else if (wordClass.includes(',')) {
+                            targetClass = wordClass.split(',')[0].trim();
+                        }
+                    }
+                }
+
+                addWord({
+                    word: item.derivedWord,
+                    ipa: '', // Derivations don't auto-generate IPA yet
+                    wordClass: targetClass,
+                    translation: customTranslations[idx] !== undefined ? customTranslations[idx].trim() : item.translationText,
+                    tags: [...processedTags, 'derived'],
+                    ideogram: '',
+                    parentRootId: rootId,
+                    derivationRuleId: rule?.id
+                });
+            }
+        });
+
+        // 3. Persist any new custom POS/tags
         if (wordClass && !STANDARD_WORD_CLASSES.includes(wordClass.toLowerCase())) {
             addCustomWordClass(wordClass);
         }
@@ -178,7 +221,20 @@ export default function CreateWordTab() {
         setFormData({ word: '', ipa: '', wordClass: 'noun', translation: '', tags: [], ideogram: '' });
         setSelectedDerivs({});
         setCustomTranslations({});
-        toast.success("Root and selected derivations saved successfully!");
+        toast.success((t) => (
+            <div className="toast-inner-flex">
+                <span>Root and derivations saved!</span>
+                <button 
+                    onClick={() => {
+                        toast.dismiss(t.id);
+                        navigate('/lexicon');
+                    }}
+                    className="toast-view-btn"
+                >
+                    View Lexicon
+                </button>
+            </div>
+        ));
 
         if (autoReturnToLexicon) {
             navigate('/lexicon');
@@ -186,9 +242,7 @@ export default function CreateWordTab() {
     };
 
     const showValidationToast = (content) => {
-        if (activeToastId) toast.dismiss(activeToastId);
-        const newId = toast.custom(content, { duration: Infinity });
-        setActiveToastId(newId);
+        toast.custom(content, { duration: Infinity, id: 'validation-toast' });
     };
 
     // Validate and save the new root to our lexicon
@@ -212,10 +266,12 @@ export default function CreateWordTab() {
             let warningMsg = "";
             if (isDuplicateWord && isDuplicateTranslation) {
                 warningMsg = "This exact word and translation already exist in your lexicon.";
-            } else if (isDuplicateWord) {
+            } else if (isDuplicateWord && !isDuplicateTranslation) {
                 warningMsg = "This word already exists (Homonym). Save it as a new entry with this different meaning?";
-            } else {
+            } else if (!isDuplicateWord && isDuplicateTranslation) {
                 warningMsg = "This translation already exists (Synonym). Save it as a new entry with this different spelling?";
+            } else {
+                warningMsg = "Duplicate detected: This word or translation is already in your dictionary.";
             }
 
             showValidationToast((t) => (
@@ -238,46 +294,72 @@ export default function CreateWordTab() {
         proceedToValidation(safeWord, cleanTrans, processedTags);
     };
 
-    const proceedToValidation = (safeWord, cleanTrans, processedTags) => {
+    const proceedToValidation = (safeWord, cleanTrans, processedTags, charIndex = 0) => {
         const validation = validateNewWord(safeWord, useConfigStore.getState());
 
         // 2. PHONOTACTIC VALIDATION
         if (!validation.valid) {
+            // Handle multiple invalid characters sequentially
+            if (validation.type === 'invalid_chars') {
+                const char = validation.invalidChars[charIndex];
+                
+                // If we've processed all individual characters, proceed to the final step (pattern validation)
+                if (!char) {
+                    return proceedToGrammarValidation(safeWord, cleanTrans, processedTags);
+                }
+
+                showValidationToast((t) => (
+                    <div className="custom-toast-v">
+                        <strong className="char-violation-title">⚠️ Character Violation: "{char}"</strong>
+                        <span>The character "{char}" is not in your Phoneme settings. How should we handle it?</span>
+                        <div className="toast-actions-v char-violation-actions">
+                            <button onClick={() => {
+                                toast.dismiss(t.id);
+                                handleAddCharsToInventory([char], 'consonants');
+                                // Delay slightly to let the toast animation complete before showing the next one
+                                setTimeout(() => proceedToValidation(safeWord, cleanTrans, processedTags, charIndex + 1), 100);
+                            }} className="btn-v btn-acc-v">Add to Consonants</button>
+                            
+                            <button onClick={() => {
+                                toast.dismiss(t.id);
+                                handleAddCharsToInventory([char], 'vowels');
+                                setTimeout(() => proceedToValidation(safeWord, cleanTrans, processedTags, charIndex + 1), 100);
+                            }} className="btn-v btn-acc2-v">Add to Vowels</button>
+
+                            <button onClick={() => {
+                                toast.dismiss(t.id);
+                                // Skip this character but keep going with the next one
+                                setTimeout(() => proceedToValidation(safeWord, cleanTrans, processedTags, charIndex + 1), 100);
+                            }} className="btn-v btn-err-v">Save as Irregular</button>
+                            
+                            <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                        </div>
+                        <div className="char-violation-progress">
+                            {validation.invalidChars.length > 1 && `(Character ${charIndex + 1} of ${validation.invalidChars.length})`}
+                        </div>
+                    </div>
+                ));
+                return;
+            }
+
+            // Pattern validation (runs after characters are cleared or skipped)
             showValidationToast((t) => (
                 <div className="custom-toast-v">
                     <strong>⚠️ Phono-Syntax Warning</strong>
                     <span>{validation.reason}</span>
-                    <p style={{fontSize: '0.9rem', color: 'var(--tx2)'}}>Do you want to save it as an irregular exception anyway?</p>
+                    <p className="pattern-warning-p">Do you want to save it as an irregular exception anyway?</p>
                     <div className="toast-actions-v">
                         <button onClick={() => {
                             toast.dismiss(t.id);
                             proceedToGrammarValidation(safeWord, cleanTrans, processedTags);
                         }} className="btn-v btn-err-v">Save Anyway</button>
                         
-                        {validation.type === 'invalid_chars' && validation.invalidChars && (
-                            <>
-                                <button onClick={() => {
-                                    toast.dismiss(t.id);
-                                    handleAddCharsToInventory(validation.invalidChars, 'consonants');
-                                }} className="btn-v btn-acc-v">Add to Consonants</button>
-                                <button onClick={() => {
-                                    toast.dismiss(t.id);
-                                    handleAddCharsToInventory(validation.invalidChars, 'vowels');
-                                }} className="btn-v btn-acc2-v">Add to Vowels</button>
-                                <button onClick={() => {
-                                    toast.dismiss(t.id);
-                                    handleAddCharsToInventory(validation.invalidChars, 'otherPhonemes');
-                                }} className="btn-v btn-acc3-v">Add to Others</button>
-                            </>
-                        )}
-
                         {validation.type === 'invalid_pattern' && validation.detectedPattern && (
                             <button onClick={() => {
                                 toast.dismiss(t.id);
                                 handleAddPattern(validation.detectedPattern, safeWord, cleanTrans, processedTags);
-                            }} className="btn-v btn-acc-v">Add to patterns & Save</button>
+                            }} className="btn-v btn-acc-v">Add as Syllable Pattern</button>
                         )}
-
                         <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
                     </div>
                 </div>
@@ -335,32 +417,6 @@ export default function CreateWordTab() {
         }
 
         saveConfirmedWord(safeWord, cleanTrans, processedTags);
-
-        // Also save any selected derivations
-        derivedWords.forEach((item, idx) => {
-            if (selectedDerivs[idx]) {
-                // Determine the best class for the derivation
-                const rule = grammarRules.find(r => r.name === item.ruleName);
-                let targetClass = wordClass; // Fallback
-                if (rule) {
-                    const ruleClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
-                    if (!ruleClasses.includes('all')) {
-                        targetClass = ruleClasses[0]; // Use the specific class the rule applies to
-                    } else if (wordClass.includes(',')) {
-                        targetClass = wordClass.split(',')[0].trim(); // Use the first class of the root
-                    }
-                }
-
-                addWord({
-                    word: item.derivedWord,
-                    ipa: '', // Derivations don't auto-generate IPA yet
-                    wordClass: targetClass,
-                    translation: customTranslations[idx] !== undefined ? customTranslations[idx].trim() : item.translationText,
-                    tags: processedTags,
-                    ideogram: ''
-                });
-            }
-        });
     };
 
     // Spin up a live preview of how this word will interact with the language's grammar rules
@@ -403,6 +459,13 @@ export default function CreateWordTab() {
                 <h2 className="create-word-title">
                     <Sparkles className="title-icon" /> Create New Root
                 </h2>
+
+                <Infobox title="Derivation & Genealogy Guide">
+                    • <b>Automatic Linking:</b> Words saved from the "Derivations" list are linked to this root. You can see this genealogy in the Lexicon Edit modal.<br />
+                    • <b>Target POS:</b> If a grammar rule (like "Adjectival") has a Target POS set, derived words will automatically be categorized correctly.<br />
+                    • <b>Duplicate Alerts:</b> The app checks for homonyms (same word) and synonyms (same translation) in real-time.<br />
+                    • <b>IPA Chart:</b> Click any field to focus it, then use the IPA chart to insert phonemes.
+                </Infobox>
 
                 <div className="input-grid">
                     <div>
@@ -451,9 +514,9 @@ export default function CreateWordTab() {
                 </div>
 
                 {/* IPA chart spans the full card width so it doesn't overflow the column grid */}
-                <div style={{ marginBottom: '1rem' }}>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--tx2)', marginBottom: '6px' }}>
-                        IPA Chart pastes into: <strong style={{ color: 'var(--acc)' }}>{activeField === 'word' ? 'Word' : 'IPA'}</strong> field. Click a field above to change target.
+                <div className="ipa-chart-status-wrap">
+                    <p className="ipa-chart-status">
+                        IPA Chart pastes into: <strong className="ipa-active-field">{activeField === 'word' ? 'Word' : 'IPA'}</strong> field. Click a field above to change target.
                     </p>
                     <IpaChart onSelect={handleIpaSelect} />
                 </div>
@@ -487,12 +550,12 @@ export default function CreateWordTab() {
                 {isDuplicate && (
                     <div className="warning-box">
                         <AlertTriangle size={18} />
-                        Warning: {isDuplicateWord && isDuplicateTranslation ? "This word and translation already exist in your lexicon." : isDuplicateWord ? "This word already exists (Homonym)." : "This translation already exists (Synonym)."}
+                        Warning: {isDuplicateWord && isDuplicateTranslation ? "This exact word and translation already exist." : isDuplicateWord && isDuplicateTranslation === false ? "This word already exists (Homonym)." : isDuplicateWord === false && isDuplicateTranslation ? "This translation already exists (Synonym)." : "This entry matches existing homonyms and synonyms."}
                     </div>
                 )}
 
                 <div className="tags-section">
-                    <label className="input-label">Semantic Tags</label>
+                    <label className="form-label">Semantic Tags</label>
                     <div className="tags-chip-container">
                         {formData.tags.map(tag => (
                             <span key={tag} className="tag-chip">
@@ -500,12 +563,16 @@ export default function CreateWordTab() {
                                 <X size={12} onClick={() => removeTag(tag)} className="tag-remove-icon" />
                             </span>
                         ))}
-                        <div className="tag-input-wrapper">
-                            <input 
-                                type="text"
-                                className="tag-inner-input"
+                        <div className="tag-input-wrap">
+                            <Input 
+                                placeholder={formData.tags.length === 0 ? "Add tags (nature, emotion...)" : ""}
                                 value={tagInput}
                                 onChange={(e) => setTagInput(e.target.value)}
+                                onInput={(e) => {
+                                    if (allTags.includes(e.target.value.toLowerCase())) {
+                                        handleAddTag(e.target.value);
+                                    }
+                                }}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter' || e.key === ',') {
                                         e.preventDefault();
@@ -513,9 +580,22 @@ export default function CreateWordTab() {
                                     }
                                 }}
                                 onBlur={() => handleAddTag(tagInput)}
-                                placeholder={formData.tags.length === 0 ? "Add tags (nature, emotion...)" : ""}
                                 list="semantic-tags"
-                            />
+                                className="tag-input-field"
+                            >
+                                {tagInput && (
+                                    <button 
+                                        className="clear-input-btn" 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setTagInput('');
+                                        }}
+                                        title="Clear Tag Input"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                )}
+                            </Input>
                             <Plus size={16} className="tag-add-icon" onClick={() => handleAddTag(tagInput)} />
                         </div>
                     </div>
@@ -542,7 +622,7 @@ export default function CreateWordTab() {
                                         onClick={() => setSelectedDerivs(prev => ({ ...prev, [idx]: !prev[idx] }))}
                                         title="Click to save alongside root"
                                     >
-                                        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, marginRight: '10px' }}>
+                                        <div className="deriv-item-content">
                                             <span className="preview-word notranslate custom-font-text">
                                                 {transliterate(item.derivedWord)}
                                             </span>
@@ -556,7 +636,7 @@ export default function CreateWordTab() {
                                             />
                                         </div>
                                         <div className="preview-checkbox">
-                                            {selectedDerivs[idx] && <span style={{ color: 'var(--bg)' }}>✓</span>}
+                                            {selectedDerivs[idx] && <span className="deriv-checkbox-check">✓</span>}
                                         </div>
                                     </div>
                                 ))}
@@ -567,22 +647,23 @@ export default function CreateWordTab() {
                     </div>
                 )}
 
-                <div className="create-word-actions" style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+                <div className="create-actions-wrap">
                     <Button 
                         variant="save" 
-                        style={{ flex: 2 }}
+                        className="create-save-main"
                         onClick={handleSave}
                     >
                         <Save size={20} /> Save Root to Lexicon
                     </Button>
                     <Button 
                         variant="edit" 
-                        style={{ flex: 1 }}
+                        className="create-view-lexicon"
                         onClick={() => navigate('/lexicon')}
                     >
                         View Lexicon
                     </Button>
                 </div>
+
             </Card>
 
             <Modal 

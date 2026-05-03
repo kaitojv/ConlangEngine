@@ -11,7 +11,7 @@ export const useLexiconStore = create(
 
             addWord: (newWordData) => set((state) => {
                 const newEntry = {
-                    id: Date.now() + Math.random(),
+                    id: newWordData.id || (Date.now() + Math.random()),
                     word: newWordData.word,
                     ipa: newWordData.ipa || '',
                     wordClass: newWordData.wordClass,
@@ -19,6 +19,8 @@ export const useLexiconStore = create(
                     tags: newWordData.tags || [],
                     ideogram: newWordData.ideogram || '',
                     personCategory: newWordData.personCategory || '',
+                    parentRootId: newWordData.parentRootId || null,
+                    derivationRuleId: newWordData.derivationRuleId || null,
                     inflectionOverrides: {},
                     createdAt: Date.now()
                 };
