@@ -108,11 +108,11 @@ export default function Home() {
                     <button onClick={() => navigate('/settings')} className="btn btn-base btn-primary">
                         <Settings2 size={18} /> Configure Grammar
                     </button>
-                    <button onClick={() => navigate('/dictionary')} className="btn btn-base btn-secondary">
-                        <BookA size={18} /> Open Dictionary
+                    <button onClick={() => navigate('/create')} className="btn btn-base btn-secondary">
+                        <PlusCircle size={18} /> Add New Root
                     </button>
-                    <button onClick={() => navigate('/help')} className="btn btn-base btn-secondary">
-                        <HelpCircle size={18} /> Build Guide
+                    <button onClick={() => navigate('/lexicon')} className="btn btn-base btn-secondary">
+                        <BookA size={18} /> Open Lexicon
                     </button>
                 </div>
             </Card> 
@@ -122,15 +122,15 @@ export default function Home() {
                 
                 {/* Quick Word Creation */}
                 <Card 
-                    className="interactive-card lexicon-card"
-                    onClick={() => navigate('/create')} 
+                    className="interactive-card help-card"
+                    onClick={() => navigate('/help')} 
                 >
                     <h3>
-                        <PlusCircle size={24} /> Expand Lexicon
+                        <HelpCircle size={24} /> Build Guide
                     </h3>
-                    <p>Create a new word for <b>{conlangName}</b> and grow your vocabulary.</p>
+                    <p>New to conlanging? Read our comprehensive guide on how to build a language from scratch.</p>
                     <div className="widget-footer">
-                        Go to Creator <ArrowRight size={16} />
+                        Open Guide <ArrowRight size={16} />
                     </div>
                 </Card>
 
@@ -159,7 +159,7 @@ export default function Home() {
                 {/* Word of the Day */}
                 <Card 
                     className="interactive-card wotd-card"
-                    onClick={() => navigate('/dictionary')} 
+                    onClick={() => navigate('/lexicon')} 
                 >
                     <h3>
                         <Bookmark size={24} /> Word of the Day
@@ -179,7 +179,7 @@ export default function Home() {
                         <p>Add words to your lexicon to reveal your daily featured word!</p>
                     )}
                     <div className="widget-footer">
-                        Open Dictionary <ArrowRight size={16} />
+                        Open Lexicon <ArrowRight size={16} />
                     </div>
                 </Card>
 

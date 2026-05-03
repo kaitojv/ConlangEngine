@@ -1,9 +1,9 @@
-.dictionary-container {
+.lexicon-container {
     width: 100%;
     margin-top: 1.5rem;
 }
 
-.dictionary-toolbar {
+.lexicon-toolbar {
     margin-bottom: 1.5rem;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
@@ -52,18 +52,7 @@
 }
 
 .filter-select {
-    padding: 0.75rem 1rem;
-    background-color: var(--s4);
-    color: var(--tx);
-    border: 1px solid var(--bd);
-    border-radius: var(--rad-sm);
-    outline: none;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.filter-select:hover {
-    border-color: var(--acc);
+    width: 160px; /* Specific width for the toolbar dropdowns */
 }
 
 .alpha-filter-bar {
@@ -202,13 +191,13 @@
     color: var(--tx2);
 }
 
-.dictionary-cards {
+.lexicon-cards {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
 }
 
-.dictionary-entry {
+.lexicon-entry {
     background: var(--s4);
     border: 1px solid var(--bd);
     border-radius: var(--rad);
@@ -217,7 +206,7 @@
     animation: slideInUp 0.3s ease-out backwards;
 }
 
-.dictionary-entry:hover {
+.lexicon-entry:hover {
     border-color: var(--acc);
     transform: translateY(-2px);
     box-shadow: var(--shadow);
@@ -311,6 +300,12 @@
 
 .entry-tag:hover {
     background-color: var(--bg);
+}
+
+.entry-tag.active {
+    background-color: var(--tx);
+    color: var(--bg);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
 }
 
 .entry-actions {

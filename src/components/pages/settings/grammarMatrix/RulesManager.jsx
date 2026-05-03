@@ -1,14 +1,30 @@
 import React, { useCallback } from 'react';
 import { RuleRow } from './RuleRow.jsx';
 import { useConfigStore } from '../../../../store/useConfigStore.jsx';
+import { useLexiconStore } from '../../../../store/useLexiconStore.jsx';
 import Button from '../../../UI/Buttons/Buttons.jsx';
 import { Plus, ListX } from 'lucide-react';
 import './rulesManager.css';
-
 export const RulesManager = () => {
     // Grab our grammar rules and the updater function from the global store
     const rules = useConfigStore((state) => state.grammarRules) || [];
     const updateConfig = useConfigStore((state) => state.updateConfig);
+    const customWordClasses = useConfigStore((state) => state.customWordClasses) || [];
+    const lexicon = useLexiconStore((state) => state.lexicon) || [];
+
+    const allWordClasses = React.useMemo(() => {
+        const merged = new Set(['noun', 'verb', 'adjective', 'adverb', 'pronoun', 'particle', 'conjunction', 'preposition']);
+        customWordClasses.forEach(cls => merged.add(cls));
+        lexicon.forEach(w => {
+            if (w.wordClass) {
+                w.wordClass.split(',').forEach(cls => {
+                    const clean = cls.trim().toLowerCase();
+                    if (clean) merged.add(clean);
+                });
+            }
+        });
+        return [...merged].sort();
+    }, [customWordClasses, lexicon]);
 
     // Add a brand new, blank rule to the bottom of the list
     const handleAddRule = () => {
@@ -55,6 +71,7 @@ export const RulesManager = () => {
                             rule={rule}
                             onUpdate={handleUpdateRule}
                             onDelete={handleDeleteRule}
+                            allWordClasses={allWordClasses}
                         />
                     ))
                 )}

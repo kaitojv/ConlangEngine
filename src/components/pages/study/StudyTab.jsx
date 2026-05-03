@@ -66,7 +66,7 @@ const PATH_LEVELS = [
 ];
 
 export default function StudyTab() {
-    // Pull in the dictionary and streak settings from our global state
+    // Pull in the lexicon and streak settings from our global state
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
     const addWord = useLexiconStore((state) => state.addWord);
     const checkDuplicate = useLexiconStore((state) => state.checkDuplicate);
@@ -197,11 +197,11 @@ export default function StudyTab() {
             // It's a new word prompt! Check if the word they typed already exists.
             if (checkDuplicate(userAnswer, '')) {
                 setMascotState('incorrect');
-                setQuizFeedback(`The word "${userAnswer}" already exists in your dictionary! Try a different one.`);
+                setQuizFeedback(`The word "${userAnswer}" already exists in your lexicon! Try a different one.`);
                 return; // Wait for them to try again
             }
 
-            // Otherwise, it's a new word. We add it to the dictionary.
+            // Otherwise, it's a new word. We add it to the lexicon.
             isCorrect = true;
             addWord({
                 word: userAnswer,
@@ -324,7 +324,7 @@ export default function StudyTab() {
             {studyMode === 'path' && (
                 <div className="learning-path-container">
                     {pathNodes.length === 0 ? (
-                        <div className="empty-path">Add some words to your dictionary to unlock the Learning Path!</div>
+                        <div className="empty-path">Add some words to your lexicon to unlock the Learning Path!</div>
                     ) : (
                         <div className="path-track" style={{ position: 'relative' }}>
                             <svg 

@@ -17,7 +17,7 @@ import { Toaster } from 'react-hot-toast';
 
 // Lazy loading pages for better performance
 const Home = lazy(() => import('./components/pages/home/Home.jsx'));
-const Dictionary = lazy(() => import('./components/pages/dictionary/DictionaryList.jsx'));
+const Lexicon = lazy(() => import('./components/pages/dictionary/LexiconList.jsx'));
 const Settings = lazy(() => import('./components/pages/settings/Settings.jsx'));
 const CreateWordTab = lazy(() => import('./components/pages/create/CreateWordTab.jsx'));
 const GeneratorTab = lazy(() => import('./components/pages/wordgenerator/GeneratorTab.jsx'));
@@ -35,7 +35,7 @@ const AlignerTab = lazy(() => import('./components/pages/aligner/AlignerTab.jsx'
 // Define your allowlist of safe relative routes based on your actual Route paths
 export const ALLOWED_REDIRECTS = [
   '/',
-  '/dictionary',
+  '/lexicon',
   '/conlangs',
   '/settings',
   '/create',
@@ -153,7 +153,7 @@ function App(){
             <Route path="/" element={<Home />} />
             <Route path="/help" element={<HelpTab />} />
             
-            <Route path="/dictionary" element={<Dictionary />} />
+            <Route path="/lexicon" element={<Lexicon />} />
             <Route path="/conlangs" element={<ConlangsTab />} />
             <Route path="/create" element={<CreateWordTab />} />
             <Route path="/generator" element={<GeneratorTab />} />

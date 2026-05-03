@@ -11,6 +11,7 @@ export default function SettingsGeneral() {
     const description = useConfigStore((state) => state.description) || '';
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const alphabeticScript = useConfigStore((state) => state.alphabeticScript);
+    const autoReturnToLexicon = useConfigStore((state) => state.autoReturnToLexicon);
     const updateConfig = useConfigStore((state) => state.updateConfig);
 
     const handleTypologyChange = (newType) => {
@@ -19,7 +20,7 @@ export default function SettingsGeneral() {
         toast((t) => (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <span style={{ fontWeight: 'bold', color: 'var(--err)' }}>⚠️ Warning: Changing Typology</span>
-                <span>Switching modes (e.g., Hangul to Syllabic) may break how your current dictionary words are rendered. We highly recommend <b>saving a backup</b> first.</span>
+                <span>Switching modes (e.g., Hangul to Syllabic) may break how your current lexicon words are rendered. We highly recommend <b>saving a backup</b> first.</span>
                 <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                     <button 
                         onClick={() => {
@@ -100,6 +101,22 @@ export default function SettingsGeneral() {
                     </select>
                 </div>
             )}
+
+            <div className="sg-input-group" style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid var(--bd)' }}>
+                <label className="cb-wrap" style={{ justifyContent: 'flex-end', gap: '12px', cursor: 'pointer' }}>
+                    <input 
+                        type="checkbox" 
+                        className="check-rule"
+                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        checked={!!autoReturnToLexicon}
+                        onChange={(e) => updateConfig({ autoReturnToLexicon: e.target.checked })}
+                    />
+                    <span style={{ fontSize: '1rem', color: 'var(--tx)', fontWeight: '600' }}>Auto-return to Lexicon after word creation</span>
+                </label>
+                <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginTop: '8px' }}>
+                    If enabled, the app will automatically navigate back to the lexicon list after you successfully save a new root.
+                </p>
+            </div>
             
             <Infobox title="Writing System Guide">
                 • <b>Alphabetic:</b> Standard root-based system. Uses your consonants, vowels, and syllable patterns. Maps to various scripts.<br />

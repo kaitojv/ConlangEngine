@@ -41,12 +41,17 @@ export const useLexiconStore = create(
                 const cleanInputWord = word.replace(/\*/g, '').toLowerCase();
                 const cleanInputTrans = translation.toLowerCase();
 
-                return currentLexicon.some(entry => {
+                let isDuplicateWord = false;
+                let isDuplicateTranslation = false;
+
+                currentLexicon.forEach(entry => {
                     const cleanDbWord = entry.word.replace(/\*/g, '').toLowerCase();
                     const cleanDbTrans = entry.translation.toLowerCase();
-                    return (word && cleanDbWord === cleanInputWord) ||
-                        (translation && cleanDbTrans === cleanInputTrans);
+                    if (word && cleanDbWord === cleanInputWord) isDuplicateWord = true;
+                    if (translation && cleanDbTrans === cleanInputTrans) isDuplicateTranslation = true;
                 });
+
+                return { isDuplicateWord, isDuplicateTranslation };
             }
         }),
         { name: 'conlang-lexicon' }

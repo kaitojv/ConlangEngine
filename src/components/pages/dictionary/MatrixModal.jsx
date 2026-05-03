@@ -8,7 +8,7 @@ import { exportTextAsSVG } from '@/utils/svgExporter.jsx';
 import './matrixmodal.css';
 
 export default function MatrixModal({ wordObj }) {
-    // Grab the language settings and dictionary from our global stores
+    // Grab the language settings and lexicon from our global stores
     const grammarRules = useConfigStore((state) => state.grammarRules) || [];
     const vowels = useConfigStore((state) => state.vowels);
     const consonants = useConfigStore((state) => state.consonants);
@@ -254,7 +254,7 @@ export default function MatrixModal({ wordObj }) {
                                 if (!derivationTranslation.trim()) return alert("Translation required");
                                 addWord({ word: derivationToSave.word, wordClass: derivationClass, translation: derivationTranslation.trim() });
                                 setDerivationToSave(null);
-                                alert("Saved to dictionary!");
+                                alert("Saved to lexicon!");
                             }}
                         >
                             Save

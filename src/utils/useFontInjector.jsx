@@ -49,7 +49,6 @@ export function useFontInjector(){
                 .conlang-word,
                 .word-text,
                 .word,
-                .dictionary-word,
                 .lexicon-word,
                 .matrix-base-word,
                 .entry-main-word,

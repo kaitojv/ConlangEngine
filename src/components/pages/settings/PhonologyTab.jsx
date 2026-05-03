@@ -47,13 +47,13 @@ export default function PhonologyTab() {
     };
 
     // Permanently apply all sound-change rules to every word in the lexicon
-    const handleApplyToDictionary = () => {
+    const handleApplyToLexicon = () => {
         if (!historicalRules.trim()) {
             toast.error('No rules to apply. Write some rules first.');
             return;
         }
         if (lexicon.length === 0) {
-            toast.error('Your dictionary is empty.');
+            toast.error('Your lexicon is empty.');
             return;
         }
 
@@ -71,7 +71,7 @@ export default function PhonologyTab() {
 
         setShowApplyConfirm(false);
         if (changed > 0) {
-            toast.success(`✅ Applied rules to ${changed} word${changed !== 1 ? 's' : ''} in your dictionary.`);
+            toast.success(`✅ Applied rules to ${changed} word${changed !== 1 ? 's' : ''} in your lexicon.`);
         } else {
             toast(`No words were changed — the rules may not match any stored phonemes.`, { icon: 'ℹ️' });
         }
@@ -157,7 +157,7 @@ export default function PhonologyTab() {
                             • <b>Left-to-Right:</b> Scans from the beginning. Finds <code>cra</code> (longest match), then <code>s</code>. Result = <code>cra</code> + <code>s</code>.<br />
                             • <b>Right-to-Left:</b> Scans from the end. Finds <code>as</code> (longest match), then <code>cr</code>. Result = <code>cr</code> + <code>as</code>.<br /><br />
                             <b>Explicit Boundaries:</b><br />
-                            If you want to force a split that goes against the algorithm, use a period <code>.</code> in your dictionary entry. For example, typing <code>cr.as</code> guarantees it will be split as <code>cr</code> and <code>as</code>.
+                            If you want to force a split that goes against the algorithm, use a period <code>.</code> in your lexicon entry. For example, typing <code>cr.as</code> guarantees it will be split as <code>cr</code> and <code>as</code>.
                         </Infobox>
                         <select 
                             className="settings-select-full"
@@ -215,11 +215,11 @@ export default function PhonologyTab() {
                     onChange={(e) => updateConfig({ historicalRules: e.target.value })}
                 />
 
-                {/* Apply to Dictionary — destructive action, gated behind a confirmation */}
+                {/* Apply to Lexicon — destructive action, gated behind a confirmation */}
                 {!showApplyConfirm ? (
                     <div className="pt-button-row">
                         <Button variant="edit" onClick={() => setShowApplyConfirm(true)}>
-                            <BookCheck size={16} /> Apply to Dictionary
+                            <BookCheck size={16} /> Apply to Lexicon
                         </Button>
                     </div>
                 ) : (
@@ -228,7 +228,7 @@ export default function PhonologyTab() {
                             ⚠️ This will <strong>permanently rewrite</strong> the stored phoneme spelling of every matching word. This cannot be undone. Are you sure?
                         </p>
                         <div className="apply-confirm-actions">
-                            <Button variant="error" onClick={handleApplyToDictionary}>
+                            <Button variant="error" onClick={handleApplyToLexicon}>
                                 Yes, apply to all {lexicon.length} words
                             </Button>
                             <Button variant="edit" onClick={() => setShowApplyConfirm(false)}>

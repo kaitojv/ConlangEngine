@@ -71,18 +71,12 @@
     gap: 10px;
 }
 
-.template-select{
-    background: var(--s2);
-    border: 1px solid var(--bd);
-    border-radius: 6px;
+.template-select {
     color: var(--acc2);
     font-size: 0.7rem;
     font-weight: bold;
-    cursor: pointer;
-    outline: none;
-    padding: 4px 8px;
-    width: 100%;
-    max-width: 110px;
+    padding: 4px 28px 4px 8px;
+    max-width: 130px;
 }
 
 .dependency-group{
@@ -174,7 +168,6 @@
 
 .custom-select {
     width: 100%;
-    cursor: pointer;
 }
 
 .alignment-header {

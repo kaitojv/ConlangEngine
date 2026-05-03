@@ -16,8 +16,8 @@ export function useGlobalHotkeys() {
                 switch (e.key.toLowerCase()) {
                     case 'd':
                         e.preventDefault();
-                        navigate('/dictionary');
-                        toast.success("Opened Dictionary", { id: 'hotkey-nav' });
+                        navigate('/lexicon');
+                        toast.success("Opened Lexicon", { id: 'hotkey-nav' });
                         break;
                     case 'c':
                         e.preventDefault();

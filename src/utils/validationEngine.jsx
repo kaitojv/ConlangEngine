@@ -57,7 +57,7 @@ const validateAlphabetic = (word, consonants, vowels, syllablePattern, otherPhon
         const invalidChars = [...new Set(tempWord.split(''))];
         return { 
             valid: false, 
-            reason: `Contains invalid characters: "${tempWord}". Check your Consonants/Vowels settings.`,
+            reason: `Contains invalid characters: "${tempWord}". Check your Phoneme settings.`,
             type: 'invalid_chars',
             invalidChars
         };

@@ -97,7 +97,7 @@ export const generateConlangPDF = (config, lexicon) => {
 
             <div class="page-break"></div>
 
-            <h2>3. Dictionary (${lexicon.length} entries)</h2>
+            <h2>3. Lexicon (${lexicon.length} entries)</h2>
             <table>
                 <thead>
                     <tr><th>Word</th><th>IPA</th><th>Class</th><th>Translation</th><th>Tags</th></tr>

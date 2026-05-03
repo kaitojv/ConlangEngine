@@ -27,7 +27,7 @@ export const INITIAL_CONFIG = {
     writingDirection: 'ltr',
     consonants:'p, t, k, m, n, s, l, r',
     vowels:'a, e, i, o, u',
-    syllablePattern: 'CVC, VC, CV...',
+    syllablePattern: 'CVC, VC, CV',
     otherPhonemes: '',
     otherPhonemeMapping: 'X',
     skipSyllableValidation: false,
@@ -79,6 +79,7 @@ export const INITIAL_CONFIG = {
     // User-defined parts of speech and semantic tags that persist across sessions
     customWordClasses: [],
     customTags: [],
+    autoReturnToLexicon: false,
 };
 
 // IndexedDB Helper for handling massive data without breaking local storage quotas

@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useShallow } from 'zustand/react/shallow';
 import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
-import { Sparkles, AlertTriangle, Save, Brush } from 'lucide-react';
+import { Sparkles, AlertTriangle, Save, Brush, X, Plus } from 'lucide-react';
 import { applyRuleToWord } from '../../../utils/morphologyEngine.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
@@ -24,10 +24,13 @@ const STANDARD_WORD_CLASSES = [
 
 export default function CreateWordTab() {
     const location = useLocation();
+    const navigate = useNavigate();
     const { normalizeToBase, transliterate } = useTransliterator();
 
     // Track which input field the IPA chart should paste into
     const [activeField, setActiveField] = useState('ipa'); // default to IPA field
+    const [activeToastId, setActiveToastId] = useState(null);
+    const [tagInput, setTagInput] = useState('');
 
     // Global stores
     const addWord = useLexiconStore((state) => state.addWord);
@@ -47,6 +50,7 @@ export default function CreateWordTab() {
         customTags: state.customTags || [],
         addCustomWordClass: state.addCustomWordClass,
         addCustomTag: state.addCustomTag,
+        autoReturnToLexicon: state.autoReturnToLexicon,
         updateConfig: state.updateConfig
     })));
     
@@ -56,7 +60,7 @@ export default function CreateWordTab() {
         ipa: '',
         wordClass: 'noun',
         translation: '',
-        tags: '',
+        tags: [],
         ideogram: ''
     });
     
@@ -94,7 +98,7 @@ export default function CreateWordTab() {
         return [...merged].sort();
     }, [customTags, lexicon]);
 
-    // If the user generated a word in the Generator Tab and clicked "Add to Dictionary", we catch it here
+    // If the user generated a word in the Generator Tab and clicked "Add to Lexicon", we catch it here
     useEffect(() => {
         if (location.state?.prefillWord) {
             setFormData(prev => ({
@@ -104,9 +108,13 @@ export default function CreateWordTab() {
                 wordClass: location.state.prefillClass || prev.wordClass
             }));
         }
+
+        // Cleanup toasts on unmount
+        return () => toast.dismiss();
     }, [location.state]);
 
-    const isDuplicate = checkDuplicate(word, translation) && (word !== '' || translation !== '');
+    const { isDuplicateWord, isDuplicateTranslation } = checkDuplicate(word, translation);
+    const isDuplicate = (isDuplicateWord || isDuplicateTranslation) && (word !== '' || translation !== '');
 
     // Handle IPA chart character selection - paste into the active field
     const handleIpaSelect = (char) => {
@@ -125,7 +133,7 @@ export default function CreateWordTab() {
     };
 
     // Quick-fix action: add detected pattern to syllable patterns
-    const handleAddPattern = (pattern) => {
+    const handleAddPattern = (pattern, safeWord, cleanTrans, processedTags) => {
         const current = syllablePattern || '';
         const arr = current.split(',').map(p => p.trim().toUpperCase()).filter(Boolean);
         if (!arr.includes(pattern.toUpperCase())) {
@@ -133,6 +141,21 @@ export default function CreateWordTab() {
         }
         updateConfig({ syllablePattern: arr.join(', ') });
         toast.success(`Added "${pattern.toUpperCase()}" to syllable patterns.`);
+        
+        // After adding the pattern, we should save the word too!
+        saveConfirmedWord(safeWord, cleanTrans, processedTags);
+    };
+
+    const handleAddTag = (tag) => {
+        const cleanTag = tag.trim().toLowerCase();
+        if (cleanTag && !formData.tags.includes(cleanTag)) {
+            updateField('tags', [...formData.tags, cleanTag]);
+            setTagInput('');
+        }
+    };
+
+    const removeTag = (tagToRemove) => {
+        updateField('tags', formData.tags.filter(t => t !== tagToRemove));
     };
 
     const saveConfirmedWord = (safeWord, cleanTrans, processedTags) => {
@@ -152,13 +175,23 @@ export default function CreateWordTab() {
         processedTags.forEach(tag => addCustomTag(tag));
 
         // Reset the form for the next word
-        setFormData({ word: '', ipa: '', wordClass: 'noun', translation: '', tags: '', ideogram: '' });
+        setFormData({ word: '', ipa: '', wordClass: 'noun', translation: '', tags: [], ideogram: '' });
         setSelectedDerivs({});
         setCustomTranslations({});
         toast.success("Root and selected derivations saved successfully!");
+
+        if (autoReturnToLexicon) {
+            navigate('/lexicon');
+        }
     };
 
-    // Validate and save the new root to our dictionary
+    const showValidationToast = (content) => {
+        if (activeToastId) toast.dismiss(activeToastId);
+        const newId = toast.custom(content, { duration: Infinity });
+        setActiveToastId(newId);
+    };
+
+    // Validate and save the new root to our lexicon
     const handleSave = () => {
         const cleanWord = word.trim();
         const cleanTrans = translation.trim();
@@ -167,76 +200,136 @@ export default function CreateWordTab() {
             return toast.error("Please fill in both the word and the translation.");
         }
         
-        if (isDuplicate) {
-            return toast.error("This word or translation already exists in your dictionary!");
-        }
+
 
         // Clean up the word to ensure custom alien letters map correctly to the base orthography
         const safeWord = normalizeToBase(cleanWord);
         const validation = validateNewWord(safeWord, useConfigStore.getState());
-        const processedTags = tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
-        
-        // Warn the user if they break their own phonotactic rules, but let them bypass it
+        const processedTags = [...formData.tags].sort();
+
+        // 1. DUPLICATE CHECK (Warnings, not blocks)
+        if (isDuplicate) {
+            let warningMsg = "";
+            if (isDuplicateWord && isDuplicateTranslation) {
+                warningMsg = "This exact word and translation already exist in your lexicon.";
+            } else if (isDuplicateWord) {
+                warningMsg = "This word already exists (Homonym). Save it as a new entry with this different meaning?";
+            } else {
+                warningMsg = "This translation already exists (Synonym). Save it as a new entry with this different spelling?";
+            }
+
+            showValidationToast((t) => (
+                <div className="custom-toast-v">
+                    <strong>⚠️ Duplicate Detected</strong>
+                    <span>{warningMsg}</span>
+                    <div className="toast-actions-v">
+                        <button onClick={() => {
+                            toast.dismiss(t.id);
+                            // Bypass duplicate check and continue to validation
+                            proceedToValidation(safeWord, cleanTrans, processedTags);
+                        }} className="btn-v btn-err-v">Save Anyway</button>
+                        <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                    </div>
+                </div>
+            ));
+            return;
+        }
+
+        proceedToValidation(safeWord, cleanTrans, processedTags);
+    };
+
+    const proceedToValidation = (safeWord, cleanTrans, processedTags) => {
+        const validation = validateNewWord(safeWord, useConfigStore.getState());
+
+        // 2. PHONOTACTIC VALIDATION
         if (!validation.valid) {
-            toast.custom((t) => (
-                <div style={{ background: 'var(--s4)', color: 'var(--tx)', padding: '15px', borderRadius: '8px', border: '1px solid var(--err)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            showValidationToast((t) => (
+                <div className="custom-toast-v">
                     <strong>⚠️ Phono-Syntax Warning</strong>
                     <span>{validation.reason}</span>
                     <p style={{fontSize: '0.9rem', color: 'var(--tx2)'}}>Do you want to save it as an irregular exception anyway?</p>
-                    <div style={{display: 'flex', gap: '8px', marginTop: '5px', flexWrap: 'wrap'}}>
+                    <div className="toast-actions-v">
                         <button onClick={() => {
                             toast.dismiss(t.id);
-                            saveConfirmedWord(safeWord, cleanTrans, processedTags);
-                        }} style={{padding: '5px 10px', background: 'var(--err)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Save Anyway</button>
+                            proceedToGrammarValidation(safeWord, cleanTrans, processedTags);
+                        }} className="btn-v btn-err-v">Save Anyway</button>
                         
-                        {/* Quick Fix: Add invalid characters to inventory */}
                         {validation.type === 'invalid_chars' && validation.invalidChars && (
                             <>
                                 <button onClick={() => {
                                     toast.dismiss(t.id);
                                     handleAddCharsToInventory(validation.invalidChars, 'consonants');
-                                }} style={{padding: '5px 10px', background: 'var(--acc)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Add to Consonants</button>
+                                }} className="btn-v btn-acc-v">Add to Consonants</button>
                                 <button onClick={() => {
                                     toast.dismiss(t.id);
                                     handleAddCharsToInventory(validation.invalidChars, 'vowels');
-                                }} style={{padding: '5px 10px', background: 'var(--acc2)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Add to Vowels</button>
+                                }} className="btn-v btn-acc2-v">Add to Vowels</button>
+                                <button onClick={() => {
+                                    toast.dismiss(t.id);
+                                    handleAddCharsToInventory(validation.invalidChars, 'otherPhonemes');
+                                }} className="btn-v btn-acc3-v">Add to Others</button>
                             </>
                         )}
 
-                        {/* Quick Fix: Add detected pattern to syllable patterns */}
                         {validation.type === 'invalid_pattern' && validation.detectedPattern && (
                             <button onClick={() => {
                                 toast.dismiss(t.id);
-                                handleAddPattern(validation.detectedPattern);
-                            }} style={{padding: '5px 10px', background: 'var(--acc)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Add to Syllable Patterns</button>
+                                handleAddPattern(validation.detectedPattern, safeWord, cleanTrans, processedTags);
+                            }} className="btn-v btn-acc-v">Add to patterns & Save</button>
                         )}
 
-                        <button onClick={() => toast.dismiss(t.id)} style={{padding: '5px 10px', background: 'var(--s2)', color: 'var(--tx)', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Cancel</button>
+                        <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
                     </div>
                 </div>
-            ), { duration: Infinity });
+            ));
             return;
         }
 
+        proceedToGrammarValidation(safeWord, cleanTrans, processedTags);
+    };
+
+    const proceedToGrammarValidation = (safeWord, cleanTrans, processedTags) => {
+        // 3. POS CONFIRMATION (If new)
+        const normalizedPOS = wordClass.toLowerCase().trim();
+        if (normalizedPOS && !allWordClasses.includes(normalizedPOS)) {
+            showValidationToast((t) => (
+                <div className="custom-toast-v">
+                    <strong>📝 New Part of Speech</strong>
+                    <span>"{normalizedPOS}" does not exist in your grammar settings. Add it globally?</span>
+                    <div className="toast-actions-v">
+                        <button onClick={() => {
+                            toast.dismiss(t.id);
+                            finalizeSave(safeWord, cleanTrans, processedTags);
+                        }} className="btn-v btn-acc-v">Add & Save</button>
+                        <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                    </div>
+                </div>
+            ));
+            return;
+        }
+
+        finalizeSave(safeWord, cleanTrans, processedTags);
+    };
+
+    const finalizeSave = (safeWord, cleanTrans, processedTags) => {
         const currentClasses = wordClass ? wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
         if (currentClasses.includes('verb') && verbMarker) {
             const markers = verbMarker.split(',').map(m => m.trim().replace(/^-/, ''));
             const match = markers.find(m => safeWord.endsWith(m));
             if (!match) {
-                toast.custom((t) => (
-                    <div style={{ background: 'var(--s4)', color: 'var(--tx)', padding: '15px', borderRadius: '8px', border: '1px solid var(--err)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                showValidationToast((t) => (
+                    <div className="custom-toast-v">
                         <strong>⚠️ Verb Marker Missing</strong>
                         <span>This word is marked as a verb, but it doesn't end with any of your defined verb markers ({verbMarker}).</span>
-                        <p style={{fontSize: '0.9rem', color: 'var(--tx2)'}}>Do you want to save it anyway?</p>
-                        <div style={{display: 'flex', gap: '8px', marginTop: '5px', flexWrap: 'wrap'}}>
+                        <div className="toast-actions-v">
                             <button onClick={() => {
                                 toast.dismiss(t.id);
                                 saveConfirmedWord(safeWord, cleanTrans, processedTags);
-                            }} style={{padding: '5px 10px', background: 'var(--err)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Save Anyway</button>
-                            <button onClick={() => toast.dismiss(t.id)} style={{padding: '5px 10px', background: 'var(--s2)', color: 'var(--tx)', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Cancel</button>
+                            }} className="btn-v btn-err-v">Save Anyway</button>
+                            <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
                         </div>
                     </div>
-                ), { duration: Infinity });
+                ));
                 return;
             }
         }
@@ -277,6 +370,7 @@ export default function CreateWordTab() {
 
         const results = [];
         const safeBaseWord = normalizeToBase(word.trim());
+        const processedTags = [...formData.tags].sort();
 
         const currentClasses = wordClass ? wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
 
@@ -337,7 +431,15 @@ export default function CreateWordTab() {
                             onChange={(e) => updateField('wordClass', e.target.value.toLowerCase())}
                             placeholder="Ex: noun, verb, classifier..."
                             list="word-classes"
-                        />
+                        >
+                            <button 
+                                className="clear-input-btn" 
+                                onClick={() => updateField('wordClass', '')}
+                                title="Clear Part of Speech"
+                            >
+                                <X size={14} />
+                            </button>
+                        </Input>
                         
                         {/* Merged datalist: standard + user-defined classes */}
                         <datalist id="word-classes">
@@ -385,18 +487,38 @@ export default function CreateWordTab() {
                 {isDuplicate && (
                     <div className="warning-box">
                         <AlertTriangle size={18} />
-                        Warning: This root or translation already exists in your dictionary!
+                        Warning: {isDuplicateWord && isDuplicateTranslation ? "This word and translation already exist in your lexicon." : isDuplicateWord ? "This word already exists (Homonym)." : "This translation already exists (Synonym)."}
                     </div>
                 )}
 
                 <div className="tags-section">
-                    <Input 
-                        label="Semantic Tags" 
-                        value={tags}
-                        onChange={(e) => updateField('tags', e.target.value)}
-                        placeholder="Ex: nature, abstract, emotion (comma separated)"
-                        list="semantic-tags"
-                    />
+                    <label className="input-label">Semantic Tags</label>
+                    <div className="tags-chip-container">
+                        {formData.tags.map(tag => (
+                            <span key={tag} className="tag-chip">
+                                {tag}
+                                <X size={12} onClick={() => removeTag(tag)} className="tag-remove-icon" />
+                            </span>
+                        ))}
+                        <div className="tag-input-wrapper">
+                            <input 
+                                type="text"
+                                className="tag-inner-input"
+                                value={tagInput}
+                                onChange={(e) => setTagInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ',') {
+                                        e.preventDefault();
+                                        handleAddTag(tagInput);
+                                    }
+                                }}
+                                onBlur={() => handleAddTag(tagInput)}
+                                placeholder={formData.tags.length === 0 ? "Add tags (nature, emotion...)" : ""}
+                                list="semantic-tags"
+                            />
+                            <Plus size={16} className="tag-add-icon" onClick={() => handleAddTag(tagInput)} />
+                        </div>
+                    </div>
                     {/* Autocomplete from previously used tags */}
                     <datalist id="semantic-tags">
                         {allTags.map(tag => (
@@ -445,13 +567,22 @@ export default function CreateWordTab() {
                     </div>
                 )}
 
-                <Button 
-                    variant="save" 
-                    className="create-word-save-btn"
-                    onClick={handleSave}
-                >
-                    <Save size={20} /> Save Root to Dictionary
-                </Button>
+                <div className="create-word-actions" style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+                    <Button 
+                        variant="save" 
+                        style={{ flex: 2 }}
+                        onClick={handleSave}
+                    >
+                        <Save size={20} /> Save Root to Lexicon
+                    </Button>
+                    <Button 
+                        variant="edit" 
+                        style={{ flex: 1 }}
+                        onClick={() => navigate('/lexicon')}
+                    >
+                        View Lexicon
+                    </Button>
+                </div>
             </Card>
 
             <Modal 

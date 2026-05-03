@@ -2,7 +2,7 @@ import React from 'react';
 import { Trash2, Link } from 'lucide-react';
 import './ruleRow.css';
 
-export const RuleRow = ({ rule, onUpdate, onDelete }) => {
+export const RuleRow = ({ rule, onUpdate, onDelete, allWordClasses }) => {
   
   // A single handler to catch changes across all inputs and checkboxes in this row
   const handleChange = (e) => {
@@ -52,7 +52,22 @@ export const RuleRow = ({ rule, onUpdate, onDelete }) => {
 
         <div className="form-group">
           <label className="rule-label">Applies To</label>
-          <input type="text" name="appliesTo" className="fi" value={rule.appliesTo} onChange={handleChange} placeholder="e.g. noun, verb" spellCheck="false" />
+          <input 
+            type="text" 
+            name="appliesTo" 
+            className="fi" 
+            value={rule.appliesTo} 
+            onChange={handleChange} 
+            placeholder="e.g. noun, verb" 
+            spellCheck="false" 
+            list={`pos-list-${rule.id}`}
+          />
+          <datalist id={`pos-list-${rule.id}`}>
+            <option value="all" />
+            {(allWordClasses || []).map(cls => (
+              <option key={cls} value={cls} />
+            ))}
+          </datalist>
         </div>
 
         <div className="form-group">

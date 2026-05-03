@@ -160,9 +160,39 @@ p {
   color: var(--tx2);
 }
 
-select option{
-  background-color: var(--s4);
-  color: var(--tx);
+/* Custom Select/Dropdown Styles */
+select {
+    background-color: var(--s4);
+    color: var(--tx);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    appearance: none; /* Remove default browser arrow */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 40px;
+}
+
+select:hover {
+    border-color: var(--bd3);
+    background-color: var(--s3);
+}
+
+select:focus {
+    border-color: var(--acc);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+    background-color: var(--s4);
+}
+
+select option {
+    background-color: var(--s4);
+    color: var(--tx);
+    padding: 12px;
 }
 
 /* Animations */
@@ -279,3 +309,119 @@ select option{
     @apply font-sans;
   }
 }
+
+/* Global Tag Chip System */
+.tags-chip-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background-color: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    min-height: 2.5rem;
+    align-items: center;
+}
+
+.tag-chip {
+    background: var(--acc);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+}
+
+.tag-remove-icon {
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.tag-remove-icon:hover {
+    opacity: 1;
+}
+
+.tag-input-wrapper {
+    flex: 1;
+    min-width: 120px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tag-inner-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--tx);
+    font-size: 0.9rem;
+}
+
+.tag-add-icon {
+    color: var(--acc);
+    cursor: pointer;
+}
+
+/* Custom Validation Toasts */
+.custom-toast-v {
+    background: var(--s4);
+    color: var(--tx);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--bd);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 350px;
+    z-index: 9999;
+}
+
+.toast-actions-v {
+    display: flex;
+    gap: 8px;
+    margin-top: 5px;
+    flex-wrap: wrap;
+}
+
+.btn-v {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: filter 0.2s;
+}
+
+.btn-v:hover {
+    filter: brightness(1.1);
+}
+
+.btn-err-v { background: var(--err); color: white; }
+.btn-acc-v { background: var(--acc); color: white; }
+.btn-acc2-v { background: var(--acc2); color: white; }
+.btn-acc3-v { background: #4c1d95; color: white; }
+.btn-sec-v { background: var(--s2); color: var(--tx); }
+
+.clear-input-btn {
+    position: absolute;
+    right: 10px;
+    top: 32px;
+    background: transparent;
+    border: none;
+    color: var(--tx2);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.input-wrapper:hover .clear-input-btn {
+    opacity: 1;
+}
+

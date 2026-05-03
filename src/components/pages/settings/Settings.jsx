@@ -3,13 +3,11 @@ import { useState } from 'react';
 import SettingsGeneral from './SettingsGeneral.jsx';
 import PhonologyTab from './PhonologyTab.jsx';
 import './settings.css';
-import { Cog, SpellCheck, Languages, Palette, Hash } from 'lucide-react'
+import { Cog, Languages, Palette, Hash, BookOpen, FileText } from 'lucide-react'
+import LexiconTab from './LexiconTab.jsx';
 import GrammarTab from './GrammarTab.jsx';
 import NumeralTab from './NumeralTab.jsx';
 import SystemTab from './SystemTab.jsx';
-
-
-
 
 export default function Settings() {
     const [activeTab, setActiveTab] = useState('general');
@@ -17,7 +15,8 @@ export default function Settings() {
     const configTabs = [
         { id: 'general', label: 'General', icon: Cog },
         { id: 'phonology', label: 'Phonology', icon: Languages },
-        { id: 'grammar', label: 'Grammar', icon: SpellCheck },
+        { id: 'lexicon', label: 'Lexicon', icon: BookOpen },
+        { id: 'grammar', label: 'Grammar', icon: FileText },
         { id: 'numerals', label: 'Numerals', icon: Hash },
         { id:'system', label: 'System and Theme', icon: Palette}
     ];
@@ -47,6 +46,9 @@ export default function Settings() {
                 )}
                 {activeTab === 'phonology' && (
                     <PhonologyTab />
+                )}
+                {activeTab === 'lexicon' && (
+                    <LexiconTab />
                 )}
                 {activeTab === 'grammar' && (
                     <GrammarTab />

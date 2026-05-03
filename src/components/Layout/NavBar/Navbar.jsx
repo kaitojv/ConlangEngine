@@ -24,7 +24,7 @@ const NAV_GROUPS = [
         title: 'Lexicon',
         items: [
             { id: '/create', label: 'Create Word', Icon: PlusCircle },
-            { id: '/dictionary', label: 'Dictionary', Icon: Book },
+            { id: '/lexicon', label: 'Lexicon', Icon: Book },
         ]
     },
     {

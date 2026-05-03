@@ -6,20 +6,24 @@ import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import Card from '../../UI/Card/Card.jsx';
 import Modal from '../../UI/Modal/Modal.jsx'
+import LexiconEditModal from './LexiconEditModal.jsx';
 import MatrixModal from './MatrixModal.jsx';
-import EditWordModal from './EditModal.jsx';
-import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download } from 'lucide-react';
+import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download, X } from 'lucide-react';
 import { exportTextAsSVG } from '../../../utils/svgExporter.jsx';
 import toast from 'react-hot-toast';
-import './dictionaryList.css';
+import './lexiconList.css';
 
-export default function DictionaryList() {
-    // Grab the global stores for our dictionary and language settings
+export default function LexiconList() {
+    // Grab the global stores for our lexicon and language settings
     const rawLexicon = useLexiconStore((state) => state.lexicon);
     const lexicon = Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []);
     const deleteWord = useLexiconStore((state) => state.deleteWord);
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
+    const grammarRules = useConfigStore((state) => state.grammarRules) || [];
     const navigate = useNavigate();
+    
+    // New toggle for showing grammar rules as entries
+    const [showBoundMorphemes, setShowBoundMorphemes] = useState(false);
     
     // Spin up the transliterator to convert base words into the language's custom script
     const { transliterate } = useTransliterator();
@@ -27,6 +31,7 @@ export default function DictionaryList() {
     // Let's bundle all our sorting and filtering logic into one neat state object
     const [filters, setFilters] = useState({
         search: '',
+        tag: 'all',
         type: 'all',
         letter: 'all',
         sort: 'newest'
@@ -36,7 +41,7 @@ export default function DictionaryList() {
     const [selectedWordForMatrix, setSelectedWordForMatrix] = useState(null);
     const [selectedWordForEdit, setSelectedWordForEdit] = useState(null); 
     
-    // Manage how many dictionary items are rendered at once for performance
+    // Manage how many lexicon items are rendered at once for performance
     const [visibleCount, setVisibleCount] = useState(50);
 
     const updateFilter = (key, value) => {
@@ -44,7 +49,7 @@ export default function DictionaryList() {
         setVisibleCount(50); // Reset visible count when filter changes
     };
 
-    // Extract all the unique first letters from the dictionary so we can build our A-Z quick jump bar
+    // Extract all the unique first letters from the lexicon so we can build our A-Z quick jump bar
     const firstLetters = useMemo(() => {
         const letters = new Set(lexicon.map(w => {
             const cleanWord = w.word.replace(/\*/g, '');
@@ -64,10 +69,36 @@ export default function DictionaryList() {
         });
         return [...classes].sort();
     }, [lexicon]);
+    
+    // Extract all unique tags for the tag filter dropdown
+    const allTags = useMemo(() => {
+        const tags = new Set();
+        lexicon.forEach(w => {
+            if (w.tags) {
+                w.tags.forEach(t => tags.add(t.toLowerCase()));
+            }
+        });
+        return [...tags].sort();
+    }, [lexicon]);
 
-    // The heavy lifter: filters and sorts the entire dictionary based on the user's current selections
+    // The heavy lifter: filters and sorts the entire lexicon based on the user's current selections
     const filteredLexicon = useMemo(() => {
         let result = [...lexicon];
+
+        // If the user wants to see bound morphemes (grammar rules), we inject them here
+        if (showBoundMorphemes) {
+            grammarRules.forEach(rule => {
+                result.push({
+                    id: rule.id,
+                    word: rule.affix,
+                    translation: rule.name,
+                    wordClass: 'bound-morpheme',
+                    tags: ['grammar', rule.condition],
+                    isBound: true,
+                    createdAt: 0 // Keep them at the bottom if sorted by newest
+                });
+            });
+        }
 
         if (filters.search) {
             const q = filters.search.toLowerCase();
@@ -75,6 +106,12 @@ export default function DictionaryList() {
                 e.word.replace(/\*/g, '').toLowerCase().includes(q) || 
                 e.translation.toLowerCase().includes(q) ||
                 (e.tags && e.tags.some(tag => tag.toLowerCase().includes(q)))
+            );
+        }
+
+        if (filters.tag !== 'all') {
+            result = result.filter(e => 
+                e.tags && e.tags.some(tag => tag.toLowerCase() === filters.tag.toLowerCase())
             );
         }
 
@@ -135,9 +172,9 @@ export default function DictionaryList() {
     };
 
     return (
-        <div className="dictionary-container">
+        <div className="lexicon-container">
             
-            <Card className="dictionary-toolbar">
+            <Card className="lexicon-toolbar">
                 <div className="toolbar-filters">
                     <div className="search-box">
                         <Search className="search-icon" size={18} />
@@ -148,7 +185,26 @@ export default function DictionaryList() {
                             value={filters.search}
                             onChange={(e) => updateFilter('search', e.target.value)}
                         />
+                        {filters.search && (
+                            <X 
+                                className="clear-search-icon" 
+                                size={16} 
+                                style={{ position: 'absolute', right: '12px', top: '10px', cursor: 'pointer', color: 'var(--tx3)' }}
+                                onClick={() => updateFilter('search', '')}
+                            />
+                        )}
                     </div>
+
+                    <select 
+                        className="filter-select"
+                        value={filters.tag}
+                        onChange={(e) => updateFilter('tag', e.target.value)}
+                    >
+                        <option value="all">All Tags</option>
+                        {allTags.map(tag => (
+                            <option key={tag} value={tag}>#{tag}</option>
+                        ))}
+                    </select>
 
                     <select 
                         className="filter-select"
@@ -169,7 +225,7 @@ export default function DictionaryList() {
                         <option value="all">All Classes</option>
                         {uniqueClasses.map(cls => (
                             <option key={cls} value={cls}>
-                                {cls}
+                                {cls === 'bound-morpheme' ? 'Bound Morphemes' : cls}
                             </option>
                         ))}
                     </select>
@@ -199,9 +255,17 @@ export default function DictionaryList() {
                 <span className="list-title">
                     Lexicon Entries
                 </span>
-                <div className="list-header-actions">
+                <div className="list-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer', color: 'var(--tx2)' }}>
+                        <input 
+                            type="checkbox" 
+                            checked={showBoundMorphemes} 
+                            onChange={(e) => setShowBoundMorphemes(e.target.checked)} 
+                        />
+                        Show Bound Morphemes
+                    </label>
                     <span className="list-total">
-                        Total: <span className="text-[var(--acc2)]">{filteredLexicon.length}</span>
+                        Total: <span style={{ color: 'var(--acc2)', fontWeight: 'bold' }}>{filteredLexicon.length}</span>
                     </span>
                     <Button variant="edit" className="btn-sm" onClick={() => navigate('/create')}>
                         <PlusCircle size={14} /> Create Word
@@ -231,13 +295,13 @@ export default function DictionaryList() {
                 </div>
             )}
 
-            <div className="dictionary-cards">
+            <div className="lexicon-cards">
                 {filteredLexicon.slice(0, visibleCount).map((entry) => {
                     const safeWord = entry.word.replace(/\*/g, '');
                     const displayWord = transliterate(safeWord, lexicon);
                     
                     return (
-                        <Card key={entry.id} className="dictionary-entry">
+                        <Card key={entry.id} className="lexicon-entry">
                             <div className="entry-header">
                                 <div className="entry-words">
                                     <span className={`notranslate entry-main-word custom-font-text ${phonologyTypes === 'featural_block' ? 'featural-block-render' : ''}`}>
@@ -278,11 +342,11 @@ export default function DictionaryList() {
 
                             {entry.tags && entry.tags.length > 0 && (
                                 <div className="entry-tags">
-                                    {entry.tags.map((tag, i) => (
+                                    {[...entry.tags].sort().map((tag, i) => (
                                         <span 
                                             key={i} 
-                                            className="entry-tag"
-                                            onClick={() => updateFilter('search', tag)}
+                                            className={`entry-tag ${filters.tag === tag ? 'active' : ''}`}
+                                            onClick={() => updateFilter('tag', filters.tag === tag ? 'all' : tag)}
                                         >
                                             #{tag}
                                         </span>
@@ -349,7 +413,7 @@ export default function DictionaryList() {
             </Modal>
 
             <Modal isOpen={!!selectedWordForEdit} onClose={() => setSelectedWordForEdit(null)} title="Edit Lexicon Entry">
-                <EditWordModal key={selectedWordForEdit?.id} wordObj={selectedWordForEdit} onClose={() => setSelectedWordForEdit(null)} />
+                <LexiconEditModal key={selectedWordForEdit?.id} wordObj={selectedWordForEdit} onClose={() => setSelectedWordForEdit(null)} />
             </Modal>
         </div>
     );

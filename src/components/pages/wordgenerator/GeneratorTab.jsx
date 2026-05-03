@@ -240,7 +240,7 @@ function FillMode({ onExit }) {
             return;
         }
         if (checkDuplicate(conlangWord, translation)) {
-            alert("This word or translation already exists in your dictionary!");
+            alert("This word or translation already exists in your lexicon!");
             return;
         }
 
@@ -270,7 +270,7 @@ function FillMode({ onExit }) {
                     <h2 className='flex sg-title'><BookCopy /> Fill Mode</h2>
                     <Button variant="cancel" onClick={onExit}>Exit Fill Mode</Button>
                 </div>
-                <p>Translate the common English word into your conlang. The word will be validated and added to your dictionary.</p>
+                <p>Translate the common English word into your conlang. The word will be validated and added to your lexicon.</p>
                 
                 <div className="fill-challenge">
                     <div className="challenge-word-container">
@@ -350,7 +350,7 @@ function BatchMode({ onExit }) {
             }
         });
         
-        alert(`Successfully saved ${savedCount} words to the dictionary!`);
+        alert(`Successfully saved ${savedCount} words to the lexicon!`);
         
         // Remove saved words from the batch
         setGeneratedBatch(prev => prev.filter(w => !selectedWords.has(w.id)));

@@ -22,7 +22,7 @@ export default function EtymologyTab() {
 
     const { transliterate, normalizeToBase } = useTransliterator();
 
-    // As the user types, we'll try to find the exact root word in the dictionary
+    // As the user types, we'll try to find the exact root word in the lexicon
     const targetWord = useMemo(() => {
         if (!searchInput.trim()) return null;
         
@@ -68,7 +68,7 @@ export default function EtymologyTab() {
                     <Network /> Etymology & Derivation Map
                 </h2>
                 <p className="etymology-description">
-                    Search for a root word in your dictionary to visualize all of its generated grammatical derivations.
+                    Search for a root word in your lexicon to visualize all of its generated grammatical derivations.
                 </p>
                 
                 <Input 
@@ -83,7 +83,7 @@ export default function EtymologyTab() {
                 {searchInput.trim() && !targetWord && (
                     <div className="etymology-error-box">
                         <AlertTriangle size={18} /> 
-                        <span>Root not found in dictionary. Make sure you typed the exact base word.</span>
+                        <span>Root not found in lexicon. Make sure you typed the exact base word.</span>
                     </div>
                 )}
             </Card>

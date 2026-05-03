@@ -251,7 +251,7 @@ export default function FloatingKeyboard() {
                                     <strong>{w.word}</strong> <span style={{ opacity: 0.7, fontSize: '0.9em' }}>{w.translation}</span>
                                 </div>
                             ))}
-                            {lexicon.length === 0 && <p style={{ opacity: 0.5, textAlign: 'center', fontSize: '0.9em' }}>No words in dictionary.</p>}
+                            {lexicon.length === 0 && <p style={{ opacity: 0.5, textAlign: 'center', fontSize: '0.9em' }}>No words in lexicon.</p>}
                         </div>
                     </div>
                 </div>

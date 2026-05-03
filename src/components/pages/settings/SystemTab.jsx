@@ -166,7 +166,7 @@ export default function SystemTab() {
 
                     const wordCount = importedLexicon.length;
                     const projectCount = oldData.project.localProjects.length;
-                    alert(`Project imported successfully!\n${wordCount} dictionary entries loaded.\n${projectCount} project(s) restored to your workspace archive.`);
+                    alert(`Project imported successfully!\n${wordCount} lexicon entries loaded.\n${projectCount} project(s) restored to your workspace archive.`);
                     return;
                 }
 
@@ -211,7 +211,7 @@ export default function SystemTab() {
                 // Explicitly save to the project archive so it appears in the Workspaces tab instantly
                 useProjectStore.getState().saveProjectToArchive(newConfig, newLexicon);
 
-                alert("Legacy project imported successfully! Your grammar and dictionary are now updated.");
+                alert("Legacy project imported successfully! Your grammar and lexicon are now updated.");
 
             } catch (err) {
                 console.error("Import failed:", err);

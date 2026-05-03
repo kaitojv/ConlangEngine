@@ -6,9 +6,9 @@ import { validateNewWord } from '@/utils/validationEngine.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
-import { Save } from 'lucide-react';
+import { Save, X, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
-import './editModal.css';
+import './lexiconEditModal.css';
 
 // Standard POS options
 const STANDARD_WORD_CLASSES = [
@@ -16,8 +16,8 @@ const STANDARD_WORD_CLASSES = [
     'particle', 'conjunction', 'preposition'
 ];
 
-export default function EditWordModal({ wordObj, onClose }) {
-    // Grab our global dictionary tools
+export default function LexiconEditModal({ wordObj, onClose }) {
+    // Grab our global lexicon tools
     const updateWord = useLexiconStore((state) => state.updateWord);
     const lexicon = useLexiconStore((state) => state.lexicon);
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
@@ -36,8 +36,10 @@ export default function EditWordModal({ wordObj, onClose }) {
 
     // Bundle all the form fields into one neat state object
     const [formData, setFormData] = useState({
-        word: '', ipa: '', wordClass: '', translation: '', tags: '', ideogram: '', personCategory: ''
+        word: '', ipa: '', wordClass: '', translation: '', tags: [], ideogram: '', personCategory: ''
     });
+    const [tagInput, setTagInput] = useState('');
+    const [activeToastId, setActiveToastId] = useState(null);
     const { word, ipa, wordClass, translation, tags, ideogram, personCategory } = formData;
 
     const updateField = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
@@ -74,11 +76,12 @@ export default function EditWordModal({ wordObj, onClose }) {
                 ipa: wordObj.ipa || '',
                 wordClass: wordObj.wordClass || '',
                 translation: wordObj.translation || '',
-                tags: Array.isArray(wordObj.tags) ? wordObj.tags.join(', ') : (typeof wordObj.tags === 'string' ? wordObj.tags : ''),
+                tags: Array.isArray(wordObj.tags) ? wordObj.tags : (typeof wordObj.tags === 'string' ? wordObj.tags.split(',').map(t => t.trim()).filter(Boolean) : []),
                 ideogram: wordObj.ideogram || '',
                 personCategory: wordObj.personCategory || ''
             });
         }
+        return () => toast.dismiss();
     }, [wordObj]);
 
     // Handle IPA chart character selection - paste into the active field
@@ -98,7 +101,7 @@ export default function EditWordModal({ wordObj, onClose }) {
     };
 
     // Quick-fix: add detected pattern to syllable patterns
-    const handleAddPattern = (pattern) => {
+    const handleAddPattern = (pattern, safeWord, cleanInputTrans, processedTags) => {
         const current = syllablePattern || '';
         const arr = current.split(',').map(p => p.trim().toUpperCase()).filter(Boolean);
         if (!arr.includes(pattern.toUpperCase())) {
@@ -106,9 +109,28 @@ export default function EditWordModal({ wordObj, onClose }) {
         }
         updateConfig({ syllablePattern: arr.join(', ') });
         toast.success(`Added "${pattern.toUpperCase()}" to syllable patterns.`);
+        doSave(safeWord, cleanInputTrans, processedTags);
     };
 
-    // Validate everything before saving changes to the dictionary
+    const handleAddTag = (tag) => {
+        const cleanTag = tag.trim().toLowerCase();
+        if (cleanTag && !formData.tags.includes(cleanTag)) {
+            updateField('tags', [...formData.tags, cleanTag]);
+            setTagInput('');
+        }
+    };
+
+    const removeTag = (tagToRemove) => {
+        updateField('tags', formData.tags.filter(t => t !== tagToRemove));
+    };
+
+    const showValidationToast = (content) => {
+        if (activeToastId) toast.dismiss(activeToastId);
+        const newId = toast.custom(content, { duration: Infinity });
+        setActiveToastId(newId);
+    };
+
+    // Validate everything before saving changes to the lexicon
     const handleSave = () => {
         const cleanInputWord = word.trim();
         const cleanInputTrans = translation.trim();
@@ -119,81 +141,110 @@ export default function EditWordModal({ wordObj, onClose }) {
         const safeLowerWord = safeWord.toLowerCase();
         const safeLowerTrans = cleanInputTrans.toLowerCase();
 
-        // Make sure they didn't accidentally change the word to match something that already exists!
-        const isDuplicate = lexicon.some(entry => {
-            if (entry.id === wordObj.id) return false; // Skip itself
-            
+        const { isDuplicateWord, isDuplicateTranslation } = lexicon.reduce((acc, entry) => {
+            if (entry.id === wordObj.id) return acc;
             const dbWord = entry.word.replace(/\*/g, '').toLowerCase();
             const dbTrans = entry.translation.toLowerCase();
-            return dbWord === safeLowerWord || dbTrans === safeLowerTrans;
-        });
+            if (dbWord === safeLowerWord) acc.isDuplicateWord = true;
+            if (dbTrans === safeLowerTrans) acc.isDuplicateTranslation = true;
+            return acc;
+        }, { isDuplicateWord: false, isDuplicateTranslation: false });
 
-        if (isDuplicate) {
-            return toast.error("This word or translation already exists in another dictionary entry!");
-        }
-
-        const processedTags = tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
-
-        // Run phono-syntax validation (previously missing from edit flow!)
+        const processedTags = [...formData.tags].sort();
         const validation = validateNewWord(safeWord, useConfigStore.getState());
         
-        const doSave = () => {
+        const doSave = (sWord = safeWord, cTrans = cleanInputTrans, pTags = processedTags) => {
             updateWord(wordObj.id, {
-                word: safeWord,
+                word: sWord,
                 ipa: ipa.trim(),
                 wordClass: wordClass.trim(),
-                translation: cleanInputTrans,
-                tags: processedTags,
+                translation: cTrans,
+                tags: pTags,
                 ideogram: ideogram.trim(),
                 personCategory: personCategory.trim()
             });
 
-            // Persist any new custom POS/tags
             if (wordClass && !STANDARD_WORD_CLASSES.includes(wordClass.trim().toLowerCase())) {
                 addCustomWordClass(wordClass);
             }
-            processedTags.forEach(tag => addCustomTag(tag));
+            pTags.forEach(tag => addCustomTag(tag));
 
             toast.success("Word updated successfully!");
             onClose();
         };
 
+        if (isDuplicateWord || isDuplicateTranslation) {
+            let warningMsg = "";
+            if (isDuplicateWord && isDuplicateTranslation) {
+                warningMsg = "This exact word and translation already exist in another lexicon entry.";
+            } else if (isDuplicateWord) {
+                warningMsg = "This word already exists in another entry (Homonym). Save anyway?";
+            } else {
+                warningMsg = "This translation already exists in another entry (Synonym). Save anyway?";
+            }
+
+            showValidationToast((t) => (
+                <div className="custom-toast-v">
+                    <strong>⚠️ Duplicate Detected</strong>
+                    <span>{warningMsg}</span>
+                    <div className="toast-actions-v">
+                        <button onClick={() => {
+                            toast.dismiss(t.id);
+                            proceedToValidation(safeWord, cleanInputTrans, processedTags, doSave);
+                        }} className="btn-v btn-err-v">Save Anyway</button>
+                        <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                    </div>
+                </div>
+            ));
+            return;
+        }
+
+        proceedToValidation(safeWord, cleanInputTrans, processedTags, doSave);
+    };
+
+    const proceedToValidation = (safeWord, cleanInputTrans, processedTags, doSave) => {
+        const validation = validateNewWord(safeWord, useConfigStore.getState());
+
         if (!validation.valid) {
-            toast.custom((t) => (
-                <div style={{ background: 'var(--s4)', color: 'var(--tx)', padding: '15px', borderRadius: '8px', border: '1px solid var(--err)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            showValidationToast((t) => (
+                <div className="custom-toast-v">
                     <strong>⚠️ Phono-Syntax Warning</strong>
                     <span>{validation.reason}</span>
                     <p style={{fontSize: '0.9rem', color: 'var(--tx2)'}}>Do you want to save it as an irregular exception anyway?</p>
-                    <div style={{display: 'flex', gap: '8px', marginTop: '5px', flexWrap: 'wrap'}}>
+                    <div className="toast-actions-v">
                         <button onClick={() => {
                             toast.dismiss(t.id);
                             doSave();
-                        }} style={{padding: '5px 10px', background: 'var(--err)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Save Anyway</button>
+                        }} className="btn-v btn-err-v">Save Anyway</button>
 
                         {validation.type === 'invalid_chars' && validation.invalidChars && (
                             <>
                                 <button onClick={() => {
                                     toast.dismiss(t.id);
                                     handleAddCharsToInventory(validation.invalidChars, 'consonants');
-                                }} style={{padding: '5px 10px', background: 'var(--acc)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Add to Consonants</button>
+                                }} className="btn-v btn-acc-v">Add to Consonants</button>
                                 <button onClick={() => {
                                     toast.dismiss(t.id);
                                     handleAddCharsToInventory(validation.invalidChars, 'vowels');
-                                }} style={{padding: '5px 10px', background: 'var(--acc2)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Add to Vowels</button>
+                                }} className="btn-v btn-acc2-v">Add to Vowels</button>
+                                <button onClick={() => {
+                                    toast.dismiss(t.id);
+                                    handleAddCharsToInventory(validation.invalidChars, 'otherPhonemes');
+                                }} className="btn-v btn-acc3-v">Add to Others</button>
                             </>
                         )}
 
                         {validation.type === 'invalid_pattern' && validation.detectedPattern && (
                             <button onClick={() => {
                                 toast.dismiss(t.id);
-                                handleAddPattern(validation.detectedPattern);
-                            }} style={{padding: '5px 10px', background: 'var(--acc)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Add to Syllable Patterns</button>
+                                handleAddPattern(validation.detectedPattern, safeWord, cleanInputTrans, processedTags);
+                            }} className="btn-v btn-acc-v">Add to patterns & Save</button>
                         )}
 
-                        <button onClick={() => toast.dismiss(t.id)} style={{padding: '5px 10px', background: 'var(--s2)', color: 'var(--tx)', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Cancel</button>
+                        <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
                     </div>
                 </div>
-            ), { duration: Infinity });
+            ));
             return;
         }
 
@@ -237,7 +288,15 @@ export default function EditWordModal({ wordObj, onClose }) {
                         value={wordClass}
                         onChange={(e) => updateField('wordClass', e.target.value.toLowerCase())}
                         list="edit-word-classes"
-                    />
+                    >
+                        <button 
+                            className="clear-input-btn" 
+                            onClick={() => updateField('wordClass', '')}
+                            title="Clear Part of Speech"
+                        >
+                            <X size={14} />
+                        </button>
+                    </Input>
                     <datalist id="edit-word-classes">
                         {allWordClasses.map(cls => (
                             <option key={cls} value={cls} />
@@ -282,12 +341,33 @@ export default function EditWordModal({ wordObj, onClose }) {
             </div>
 
             <div>
-                <Input 
-                    label="Semantic Tags (Comma separated)" 
-                    value={tags}
-                    onChange={(e) => updateField('tags', e.target.value)}
-                    list="edit-semantic-tags"
-                />
+                <label className="input-label">Semantic Tags</label>
+                <div className="tags-chip-container">
+                    {formData.tags.map(tag => (
+                        <span key={tag} className="tag-chip">
+                            {tag}
+                            <X size={12} onClick={() => removeTag(tag)} className="tag-remove-icon" />
+                        </span>
+                    ))}
+                    <div className="tag-input-wrapper">
+                        <input 
+                            type="text"
+                            className="tag-inner-input"
+                            value={tagInput}
+                            onChange={(e) => setTagInput(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ',') {
+                                    e.preventDefault();
+                                    handleAddTag(tagInput);
+                                }
+                            }}
+                            onBlur={() => handleAddTag(tagInput)}
+                            placeholder={formData.tags.length === 0 ? "Add tags..." : ""}
+                            list="edit-semantic-tags"
+                        />
+                        <Plus size={16} className="tag-add-icon" onClick={() => handleAddTag(tagInput)} />
+                    </div>
+                </div>
                 <datalist id="edit-semantic-tags">
                     {allTags.map(tag => (
                         <option key={tag} value={tag} />
