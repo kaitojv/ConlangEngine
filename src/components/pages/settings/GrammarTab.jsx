@@ -27,7 +27,8 @@ export default function GrammarTab(){
                 <Infobox title="Morphology & Inflection Guide">
                     • <b>Prefixes &amp; Suffixes:</b> Use a hyphen to indicate where the root connects. <i>Prefix:</i> <code>ir-</code> | <i>Suffix:</i> <code>-s</code>.<br />
                     • <b>Infixes:</b> Use <code>-affix-@position</code>. Example: <code>-ma-@V</code> (inserts after the first vowel).<br />
-                    • <b>Templatic Roots:</b> For triconsonantal roots, use Regex with the <code>=&gt;</code> operator (e.g., <code>(.)(.)(.) =&gt; $1a$2a$3</code>).<br />
+                    • <b>Regex Mutations:</b> Use the <code>=&gt;</code> operator for stem changes. <b>Avoid brackets <code>[]</code></b> unless you want to match "any of these letters". Use <code>em$ =&gt; esh</code> to turn <i>Rem</i> into <i>Resh</i>.<br />
+                    • <b>Templatic Roots:</b> For triconsonantal roots, use capture groups: <code>(.)(.)(.) =&gt; $1a$2a$3</code>.<br />
                     • <b>Sound Assimilation:</b> Use Regex for context-specific sound changes. Example: <code>n(?=[pb]) =&gt; m</code> (changes 'n' to 'm' before 'p' or 'b').<br />
                     • <b>Reduplication:</b> Capture groups and repeat them. Example: <code>^(.{2})(.*) =&gt; $1$1$2</code> (copies the first two letters).<br />
                     • <b>Deletion:</b> Leave the right side of the arrow empty. Example: <code>[aeiou]$ =&gt; </code> (deletes a trailing vowel).<br />

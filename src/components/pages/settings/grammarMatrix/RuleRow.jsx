@@ -114,6 +114,11 @@ export const RuleRow = ({ rule, onUpdate, onDelete, allWordClasses }) => {
             <input className="check-rule" type="checkbox" name="standalone" checked={!!rule.standalone} onChange={handleChange} />
             <span>Standalone Rule</span>
           </label>
+          <div className="divider"></div>
+          <label className="cb-wrap" title="Allow this rule to apply to Person and Class markers (Pronouns)">
+            <input className="check-rule" type="checkbox" name="applyToPersons" checked={!!rule.applyToPersons} onChange={handleChange} />
+            <span>Apply to Persons</span>
+          </label>
         </div>
       </div>
     </div>

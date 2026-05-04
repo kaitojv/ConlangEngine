@@ -16,29 +16,52 @@ const parseAffix = (affixStr) => {
     return { clean: morpheme, type, position };
 };
 
-// Placeholder for stripAffix - actual implementation would be more complex
-export const stripAffix = (word, affixRule) => {
+// Robustly strips an affix, handling orthography normalization and various quote styles
+export const stripAffix = (word, affixRule, normalizeToBase) => {
     if (!affixRule || !word) return null;
 
-    // Reversing arbitrary regex transformations (like n => m) is mathematically 
-    // impossible without a dictionary of underlying forms, so we skip them in the basic analyzer.
-    if (affixRule.includes('=>')) return null;
+    // Handle Regex mutation rules (e.g. "em$ => esh")
+    if (affixRule.includes('=>')) {
+        const [pattern, replacement] = affixRule.split('=>').map(s => s.trim());
+        if (!replacement) return null; // Deletion rules are too ambiguous to reverse automatically
+
+        // Heuristic: If the word ends with the replacement, swap it for the pattern (stripped of regex anchors)
+        const cleanPattern = pattern.replace(/[\\^$]/g, '');
+        const isPrefixStyle = pattern.startsWith('^');
+        
+        const normWord = normalizeToBase ? normalizeToBase(word.toLowerCase()) : word.toLowerCase();
+        const normReplacement = normalizeToBase ? normalizeToBase(replacement.toLowerCase()) : replacement.toLowerCase();
+
+        if (isPrefixStyle) {
+            if (normWord.startsWith(normReplacement)) return cleanPattern + normWord.slice(normReplacement.length);
+        } else {
+            if (normWord.endsWith(normReplacement)) return normWord.slice(0, -normReplacement.length) + cleanPattern;
+        }
+        return null;
+    }
 
     const parsed = parseAffix(affixRule);
     if (!parsed) return null;
 
     const { clean, type } = parsed;
+    
+    // Normalize both word and clean affix to ensure they use the same character styles (e.g. straight vs smart quotes)
+    const normWord = normalizeToBase ? normalizeToBase(word.toLowerCase()) : word.toLowerCase();
+    const normClean = normalizeToBase ? normalizeToBase(clean.toLowerCase()) : clean.toLowerCase();
+
+    // Secondary normalization for common separators if they aren't in the orthography
+    const cleanSep = (s) => s.replace(/[’‘]/g, "'");
+    const finalWord = cleanSep(normWord);
+    const finalClean = cleanSep(normClean);
 
     if (type === 'suffix') {
-        if (word.endsWith(clean)) return word.slice(0, word.length - clean.length);
+        if (finalWord.endsWith(finalClean)) return finalWord.slice(0, finalWord.length - finalClean.length);
     } else if (type === 'prefix') {
-        if (word.startsWith(clean)) return word.slice(clean.length);
+        if (finalWord.startsWith(finalClean)) return finalWord.slice(finalClean.length);
     } else if (type === 'infix') {
-        // For infixes, we just remove the first occurrence of the morpheme
-        // This is a simplification but works for general analysis
-        const idx = word.indexOf(clean);
-        if (idx > 0 && idx < word.length - clean.length) {
-            return word.slice(0, idx) + word.slice(idx + clean.length);
+        const idx = finalWord.indexOf(finalClean);
+        if (idx > 0 && idx < finalWord.length - finalClean.length) {
+            return finalWord.slice(0, idx) + finalWord.slice(idx + finalClean.length);
         }
     }
     return null;

@@ -63,8 +63,17 @@ export default function AnalyzerTab() {
         const personRules = getPersonRules(config.personRules);
         personRules.forEach(rule => {
             const cleanAffix = rule.affix ? rule.affix.replace(/^-|-$/g, '').toLowerCase() : null;
-            const isFreeMatch = rule.freeForm && normalizeToBase(rule.freeForm.toLowerCase()) === safeSurface;
-            const isAffixMatch = cleanAffix && normalizeToBase(cleanAffix) === safeSurface;
+            const normFree = rule.freeForm ? normalizeToBase(rule.freeForm.toLowerCase()) : null;
+            const normAffix = cleanAffix ? normalizeToBase(cleanAffix) : null;
+            
+            const isFreeMatch = normFree && normFree === safeSurface;
+            
+            // Flexible match for affixes: allow matching even if apostrophes are "shared" or slightly different
+            const isAffixMatch = normAffix && (
+                normAffix === safeSurface || 
+                normAffix.replace(/^['’‘]/, '') === safeSurface ||
+                normAffix === safeSurface.replace(/^['’‘]/, '')
+            );
 
             if (isFreeMatch || isAffixMatch) {
                 parsings.push({
@@ -96,11 +105,14 @@ export default function AnalyzerTab() {
         allRules.forEach(rule => {
             if (!rule.affix) return;
             
-            const stripped = stripAffix(safeSurface, rule.affix);
+            const stripped = stripAffix(safeSurface, rule.affix, normalizeToBase);
             if (stripped) {
                 findAllParsings(stripped, depth + 1).forEach(sp => {
                     const applies = rule.appliesTo ? rule.appliesTo.split(',').map(c => c.trim().toLowerCase()) : ['all'];
-                    if (applies.includes('all') || applies.includes(sp.root.wordClass?.toLowerCase())) {
+                    const rootClass = sp.root.wordClass?.toLowerCase();
+                    const canApplyToPerson = rule.applyToPersons && rootClass === 'pronoun';
+
+                    if (applies.includes('all') || applies.includes(rootClass) || canApplyToPerson) {
                         parsings.push({ root: sp.root, rules: [rule, ...sp.rules] });
                     }
                 });
@@ -265,33 +277,64 @@ export default function AnalyzerTab() {
             }
             
             let baseTrans = parse.root.translation?.split(',')[0].trim() || parse.root.word;
+            
+            // Map common person codes to English pronouns
+            const pronounMap = {
+                '1s': { subj: 'I', obj: 'me' },
+                '2s': { subj: 'you', obj: 'you' },
+                '3s': { subj: 'he/she/it', obj: 'him/her/it' },
+                '1p': { subj: 'we', obj: 'us' },
+                '2p': { subj: 'you', obj: 'you' },
+                '3p': { subj: 'they', obj: 'them' },
+                '3s.fem': { subj: 'she', obj: 'her' },
+                '3s.masc': { subj: 'he', obj: 'him' },
+                '3s.neut': { subj: 'it', obj: 'it' },
+                '1s.neut': { subj: 'I', obj: 'me' },
+                '3p.fem': { subj: 'they', obj: 'them' },
+                '3p.masc': { subj: 'they', obj: 'them' }
+            };
+
+            const isGhostPerson = baseTrans.startsWith('Person (');
+            let personCode = isGhostPerson ? baseTrans.match(/\(([^)]+)\)/)?.[1]?.toLowerCase() : null;
+            
             if (role === 'V' && baseTrans.toLowerCase().startsWith('to ')) baseTrans = baseTrans.substring(3);
             
-            const pronouns = { '1s': 'I', '2s': 'you', '3s': 'he/she/it', '1p': 'we', '2p': 'you', '3p': 'they' };
             const remainingTags = [];
             let hiddenPronoun = null;
+            let isAccusative = false;
             
             parse.rules.forEach(r => {
                 const n = r.name.toLowerCase();
-                if (pronouns[n]) hiddenPronoun = pronouns[n];
+                const standardCode = n.match(/[123][sp]/)?.[0];
+                
+                if (pronounMap[n]) hiddenPronoun = pronounMap[n].subj;
+                else if (standardCode && pronounMap[standardCode]) hiddenPronoun = pronounMap[standardCode].subj;
                 else if (n.includes('past')) baseTrans = baseTrans.endsWith('e') ? baseTrans + 'd' : baseTrans + 'ed';
                 else if (n.includes('future')) baseTrans = 'will ' + baseTrans;
                 else if (n.includes('continuous') || n.includes('gerund')) baseTrans = (baseTrans.endsWith('e') && !baseTrans.endsWith('ee')) ? baseTrans.slice(0, -1) + 'ing' : baseTrans + 'ing';
                 else if (n.includes('plural') && role !== 'V') baseTrans = baseTrans.endsWith('s') ? baseTrans + 'es' : baseTrans + 's';
                 else if (n.includes('conditional')) baseTrans = 'would ' + baseTrans;
                 else if (n.includes('potential') || n.includes('ability')) baseTrans = 'can ' + baseTrans;
-                else if (['acc', 'acu', 'obj', 'dat'].some(t => n.includes(t))) { /* Ignore case tags */ }
+                else if (['acc', 'acu', 'obj', 'dat'].some(t => n.includes(t))) { isAccusative = true; }
                 else remainingTags.push(r.name);
             });
+
+            // If it's a standalone pronoun (the root is a person marker), use the mapped pronoun
+            if (isGhostPerson && personCode && pronounMap[personCode]) {
+                baseTrans = isAccusative ? pronounMap[personCode].obj : pronounMap[personCode].subj;
+            } else if (isGhostPerson && personCode) {
+                baseTrans = personCode.toUpperCase(); // Fallback to code if not in map
+            }
             
             if (hiddenPronoun && role === 'V') subjects.push(hiddenPronoun);
             
-            const approximatedWord = remainingTags.length > 0 ? `${baseTrans} [${remainingTags.join(', ')}]` : baseTrans;
+            let finalWord = baseTrans;
+            if (remainingTags.length > 0) finalWord += ` [${remainingTags.join(', ')}]`;
             
-            if (role === 'S') subjects.push(approximatedWord);
-            else if (role === 'V') verbs.push(approximatedWord);
-            else if (role === 'O') objects.push(approximatedWord);
-            else others.push(approximatedWord);
+            if (role === 'S') subjects.push(finalWord);
+            else if (role === 'V') verbs.push(finalWord);
+            else if (role === 'O') objects.push(finalWord);
+            else others.push(finalWord);
         });
         
         let translatedSentence = [...new Set(subjects), ...verbs, ...objects, ...others].join(' ');

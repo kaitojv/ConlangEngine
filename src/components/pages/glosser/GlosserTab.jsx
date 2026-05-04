@@ -38,8 +38,17 @@ export default function GlosserTab() {
         const personRules = getPersonRules(config.personRules);
         personRules.forEach(rule => { 
             const cleanAffix = rule.affix ? rule.affix.replace(/^-|-$/g, '').toLowerCase() : null;
-            const isFreeMatch = rule.freeForm && normalizeToBase(rule.freeForm.toLowerCase()) === safeSurface;
-            const isAffixMatch = cleanAffix && normalizeToBase(cleanAffix) === safeSurface;
+            const normFree = rule.freeForm ? normalizeToBase(rule.freeForm.toLowerCase()) : null;
+            const normAffix = cleanAffix ? normalizeToBase(cleanAffix) : null;
+
+            const isFreeMatch = normFree && normFree === safeSurface;
+            
+            // Flexible match for affixes: allow matching even if apostrophes are "shared" or slightly different
+            const isAffixMatch = normAffix && (
+                normAffix === safeSurface || 
+                normAffix.replace(/^['’‘]/, '') === safeSurface ||
+                normAffix === safeSurface.replace(/^['’‘]/, '')
+            );
 
             if (isFreeMatch || isAffixMatch) {
                 parsings.push({
@@ -70,12 +79,14 @@ export default function GlosserTab() {
         let allRules = [...(config.grammarRules || []), ...personRules.filter(p => p.affix).map(p => ({ ...p, appliesTo: p.appliesTo || 'all' }))];
         allRules.forEach(rule => {
             if (!rule.affix) return;
-            let stripped = stripAffix(safeSurface, rule.affix);
+            let stripped = stripAffix(safeSurface, rule.affix, normalizeToBase);
             if (stripped) {
                 findAllParsings(stripped, depth + 1).forEach(sp => {
                     let applies = rule.appliesTo ? rule.appliesTo.split(',').map(c => c.trim().toLowerCase()) : ['all'];
-                    const rootClasses = sp.root.wordClass ? sp.root.wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
-                    if (applies.includes('all') || rootClasses.some(rc => applies.includes(rc))) {
+                    const rootClass = sp.root.wordClass?.toLowerCase();
+                    const canApplyToPerson = rule.applyToPersons && rootClass === 'pronoun';
+
+                    if (applies.includes('all') || rootClass === 'all' || applies.includes(rootClass) || canApplyToPerson) {
                         parsings.push({ root: sp.root, rules: [rule, ...sp.rules] });
                     }
                 });

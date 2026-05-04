@@ -36,6 +36,7 @@ export const RulesManager = () => {
             condition: 'always',
             dependency: '', 
             standalone: false,
+            applyToPersons: false,
         };
         
         updateConfig({ grammarRules: [...rules, newRule] });
