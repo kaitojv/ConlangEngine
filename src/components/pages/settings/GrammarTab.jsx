@@ -31,7 +31,9 @@ export default function GrammarTab(){
                     • <b>Advanced Regex:</b> Support for capture groups and lookaheads. Example: <code>n(?=[pb]) =&gt; m</code> (Assimilation) or <code>^(.{2})(.*) =&gt; $1$1$2</code> (Reduplication).<br />
                     • <b>Apostrophe Handling:</b> The engine is robust against smart/straight quotes and shared punctuation between affixes.<br />
                     • <b>Standalone Rules:</b> Check <b>"Standalone"</b> for rules that conjugate independently (e.g., Passive Voice or Infinitives).<br />
-                    • <b>Rule Scoping:</b> Use <b>Person Categories</b> or <b>Root Tags</b> to restrict rules to specific words.
+                    • <b>Applies To (Constraint):</b> Filters which words are allowed to use this rule (e.g., "This rule only applies to <b>Nouns</b>").<br />
+                    • <b>Target POS (Transformation):</b> Defines what the word becomes after the rule is applied (e.g., "This rule turns a Verb into a <b>Noun</b>").<br />
+                    • <b>Rule Scoping:</b> Use Person Categories or Root Tags to restrict rules to specific dictionary words.
                 </Infobox>
                 
                 <div className="rules-wrapper">

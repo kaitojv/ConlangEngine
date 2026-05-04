@@ -1,6 +1,7 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
-import { Menu, Home, Printer, Save, FolderUp, User, Cloud } from 'lucide-react';
+import { Menu, Home, Printer, Save, FolderUp, User, Cloud, FileText, Table, FileEdit, Download } from 'lucide-react';
 
 // Bring in our UI components and styling
 import Button from '../../UI/Buttons/Buttons.jsx';
@@ -12,6 +13,10 @@ import { useProjectStore } from '../../../store/useProjectStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
 import { generateConlangPDF } from '../../../utils/pdfGenerator.jsx';
+import { generateObsidianMarkdown } from '../../../utils/obsidianExporter.jsx';
+import { generateSheetsExport } from '../../../utils/sheetsExporter.jsx';
+import { generateDocxExport } from '../../../utils/docxExporter.jsx';
+import { ExportModal } from './ExportModal.jsx';
 import { sanitizeBackup } from '../../../utils/schemaValidator.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 
@@ -22,6 +27,7 @@ export default function Header({ openMenu }) {
     
     const [session, setSession] = useState(null);
     const [isLive, setIsLive] = useState(false);
+    const [exportType, setExportType] = useState(null); // 'pdf', 'docx', 'obsidian', 'sheets'
 
     // Listen for auth changes and figure out if the user has an active Pro subscription
     useEffect(() => {
@@ -122,21 +128,29 @@ export default function Header({ openMenu }) {
         event.target.value = ''; 
     };
 
-    // Grab the data and pass it to our PDF utility function
-    const handleGeneratePDF = () => {
+    const handleExport = (template, options) => {
         const config = useConfigStore.getState();
         const lexicon = useLexiconStore.getState().lexicon || [];
-        
-        // Transliterate lexicon for PDF to ensure custom scripts appear
         const transliteratedLexicon = lexicon.map(w => ({
             ...w,
             displayWord: transliterate(w.word.replace(/\*/g, ''), lexicon)
         }));
 
-        generateConlangPDF(config, transliteratedLexicon);
+        if (exportType === 'pdf') {
+            generateConlangPDF(config, transliteratedLexicon, template, options);
+        } else if (exportType === 'docx') {
+            generateDocxExport(config, lexicon, template, options);
+        } else if (exportType === 'obsidian') {
+            generateObsidianMarkdown(config, transliteratedLexicon, options);
+        } else if (exportType === 'sheets') {
+            generateSheetsExport(config, lexicon, options);
+        }
+        
+        setExportType(null);
     };
 
     return (
+        <>
         <header className="hdr">
             <div className="hdr-flex">
                 <div className="hdr-left">
@@ -160,9 +174,25 @@ export default function Header({ openMenu }) {
                         <Button className="hdr-btn" onClick={() => navigate('/')}>
                             <Home /> <span>Home</span>
                         </Button>
-                        <Button className="hdr-btn" onClick={handleGeneratePDF}>
-                            <Printer /> <span>PDF</span>
-                        </Button>
+                        <div className="export-menu-wrapper">
+                            <Button className="hdr-btn export-trigger">
+                                <Download /> <span>Export</span>
+                            </Button>
+                            <div className="export-dropdown">
+                                <button className="export-opt" onClick={() => setExportType('pdf')}>
+                                    <Printer size={14} /> PDF Document
+                                </button>
+                                <button className="export-opt" onClick={() => setExportType('obsidian')}>
+                                    <FileText size={14} /> Obsidian (MD)
+                                </button>
+                                <button className="export-opt" onClick={() => setExportType('docx')}>
+                                    <FileEdit size={14} /> Word (DOCX)
+                                </button>
+                                <button className="export-opt" onClick={() => setExportType('sheets')}>
+                                    <Table size={14} /> Sheets (CSV)
+                                </button>
+                            </div>
+                        </div>
                         <Button className="hdr-btn" onClick={handleSave}>
                             <Save /> <span>Save</span>
                         </Button>
@@ -184,5 +214,13 @@ export default function Header({ openMenu }) {
                 </div>
             </div>
         </header>
+
+        <ExportModal 
+            isOpen={!!exportType} 
+            type={exportType}
+            onClose={() => setExportType(null)} 
+            onExport={handleExport}
+        />
+        </>
     );
 };

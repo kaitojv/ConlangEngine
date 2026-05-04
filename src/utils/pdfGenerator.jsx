@@ -1,153 +1,337 @@
-// We keep this massive HTML template here so it doesn't clutter up our beautiful React components!
-export const generateConlangPDF = (config, lexicon) => {
-    // Pop open a new window for the print preview
+
+/**
+ * pdfGenerator.jsx
+ * Generates a beautiful PDF reference document with premium template support.
+ */
+import { generateParadigm } from './morphologyEngine.jsx';
+
+export const generateConlangPDF = (config, lexicon, template = 'academic', options = {}) => {
     const printWindow = window.open('', '', 'height=900,width=800');
     if (!printWindow) {
         return alert("Please allow pop-ups to generate the PDF.");
     }
 
-    // Construct the HTML layout for the document
+    const {
+        conlangName = "My Conlang",
+        authorName = "Author",
+        grammarRules = [],
+        personRules = [],
+        consonants = "",
+        vowels = "",
+        syntaxOrder = "SVO",
+        wikiPages = {},
+        historicalRules = "",
+        syllablePattern = "",
+        phonologyTypes = "alphabetic",
+        customFont = "",
+        customFontBase64 = ""
+    } = config;
+
+    const { includeInflections = true, inflectionMode = 'compact' } = options;
+
+    const styles = {
+        academic: {
+            font: "'Lora', Georgia, serif",
+            accent: '#1a1a1a',
+            bg: '#fdfdfd',
+            tableHeader: '#f1f1f1',
+            border: '2px solid #1a1a1a'
+        },
+        modern: {
+            font: "'Inter', sans-serif",
+            accent: '#7c3aed',
+            bg: '#ffffff',
+            tableHeader: '#7c3aed',
+            border: 'none'
+        },
+        manuscript: {
+            font: "'Special Elite', Courier New, monospace",
+            accent: '#433422',
+            bg: '#f4ecd8',
+            tableHeader: '#e9dec3',
+            border: '1px solid #433422'
+        }
+    }[template];
+
     const html = `
         <!DOCTYPE html>
         <html>
         <head>
-            <title>${config.conlangName || 'Conlang'} - Reference Document</title>
+            <title>${conlangName} - Reference Document</title>
             <style>
-                ${(config.customFont || config.customFontBase64) ? `
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Lora:ital,wght@0,400;0,700;1,400&family=Special+Elite&display=swap');
+                
+                ${(customFont || customFontBase64) ? `
                 @font-face {
                     font-family: 'ConlangCustomFont';
-                    src: url('${config.customFont || config.customFontBase64}') format('truetype');
+                    src: url('${customFont || customFontBase64}') format('truetype');
                 }
-                .custom-font { font-family: 'ConlangCustomFont', 'Arial', sans-serif; }
+                .custom-font { font-family: 'ConlangCustomFont', ${styles.font}; }
                 ` : ''}
-                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; padding: 20px; }
-                h1 { color: #111; text-align: center; border-bottom: 2px solid #222; padding-bottom: 10px; margin-bottom: 5px; }
-                .subtitle { text-align: center; font-size: 1.1rem; color: #555; margin-bottom: 30px; }
-                h2 { color: #222; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 40px; page-break-after: avoid; }
-                h3 { color: #444; margin-top: 20px; }
-                p { margin: 8px 0; }
-                table { width: 100%; border-collapse: collapse; margin-top: 15px; page-break-inside: auto; }
-                tr { page-break-inside: avoid; page-break-after: auto; }
-                th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-                th { background-color: #f8f9fa; font-weight: bold; }
+
+                body { 
+                    font-family: ${styles.font}; 
+                    line-height: 1.8; 
+                    color: ${styles.accent}; 
+                    padding: 50px; 
+                    background: ${styles.bg};
+                    text-align: justify;
+                }
+
+                h1 { 
+                    font-size: 42pt; 
+                    margin-bottom: 0; 
+                    text-align: center; 
+                    text-transform: uppercase; 
+                    letter-spacing: 0.1em;
+                    font-weight: 700;
+                }
+
+                .subtitle { 
+                    text-align: center; 
+                    font-style: italic; 
+                    margin-bottom: 60px; 
+                    border-top: 1px solid #ddd;
+                    padding-top: 10px;
+                    display: block;
+                    width: 60%;
+                    margin-left: 20%;
+                }
+
+                h2 { 
+                    font-variant: small-caps; 
+                    border-bottom: ${styles.border || '1px solid #ddd'}; 
+                    padding-bottom: 5px; 
+                    margin-top: 50px; 
+                    font-size: 24pt;
+                    letter-spacing: 0.05em;
+                }
+
+                h3 { 
+                    font-size: 18pt; 
+                    margin-top: 30px; 
+                    border-left: 4px solid ${styles.accent};
+                    padding-left: 15px;
+                }
+
+                table { 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    margin: 25px 0; 
+                }
+
+                th { 
+                    background: ${styles.tableHeader}; 
+                    color: ${template === 'modern' ? 'white' : styles.accent}; 
+                    padding: 12px; 
+                    text-align: left; 
+                    font-size: 8pt;
+                    text-transform: uppercase;
+                    border: 1px solid #ddd;
+                }
+
+                td { 
+                    padding: 12px; 
+                    border: 1px solid #ddd; 
+                    font-size: 9pt;
+                }
+
+                .dictionary-entry {
+                    margin-bottom: 40px;
+                    padding-bottom: 20px;
+                    border-bottom: 1px solid #eee;
+                    page-break-inside: avoid;
+                }
+
+                .word-head {
+                    font-weight: 700;
+                    font-size: 1.4rem;
+                    color: ${styles.accent};
+                }
+
+                .pos-label {
+                    font-style: italic;
+                    color: #666;
+                    margin-left: 10px;
+                }
+
+                .ipa-label {
+                    color: #888;
+                    font-family: 'Inter', sans-serif;
+                    font-size: 0.9rem;
+                    margin-left: 10px;
+                }
+
+                .definition {
+                    display: block;
+                    margin-top: 5px;
+                    font-size: 11pt;
+                }
+
+                .inflection-table {
+                    margin-top: 15px;
+                    width: auto;
+                    min-width: 50%;
+                }
+
+                .inflection-table th {
+                    background: #f8f9fa;
+                    color: #444;
+                    font-size: 7pt;
+                    padding: 6px;
+                }
+
+                .inflection-table td {
+                    padding: 6px;
+                    font-size: 8pt;
+                }
+
+                .code-block { 
+                    background: ${template === 'manuscript' ? 'rgba(0,0,0,0.05)' : '#f8f9fa'}; 
+                    border: 1px solid #ddd; 
+                    padding: 20px; 
+                    font-family: 'Special Elite', monospace;
+                    font-size: 10pt;
+                    margin: 20px 0;
+                }
+
                 .page-break { page-break-before: always; }
-                .wiki-page { margin-bottom: 30px; }
-                .tag { display: inline-block; background: #e9ecef; padding: 2px 6px; border-radius: 4px; font-size: 0.85em; margin-right: 4px; }
+                
+                @media print {
+                    body { padding: 0; background: white; }
+                }
             </style>
         </head>
         <body>
-            <h1>${config.conlangName || 'My Conlang'}</h1>
+            <h1>${conlangName}</h1>
             <div class="subtitle">
-                <strong>Author:</strong> ${config.authorName || 'Anonymous'}<br/>
-                ${config.description || ''}
+                A Reference Grammar by ${authorName}
             </div>
 
-            <h2>1. Phonology</h2>
-            <p><strong>Typology:</strong> <span style="text-transform: capitalize;">${config.phonologyTypes || 'Not specified'}</span></p>
-            <p><strong>Consonants:</strong> <span class="custom-font">${config.consonants || 'None'}</span></p>
-            <p><strong>Vowels:</strong> <span class="custom-font">${config.vowels || 'None'}</span></p>
-            <p><strong>Syllable Structure:</strong> ${config.syllablePattern || 'None'}</p>
-            <p><strong>Historical Rules:</strong> ${config.historicalRules || 'None'}</p>
+            <p style="text-align: center; font-size: 10pt; margin-bottom: 50px;">
+                Generated on ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
 
-            <h2>2. Grammar & Syntax</h2>
-            <p><strong>Word Order:</strong> ${config.syntaxOrder || 'SVO'}</p>
-            <p><strong>Writing Direction:</strong> <span style="text-transform: uppercase;">${config.writingDirection || 'LTR'}</span></p>
-            <p><strong>Verb Marker:</strong> ${config.verbMarker || 'None'}</p>
-            <p><strong>Clitics/Particles:</strong> ${config.cliticsRules || 'None'}</p>
+            <h2>I. Phonology</h2>
+            <p>The phonological system of <strong>${conlangName}</strong> is classified as <em>${phonologyTypes}</em>. The following inventory represents the standard phonemes used in the language.</p>
             
-            ${Array.isArray(config.personRules) && config.personRules.length > 0 ? `
-            <h3>Person & Class Alignment</h3>
             <table>
-                <thead>
-                    <tr><th>Person</th><th>Number</th><th>Gender</th><th>Free Form</th><th>Affix</th><th>Applies To</th></tr>
-                </thead>
-                <tbody>
-                    ${config.personRules.map(p => `
+                <tr><th>Category</th><th>Inventory</th></tr>
+                <tr><td>Consonants</td><td class="custom-font">${consonants || '—'}</td></tr>
+                <tr><td>Vowels</td><td class="custom-font">${vowels || '—'}</td></tr>
+                <tr><td>Syllable Structure</td><td><code>${syllablePattern || '—'}</code></td></tr>
+            </table>
+
+            ${historicalRules ? `
+                <h3>Historical Sound Changes</h3>
+                <div class="code-block">${typeof historicalRules === 'string' ? historicalRules : JSON.stringify(historicalRules, null, 2)}</div>
+            ` : ''}
+
+            <div class="page-break"></div>
+
+            <h2>II. Morphology & Syntax</h2>
+            <p><strong>${conlangName}</strong> adheres to a <strong>${syntaxOrder}</strong> constituent order. The language exhibits ${grammarRules.length} primary morphological processes.</p>
+
+            ${Array.isArray(personRules) && personRules.length > 0 ? `
+                <h3>Person & Number Alignment</h3>
+                <table>
+                    <tr><th>Person</th><th>Number</th><th>Marker</th><th>Free Form</th></tr>
+                    ${personRules.map(p => `
                         <tr>
-                            <td>${p.person || '-'}</td>
-                            <td>${p.number || '-'}</td>
-                            <td>${p.gender || '-'}</td>
-                            <td>${p.freeForm || '-'}</td>
-                            <td><code>${p.affix || '-'}</code></td>
-                            <td>${p.appliesTo || 'all'}</td>
+                            <td>${p.person || '—'}</td>
+                            <td>${p.number || '—'}</td>
+                            <td><code>${p.affix || '—'}</code></td>
+                            <td>${p.freeForm || '—'}</td>
                         </tr>
                     `).join('')}
-                </tbody>
-            </table>
-            ` : `<p><strong>Person Rules:</strong> ${typeof config.personRules === 'string' ? config.personRules : 'None'}</p>`}
+                </table>
+            ` : ''}
 
-            ${config.grammarRules && config.grammarRules.length > 0 ? `
-            <h3>Grammar & Inflection Rules</h3>
-            <table>
-                <thead>
-                    <tr><th>Rule Name</th><th>Affix / Formula</th><th>Applies To</th><th>Condition</th></tr>
-                </thead>
-                <tbody>
-                    ${config.grammarRules.map(r => `
+            ${grammarRules.length > 0 ? `
+                <h3>Grammatical Inflections</h3>
+                <table>
+                    <tr><th>Rule Name / Cat</th><th>Affix</th><th>Applies To</th><th>Condition</th><th>Type</th><th>Dep.</th></tr>
+                    ${grammarRules.map(r => `
                         <tr>
-                            <td><strong>${r.name || 'Unnamed'}</strong></td>
-                            <td><code>${r.affix || '-'}</code></td>
-                            <td>${r.appliesTo || 'all'}</td>
+                            <td><strong>${r.name || r.category || 'General'}</strong></td>
+                            <td><code>${r.affix || '—'}</code></td>
+                            <td>${Array.isArray(r.appliesTo) ? r.appliesTo.join(", ") : (r.appliesTo || 'Universal')}</td>
                             <td>${r.condition || 'always'}</td>
+                            <td>${r.standalone ? 'Particle' : 'Affix'}</td>
+                            <td>${r.dependency || 'None'}</td>
                         </tr>
                     `).join('')}
-                </tbody>
-            </table>
+                </table>
             ` : ''}
 
             <div class="page-break"></div>
 
-            <h2>3. Lexicon (${lexicon.length} entries)</h2>
-            <table>
-                <thead>
-                    <tr><th>Word</th><th>IPA</th><th>Class</th><th>Translation</th><th>Tags</th></tr>
-                </thead>
-                <tbody>
-                    ${lexicon.map(w => `
-                        <tr>
-                            <td>
-                                <span class="custom-font" style="font-size: 1.1em;"><strong>${w.displayWord || w.word.replace(/\*/g, '')}</strong></span>
-                                ${w.ideogram ? `<br/><span style="font-size: 1.4em;" class="custom-font">${w.ideogram}</span>` : ''}
-                            </td>
-                            <td>${w.ipa ? `/${w.ipa}/` : ''}</td>
-                            <td><em>${w.wordClass || ''}</em></td>
-                            <td>${w.translation || ''}</td>
-                            <td>${(w.tags || []).map(t => `<span class="tag">${t}</span>`).join('')}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
+            <h2>III. Lexicon</h2>
+            <div style="column-count: 1;">
+                ${lexicon.map(w => {
+                    const paradigm = includeInflections ? generateParadigm(w.word.replace(/\*/g, ''), config, {
+                        inflectionMode,
+                        wordClass: w.wordClass
+                    }) : [];
 
-            ${Object.keys(config.wikiPages || {}).length > 0 ? `
-            <div class="page-break"></div>
-            <h2>4. Library & Documents</h2>
-            ${Object.entries(config.wikiPages).map(([id, page]) => {
-                const isObject = typeof page === 'object' && page !== null;
-                const title = isObject ? page.title : id.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                const content = isObject ? page.content : page;
-                const type = isObject ? page.type : 'wiki';
+                    // Group paradigm by Rule if in full mode
+                    const groupedParadigm = {};
+                    if (inflectionMode !== 'compact') {
+                        paradigm.forEach(p => {
+                            if (!groupedParadigm[p.ruleName]) groupedParadigm[p.ruleName] = [];
+                            groupedParadigm[p.ruleName].push(p);
+                        });
+                    }
 
-                return `
-                    <div class="wiki-page">
-                        <h3>${title} <span style="font-size: 0.7em; font-weight: normal; color: #888;">(${type})</span></h3>
-                        <div class="${type === 'corpus' ? 'custom-font' : ''}" style="white-space: pre-wrap; background: #fafafa; padding: 15px; border-radius: 6px; border: 1px solid #eee;">
-                            ${content}
+                    return `
+                        <div class="dictionary-entry">
+                            <span class="word-head custom-font">${w.displayWord || w.word.replace(/\*/g, '')}</span>
+                            <span class="ipa-label">${w.ipa ? `[${w.ipa}]` : ''}</span>
+                            <span class="pos-label">${w.wordClass || ''}</span>
+                            <span class="definition">${w.translation || ''}</span>
+                            
+                            ${includeInflections && paradigm.length > 0 ? `
+                                <table class="inflection-table">
+                                    ${inflectionMode === 'compact' ? `
+                                        <tr><th>Form</th><th>Result</th></tr>
+                                        ${paradigm.map(p => `<tr><td>${p.ruleName}</td><td class="custom-font">${p.result || '—'}</td></tr>`).join('')}
+                                    ` : `
+                                        <tr><th>Rule</th><th>Person/Class</th><th>Result</th></tr>
+                                        ${paradigm.map(p => `
+                                            <tr>
+                                                <td>${p.ruleName}</td>
+                                                <td>${p.personName}</td>
+                                                <td class="custom-font">${p.result || '—'}</td>
+                                            </tr>
+                                        `).join('')}
+                                    `}
+                                </table>
+                            ` : ''}
                         </div>
-                    </div>
-                `;
-            }).join('')}
+                    `;
+                }).join('')}
+            </div>
+
+            ${Object.keys(wikiPages).length > 0 ? `
+                <div class="page-break"></div>
+                <h2>IV. Documentation & Corpus</h2>
+                ${Object.entries(wikiPages).map(([id, page]) => {
+                    if (id === 'phonology') return '';
+                    const title = typeof page === 'object' ? page.title : id.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    const content = typeof page === 'object' ? page.content : page;
+                    return `<h3>${title}</h3><div style="font-size: 10pt;">${content}</div>`;
+                }).join('')}
             ` : ''}
+
         </body>
         </html>
     `;
 
-    // Write the content to the new window and trigger the print dialog
     printWindow.document.write(html);
     printWindow.document.close();
     printWindow.focus();
     
-    // A tiny delay ensures custom fonts have a moment to load and paint before printing
     setTimeout(() => {
         printWindow.print();
-    }, 500); 
+    }, 1000); 
 };

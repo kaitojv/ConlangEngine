@@ -249,3 +249,81 @@ export const segmentToken = (token, lexicon, config, normalizeToBase, getUniqueP
     // Only return the segments if we actually found more than one and covered the whole string
     return (resultTokens.length > 1 && remaining.length === 0) ? resultTokens : [token];
 };
+
+/**
+ * Generates a full paradigm of inflected forms for a given word.
+ * Used by exporters and MatrixModal.
+ */
+export const generateParadigm = (baseWord, config, options = {}) => {
+    const { 
+        grammarRules = [], 
+        vowels = "", 
+        consonants = "", 
+        otherPhonemes = "",
+        syntaxOrder = "SVO"
+    } = config;
+    
+    const { 
+        inflectionMode = 'compact', // compact, affix, free
+        wordClass = 'all'
+    } = options;
+
+    const liveClasses = (wordClass || 'all').split(',').map(c => c.trim().toLowerCase());
+    const applicableRules = grammarRules.filter(rule => {
+        const ruleClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
+        return ruleClasses.includes('all') || liveClasses.some(lc => ruleClasses.includes(lc));
+    });
+
+    const results = [];
+
+    // Compact mode: Only Rule results
+    if (inflectionMode === 'compact') {
+        applicableRules.forEach(rule => {
+            results.push({
+                ruleName: rule.name || rule.category || 'General',
+                personName: 'BASE',
+                result: applyRuleToWord(baseWord, rule, grammarRules, vowels, consonants, otherPhonemes)
+            });
+        });
+        return results;
+    }
+
+    // Full mode: Rule x Person results
+    const personRules = getPersonRules(config.personRules || []);
+    const fullPersonList = [{ name: 'BASE', affix: '', freeForm: '' }, ...personRules];
+
+    applicableRules.forEach(rule => {
+        fullPersonList.forEach(person => {
+            // Skip non-base person for standalone rules (like Passive or Infinitive)
+            if (rule.standalone && person.name !== 'BASE') return;
+
+            let inflected = applyRuleToWord(baseWord, rule, grammarRules, vowels, consonants, otherPhonemes);
+            
+            // Apply person marker if it's not the base root
+            if (inflected && !rule.standalone && person.name !== 'BASE') {
+                const useFree = (inflectionMode === 'free' && person.freeForm) || (!person.affix && person.freeForm);
+                const useAffix = (inflectionMode === 'affix' && person.affix) || (!person.freeForm && person.affix);
+
+                if (useFree) {
+                    const sIndex = syntaxOrder.toUpperCase().indexOf('S');
+                    const vIndex = syntaxOrder.toUpperCase().indexOf('V');
+                    if (vIndex !== -1 && sIndex !== -1 && vIndex < sIndex) {
+                        inflected = `${inflected} ${person.freeForm}`;
+                    } else {
+                        inflected = `${person.freeForm} ${inflected}`;
+                    }
+                } else if (useAffix) {
+                    inflected = applyRuleToWord(inflected, person, grammarRules, vowels, consonants, otherPhonemes);
+                }
+            }
+
+            results.push({
+                ruleName: rule.name || rule.category || 'General',
+                personName: person.name,
+                result: inflected
+            });
+        });
+    });
+
+    return results;
+};
