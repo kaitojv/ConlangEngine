@@ -4,9 +4,15 @@ import { Wand2, X, ArrowRight, RefreshCw, Layers, Repeat, Type, Wand } from 'luc
 import Button from '../../../UI/Buttons/Buttons.jsx';
 import './visualRuleBuilder.css';
 
-export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "" }) => {
-    const [mode, setMode] = useState('standard'); // standard, mutation, reduplication, transformation
-    const [testWord, setTestWord] = useState('Rem');
+export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "", initialMode = 'standard' }) => {
+    const [mode, setMode] = useState(initialMode);
+    
+    // Reset mode when modal opens
+    useEffect(() => {
+        if (isOpen) setMode(initialMode);
+    }, [isOpen, initialMode]);
+
+    const [testWord, setTestWord] = useState('Pata');
     const [result, setResult] = useState('');
     
     // Standard Mode State
@@ -18,6 +24,8 @@ export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "" 
     const [mutFind, setMutFind] = useState('');
     const [mutReplace, setMutReplace] = useState('');
     const [mutPos, setMutPos] = useState('end'); // start, end, everywhere
+    const [mutPrecededBy, setMutPrecededBy] = useState('');
+    const [mutFollowedBy, setMutFollowedBy] = useState('');
 
     // Reduplication Mode State
     const [redSource, setRedSource] = useState('start'); // start, end
@@ -32,14 +40,24 @@ export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "" 
         let compiled = '';
         
         if (mode === 'standard') {
-            if (stdType === 'prefix') compiled = `${stdValue}-`;
-            else if (stdType === 'suffix') compiled = `-${stdValue}`;
+            const lookbehind = mutPrecededBy ? `(?<=${mutPrecededBy})` : '';
+            const lookahead = mutFollowedBy ? `(?=${mutFollowedBy})` : '';
+            
+            if (stdType === 'prefix') compiled = `^${lookbehind}${stdValue}-${lookahead}`;
+            else if (stdType === 'suffix') compiled = `${lookbehind}-${stdValue}${lookahead}$`;
             else if (stdType === 'infix') compiled = `-${stdValue}-${stdInfixPos}`;
             else compiled = stdValue;
         } 
         else if (mode === 'mutation') {
             const anchor = mutPos === 'start' ? '^' : (mutPos === 'end' ? '$' : '');
-            const pattern = mutPos === 'start' ? `${anchor}${mutFind}` : (mutPos === 'end' ? `${mutFind}${anchor}` : mutFind);
+            const lookbehind = mutPrecededBy ? `(?<=${mutPrecededBy})` : '';
+            const lookahead = mutFollowedBy ? `(?=${mutFollowedBy})` : '';
+            
+            let pattern = mutFind;
+            if (mutPos === 'start') pattern = `${anchor}${lookbehind}${mutFind}${lookahead}`;
+            else if (mutPos === 'end') pattern = `${lookbehind}${mutFind}${lookahead}${anchor}`;
+            else pattern = `${lookbehind}${mutFind}${lookahead}`;
+            
             compiled = `${pattern} => ${mutReplace}`;
         }
         else if (mode === 'reduplication') {
@@ -142,33 +160,52 @@ export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "" 
                         
                         {mode === 'standard' && (
                             <>
-                                <div className="vrb-field-group">
-                                    <label className="vrb-label">Type</label>
-                                    <div className="vrb-input-row">
+                                <div className="vrb-form-grid">
+                                    <div className="vrb-field-group">
+                                        <label className="vrb-label">Type</label>
                                         <select className="vrb-select" value={stdType} onChange={e => setStdType(e.target.value)}>
                                             <option value="prefix">Prefix (Start)</option>
                                             <option value="suffix">Suffix (End)</option>
                                             <option value="infix">Infix (Middle)</option>
-                                            <option value="free">Free Word / Particle</option>
+                                            <option value="free">Free Word</option>
                                         </select>
                                     </div>
-                                </div>
-                                <div className="vrb-field-group">
-                                    <label className="vrb-label">Morpheme Content</label>
-                                    <input 
-                                        className="vrb-input" 
-                                        placeholder="e.g. ma, ir, s" 
-                                        value={stdValue}
-                                        onChange={e => setStdValue(e.target.value)}
-                                    />
-                                </div>
-                                {stdType === 'infix' && (
                                     <div className="vrb-field-group">
-                                        <label className="vrb-label">Insertion Point</label>
-                                        <select className="vrb-select" value={stdInfixPos} onChange={e => setStdInfixPos(e.target.value)}>
-                                            <option value="@V">After First Vowel</option>
-                                            <option value="@C">After First Consonant</option>
-                                        </select>
+                                        <label className="vrb-label">Morpheme</label>
+                                        <input 
+                                            className="vrb-input" 
+                                            placeholder="e.g. ma, s" 
+                                            value={stdValue}
+                                            onChange={e => setStdValue(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                {(stdType === 'infix' || stdType === 'prefix' || stdType === 'suffix') && (
+                                    <div className="vrb-form-grid" style={{ gridTemplateColumns: stdType === 'infix' ? '1fr 1fr' : '0.8fr 1.1fr 1.1fr', marginTop: '0.5rem', gap: '0.5rem' }}>
+                                        {stdType === 'infix' ? (
+                                            <div className="vrb-field-group">
+                                                <label className="vrb-label">Insertion Point</label>
+                                                <select className="vrb-select" value={stdInfixPos} onChange={e => setStdInfixPos(e.target.value)}>
+                                                    <option value="@V">After Vowel</option>
+                                                    <option value="@C">After Consonant</option>
+                                                </select>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="vrb-field-group">
+                                                    <label className="vrb-label">Type (Locked)</label>
+                                                    <div className="vrb-input" style={{ opacity: 0.5, fontSize: '0.75rem', display: 'flex', alignItems: 'center' }}>{stdType}</div>
+                                                </div>
+                                                <div className="vrb-field-group">
+                                                    <label className="vrb-label">Preceded By</label>
+                                                    <input className="vrb-input" placeholder="e.g. a" value={mutPrecededBy} onChange={e => setMutPrecededBy(e.target.value)} />
+                                                </div>
+                                                <div className="vrb-field-group">
+                                                    <label className="vrb-label">Followed By</label>
+                                                    <input className="vrb-input" placeholder="e.g. i" value={mutFollowedBy} onChange={e => setMutFollowedBy(e.target.value)} />
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 )}
                             </>
@@ -176,31 +213,33 @@ export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "" 
 
                         {mode === 'mutation' && (
                             <>
-                                <div className="vrb-field-group">
-                                    <label className="vrb-label">Find Sequence</label>
-                                    <input 
-                                        className="vrb-input" 
-                                        placeholder="e.g. em, r, a" 
-                                        value={mutFind}
-                                        onChange={e => setMutFind(e.target.value)}
-                                    />
+                                <div className="vrb-form-grid">
+                                    <div className="vrb-field-group">
+                                        <label className="vrb-label">Find</label>
+                                        <input className="vrb-input" placeholder="e.g. em" value={mutFind} onChange={e => setMutFind(e.target.value)} />
+                                    </div>
+                                    <div className="vrb-field-group">
+                                        <label className="vrb-label">Replace</label>
+                                        <input className="vrb-input" placeholder="e.g. esh" value={mutReplace} onChange={e => setMutReplace(e.target.value)} />
+                                    </div>
                                 </div>
-                                <div className="vrb-field-group">
-                                    <label className="vrb-label">Replace With</label>
-                                    <input 
-                                        className="vrb-input" 
-                                        placeholder="e.g. esh, l, i" 
-                                        value={mutReplace}
-                                        onChange={e => setMutReplace(e.target.value)}
-                                    />
-                                </div>
-                                <div className="vrb-field-group">
-                                    <label className="vrb-label">At Position</label>
-                                    <select className="vrb-select" value={mutPos} onChange={e => setMutPos(e.target.value)}>
-                                        <option value="end">End of word ($)</option>
-                                        <option value="start">Start of word (^)</option>
-                                        <option value="everywhere">Everywhere (Global)</option>
-                                    </select>
+                                <div className="vrb-form-grid" style={{ gridTemplateColumns: '0.8fr 1.1fr 1.1fr', marginTop: '0.5rem', gap: '0.5rem' }}>
+                                    <div className="vrb-field-group">
+                                        <label className="vrb-label">At Position</label>
+                                        <select className="vrb-select" value={mutPos} onChange={e => setMutPos(e.target.value)}>
+                                            <option value="end">End ($)</option>
+                                            <option value="start">Start (^)</option>
+                                            <option value="everywhere">Everywhere</option>
+                                        </select>
+                                    </div>
+                                    <div className="vrb-field-group">
+                                        <label className="vrb-label">Preceded By</label>
+                                        <input className="vrb-input" placeholder="e.g. a" value={mutPrecededBy} onChange={e => setMutPrecededBy(e.target.value)} />
+                                    </div>
+                                    <div className="vrb-field-group">
+                                        <label className="vrb-label">Followed By</label>
+                                        <input className="vrb-input" placeholder="e.g. i" value={mutFollowedBy} onChange={e => setMutFollowedBy(e.target.value)} />
+                                    </div>
                                 </div>
                             </>
                         )}

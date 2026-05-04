@@ -18,12 +18,15 @@
 .vrb-modal {
     background: #0f172a;
     width: 90%;
-    max-width: 520px;
+    max-width: 580px;
+    max-height: 95vh;
     border-radius: 1rem;
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    overflow: hidden;
+    overflow-y: auto;
     color: #f8fafc;
+    display: flex;
+    flex-direction: column;
 }
 
 .vrb-header {
@@ -83,14 +86,20 @@
 
 .vrb-form {
     background: rgba(0, 0, 0, 0.2);
-    padding: 1rem;
+    padding: 0.85rem;
     border-radius: 0.75rem;
     border: 1px solid rgba(255, 255, 255, 0.05);
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.vrb-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
 }
 
 .vrb-field-group {
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
 }
 
 .vrb-field-group:last-child {
@@ -120,7 +129,7 @@
     padding: 0.625rem;
     color: white;
     font-size: 0.875rem;
-    flex-grow: 1;
+    width: 100%;
 }
 
 .vrb-input:focus {
@@ -140,10 +149,10 @@
 
 .vrb-preview-box {
     background: linear-gradient(135deg, #1e1b4b, #1e293b);
-    padding: 1rem;
+    padding: 0.85rem;
     border-radius: 0.75rem;
     border: 1px solid rgba(168, 85, 247, 0.3);
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
 }
 
 .vrb-preview-title {

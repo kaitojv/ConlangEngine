@@ -9,7 +9,8 @@ import SyllabaryManager from '../../UI/SyllabaryManager/SyllabaryManager.jsx';
 import BlockManager from '../../UI/BlockManager/BlockManager.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import applySoundChanges from '../../../utils/applysoundchanges.jsx';
-import { Info, AudioLines, Hourglass, Eye, BookCheck } from 'lucide-react';
+import { VisualRuleBuilder } from './grammarMatrix/VisualRuleBuilder.jsx';
+import { Wand2, Info, AudioLines, Hourglass, Eye, BookCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './phonologyTab.css'
 
@@ -35,6 +36,7 @@ export default function PhonologyTab() {
     const [testWords, setTestWords] = useState('');
     const [previewResults, setPreviewResults] = useState([]);
     const [showApplyConfirm, setShowApplyConfirm] = useState(false);
+    const [isBuilderOpen, setIsBuilderOpen] = useState(false);
 
     // Run the user's test words through the sound change engine
     const handlePreview = () => {
@@ -185,10 +187,18 @@ export default function PhonologyTab() {
 
             <Card>
                 <h2 className="flex sg-title"><Hourglass /> Historical Sound Changer</h2>
-                <p className="settings-description">
-                    Evolve your language natively. Write rules line by line using Regex format: 
-                    <code> pattern =&gt; replacement</code>
-                </p>
+                <div className="flex items-center justify-between" style={{ marginBottom: '0.5rem' }}>
+                    <p className="settings-description" style={{ margin: 0 }}>
+                        Evolve your language natively. Write rules line by line:
+                    </p>
+                    <Button 
+                        variant="edit" 
+                        onClick={() => setIsBuilderOpen(true)}
+                        style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', gap: '0.4rem' }}
+                    >
+                        <Wand2 size={14} /> Rule Builder
+                    </Button>
+                </div>
                 
                 <Infobox title="View Rule Formatting Guide">
                     <b>Basic Replacement:</b><br />
@@ -213,6 +223,19 @@ export default function PhonologyTab() {
                     placeholder={"^(.{2})(.*) => $1$1$2\nk(?=[ie]) => tS"}
                     value={historicalRules}
                     onChange={(e) => updateConfig({ historicalRules: e.target.value })}
+                />
+
+                <VisualRuleBuilder 
+                    isOpen={isBuilderOpen}
+                    onClose={() => setIsBuilderOpen(false)}
+                    initialMode="mutation"
+                    onApply={(newRule) => {
+                        const current = historicalRules.trim();
+                        const updated = current ? `${current}\n${newRule}` : newRule;
+                        updateConfig({ historicalRules: updated });
+                        setIsBuilderOpen(false);
+                        toast.success('Sound Change added!');
+                    }}
                 />
 
                 {/* Apply to Lexicon — destructive action, gated behind a confirmation */}
