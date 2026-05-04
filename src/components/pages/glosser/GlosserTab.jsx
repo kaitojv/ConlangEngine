@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
-import { stripAffix, getPersonRules } from '@/utils/morphologyEngine.jsx';
+import { stripAffix, getPersonRules, segmentToken } from '@/utils/morphologyEngine.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import Card from '@/components/UI/Card/Card.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
@@ -20,7 +20,8 @@ export default function GlosserTab() {
     const [copied, setCopied] = useState(false);
 
     // Store Data
-    const lexicon = useLexiconStore((state) => state.lexicon);
+    const rawLexicon = useLexiconStore((state) => state.lexicon);
+    const lexicon = Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []);
     const config = useConfigStore();
     const { normalizeToBase, transliterate } = useTransliterator();
 
@@ -36,7 +37,7 @@ export default function GlosserTab() {
 
         // Ghost Pronouns
         const personRules = getPersonRules(config.personRules);
-        personRules.forEach(rule => { // Changed rule.free to rule.freeForm
+        personRules.forEach(rule => { 
             if (rule.freeForm && normalizeToBase(rule.freeForm.toLowerCase()) === safeSurface) {
                 parsings.push({
                     root: { word: rule.freeForm, wordClass: 'pronoun', translation: `Pronoun (${rule.name})` },
@@ -97,21 +98,35 @@ export default function GlosserTab() {
         }
 
         // Split by words and keep punctuation as separate tokens
-        const tokens = inputText.split(/(\s+|[.,!?;:"()]+)/).filter(Boolean);
-        
-        const processed = tokens.map(token => {
+        const rawTokens = inputText.split(/(\s+|[.,!?;:"()]+)/).filter(Boolean);
+        const processed = [];
+
+        rawTokens.forEach(token => {
+            // If it's punctuation or whitespace, just pass it through
             if (/^[\s.,!?;:"()]+$/.test(token)) {
-                return { isPunctuation: true, text: token };
+                processed.push({ isPunctuation: true, text: token });
+                return;
             }
-            
-            const cleanToken = normalizeToBase(token.toLowerCase());
-            const parsings = getUniqueParsings(cleanToken);
-            return { isPunctuation: false, text: token, parsings };
+
+            // Perform Lexicon-Aware Segmentation
+            const cleanToken = token.replace(/[.,!?]/g, '');
+            const segments = segmentToken(cleanToken, lexicon, config, normalizeToBase, getUniqueParsings);
+
+            segments.forEach(seg => {
+                const parsings = getUniqueParsings(seg);
+                processed.push({ isPunctuation: false, text: seg, parsings });
+            });
         });
 
         setProcessedWords(processed);
         setFreeTranslation('');
         setIsModalOpen(true);
+
+        // Unlock Storyteller achievement
+        if (inputText.trim() && !config.unlockedBadges?.includes('storyteller')) {
+            config.unlockBadge('storyteller', 'Storyteller');
+            config.logActivity('Glossed a text using the Reader!');
+        }
     };
 
     // --- EXPORT IGT TO CLIPBOARD ---

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
-import { stripAffix, getPersonRules } from '@/utils/morphologyEngine.jsx';
+import { stripAffix, getPersonRules, segmentToken } from '@/utils/morphologyEngine.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import Card from '@/components/UI/Card/Card.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
@@ -17,7 +17,8 @@ export default function AnalyzerTab() {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Store Data
-    const lexicon = useLexiconStore((state) => state.lexicon);
+    const rawLexicon = useLexiconStore((state) => state.lexicon);
+    const lexicon = Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []);
     const config = useConfigStore();
     const { normalizeToBase, transliterate } = useTransliterator();
 
@@ -128,20 +129,35 @@ export default function AnalyzerTab() {
             return;
         }
         
-        const words = inputText.trim().split(/\s+/).map(p => {
-            const cleanP = p.replace(/[.,!?]/g, ''); // Strip basic punctuation
-            return {
-                original: p,
-                clean: cleanP,
-                parsings: getUniqueParsings(cleanP),
-                selectedIdx: 0,
-                manualRole: null
-            };
+        // 1. Initial split by whitespace
+        const initialTokens = inputText.trim().split(/\s+/);
+        const finalTokens = [];
+
+        // 2. Perform Lexicon-Aware Segmentation on each token
+        initialTokens.forEach(token => {
+            const cleanToken = token.replace(/[.,!?]/g, '');
+            const segments = segmentToken(cleanToken, lexicon, config, normalizeToBase, getUniqueParsings);
+            
+            segments.forEach(seg => {
+                finalTokens.push({
+                    original: seg,
+                    clean: seg,
+                    parsings: getUniqueParsings(seg),
+                    selectedIdx: 0,
+                    manualRole: null
+                });
+            });
         });
         
-        setAnalyzedWords(words);
+        setAnalyzedWords(finalTokens);
         setTranslation('');
         setIsModalOpen(true);
+
+        // Unlock Translator achievement
+        if (inputText.trim() && !config.unlockedBadges?.includes('translator')) {
+            config.unlockBadge('translator', 'Translator');
+            config.logActivity('Analyzed a sentence in the Syntax Analyzer!');
+        }
     };
 
     const handleParsingChange = (wordIndex, parseIndex) => {

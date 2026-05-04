@@ -13,6 +13,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ALLOWED_REDIRECTS } from '../../../App.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
 import { sanitizeConfig, sanitizeLexicon } from '@/utils/schemaValidator.jsx';
+import { useSharing } from '@/hooks/useSharing.jsx';
 
 const BADGES = [
     { id: 'genesis', name: 'Genesis', desc: 'You started a new Conlang.', Icon: Sparkles },
@@ -161,7 +162,13 @@ export default function ProfileTab() {
         if (localProjects.length > 1) unlock('multiverse', 'Multiverse');
         if (configPhonologyTypes !== 'alphabetic') unlock('typologist', 'Typologist');
         if (configCustomFont || Object.keys(configCustomGlyphs || {}).length > 0) unlock('calligrapher', 'Calligrapher');
-    }, [lexicon, grammarRules, configStreak, configUnlockedBadges, configWikiPages, configSyntaxOrder, localProjects.length, configPhonologyTypes, configCustomFont, configCustomGlyphs, unlockBadge, logActivity]);
+
+        // New state-based triggers
+        const phonemeCount = new Set(lexicon.map(w => w.word.toLowerCase()).join('').split('')).size;
+        if (phonemeCount >= 20) unlock('phonologist', 'Phonologist');
+        
+        if (config.isProActive) unlock('patron', 'Patron');
+    }, [lexicon, grammarRules, configStreak, configUnlockedBadges, configWikiPages, configSyntaxOrder, localProjects.length, configPhonologyTypes, configCustomFont, configCustomGlyphs, config.isProActive, unlockBadge, logActivity]);
 
     // Crunch the numbers for the overall dictionary statistics
     const analytics = useMemo(() => {
@@ -302,37 +309,8 @@ export default function ProfileTab() {
         setSession(null);
     };
 
-    // Back up all local data securely into Supabase
-    const handlePushToCloud = async () => {
-        if (!session) return alert("You must be logged in to sync!");
-        setSyncStatus('⏳ Pushing to cloud...');
-
-        let currentProjectId = config.projectId;
-        if (!currentProjectId) {
-            currentProjectId = 'proj_' + Date.now();
-            config.updateConfig({ projectId: currentProjectId });
-        }
-
-        // BUG-2: Only serialize data fields, not Zustand action functions
-        const configData = sanitizeConfig(useConfigStore.getState());
-        const payload = { dictionary: lexicon, config: configData, wiki: config.wikiPages || {} };
-        
-        try {
-            const { error } = await supabase.from('conlangs').upsert({ 
-                user_id: session.user.id, 
-                project_id: currentProjectId, 
-                project_data: payload 
-            }, { onConflict: 'project_id' });
-
-            if (error) throw error;
-            setSyncStatus('✅ Cloud Sync Complete!');
-            config.logActivity('Pushed dictionary to the cloud.');
-            setTimeout(() => setSyncStatus(''), 3000);
-        } catch (err) {
-            console.error(err);
-            setSyncStatus(`❌ Sync failed: ${err.message}`);
-        }
-    };
+    // Use the unified sharing hook
+    const { isSharing, handleShareLink, handlePushToCloud } = useSharing(session);
 
     // Retrieve cloud backups and save ALL of them into the local project archive
     const handlePullFromCloud = async () => {
@@ -381,24 +359,6 @@ export default function ProfileTab() {
         }
     };
 
-        const handleShareLink = async () => {
-        if (!session) return alert("You must be logged in to generate a share link!");
-        
-        // Auto-push so the link actually points to something valid
-        await handlePushToCloud();
-        
-        // We ensure we have a projectId after the push
-        const currentProjectId = config.projectId || useConfigStore.getState().projectId;
-        if (!currentProjectId) return alert("❌ Error generating project ID.");
-
-        const shareUrl = `${window.location.origin}/view/${currentProjectId}`;
-        try {
-            await navigator.clipboard.writeText(shareUrl);
-            alert("🔗 Public Reader Link Copied to Clipboard!\n\nAnyone with this link can view a read-only showcase of your conlang.");
-        } catch (err) {
-            alert("❌ Failed to copy link.");
-        }
-    };
 
     // Figure out which icon looks best next to the activity timeline text
     const getActivityDetails = (text) => {
@@ -428,58 +388,66 @@ export default function ProfileTab() {
                         </div>
                     </div>
                     
-                    {session ? (
-                        <div className="account-actions">
-                            <Button variant="save" className="share-btn" onClick={handleShareLink} title="Copy Public Link">
-                                <div className="btn-content"><Share2 size={16}/> Share Link</div>
-                            </Button>
-
-                            {config.isProActive && (
-                                <>
-                                    <Button variant="default" className="push-btn" onClick={handlePushToCloud}>
-                                        <div className="btn-content"><CloudUpload size={16}/> Push to Cloud</div>
-                                    </Button>
-                                    <Button variant="default" className="pull-btn" onClick={handlePullFromCloud}>
-                                        <div className="btn-content"><CloudDownload size={16}/> Pull from Cloud</div>
-                                    </Button>
-                                </>
-                            )}
-
-                            <Button variant="error" className="signout-btn" onClick={handleLogout}>
-                                <div className="btn-content"><LogOut size={16}/> Sign Out</div>
-                            </Button>
-                        </div>
-                    ) : (
-                        <div className="login-form">
-                            {authMode === 'forgot' ? (
-                                <>
-                                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email to reset password" className="login-input" />
-                                    <Button variant="imp" onClick={handleResetPassword}>Send Reset Link</Button>
-                                    <Button variant="default" onClick={() => { setAuthMode('login'); setAuthStatus({msg:'', type:''}); }}>Back to Login</Button>
-                                </>
-                            ) : (
-                                <>
-                                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="login-input" />
-                                    <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="login-input" />
-                                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-5px', marginBottom: '10px' }}>
-                                        <span 
-                                            style={{ fontSize: '0.8rem', color: 'var(--acc)', cursor: 'pointer', textDecoration: 'underline' }}
-                                            onClick={() => { setAuthMode('forgot'); setAuthStatus({msg:'', type:''}); }}
-                                        >
-                                            Forgot Password?
-                                        </span>
+                    <div className="account-actions">
+                        {session ? (
+                            <>
+                                <Button variant="save" className="share-btn" onClick={handleShareLink} title="Copy Public Link" disabled={isSharing}>
+                                    <div className="btn-content">
+                                        <Share2 size={16} className={isSharing ? 'animate-spin' : ''}/> 
+                                        {isSharing ? ' Generating...' : ' Share Link'}
                                     </div>
-                                    <Button variant="imp" onClick={() => { setAuthMode('login'); handleAuth(); }}>Login</Button>
-                                    <Button variant="default" onClick={() => { setAuthMode('signup'); handleAuth(); }}>Sign Up</Button>
-                                    <div className="login-divider">— OR CONTINUE WITH —</div>
-                                    <div className="social-row">
-                                        <Button variant="default" className="social-btn" onClick={() => handleOAuth('google')} title="Google"><Globe size={18} /></Button>
-                                        <Button variant="default" className="social-btn" onClick={() => handleOAuth('github')} title="GitHub"><GitBranch size={18} /></Button>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    )}
+                                </Button>
+                                
+                                {config.isProActive && (
+                                    <>
+                                        <Button variant="default" className="push-btn" onClick={handlePushToCloud}>
+                                            <div className="btn-content"><CloudUpload size={16}/> Push to Cloud</div>
+                                        </Button>
+                                        <Button variant="default" className="pull-btn" onClick={handlePullFromCloud}>
+                                            <div className="btn-content"><CloudDownload size={16}/> Pull from Cloud</div>
+                                        </Button>
+                                    </>
+                                )}
+
+                                <Button variant="error" className="signout-btn" onClick={handleLogout}>
+                                    <div className="btn-content"><LogOut size={16}/> Sign Out</div>
+                                </Button>
+                            </>
+                        ) : (
+                            <div className="login-form">
+                                {authMode === 'forgot' ? (
+                                    <>
+                                        <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email to reset password" className="login-input" />
+                                        <Button variant="imp" onClick={handleResetPassword}>Send Reset Link</Button>
+                                        <Button variant="default" onClick={() => { setAuthMode('login'); setAuthStatus({msg:'', type:''}); }}>Back to Login</Button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="login-input" />
+                                        <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="login-input" />
+                                        <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', marginTop: '-8px', marginBottom: '8px' }}>
+                                            <span 
+                                                className="forgot-password-link"
+                                                style={{ fontSize: '0.75rem', color: 'var(--tx3)', cursor: 'pointer', opacity: 0.8 }}
+                                                onClick={() => { setAuthMode('forgot'); setAuthStatus({msg:'', type:''}); }}
+                                                onMouseEnter={(e) => e.target.style.color = 'var(--acc)'}
+                                                onMouseLeave={(e) => e.target.style.color = 'var(--tx3)'}
+                                            >
+                                                Forgot Password?
+                                            </span>
+                                        </div>
+                                        <Button variant="imp" onClick={() => { setAuthMode('login'); handleAuth(); }}>Login</Button>
+                                        <Button variant="default" onClick={() => { setAuthMode('signup'); handleAuth(); }}>Sign Up</Button>
+                                        <div className="login-divider">— OR CONTINUE WITH —</div>
+                                        <div className="social-row">
+                                            <Button variant="default" className="social-btn" onClick={() => handleOAuth('google')} title="Google"><Globe size={18} /></Button>
+                                            <Button variant="default" className="social-btn" onClick={() => handleOAuth('github')} title="GitHub"><GitBranch size={18} /></Button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
                 {authStatus.msg && <div className={`auth-status-msg text-${authStatus.type}`}>{authStatus.msg}</div>}
                 {syncStatus && <div className={`auth-status-msg ${syncStatus.includes('❌') ? 'text-err' : 'text-tx'}`}>{syncStatus}</div>}
@@ -528,7 +496,7 @@ export default function ProfileTab() {
                                 <Button variant="default" className="support-btn" onClick={() => window.open('https://patreon.com/kaitosz', '_blank')}>
                                     <div className="btn-content"><Heart size={14}/> Support on Patreon</div>
                                 </Button>
-                                <Button variant="default" className="support-btn support-alt" onClick={() => window.open('https://ko-fi.com/kaitosz', '_blank')}>
+                                <Button variant="default" className="support-alt" onClick={() => window.open('https://ko-fi.com/kaitosz', '_blank')}>
                                     <div className="btn-content"><Coffee size={14}/> Support on Ko-fi</div>
                                 </Button>
                             </div>

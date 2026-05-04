@@ -9,9 +9,11 @@ import Modal from '../../UI/Modal/Modal.jsx'
 import LexiconEditModal from './LexiconEditModal.jsx';
 import MatrixModal from './MatrixModal.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
-import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download, X } from 'lucide-react';
+import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download, X, Share2 } from 'lucide-react';
 import { exportTextAsSVG } from '../../../utils/svgExporter.jsx';
 import toast from 'react-hot-toast';
+import { supabase } from '../../../utils/supabaseClient.js';
+import { useSharing } from '../../../hooks/useSharing.jsx';
 import './lexiconList.css';
 
 export default function LexiconList() {
@@ -21,7 +23,15 @@ export default function LexiconList() {
     const deleteWord = useLexiconStore((state) => state.deleteWord);
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const grammarRules = useConfigStore((state) => state.grammarRules) || [];
+    const conlangName = useConfigStore((state) => state.conlangName);
     const navigate = useNavigate();
+
+    const [session, setSession] = React.useState(null);
+    React.useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
+    }, []);
+
+    const { isSharing, handleShareLink } = useSharing(session);
     
     // New toggle for showing grammar rules as entries
     const [showBoundMorphemes, setShowBoundMorphemes] = useState(false);
@@ -290,6 +300,12 @@ export default function LexiconList() {
                     <span className="list-total">
                         Total: <span className="list-total-count">{filteredLexicon.length}</span>
                     </span>
+                    {session && (
+                        <Button variant="default" className="btn-sm" onClick={handleShareLink} disabled={isSharing}>
+                            <Share2 size={14} className={isSharing ? 'animate-spin' : ''} /> 
+                            {isSharing ? 'Sharing...' : 'Share'}
+                        </Button>
+                    )}
                     <Button variant="edit" className="btn-sm" onClick={() => navigate('/create')}>
                         <PlusCircle size={14} /> Create Word
                     </Button>

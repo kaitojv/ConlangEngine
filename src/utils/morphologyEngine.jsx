@@ -3,7 +3,7 @@
 // Helper to parse complex affix strings like "-ma-@V" or "re-"
 const parseAffix = (affixStr) => {
     if (!affixStr) return null;
-    // Regex matches: [startHyphen] [morpheme] [endHyphen] [@positionTag]
+    // Regex matches: [startHyphen] [morpheme] [endHyphen] @positionTag
     const match = affixStr.match(/^([-=])?([^-=@]+)([-=])?(?:@(\w+))?$/);
     if (!match) return { clean: affixStr.replace(/^-|-$/g, ''), type: 'unknown' };
 
@@ -136,7 +136,6 @@ export const applyRuleToWord = (baseWord, rule, grammarRules, vowels, consonants
  */
 export const getPersonRules = (personRulesArray) => {
     if (!Array.isArray(personRulesArray)) {
-        console.warn("getPersonRules received a non-array value for personRules. Falling back to empty array.", personRulesArray);
         return [];
     }
 
@@ -152,4 +151,78 @@ export const getPersonRules = (personRulesArray) => {
             name: name || (rule.id ? `Rule-${rule.id.substring(0, 4)}` : 'UnnamedRule')
         };
     });
+};
+
+/**
+ * Attempts to segment a single mashed-together token into multiple valid lexicon/rule entries.
+ * Uses a Greedy Longest Match approach.
+ */
+export const segmentToken = (token, lexicon, config, normalizeToBase, getUniqueParsings) => {
+    if (!token || !lexicon) return [token];
+    
+    // Safety check for lexicon format
+    const lexiconArray = Array.isArray(lexicon) ? lexicon : (lexicon.lexicon || []);
+    if (lexiconArray.length === 0) return [token];
+
+    // 1. If the token is already fully parsable as a single unit (root + affixes), keep it together.
+    // This is the primary reason why it might not segment: if the whole thing is found.
+    if (getUniqueParsings(token).length > 0) {
+        return [token];
+    }
+
+    const safeToken = normalizeToBase(token.toLowerCase());
+    const resultTokens = [];
+    let remaining = safeToken;
+
+    const findLongestMatch = (str) => {
+        let longest = null;
+        let matchLength = 0;
+
+        // Check Lexicon
+        lexiconArray.forEach(entry => {
+            if (!entry.word) return;
+            const entryWord = normalizeToBase(entry.word.toLowerCase());
+            if (entryWord && str.startsWith(entryWord) && entryWord.length > matchLength) {
+                matchLength = entryWord.length;
+                longest = entry.word;
+            }
+        });
+
+        // Check Person Rules (Free forms)
+        const personRules = getPersonRules(config?.personRules || []);
+        personRules.forEach(rule => {
+            if (rule.freeForm) {
+                const freeForm = normalizeToBase(rule.freeForm.toLowerCase());
+                if (freeForm && str.startsWith(freeForm) && freeForm.length > matchLength) {
+                    matchLength = freeForm.length;
+                    longest = rule.freeForm;
+                }
+            }
+        });
+
+        return { word: longest, length: matchLength };
+    };
+
+    let iterations = 0;
+    while (remaining.length > 0 && iterations < 20) {
+        iterations++;
+        const match = findLongestMatch(remaining);
+        
+        if (match.word && match.length > 0) {
+            resultTokens.push(match.word);
+            remaining = remaining.slice(match.length);
+        } else {
+            // Handle separators and glottal stops that might be in the middle
+            if (remaining.startsWith("'") || remaining.startsWith("-") || remaining.startsWith("’") || remaining.startsWith("‘")) {
+                remaining = remaining.slice(1);
+                continue;
+            }
+
+            // If we're stuck, it's not a perfect segmentation. Return original.
+            return [token];
+        }
+    }
+
+    // Only return the segments if we actually found more than one and covered the whole string
+    return (resultTokens.length > 1 && remaining.length === 0) ? resultTokens : [token];
 };

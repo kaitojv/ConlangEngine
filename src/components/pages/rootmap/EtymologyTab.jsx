@@ -21,6 +21,9 @@ export default function EtymologyTab() {
     const cliticsRules = useConfigStore((state) => state.cliticsRules);
 
     const { transliterate, normalizeToBase } = useTransliterator();
+    const unlockBadge = useConfigStore((state) => state.unlockBadge);
+    const logActivity = useConfigStore((state) => state.logActivity);
+    const unlockedBadges = useConfigStore((state) => state.unlockedBadges);
 
     // As the user types, we'll try to find the exact root word in the lexicon
     const targetWord = useMemo(() => {
@@ -61,6 +64,14 @@ export default function EtymologyTab() {
             return acc;
         }, []);
     }, [targetWord, grammarRules, vowels, verbMarker, cliticsRules]);
+
+    // Unlock achievement when a map is generated
+    React.useEffect(() => {
+        if (targetWord && !unlockedBadges?.includes('etymologist')) {
+            unlockBadge('etymologist', 'Etymologist');
+            logActivity('Generated an Etymology Root Map!');
+        }
+    }, [targetWord, unlockedBadges, unlockBadge, logActivity]);
 
     return (
         <div className="etymology-container">
