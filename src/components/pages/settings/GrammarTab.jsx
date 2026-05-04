@@ -25,16 +25,13 @@ export default function GrammarTab(){
                 <h2 className="flex sg-title"><TextInitial /> Grammatical Rules & Inflections</h2>
                 
                 <Infobox title="Morphology & Inflection Guide">
-                    • <b>Prefixes &amp; Suffixes:</b> Use a hyphen to indicate where the root connects. <i>Prefix:</i> <code>ir-</code> | <i>Suffix:</i> <code>-s</code>.<br />
-                    • <b>Infixes:</b> Use <code>-affix-@position</code>. Example: <code>-ma-@V</code> (inserts after the first vowel).<br />
-                    • <b>Regex Mutations:</b> Use the <code>=&gt;</code> operator for stem changes. <b>Avoid brackets <code>[]</code></b> unless you want to match "any of these letters". Use <code>em$ =&gt; esh</code> to turn <i>Rem</i> into <i>Resh</i>.<br />
-                    • <b>Templatic Roots:</b> For triconsonantal roots, use capture groups: <code>(.)(.)(.) =&gt; $1a$2a$3</code>.<br />
-                    • <b>Sound Assimilation:</b> Use Regex for context-specific sound changes. Example: <code>n(?=[pb]) =&gt; m</code> (changes 'n' to 'm' before 'p' or 'b').<br />
-                    • <b>Reduplication:</b> Capture groups and repeat them. Example: <code>^(.{2})(.*) =&gt; $1$1$2</code> (copies the first two letters).<br />
-                    • <b>Deletion:</b> Leave the right side of the arrow empty. Example: <code>[aeiou]$ =&gt; </code> (deletes a trailing vowel).<br />
-                    • <b>Standalone Rules:</b> Check the <b>"Standalone"</b> box for inflections that should IGNORE Person/Class alignments (e.g., Passive Voice, Infinitives). They will conjugate independently in the Matrix without attaching pronouns.<br />
-                    • <b>Target POS:</b> Automatically change the word class of derived words (e.g., from Noun to Adjective) when this rule is applied.<br />
-                    • <b>Rule Scoping:</b> Use the <b>Person Category</b> (in Lexicon Edit) or <b>Root Tag</b> (in Person Alignment) to filter which rules appear for specific words. This is perfect for separating 1st, 2nd, and 3rd person pronoun roots.
+                    • <b>Visual Rule Builder:</b> Click the <b>Magic Wand (🪄)</b> icon to build any rule visually. The "Test Lab" shows your changes in real-time.<br />
+                    • <b>Manual Formulas:</b> Use the <code>=&gt;</code> operator for stem changes. Example: <code>um$ =&gt; i</code> (turns <i>kum</i> into <i>ki</i>).<br />
+                    • <b>Affix / Infix:</b> Standard <b>Prefixes</b> (<code>ir-</code>), <b>Suffixes</b> (<code>-s</code>), and <b>Infixes</b> (<code>-ma-@V</code>).<br />
+                    • <b>Advanced Regex:</b> Support for capture groups and lookaheads. Example: <code>n(?=[pb]) =&gt; m</code> (Assimilation) or <code>^(.{2})(.*) =&gt; $1$1$2</code> (Reduplication).<br />
+                    • <b>Apostrophe Handling:</b> The engine is robust against smart/straight quotes and shared punctuation between affixes.<br />
+                    • <b>Standalone Rules:</b> Check <b>"Standalone"</b> for rules that conjugate independently (e.g., Passive Voice or Infinitives).<br />
+                    • <b>Rule Scoping:</b> Use <b>Person Categories</b> or <b>Root Tags</b> to restrict rules to specific words.
                 </Infobox>
                 
                 <div className="rules-wrapper">

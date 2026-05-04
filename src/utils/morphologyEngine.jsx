@@ -108,8 +108,8 @@ export const applyRuleToWord = (baseWord, rule, grammarRules, vowels, consonants
             const pattern = parts[0].trim();
             const replacement = parts[1].trim();
             try {
-                // We use 'g' to replace all matching occurrences in the root
-                const regex = new RegExp(pattern, 'g');
+                // We use 'gi' for global and case-insensitive matching
+                const regex = new RegExp(pattern, 'gi');
                 return baseWord.replace(regex, replacement);
             } catch (e) {
                 console.error("Invalid Regex rule:", pattern);

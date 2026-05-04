@@ -1,8 +1,10 @@
 import React from 'react';
-import { Trash2, Link } from 'lucide-react';
+import { Trash2, Link, Wand2 } from 'lucide-react';
+import { VisualRuleBuilder } from './VisualRuleBuilder.jsx';
 import './ruleRow.css';
 
 export const RuleRow = ({ rule, onUpdate, onDelete, allWordClasses }) => {
+  const [isBuilderOpen, setIsBuilderOpen] = React.useState(false);
   
   // A single handler to catch changes across all inputs and checkboxes in this row
   const handleChange = (e) => {
@@ -12,12 +14,7 @@ export const RuleRow = ({ rule, onUpdate, onDelete, allWordClasses }) => {
   };
 
   // Instantly apply a complex Regex template when the user selects one from the dropdown
-  const handleTemplateChange = (e) => {
-    if (e.target.value) {
-      onUpdate(rule.id, 'affix', e.target.value);
-      e.target.value = ''; // Reset the select dropdown back to the placeholder
-    }
-  };
+  // REMOVED: Replaced by Visual Rule Builder
 
   return (
     <div className="rule-card">
@@ -37,17 +34,29 @@ export const RuleRow = ({ rule, onUpdate, onDelete, allWordClasses }) => {
         </div>
 
         <div className="form-group">
-          <div className="label-with-select">
-            <label className="rule-label">Affix / Formula</label>
-            <select className="template-select" onChange={handleTemplateChange} title="Insert Regex Template">
-              <option value="">🪄 Templates ▾</option>
-              <option value="^(.{2})(.*) => $1$1$2">🔄 Reduplication</option>
-              <option value="a(.*) => e$1">🅰️ Ablaut (a - e)</option>
-              <option value="(.)(.)(.) => $1a$2a$3">📐 Triconsonantal</option>
-              <option value="n(?=[pb]) => m">🧲 Assimilation (n ➔ m / _p,b)</option>
-            </select>
+          <label className="rule-label">Affix / Formula</label>
+          <div className="vrb-input-container" style={{ position: 'relative', display: 'flex', gap: '0.5rem' }}>
+            <input type="text" name="affix" className="fi" value={rule.affix} onChange={handleChange} placeholder="-s, ir-, =>" spellCheck="false" style={{ flexGrow: 1 }} />
+            <button 
+              type="button" 
+              className="vrb-open-btn" 
+              onClick={() => setIsBuilderOpen(true)}
+              title="Open Visual Rule Builder"
+              style={{
+                background: 'rgba(168, 85, 247, 0.1)',
+                border: '1px solid rgba(168, 85, 247, 0.3)',
+                borderRadius: '0.5rem',
+                padding: '0.25rem',
+                color: '#a855f7',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Wand2 size={16} />
+            </button>
           </div>
-          <input type="text" name="affix" className="fi" value={rule.affix} onChange={handleChange} placeholder="-s, ir-, =>" spellCheck="false" />
         </div>
 
         <div className="form-group">
@@ -121,6 +130,15 @@ export const RuleRow = ({ rule, onUpdate, onDelete, allWordClasses }) => {
           </label>
         </div>
       </div>
+      <VisualRuleBuilder 
+        isOpen={isBuilderOpen} 
+        onClose={() => setIsBuilderOpen(false)} 
+        onApply={(newAffix) => {
+          onUpdate(rule.id, 'affix', newAffix);
+          setIsBuilderOpen(false);
+        }}
+        currentAffix={rule.affix}
+      />
     </div>
   );
 };
