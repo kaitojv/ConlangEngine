@@ -35,12 +35,19 @@ export default function GlosserTab() {
         lexicon.filter(e => normalizeToBase(e.word.toLowerCase()) === safeSurface)
                .forEach(m => parsings.push({ root: m, rules: [] }));
 
-        // Ghost Pronouns
         const personRules = getPersonRules(config.personRules);
         personRules.forEach(rule => { 
-            if (rule.freeForm && normalizeToBase(rule.freeForm.toLowerCase()) === safeSurface) {
+            const cleanAffix = rule.affix ? rule.affix.replace(/^-|-$/g, '').toLowerCase() : null;
+            const isFreeMatch = rule.freeForm && normalizeToBase(rule.freeForm.toLowerCase()) === safeSurface;
+            const isAffixMatch = cleanAffix && normalizeToBase(cleanAffix) === safeSurface;
+
+            if (isFreeMatch || isAffixMatch) {
                 parsings.push({
-                    root: { word: rule.freeForm, wordClass: 'pronoun', translation: `Pronoun (${rule.name})` },
+                    root: { 
+                        word: rule.freeForm || cleanAffix, 
+                        wordClass: 'pronoun', 
+                        translation: `Person (${rule.name})` 
+                    },
                     rules: []
                 });
             }
@@ -60,7 +67,7 @@ export default function GlosserTab() {
         }
 
         // Recursive affix stripping
-        let allRules = [...(config.grammarRules || []), ...personRules.filter(p => p.affix).map(p => ({ ...p, appliesTo: 'verb' }))];
+        let allRules = [...(config.grammarRules || []), ...personRules.filter(p => p.affix).map(p => ({ ...p, appliesTo: p.appliesTo || 'all' }))];
         allRules.forEach(rule => {
             if (!rule.affix) return;
             let stripped = stripAffix(safeSurface, rule.affix);

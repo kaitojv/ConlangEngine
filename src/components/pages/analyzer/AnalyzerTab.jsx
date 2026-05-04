@@ -60,12 +60,19 @@ export default function AnalyzerTab() {
         lexicon.filter(e => normalizeToBase(e.word.toLowerCase()) === safeSurface)
                .forEach(m => parsings.push({ root: m, rules: [] }));
 
-        // Next, check if it's a standalone pronoun that isn't formally in the lexicon
         const personRules = getPersonRules(config.personRules);
         personRules.forEach(rule => {
-            if (rule.freeForm && normalizeToBase(rule.freeForm.toLowerCase()) === safeSurface) {
+            const cleanAffix = rule.affix ? rule.affix.replace(/^-|-$/g, '').toLowerCase() : null;
+            const isFreeMatch = rule.freeForm && normalizeToBase(rule.freeForm.toLowerCase()) === safeSurface;
+            const isAffixMatch = cleanAffix && normalizeToBase(cleanAffix) === safeSurface;
+
+            if (isFreeMatch || isAffixMatch) {
                 parsings.push({
-                    root: { word: rule.freeForm, wordClass: 'pronoun', translation: `Pronoun (${rule.name})` },
+                    root: { 
+                        word: rule.freeForm || cleanAffix, 
+                        wordClass: 'pronoun', 
+                        translation: `Person (${rule.name})` 
+                    },
                     rules: [],
                 });
             }
@@ -83,7 +90,7 @@ export default function AnalyzerTab() {
         // Finally, start stripping off grammar affixes one by one to see what's underneath
         const allRules = [
             ...(config.grammarRules || []), 
-            ...personRules.filter(p => p.affix).map(p => ({ ...p, appliesTo: 'verb' }))
+            ...personRules.filter(p => p.affix).map(p => ({ ...p, appliesTo: p.appliesTo || 'all' }))
         ];
 
         allRules.forEach(rule => {
