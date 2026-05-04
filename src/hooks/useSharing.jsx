@@ -31,7 +31,8 @@ export function useSharing(session) {
         };
         
         try {
-            const { error } = await supabase.from('conlangs').upsert({ 
+            // Always push to the snapshots table for public links
+            const { error } = await supabase.from('conlang_snapshots').upsert({ 
                 user_id: session?.user?.id || null, 
                 project_id: currentProjectId, 
                 project_data: payload 

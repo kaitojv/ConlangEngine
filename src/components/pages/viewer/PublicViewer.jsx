@@ -18,7 +18,7 @@ export default function PublicViewer() {
             try {
                 setLoading(true);
                 const { data, error: fetchError } = await supabase
-                    .from('conlangs')
+                    .from('conlang_snapshots')
                     .select('project_data')
                     .eq('project_id', projectId)
                     .single();
