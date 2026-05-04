@@ -453,11 +453,6 @@ export default function LexiconList() {
                 </div>
             )}
 
-            <Infobox title="Lexicon Pro Tips">
-                • <b>Stacked Filters:</b> Combine multiple tags, keywords, and letters to find specific word groups.<br />
-                • <b>Matrix Power:</b> Use the Matrix button to generate and save derivations (plurals, verb forms, etc.) in bulk.<br />
-                • <b>Genealogy:</b> Derived words link to their root automatically. See a word's origin in its Edit modal.
-            </Infobox>
 
             <Modal isOpen={!!selectedWordForMatrix} onClose={() => setSelectedWordForMatrix(null)} title="Word Inflection Matrix">
                 <MatrixModal key={selectedWordForMatrix?.id} wordObj={selectedWordForMatrix} />
