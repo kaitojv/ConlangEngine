@@ -99,6 +99,7 @@ export default function SettingsGeneral() {
                             <option value="greek">Greek</option>
                             <option value="runic">Runic</option>
                             <option value="georgian">Georgian</option>
+                            <option value="custom">Custom Script (Font Studio)</option>
                         </select>
                     </div>
                     <Infobox title="Writing System Guide">

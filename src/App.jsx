@@ -31,6 +31,8 @@ const ConlangsTab = lazy(() => import('./components/pages/conlangstab/ConlangsTa
 const HelpTab = lazy(() => import('./components/pages/help/HelpTab.jsx'));
 const PublicViewer = lazy(() => import('./components/pages/viewer/PublicViewer.jsx'));
 const AlignerTab = lazy(() => import('./components/pages/aligner/AlignerTab.jsx'));
+const OrthographyPage = lazy(() => import('./components/pages/orthography/OrthographyPage.jsx'));
+const SemanticExplorer = lazy(() => import('./components/pages/lexicon/SemanticExplorer.jsx'));
 
 // Define your allowlist of safe relative routes based on your actual Route paths
 export const ALLOWED_REDIRECTS = [
@@ -47,7 +49,9 @@ export const ALLOWED_REDIRECTS = [
   '/study',
   '/profile',
   '/help',
-  '/aligner'
+  '/aligner',
+  '/orthography',
+  '/semantic'
 ];
 
 function App(){
@@ -165,6 +169,8 @@ function App(){
             <Route path="/settings" element={<Settings />} />
             <Route path="/profile" element={<ProfileTab />} />
             <Route path="/aligner" element={<AlignerTab />} />
+            <Route path="/orthography" element={<OrthographyPage />} />
+            <Route path="/semantic" element={<SemanticExplorer />} />
             <Route path="*" element={
               <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--tx2)' }}>
                 <h2 style={{ fontSize: '3rem', marginBottom: '10px', color: 'var(--tx)' }}>404</h2>

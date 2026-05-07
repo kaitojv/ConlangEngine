@@ -32,6 +32,7 @@ const SCRIPT_MAPS = {
 export function useTransliterator() {
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const alphabeticScript = useConfigStore((state) => state.alphabeticScript);
+    const alphabetGlyphs = useConfigStore((state) => state.alphabetGlyphs) || {};
     const syllabaryMap = useConfigStore((state) => state.syllabaryMap) || {};
     const syllabificationAlgorithm = useConfigStore((state) => state.syllabificationAlgorithm) || 'ltr';
     
@@ -70,7 +71,7 @@ export function useTransliterator() {
 
             // Apply pre-existing script mapping if chosen
             if (alphabeticScript && alphabeticScript !== 'latin') {
-                const scriptMap = SCRIPT_MAPS[alphabeticScript] || {};
+                const scriptMap = alphabeticScript === 'custom' ? alphabetGlyphs : (SCRIPT_MAPS[alphabeticScript] || {});
                 const sortedKeys = Object.keys(scriptMap).sort((a, b) => b.length - a.length);
                 let out = "";
                 let i = 0;
@@ -173,7 +174,7 @@ export function useTransliterator() {
         }
 
         return cleanWord;
-    }, [phonologyTypes, alphabeticScript, syllabaryMap, consonants, vowels, syllabificationAlgorithm]);
+    }, [phonologyTypes, alphabeticScript, alphabetGlyphs, syllabaryMap, consonants, vowels, syllabificationAlgorithm]);
 
     // 2. FROM KEYBOARD TO MEMORY (The Normalizer that protects against bugs)
     const normalizeToBase = React.useCallback((word) => {
@@ -191,7 +192,7 @@ export function useTransliterator() {
         }
 
         if (alphabeticScript && alphabeticScript !== 'latin') {
-            const scriptMap = SCRIPT_MAPS[alphabeticScript] || {};
+            const scriptMap = alphabeticScript === 'custom' ? alphabetGlyphs : (SCRIPT_MAPS[alphabeticScript] || {});
             for (const [base, text] of Object.entries(scriptMap)) {
                 const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 const regex = new RegExp(escapedText, 'g');
@@ -200,7 +201,7 @@ export function useTransliterator() {
         }
 
         return baseWord;
-    }, [phonologyTypes, alphabeticScript, consonants, vowels]);
+    }, [phonologyTypes, alphabeticScript, alphabetGlyphs, consonants, vowels]);
 
     return { transliterate, normalizeToBase };
 }

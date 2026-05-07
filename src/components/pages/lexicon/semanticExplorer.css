@@ -1,0 +1,707 @@
+/* ==========================================================================
+   Semantic Explorer - Standardized Design
+   ========================================================================== */
+
+.semantic-page-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+    animation: fadeIn 0.4s ease-out;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.semantic-header-card {
+    padding: 2.5rem !important;
+}
+
+.semantic-header-card .page-header {
+    border-bottom: none;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0;
+}
+
+.semantic-header-card .sg-title {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+}
+
+.semantic-header-card .subtitle {
+    font-size: 1.1rem;
+    color: var(--tx2);
+    margin-bottom: 2rem;
+}
+
+/* Page Navigation / Tabs */
+.page-subnav {
+    display: flex;
+    gap: 0.5rem;
+    background: var(--s4);
+    padding: 0.4rem;
+    border-radius: 0.75rem;
+    width: fit-content;
+    margin-top: 1.5rem;
+    margin-bottom: 0;
+    border: 1px solid var(--bd);
+}
+
+.page-subnav .tab {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 1.2rem;
+    border-radius: 0.5rem;
+    color: var(--tx2);
+    font-weight: 600;
+    transition: all 0.2s;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.page-subnav .tab:hover {
+    color: var(--tx);
+    background: var(--s3);
+}
+
+.page-subnav .tab-active {
+    background: var(--acc) !important;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+/* Page Header Overrides (if needed) */
+.semantic-page-container .page-header {
+    margin-bottom: 0; /* Handled by container gap */
+}
+
+/* Quick Guide Panel */
+.quick-guide-panel {
+    padding: 2rem !important;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    animation: slideDown 0.4s ease-out;
+    margin-bottom: 0;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; max-height: 0; transform: translateY(-10px); }
+    to { opacity: 1; max-height: 500px; transform: translateY(0); }
+}
+
+.guide-item h4 {
+    color: var(--acc);
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.guide-item p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--tx2);
+    line-height: 1.6;
+}
+
+/* Main Content Wrapper */
+.semantic-main-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* Search Bar Standardized */
+.main-search-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.semantic-search-bar {
+    background: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: 1rem;
+    padding: 0.4rem 0.4rem 0.4rem 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    transition: 0.3s;
+}
+
+.semantic-search-bar:focus-within {
+    border-color: var(--acc);
+    background: var(--s3);
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+}
+
+.semantic-search-bar input {
+    background: transparent;
+    border: none;
+    color: var(--tx);
+    flex: 1;
+    outline: none;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.search-submit {
+    padding: 0.75rem 2rem !important;
+    font-size: 0.9rem !important;
+}
+
+.search-submit:hover:not(:disabled) {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+/* Synset Badges */
+.synset-badges {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 1rem;
+}
+
+.synset-badge {
+    padding: 0.5rem 1rem;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--tx2);
+    cursor: pointer;
+    transition: 0.2s;
+    font-weight: 600;
+}
+
+.synset-badge:hover {
+    border-color: var(--acc);
+    color: var(--tx);
+    background: var(--s3);
+}
+
+.synset-badge.active {
+    background: var(--acc);
+    color: white;
+    border-color: var(--acc);
+}
+
+.synset-badge.is-syn {
+    opacity: 0.7;
+    border-style: dashed;
+}
+
+.synset-badge.is-syn:hover {
+    opacity: 1;
+}
+
+/* Visualizer Canvas Area */
+.semantic-visualizer {
+    background: var(--s1);
+    border: 1px solid var(--bd);
+    border-radius: 2rem;
+    min-height: 1000px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.3);
+    padding: 2.5rem;
+}
+
+.visualizer-svg {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+}
+
+.empty-explorer-state {
+    text-align: center;
+    padding: 4rem;
+}
+
+.empty-icon-wrap {
+    width: 100px;
+    height: 100px;
+    background: var(--s2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 2rem;
+    color: var(--acc);
+    opacity: 0.5;
+}
+
+/* Dictionary View Card */
+.dictionary-view {
+    padding: 2.5rem;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.dictionary-card {
+    background: var(--s2);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--bd);
+    border-radius: 2rem;
+    padding: 3rem;
+    width: 100%;
+    max-width: 850px;
+    position: relative;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    max-height: 75vh;
+}
+
+.dict-sense-badge {
+    position: absolute;
+    top: -1.2rem;
+    right: -1.2rem;
+    background: var(--acc);
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 25px rgba(124, 58, 237, 0.3);
+    z-index: 10;
+}
+
+.sense-count {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: white;
+}
+
+.sense-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: white;
+    text-transform: uppercase;
+}
+
+.dict-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--bd);
+    padding-bottom: 1.5rem;
+}
+
+.dict-lemma {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--tx);
+    margin: 0;
+}
+
+.dict-ipa {
+    color: var(--tx3);
+    font-family: monospace;
+    font-size: 1.1rem;
+}
+
+.dict-body {
+    overflow-y: auto;
+    padding-right: 1rem;
+}
+
+.dict-pos-group {
+    margin-bottom: 2rem;
+}
+
+.dict-pos-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+}
+
+.pos-label {
+    background: var(--s3);
+    color: var(--acc);
+    padding: 0.4rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    border: 1px solid var(--bd);
+}
+
+.sense-index {
+    color: var(--tx3);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.map-sense-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px dashed var(--bd);
+    color: var(--tx2);
+    padding: 0.8rem;
+    border-radius: 1rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: 0.2s;
+    margin-bottom: 1rem;
+}
+
+.map-sense-btn:hover {
+    background: var(--s3);
+    color: var(--acc);
+    border-color: var(--acc);
+}
+
+.dict-def-text {
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: var(--tx);
+    margin: 0.5rem 0;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: 0.2s;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.dict-def-text:hover {
+    background: var(--s3);
+    color: var(--acc);
+    transform: translateX(5px);
+}
+
+/* Taxonomy & Family Star Visuals */
+.node-label {
+    fill: var(--tx);
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.node-label:hover {
+    fill: var(--acc);
+}
+
+.node-label.active {
+    fill: var(--ok);
+    font-weight: 900;
+}
+
+.node-pulse {
+    animation: pulse 2.5s infinite ease-in-out;
+    transform-origin: center;
+    transform-box: fill-box;
+}
+
+circle, line {
+    vector-effect: non-scaling-stroke;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Taxonomy Options UI */
+.taxonomy-tree {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.taxonomy-options-overlay {
+    position: absolute;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    background: var(--s2);
+    padding: 1.2rem;
+    border-radius: 1.5rem;
+    border: 1px solid var(--bd);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+    max-width: 95%;
+    width: auto;
+    backdrop-filter: blur(10px);
+}
+
+.options-label {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--tx3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.options-row {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.option-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--s4);
+    color: var(--tx);
+    border: 1px solid var(--bd);
+    padding: 0.6rem 1.1rem;
+    border-radius: 1rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.option-badge:hover {
+    background: var(--acc);
+    color: white;
+    border-color: var(--acc);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+/* Comparison Tool */
+.compare-view {
+    width: 100%;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
+    align-items: center;
+}
+
+.compare-inputs-row {
+    display: flex;
+    gap: 1.5rem;
+    background: var(--s2);
+    padding: 2.5rem;
+    border-radius: 2rem;
+    align-items: center;
+    border: 1px solid var(--bd);
+    width: 100%;
+    max-width: 900px;
+    box-shadow: var(--shadow);
+}
+
+.comp-input-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.comp-input-group label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--tx3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.comp-input-group input,
+.comp-input-group select {
+    background: var(--s1);
+    color: var(--tx);
+    border: 1px solid var(--bd);
+    padding: 0.8rem 1rem;
+    border-radius: 0.8rem;
+    font-size: 0.9rem;
+    outline: none;
+    width: 100%;
+    transition: 0.2s;
+}
+
+.comp-input-group select {
+    cursor: pointer;
+    text-overflow: ellipsis;
+}
+
+.comp-input-group input:focus,
+.comp-input-group select:focus {
+    border-color: var(--acc);
+    background: var(--s2);
+}
+
+.comp-input-group select option {
+    background-color: #1a1a2e; /* Deep dark background */
+    color: #ffffff;            /* Bright white text */
+    padding: 10px;
+}
+
+/* Fallback for when variables are working */
+.comp-input-group select option {
+    background-color: var(--s1);
+    color: var(--tx);
+}
+
+.comp-vs-orb {
+    width: 50px;
+    height: 50px;
+    background: var(--s1);
+    border: 2px solid var(--acc);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    color: var(--acc);
+    flex-shrink: 0;
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.1);
+    margin-top: 1.5rem;
+}
+
+.comp-trigger {
+    background: var(--acc);
+    color: white;
+    border: none;
+    padding: 1rem 2.5rem;
+    border-radius: 2rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.compare-cards-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    width: 100%;
+}
+
+.comp-result-card {
+    background: var(--s2);
+    padding: 2rem;
+    border-radius: 2rem;
+    border: 1px solid var(--bd);
+    position: relative;
+    box-shadow: var(--shadow);
+    transition: 0.3s;
+}
+
+.comp-result-card:hover {
+    border-color: var(--acc);
+    transform: translateY(-3px);
+}
+
+.comp-pos {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    font-size: 0.7rem;
+    font-weight: 800;
+    background: var(--acc);
+    padding: 0.3rem 0.8rem;
+    border-radius: 0.5rem;
+    color: white;
+    text-transform: uppercase;
+}
+
+/* Mapping Modal Styles */
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.concept-preview {
+    background: var(--s1);
+    padding: 1.5rem;
+    border-radius: 1.5rem;
+    border: 1px solid var(--bd);
+    text-align: center;
+}
+
+.preview-pos {
+    display: inline-block;
+    padding: 0.3rem 0.8rem;
+    background: var(--s3);
+    color: var(--acc);
+    border-radius: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin-bottom: 0.8rem;
+}
+
+.concept-preview h4 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 0 0 0.5rem 0;
+}
+
+.clean-definition {
+    font-size: 0.95rem;
+    color: var(--tx2);
+    font-style: italic;
+    line-height: 1.5;
+}
+
+.mapping-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-group label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--tx3);
+    margin-bottom: 0.5rem;
+    display: block;
+    text-transform: uppercase;
+}
+
+.mapping-input {
+    background: var(--s1) !important;
+    border: 1px solid var(--bd) !important;
+    color: var(--tx) !important;
+    padding: 1rem 1.2rem !important;
+    border-radius: 1rem !important;
+    width: 100% !important;
+    font-size: 1.1rem !important;
+}
+
+.mapping-input:focus {
+    border-color: var(--acc) !important;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1) !important;
+}

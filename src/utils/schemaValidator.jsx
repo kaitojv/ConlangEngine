@@ -17,7 +17,8 @@ const VALID_CONFIG_KEYS = new Set([
     'generatorMarkers',
     'customWordClasses', 'customTags',
     'otherPhonemes', 'otherPhonemeMapping', 'skipSyllableValidation',
-    'syllabificationAlgorithm', 'blockTemplates'
+    'syllabificationAlgorithm', 'blockTemplates',
+    'alphabetNames', 'numberSystem'
 ]);
 
 /**

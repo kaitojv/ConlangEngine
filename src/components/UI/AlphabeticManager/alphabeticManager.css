@@ -1,0 +1,139 @@
+.alphabet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.char-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.5rem;
+    border-radius: 1.5rem;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    cursor: pointer;
+    min-height: 200px;
+}
+
+.char-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--acc);
+    box-shadow: 0 20px 40px -20px var(--glow);
+    background: var(--s3);
+}
+
+.char-card.is-editing {
+    background: var(--s3);
+    border-color: var(--acc);
+    box-shadow: 0 0 0 2px var(--acc);
+    cursor: default;
+}
+
+.char-display {
+    font-size: 4rem;
+    font-weight: 800;
+    color: var(--tx);
+    margin-bottom: 1.5rem;
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+.char-info {
+    width: 100%;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.char-name-display {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--tx2);
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.char-card:hover .char-name-display {
+    color: var(--acc);
+}
+
+.name-label {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.edit-icon {
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.2s ease;
+}
+
+.char-card:hover .edit-icon {
+    opacity: 0.6;
+    transform: scale(1);
+}
+
+.char-edit-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--s4);
+    padding: 0.4rem 0.6rem;
+    border-radius: 0.75rem;
+    border: 1.5px solid var(--acc);
+    width: 100%;
+    animation: fadeIn 0.2s ease;
+}
+
+.char-name-input-active {
+    background: transparent;
+    border: none;
+    color: var(--tx);
+    font-size: 1rem;
+    width: 100%;
+    outline: none;
+}
+
+.char-save-btn {
+    background: var(--acc);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.char-save-btn:hover {
+    transform: scale(1.1);
+    background: var(--acc2);
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+    border-radius: 1rem;
+    background: var(--s2);
+    border: 1px dashed var(--bd);
+    color: var(--tx2);
+    gap: 1rem;
+}

@@ -80,6 +80,36 @@ export const INITIAL_CONFIG = {
     customWordClasses: [],
     customTags: [],
     autoReturnToLexicon: false,
+    alphabetNames: {},
+    numberSystem: {
+        zero: '',
+        digits: {},
+        stems: {},
+        powers: {},
+        irregulars: {},
+        settings: {
+            fusion: false,
+            separator: ' ',
+            order: 'digit-first' // or 'unit-first'
+        }
+    },
+    numberMatrix: {},
+    numberDerivedRules: {
+        ordinal: '',
+        fractional: '',
+        multiplier: ''
+    },
+    timeSystemVocab: {
+        second: '',
+        minute: '',
+        hour: '',
+        day: '',
+        week: '',
+        month: '',
+        year: ''
+    },
+    alphabetGlyphs: {}, // { 'a': '\uE001', 'b': '\uE002' }
+    semanticMappings: {} // { [synsetId]: { word: '...', ipa: '...', meaning: '...' } }
 };
 
 // IndexedDB Helper for handling massive data without breaking local storage quotas
