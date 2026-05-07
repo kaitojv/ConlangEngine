@@ -176,6 +176,29 @@ export const generateBlockFontData = async (config) => {
         }
     }
 
+    // ── Standalone Radicals ─────────────────────────────────────────────────
+    // Any drawn base character that has NO syllabaryMap entry yet (i.e. it never
+    // appeared as part of a full-block combination) gets compiled at full scale so
+    // that isolated radicals render as their drawn glyph instead of plain text.
+    const SOLO_SCALE  = 0.9;
+    const SOLO_OFFSET = 15; // px — centres the glyph with a small margin
+
+    for (const [char, strokes] of Object.entries(featuralComponents)) {
+        if (!strokes || strokes.length === 0) continue;
+        if (newSyllabaryMap[char]) continue; // Already compiled as part of a combination
+
+        const soloStrokes = strokes.map(stroke =>
+            stroke.map(point => ({
+                x: Number(((point.x * SOLO_SCALE) + SOLO_OFFSET).toFixed(1)),
+                y: Number(((point.y * SOLO_SCALE) + SOLO_OFFSET).toFixed(1))
+            }))
+        );
+
+        compilerGlyphs[currentPua] = soloStrokes;
+        newSyllabaryMap[char] = String.fromCodePoint(currentPua);
+        currentPua++;
+    }
+
     const base64Font = await compileFont(compilerGlyphs);
 
     return {
@@ -184,3 +207,4 @@ export const generateBlockFontData = async (config) => {
         puaCounter: currentPua
     };
 };
+

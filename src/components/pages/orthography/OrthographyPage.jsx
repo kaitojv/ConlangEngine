@@ -1015,11 +1015,12 @@ export default function OrthographyPage() {
 
     const renderScriptManager = () => {
         switch (phonologyTypes) {
-            case 'syllabic':   return <SyllabaryShowcase />;
-            case 'logographic':return <LogographicShowcase />;
+            case 'syllabic':      return <SyllabaryShowcase />;
+            case 'logographic':   return <LogographicShowcase />;
+            case 'featural_block':
             case 'featural':
-            case 'block':      return <BlockShowcase />;
-            default:           return <AlphabeticShowcase />;
+            case 'block':         return <BlockShowcase />;
+            default:              return <AlphabeticShowcase />;
         }
     };
 
