@@ -613,9 +613,8 @@ const AlphabeticShowcase = () => {
             .map(s => s.trim())
             .filter(Boolean)
             .map(s => {
-                if (s.includes('=')) {
-                    return s.split('=')[1].trim();
-                }
+                // LEFT side of IPA=Text is the phoneme/letter identity
+                if (s.includes('=')) return s.split('=')[0].trim();
                 return s;
             });
     };
@@ -672,22 +671,356 @@ const AlphabeticShowcase = () => {
     );
 };
 
-// --- MAIN PAGE ---
+// ─── SYLLABARY SHOWCASE ───────────────────────────────────────────────────────
+
+const SyllabaryShowcase = () => {
+    const syllabaryMap = useConfigStore(state => state.syllabaryMap) || {};
+    const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
+    const consonants   = useConfigStore(state => state.consonants) || '';
+    const vowels       = useConfigStore(state => state.vowels) || '';
+
+    const parseList = (str) => str.split(',').map(s => {
+        let c = s.trim();
+        if (c.includes('=')) c = c.split('=')[0].trim();
+        return c;
+    }).filter(Boolean);
+
+    // Build phoneme → script-character map from IPA=char phonology entries
+    const phonemeToChar = useMemo(() => {
+        const map = {};
+        [...consonants.split(','), ...vowels.split(',')].forEach(s => {
+            const parts = s.trim().split('=');
+            if (parts.length === 2) map[parts[0].trim()] = parts[1].trim();
+        });
+        return map;
+    }, [consonants, vowels]);
+
+    const consList = ['', ...parseList(consonants)];
+    const vowList  = parseList(vowels);
+
+    const allEntries = useMemo(() => {
+        const grid = [];
+        consList.forEach(c => {
+            vowList.forEach(v => {
+                const syl = c + v;
+                // Display label uses mapped characters, not raw phonemes
+                const conChar = phonemeToChar[c] || c;
+                const vowChar = phonemeToChar[v] || v;
+                const displayLabel = conChar + vowChar || vowChar;
+                grid.push({ key: syl, displayLabel, symbol: syllabaryMap[syl] || '' });
+            });
+        });
+        Object.keys(syllabaryMap).forEach(k => {
+            if (!grid.find(e => e.key === k)) {
+                grid.push({ key: k, displayLabel: k, symbol: syllabaryMap[k] });
+            }
+        });
+        return grid;
+    }, [syllabaryMap, consonants, vowels, phonemeToChar]);
+
+    // Render as crisp SVG strokes if available, else font char, else dash
+    const renderSymbol = (symbol) => {
+        if (!symbol) return <span style={{ color: 'var(--tx2)', fontSize: '1.5rem', opacity: 0.3 }}>—</span>;
+        const codePoint = symbol.codePointAt(0);
+        const strokes = customGlyphs[codePoint];
+        if (strokes && strokes.length > 0) {
+            return (
+                <svg viewBox="0 0 300 300" width="52" height="52">
+                    {strokes.map((stroke, i) => (
+                        <path
+                            key={i}
+                            d={`M ${stroke.map(p => `${p.x} ${p.y}`).join(' L ')}`}
+                            stroke="var(--acc)"
+                            strokeWidth="14"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            fill="none"
+                        />
+                    ))}
+                </svg>
+            );
+        }
+        return <span className="custom-font-text" style={{ fontSize: '2.2rem', color: 'var(--acc)', lineHeight: 1 }}>{symbol}</span>;
+    };
+
+    return (
+        <div className="tab-pane-container">
+            <Infobox title="Syllabary Register">
+                Read-only showcase of every syllable mapped in your writing system. Draw and edit syllables in <b>System &rarr; Phonology</b>.
+            </Infobox>
+            {allEntries.length === 0 ? (
+                <div className="empty-state glass">
+                    <Type size={48} style={{ opacity: 0.2 }} />
+                    <p>No syllables mapped yet. Add them in Phonology Settings.</p>
+                </div>
+            ) : (
+                <div className="showcase-syllabary-grid">
+                    {allEntries.map(({ key, displayLabel, symbol }) => (
+                        <div key={key} className="showcase-syl-card glass">
+                            <div className="showcase-syl-symbol">{renderSymbol(symbol)}</div>
+                            <div className="showcase-syl-label">{displayLabel}</div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ─── LOGOGRAPHIC SHOWCASE ─────────────────────────────────────────────────────
+
+const LogographicShowcase = () => {
+    const lexicon = useLexiconStore(state => state.lexicon) || [];
+    const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
+
+    const logographicWords = useMemo(() => {
+        return lexicon.filter(w => w.ideogram && w.ideogram.trim() !== '');
+    }, [lexicon]);
+
+    // Render strokes as crisp inline SVG instead of font character
+    const renderGlyph = (ideogram) => {
+        const codePoint = ideogram.codePointAt(0);
+        const strokes = customGlyphs[codePoint];
+        if (strokes && strokes.length > 0) {
+            return (
+                <svg viewBox="0 0 300 300" width="80" height="80">
+                    {strokes.map((stroke, i) => (
+                        <path
+                            key={i}
+                            d={`M ${stroke.map(p => `${p.x} ${p.y}`).join(' L ')}`}
+                            stroke="var(--acc)"
+                            strokeWidth="12"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            fill="none"
+                        />
+                    ))}
+                </svg>
+            );
+        }
+        // Fallback: render the character itself at large size with smoothing
+        return (
+            <span className="custom-font-text" style={{
+                fontSize: '4rem',
+                lineHeight: 1,
+                display: 'block',
+                textRendering: 'geometricPrecision',
+                WebkitFontSmoothing: 'antialiased',
+            }}>{ideogram}</span>
+        );
+    };
+
+    return (
+        <div className="tab-pane-container">
+            <Infobox title="Logographic Register">
+                Every word in your lexicon that has a custom ideogram/character assigned appears here. Manage ideograms on individual lexicon entries.
+            </Infobox>
+            {logographicWords.length === 0 ? (
+                <div className="empty-state glass">
+                    <Languages size={48} style={{ opacity: 0.2 }} />
+                    <p>No logographic entries found. Add ideograms to words in your Lexicon.</p>
+                </div>
+            ) : (
+                <div className="alphabet-grid">
+                    {logographicWords.map(word => (
+                        <div key={word.id} className="char-card glass" style={{ cursor: 'default' }}>
+                            <div className="char-display" style={{ height: 'auto', marginBottom: '0.5rem' }}>
+                                {renderGlyph(word.ideogram)}
+                            </div>
+                            <div className="char-name-display" style={{ flexDirection: 'column', gap: '2px', textAlign: 'center' }}>
+                                <span style={{ fontWeight: 700, color: 'var(--acc)' }}>{word.word}</span>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--tx2)' }}>{word.translation}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ─── BLOCK SHOWCASE ───────────────────────────────────────────────────────────
+
+const BlockShowcase = () => {
+    const syllabaryMap       = useConfigStore(state => state.syllabaryMap) || {};
+    const featuralComponents = useConfigStore(state => state.featuralComponents) || {};
+    const customGlyphs       = useConfigStore(state => state.customGlyphs) || {};
+    const consonants         = useConfigStore(state => state.consonants) || '';
+    const vowels             = useConfigStore(state => state.vowels) || '';
+    const otherPhonemes      = useConfigStore(state => state.otherPhonemes) || '';
+
+    const parseList = (str) => (str || '').split(',').map(s => {
+        let c = s.trim();
+        if (c.includes('=')) c = c.split('=')[0].trim();
+        return c;
+    }).filter(Boolean);
+
+    // Build phoneme → script-character map
+    const phonemeToChar = useMemo(() => {
+        const map = {};
+        [...consonants.split(','), ...vowels.split(','), ...otherPhonemes.split(',')].forEach(s => {
+            const parts = s.trim().split('=');
+            if (parts.length === 2) map[parts[0].trim()] = parts[1].trim();
+        });
+        return map;
+    }, [consonants, vowels, otherPhonemes]);
+
+    const allComponents = [...new Set([
+        ...parseList(consonants),
+        ...parseList(vowels),
+        ...parseList(otherPhonemes)
+    ])];
+
+    const drawnComponents = allComponents.filter(c => featuralComponents[c]?.length > 0);
+    const blockEntries    = Object.entries(syllabaryMap).filter(([, v]) => v && v.trim() !== '');
+
+    // Translate a phoneme key (e.g. "ʁé") to morpheme chars (e.g. "ꞃɛ")
+    const toMorphemeLabel = (key) => {
+        // Try to map each character in the key through phonemeToChar
+        // Keys can be multi-char phonemes like "ks", so we try longest-match
+        let result = '';
+        let remaining = key;
+        while (remaining.length > 0) {
+            let matched = false;
+            // Try longest first
+            for (let len = Math.min(remaining.length, 4); len >= 1; len--) {
+                const chunk = remaining.slice(0, len);
+                if (phonemeToChar[chunk]) {
+                    result += phonemeToChar[chunk];
+                    remaining = remaining.slice(len);
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) {
+                result += remaining[0];
+                remaining = remaining.slice(1);
+            }
+        }
+        return result;
+    };
+
+    // Render a compiled block as SVG strokes if available, else custom font char
+    const renderBlockSymbol = (val) => {
+        if (!val) return <span style={{ opacity: 0.3 }}>—</span>;
+        const codePoint = val.codePointAt(0);
+        const strokes = customGlyphs[codePoint];
+        if (strokes && strokes.length > 0) {
+            return (
+                <svg viewBox="0 0 300 300" width="52" height="52">
+                    {strokes.map((stroke, i) => (
+                        <path
+                            key={i}
+                            d={`M ${stroke.map(p => `${p.x} ${p.y}`).join(' L ')}`}
+                            stroke="var(--acc)"
+                            strokeWidth="14"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            fill="none"
+                        />
+                    ))}
+                </svg>
+            );
+        }
+        return <span className="custom-font-text" style={{ fontSize: '2.2rem', color: 'var(--acc)', lineHeight: 1 }}>{val}</span>;
+    };
+
+    // ── Nothing at all ──────────────────────────────────────────────────────────
+    if (drawnComponents.length === 0 && blockEntries.length === 0) {
+        return (
+            <div className="tab-pane-container">
+                <Infobox title="Featural Block Register">
+                    Showcase of your compiled block script. Draw base characters and compile in <b>System &rarr; Phonology</b>.
+                </Infobox>
+                <div className="empty-state glass">
+                    <Hash size={48} style={{ opacity: 0.2 }} />
+                    <p style={{ fontWeight: 700 }}>No base characters drawn yet.</p>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--tx2)' }}>
+                        Go to <b>System &rarr; Phonology</b>, draw each base character, then click <b>Compile Block Font</b> to generate your script.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="tab-pane-container">
+            <Infobox title="Featural Block Register">
+                Showcase of your compiled block script. Draw base characters and compile in <b>System &rarr; Phonology</b>.
+            </Infobox>
+
+            {/* Base Characters */}
+            {drawnComponents.length > 0 && (
+                <>
+                    <h3 style={{ marginBottom: '1rem', color: 'var(--tx2)', fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Base Characters ({drawnComponents.length})
+                    </h3>
+                    <div className="showcase-block-base-grid">
+                        {drawnComponents.map(comp => (
+                            <div key={comp} className="showcase-block-base-card glass">
+                                <svg viewBox="0 0 300 300" width="64" height="64" className="showcase-block-svg">
+                                    {featuralComponents[comp].map((stroke, i) => (
+                                        <path
+                                            key={i}
+                                            d={`M ${stroke.map(p => `${p.x} ${p.y}`).join(' L ')}`}
+                                            stroke="var(--acc)"
+                                            strokeWidth="10"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            fill="none"
+                                        />
+                                    ))}
+                                </svg>
+                                <div className="showcase-syl-label">{phonemeToChar[comp] || comp}</div>
+                            </div>
+                        ))}
+                    </div>
+                </>
+            )}
+
+            {/* Compiled Blocks */}
+            {blockEntries.length > 0 ? (
+                <>
+                    <h3 style={{ margin: '2rem 0 1rem', color: 'var(--tx2)', fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Compiled Blocks ({blockEntries.length})
+                    </h3>
+                    <div className="showcase-syllabary-grid">
+                        {blockEntries.map(([key, val]) => (
+                            <div key={key} className="showcase-syl-card glass">
+                                <div className="showcase-syl-symbol">{renderBlockSymbol(val)}</div>
+                                <div className="showcase-syl-label">{toMorphemeLabel(key)}</div>
+                            </div>
+                        ))}
+                    </div>
+                </>
+            ) : (
+                <div className="empty-state glass" style={{ marginTop: '2rem' }}>
+                    <Hash size={40} style={{ opacity: 0.2 }} />
+                    <p style={{ fontWeight: 700 }}>Base characters ready — blocks not compiled yet.</p>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--tx2)' }}>
+                        Go to <b>System &rarr; Phonology</b> and click <b>Compile Block Font</b> to generate the full block grid.
+                    </p>
+                </div>
+            )}
+        </div>
+    );
+};
+
+
+// ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 
 export default function OrthographyPage() {
     const phonologyTypes = useConfigStore(state => state.phonologyTypes);
     const [activeTab, setActiveTab] = useState('script');
 
     const renderScriptManager = () => {
-        if (phonologyTypes === 'alphabetic' || !phonologyTypes) return <AlphabeticShowcase />;
-        
-        return (
-            <div className="empty-state glass">
-                <h2 className="sg-title" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{phonologyTypes.charAt(0).toUpperCase() + phonologyTypes.slice(1)} Script Register</h2>
-                <p>A beautiful visual register for your {phonologyTypes} script will be available here soon.</p>
-                <p style={{ fontSize: '0.9rem', color: 'var(--tx2)' }}>Manage your script in the System &rarr; Phonology tab.</p>
-            </div>
-        );
+        switch (phonologyTypes) {
+            case 'syllabic':   return <SyllabaryShowcase />;
+            case 'logographic':return <LogographicShowcase />;
+            case 'featural':
+            case 'block':      return <BlockShowcase />;
+            default:           return <AlphabeticShowcase />;
+        }
     };
 
     return (

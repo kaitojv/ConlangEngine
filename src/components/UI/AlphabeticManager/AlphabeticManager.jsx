@@ -23,9 +23,8 @@ export default function AlphabeticManager() {
             .map(s => s.trim())
             .filter(Boolean)
             .map(s => {
-                if (s.includes('=')) {
-                    return s.split('=')[1].trim();
-                }
+                // LEFT side of IPA=Text is the phoneme/letter identity
+                if (s.includes('=')) return s.split('=')[0].trim();
                 return s;
             });
     };
