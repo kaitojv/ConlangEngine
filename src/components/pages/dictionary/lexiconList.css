@@ -222,8 +222,8 @@
 .entry-words {
     display: flex;
     align-items: baseline;
-    gap: 0.75rem;
-    flex-wrap: wrap; /* Allow wrapping on narrow screens */
+    gap: 0.5rem 0.75rem;
+    flex-wrap: wrap;
 }
 
 .entry-main-word {
@@ -248,6 +248,22 @@
     font-family: monospace;
     font-size: 0.875rem;
 }
+
+/* Romanization line — shown when the "Show Romanization" toggle is active */
+.entry-romanized {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--tx2);
+    letter-spacing: 0.03em;
+    font-style: italic;
+    border-left: 2px solid var(--acc);
+    padding-left: 0.5rem;
+    opacity: 0.85;
+}
+
 
 .word-class-badge {
     padding: 0.25rem 0.5rem;

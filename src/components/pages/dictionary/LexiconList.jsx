@@ -35,6 +35,9 @@ export default function LexiconList() {
     
     // New toggle for showing grammar rules as entries
     const [showBoundMorphemes, setShowBoundMorphemes] = useState(false);
+    // Toggle for showing romanized form beneath the conscript in script modes
+    const [showRomanization, setShowRomanization] = useState(false);
+    const isScriptMode = ['syllabic', 'featural_block', 'logographic', 'featural', 'block'].includes(phonologyTypes);
     
     // Spin up the transliterator to convert base words into the language's custom script
     const { transliterate } = useTransliterator();
@@ -248,6 +251,17 @@ export default function LexiconList() {
                         />
                         Show Affixes
                     </label>
+                    {isScriptMode && (
+                        <label className="bound-toggle">
+                            <input 
+                                type="checkbox" 
+                                className="bound-checkbox"
+                                checked={showRomanization}
+                                onChange={(e) => setShowRomanization(e.target.checked)}
+                            />
+                            Show Romanization
+                        </label>
+                    )}
                 </div>
 
                 {/* Active Filters Bar */}
@@ -352,8 +366,16 @@ export default function LexiconList() {
                                     <span className={`notranslate entry-main-word custom-font-text ${phonologyTypes === 'featural_block' ? 'featural-block-render' : ''}`}>
                                         {displayWord}
                                     </span>
-                                    
-                                    {phonologyTypes !== 'alphabetic' && (
+
+                                    {/* Romanized form — shown as a dedicated readable line when toggle is on */}
+                                    {isScriptMode && showRomanization && (
+                                        <span className="notranslate entry-romanized">
+                                            {safeWord}
+                                        </span>
+                                    )}
+
+                                    {/* Compact bracket form — shown when toggle is off */}
+                                    {phonologyTypes !== 'alphabetic' && !showRomanization && (
                                         <span className="notranslate entry-base-word">
                                             [{safeWord}]
                                         </span>
