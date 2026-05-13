@@ -65,7 +65,7 @@ export default function CreateWordTab() {
         ideogram: ''
     });
     
-    const { word, ipa, wordClass, translation, tags, ideogram } = formData;
+    const { word, ipa, wordClass, translation, definition, tags, ideogram } = formData;
     const [isFontStudioOpen, setIsFontStudioOpen] = useState(false);
     const [selectedDerivs, setSelectedDerivs] = useState({});
     const [customTranslations, setCustomTranslations] = useState({});
@@ -555,7 +555,7 @@ export default function CreateWordTab() {
                     <div>
                         <Input 
                             label="Full Definition (Optional)" 
-                            value={formData.definition}
+                            value={definition}
                             onChange={(e) => updateField('definition', e.target.value)}
                             placeholder="Extended description..."
                         />
