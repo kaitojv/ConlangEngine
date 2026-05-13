@@ -37,6 +37,7 @@ export const RulesManager = () => {
             dependency: '', 
             standalone: false,
             applyToPersons: false,
+            gloss: '',
         };
         
         updateConfig({ grammarRules: [...rules, newRule] });

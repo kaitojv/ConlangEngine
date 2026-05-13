@@ -267,6 +267,7 @@ export default function SemanticExplorer() {
             word: editingMapping.word.trim(),
             ipa: editingMapping.ipa.trim(),
             translation: editingMapping.translation.trim(),
+            definition: selectedSynset.definition || '',
             wordClass: selectedSynset.pos === 'n' ? 'Noun' : (selectedSynset.pos === 'v' ? 'Verb' : 'Other'),
             tags: ['semantic-explorer'],
             ideogram: '',
@@ -284,8 +285,8 @@ export default function SemanticExplorer() {
             <Card className="semantic-header-card">
                 <header className="page-header">
                     <div className="header-content">
-                        <h2 className="flex sg-title">
-                            <Compass className="text-accent" />
+                        <h2 className="flex sg-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <Compass style={{ color: 'var(--acc)' }} />
                             Semantic Explorer
                         </h2>
                         <p className="subtitle">

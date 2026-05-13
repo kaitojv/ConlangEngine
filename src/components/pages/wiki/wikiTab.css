@@ -54,3 +54,36 @@
     cursor: pointer; padding: 4px; border-radius: 4px; 
 }
 .wiki-del-btn:hover { color: var(--err); background: rgba(239, 68, 68, 0.1); }
+
+.suggestion-def { color: var(--tx3); font-style: italic; font-size: 0.8rem; margin-left: 4px; }
+
+.wa-tip-box {
+    margin: 10px 14px;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(236, 72, 153, 0.08));
+    border: 1px solid rgba(139, 92, 246, 0.25);
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    animation: slideDown 0.3s ease-out;
+}
+
+.wa-tip-box::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%; width: 200%; height: 200%;
+    background: radial-gradient(circle at center, rgba(139, 92, 246, 0.05), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.5; }
+    100% { transform: scale(1); opacity: 1; }
+}

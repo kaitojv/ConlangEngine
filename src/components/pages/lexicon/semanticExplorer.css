@@ -139,6 +139,12 @@
     transition: 0.3s;
 }
 
+.search-icon {
+    color: var(--tx3);
+    opacity: 0.6;
+    flex-shrink: 0;
+}
+
 .semantic-search-bar:focus-within {
     border-color: var(--acc);
     background: var(--s3);

@@ -16,6 +16,7 @@ export const useLexiconStore = create(
                     ipa: newWordData.ipa || '',
                     wordClass: newWordData.wordClass,
                     translation: newWordData.translation,
+                    definition: newWordData.definition || '',
                     tags: newWordData.tags || [],
                     ideogram: newWordData.ideogram || '',
                     personCategory: newWordData.personCategory || '',

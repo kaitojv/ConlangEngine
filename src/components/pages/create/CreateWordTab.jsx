@@ -60,6 +60,7 @@ export default function CreateWordTab() {
         ipa: '',
         wordClass: 'noun',
         translation: '',
+        definition: '',
         tags: [],
         ideogram: ''
     });
@@ -174,6 +175,7 @@ export default function CreateWordTab() {
             ipa: ipa.trim(),
             wordClass: wordClass,
             translation: cleanTrans,
+            definition: definition.trim(),
             tags: processedTags,
             ideogram: ideogram.trim()
         });
@@ -203,6 +205,7 @@ export default function CreateWordTab() {
                     ipa: '', // Derivations don't auto-generate IPA yet
                     wordClass: targetClass,
                     translation: customTranslations[idx] !== undefined ? customTranslations[idx].trim() : item.translationText,
+                    definition: '',
                     tags: [...processedTags, 'derived'],
                     ideogram: '',
                     parentRootId: rootId,
@@ -218,7 +221,7 @@ export default function CreateWordTab() {
         processedTags.forEach(tag => addCustomTag(tag));
 
         // Reset the form for the next word
-        setFormData({ word: '', ipa: '', wordClass: 'noun', translation: '', tags: [], ideogram: '' });
+        setFormData({ word: '', ipa: '', wordClass: 'noun', translation: '', definition: '', tags: [], ideogram: '' });
         setSelectedDerivs({});
         setCustomTranslations({});
         toast.success((t) => (
@@ -540,12 +543,24 @@ export default function CreateWordTab() {
                     </div>
                 )}
 
-                <Input 
-                    label="Translation / Definition" 
-                    value={translation}
-                    onChange={(e) => updateField('translation', e.target.value)}
-                    placeholder="Meaning in English..."
-                />
+                <div className="input-grid trans-def-grid">
+                    <div>
+                        <Input 
+                            label="Short Translation" 
+                            value={translation}
+                            onChange={(e) => updateField('translation', e.target.value)}
+                            placeholder="Primary English word..."
+                        />
+                    </div>
+                    <div>
+                        <Input 
+                            label="Full Definition (Optional)" 
+                            value={formData.definition}
+                            onChange={(e) => updateField('definition', e.target.value)}
+                            placeholder="Extended description..."
+                        />
+                    </div>
+                </div>
 
                 {isDuplicate && (
                     <div className="warning-box">

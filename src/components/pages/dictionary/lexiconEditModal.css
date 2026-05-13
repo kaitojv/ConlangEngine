@@ -11,6 +11,10 @@
     gap: 16px;
 }
 
+.trans-def-grid {
+    margin-top: 1rem;
+}
+
 .edit-modal-save-btn {
     width: 100%;
     padding: 12px;

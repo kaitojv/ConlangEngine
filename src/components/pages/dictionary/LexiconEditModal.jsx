@@ -34,7 +34,7 @@ export default function LexiconEditModal({ wordObj, onClose }) {
 
     // Bundle all the form fields into one neat state object
     const [formData, setFormData] = useState({
-        word: '', ipa: '', wordClass: '', translation: '', tags: [], ideogram: '', personCategory: ''
+        word: '', ipa: '', wordClass: '', translation: '', definition: '', tags: [], ideogram: '', personCategory: ''
     });
     const [tagInput, setTagInput] = useState('');
     const { word, ipa, wordClass, translation, tags, ideogram, personCategory } = formData;
@@ -86,6 +86,7 @@ export default function LexiconEditModal({ wordObj, onClose }) {
                 ipa: wordObj.ipa || '',
                 wordClass: wordObj.wordClass || '',
                 translation: wordObj.translation || '',
+                definition: wordObj.definition || '',
                 tags: Array.isArray(wordObj.tags) ? wordObj.tags : (typeof wordObj.tags === 'string' ? wordObj.tags.split(',').map(t => t.trim()).filter(Boolean) : []),
                 ideogram: wordObj.ideogram || '',
                 personCategory: wordObj.personCategory || ''
@@ -173,6 +174,7 @@ export default function LexiconEditModal({ wordObj, onClose }) {
                 ipa: ipa.trim(),
                 wordClass: wordClass.trim(),
                 translation: cTrans,
+                definition: formData.definition.trim(),
                 tags: pTags,
                 ideogram: ideogram.trim(),
                 personCategory: personCategory.trim()
@@ -372,11 +374,22 @@ export default function LexiconEditModal({ wordObj, onClose }) {
             </div>
 
             <div>
-                <Input 
-                    label="Translation / Definition" 
-                    value={translation}
-                    onChange={(e) => updateField('translation', e.target.value)}
-                />
+            <div className="edit-modal-grid trans-def-grid">
+                <div>
+                    <Input 
+                        label="Short Translation" 
+                        value={translation}
+                        onChange={(e) => updateField('translation', e.target.value)}
+                    />
+                </div>
+                <div>
+                    <Input 
+                        label="Full Definition (Optional)" 
+                        value={formData.definition}
+                        onChange={(e) => updateField('definition', e.target.value)}
+                    />
+                </div>
+            </div>
             </div>
 
             <div>

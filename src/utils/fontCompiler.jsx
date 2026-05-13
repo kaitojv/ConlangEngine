@@ -22,57 +22,91 @@ export async function compileFont(customGlyphs) {
 
             const unicode = parseInt(unicodeStr);
             let path = new opentype.Path();
-            const r = 30;
+            let r_base = 30;
 
-            strokeArray.forEach(originalStroke => {
-                if (originalStroke.length === 0) return;
+            // Detect calligraphy flag
+            const hasCalligraphy = strokeArray.length > 0 && 
+                                  strokeArray[0].length === 1 && 
+                                  strokeArray[0][0].x === -999;
+            
+            const actualStrokes = hasCalligraphy ? strokeArray.slice(1) : strokeArray;
 
-                // 1. Simplify the stroke by dropping points that are too close (distance < 15)
-                const simplified = [originalStroke[0]];
-                for (let i = 1; i < originalStroke.length; i++) {
+            actualStrokes.forEach(strokeData => {
+                const points = Array.isArray(strokeData) ? strokeData : (strokeData.points || []);
+                const isFilled = strokeData.isFilled || false;
+
+                if (points.length === 0) return;
+
+                // 1. Simplify the stroke by dropping points that are too close
+                const simplified = [points[0]];
+                for (let i = 1; i < points.length; i++) {
                     let last = simplified[simplified.length - 1];
-                    let curr = originalStroke[i];
+                    let curr = points[i];
                     let dx = curr.x - last.x;
                     let dy = curr.y - last.y;
-                    if (Math.sqrt(dx*dx + dy*dy) > 15 || i === originalStroke.length - 1) {
+                    if (Math.sqrt(dx*dx + dy*dy) > 15 || i === points.length - 1) {
                         simplified.push(curr);
                     }
                 }
 
-                for (let i = 0; i < simplified.length; i++) {
-                    let pt1 = simplified[i];
-                    let cx1 = 100 + (pt1.x * 2.85); // Increased scale to make characters slightly larger
-                    let cy1 = 800 - (pt1.y * 2.85);
-
-                    // Only draw full joint circles for the very start, end, or sharp corners to save thousands of SVG commands
-                    if (i === 0 || i === simplified.length - 1) {
-                        const kappa = r * 0.55228;
-                        path.moveTo(cx1, cy1 - r);
-                        path.curveTo(cx1 + kappa, cy1 - r, cx1 + r, cy1 - kappa, cx1 + r, cy1);
-                        path.curveTo(cx1 + r, cy1 + kappa, cx1 + kappa, cy1 + r, cx1, cy1 + r);
-                        path.curveTo(cx1 - kappa, cy1 + r, cx1 - r, cy1 + kappa, cx1 - r, cy1);
-                        path.curveTo(cx1 - r, cy1 - kappa, cx1 - kappa, cy1 - r, cx1, cy1 - r);
-                        path.close();
+                if (isFilled && simplified.length >= 3) {
+                    // Draw a solid filled path
+                    path.moveTo(100 + simplified[0].x * 2.85, 800 - simplified[0].y * 2.85);
+                    for (let i = 1; i < simplified.length; i++) {
+                        path.lineTo(100 + simplified[i].x * 2.85, 800 - simplified[i].y * 2.85);
                     }
+                    path.close();
+                } else {
+                    // Standard thickened stroke logic
+                    for (let i = 0; i < simplified.length; i++) {
+                        let pt1 = simplified[i];
+                        let cx1 = 100 + (pt1.x * 2.85);
+                        let cy1 = 800 - (pt1.y * 2.85);
 
-                    if (i < simplified.length - 1) {
-                        let pt2 = simplified[i+1];
-                        let cx2 = 100 + (pt2.x * 2.85);
-                        let cy2 = 800 - (pt2.y * 2.85);
+                        let r = r_base;
+                        if (hasCalligraphy) {
+                            const taper = Math.sin((i / (simplified.length - 1 || 1)) * Math.PI);
+                            r = r_base * (0.3 + 0.7 * taper);
+                        }
 
-                        let dx = cx2 - cx1;
-                        let dy = cy2 - cy1;
-                        let len = Math.sqrt(dx*dx + dy*dy);
-                        
-                        if (len > 0) {
-                            let nx = (dy / len) * r;
-                            let ny = -(dx / len) * r;
-                            
-                            path.moveTo(cx1 + nx, cy1 + ny);
-                            path.lineTo(cx2 + nx, cy2 + ny);
-                            path.lineTo(cx2 - nx, cy2 - ny);
-                            path.lineTo(cx1 - nx, cy1 - ny);
+                        // Only draw joint circles
+                        if (i === 0 || i === simplified.length - 1) {
+                            const kappa = r * 0.55228;
+                            path.moveTo(cx1, cy1 - r);
+                            path.curveTo(cx1 + kappa, cy1 - r, cx1 + r, cy1 - kappa, cx1 + r, cy1);
+                            path.curveTo(cx1 + r, cy1 + kappa, cx1 + kappa, cy1 + r, cx1, cy1 + r);
+                            path.curveTo(cx1 - kappa, cy1 + r, cx1 - r, cy1 + kappa, cx1 - r, cy1);
+                            path.curveTo(cx1 - r, cy1 - kappa, cx1 - kappa, cy1 - r, cx1, cy1 - r);
                             path.close();
+                        }
+
+                        if (i < simplified.length - 1) {
+                            let pt2 = simplified[i+1];
+                            let cx2 = 100 + (pt2.x * 2.85);
+                            let cy2 = 800 - (pt2.y * 2.85);
+
+                            let next_r = r_base;
+                            if (hasCalligraphy) {
+                                const next_taper = Math.sin(((i + 1) / (simplified.length - 1 || 1)) * Math.PI);
+                                next_r = r_base * (0.3 + 0.7 * next_taper);
+                            }
+
+                            let dx = cx2 - cx1;
+                            let dy = cy2 - cy1;
+                            let len = Math.sqrt(dx*dx + dy*dy);
+                            
+                            if (len > 0) {
+                                let nx1 = (dy / len) * r;
+                                let ny1 = -(dx / len) * r;
+                                let nx2 = (dy / len) * next_r;
+                                let ny2 = -(dx / len) * next_r;
+                                
+                                path.moveTo(cx1 + nx1, cy1 + ny1);
+                                path.lineTo(cx2 + nx2, cy2 + ny2);
+                                path.lineTo(cx2 - nx2, cy2 - ny2);
+                                path.lineTo(cx1 - nx1, cy1 - ny1);
+                                path.close();
+                            }
                         }
                     }
                 }

@@ -66,6 +66,7 @@ export function sanitizeLexicon(rawLexicon) {
         ipa: typeof entry.ipa === 'string' ? entry.ipa : '',
         wordClass: typeof entry.wordClass === 'string' ? entry.wordClass : '',
         translation: entry.translation,
+        definition: typeof entry.definition === 'string' ? entry.definition : '',
         tags: Array.isArray(entry.tags) ? entry.tags.filter(t => typeof t === 'string') : [],
         ideogram: typeof entry.ideogram === 'string' ? entry.ideogram : '',
         personCategory: typeof entry.personCategory === 'string' ? entry.personCategory : '',

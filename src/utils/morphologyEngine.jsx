@@ -201,29 +201,23 @@ export const segmentToken = (token, lexicon, config, normalizeToBase, getUniqueP
         let longest = null;
         let matchLength = 0;
 
-        // Check Lexicon
-        lexiconArray.forEach(entry => {
-            if (!entry.word) return;
-            const entryWord = normalizeToBase(entry.word.toLowerCase());
-            if (entryWord && str.startsWith(entryWord) && entryWord.length > matchLength) {
-                matchLength = entryWord.length;
-                longest = entry.word;
-            }
-        });
+        // Check Lexicon + Affixes (The key fix: check if the chunk is parsable)
+        // We try from longest possible prefix to shortest
+        for (let len = str.length; len >= 1; len--) {
+            const chunk = str.substring(0, len);
+            
+            // 1. Check if it's a raw lexicon word
+            const inLexicon = lexiconArray.some(e => e.word && normalizeToBase(e.word.toLowerCase()) === normalizeToBase(chunk.toLowerCase()));
+            
+            // 2. Check if it's a valid inflected form
+            const isParsable = getUniqueParsings(chunk).length > 0;
 
-        // Check Person Rules (Free forms)
-        const personRules = getPersonRules(config?.personRules || []);
-        personRules.forEach(rule => {
-            if (rule.freeForm) {
-                const freeForm = normalizeToBase(rule.freeForm.toLowerCase());
-                if (freeForm && str.startsWith(freeForm) && freeForm.length > matchLength) {
-                    matchLength = freeForm.length;
-                    longest = rule.freeForm;
-                }
+            if (inLexicon || isParsable) {
+                return { word: chunk, length: len };
             }
-        });
+        }
 
-        return { word: longest, length: matchLength };
+        return { word: null, length: 0 };
     };
 
     let iterations = 0;

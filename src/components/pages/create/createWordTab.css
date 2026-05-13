@@ -30,6 +30,10 @@
     }
 }
 
+.trans-def-grid {
+    margin-top: 1.5rem;
+}
+
 .ideogram-section {
     display: flex;
     gap: 1rem;

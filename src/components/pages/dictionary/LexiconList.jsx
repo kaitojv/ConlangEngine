@@ -407,6 +407,12 @@ export default function LexiconList() {
                                 {entry.translation}
                             </div>
 
+                            {entry.definition && (
+                                <div className="entry-definition">
+                                    {entry.definition}
+                                </div>
+                            )}
+
                             {entry.tags && entry.tags.length > 0 && (
                                 <div className="entry-tags">
                                     {[...entry.tags].sort().map((tag, i) => (

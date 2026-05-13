@@ -294,7 +294,16 @@
 .entry-translation {
     color: var(--tx);
     font-size: 1.125rem;
+    margin-bottom: 0.25rem;
+    font-weight: 700;
+}
+
+.entry-definition {
+    color: var(--tx2);
+    font-size: 0.95rem;
+    font-weight: 400;
     margin-bottom: 0.75rem;
+    line-height: 1.4;
 }
 
 .entry-tags {
