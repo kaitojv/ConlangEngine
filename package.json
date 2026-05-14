@@ -12,6 +12,7 @@
   "dependencies": {
     "@aws-sdk/client-polly": "^3.1030.0",
     "@fontsource-variable/inter": "^5.2.8",
+    "@paypal/react-paypal-js": "^9.2.0",
     "@supabase/supabase-js": "^2.103.0",
     "@tailwindcss/vite": "^4.2.2",
     "class-variance-authority": "^0.7.1",

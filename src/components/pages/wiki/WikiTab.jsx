@@ -7,9 +7,122 @@ import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import Modal from '@/components/UI/Modal/Modal.jsx';
-import { Book, Plus, Trash2, Bold, Italic, Underline, Link, Save, Type, Languages, FileText } from 'lucide-react';
+import { Book, Plus, Trash2, Bold, Italic, Underline, Link, Save, Type, Languages, FileText, Settings, ChevronDown, ChevronUp, Info, Wand2 } from 'lucide-react';
 import { applyRuleToWord } from '@/utils/morphologyEngine.jsx';
 import './wikiTab.css';
+
+// Word Assist Configuration Menu Component
+function WordAssistSettingsMenu({ config, updateConfig }) {
+    const wa = config.wordAssistConfig || { triggers: [] };
+    const triggers = wa.triggers || [];
+
+    const updateTrigger = (id, field, value) => {
+        const newTriggers = triggers.map(t => t.id === id ? { ...t, [field]: value } : t);
+        updateConfig({ wordAssistConfig: { ...wa, triggers: newTriggers } });
+    };
+
+    const addTrigger = () => {
+        const newId = `tr-${Date.now()}`;
+        const newTrigger = { id: newId, name: 'New Rule', trigger: '', marker: '', type: 'word', position: 'before', priority: triggers.length + 1 };
+        updateConfig({ wordAssistConfig: { ...wa, triggers: [...triggers, newTrigger] } });
+    };
+
+    const removeTrigger = (id) => {
+        const newTriggers = triggers.filter(t => t.id !== id);
+        updateConfig({ wordAssistConfig: { ...wa, triggers: newTriggers } });
+    };
+
+    const moveTrigger = (idx, direction) => {
+        const newTriggers = [...triggers];
+        const targetIdx = idx + direction;
+        if (targetIdx < 0 || targetIdx >= newTriggers.length) return;
+        const [moved] = newTriggers.splice(idx, 1);
+        newTriggers.splice(targetIdx, 0, moved);
+        updateConfig({ wordAssistConfig: { ...wa, triggers: newTriggers } });
+    };
+
+    return (
+        <div className="wa-settings-container-v2">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--tx3)', fontStyle: 'italic' }}>
+                    Define triggers (words or suffixes) and how they should be marked in your conlang.
+                </span>
+                <Button variant="default" onClick={addTrigger} style={{ fontSize: '0.7rem', padding: '4px 10px' }}>
+                    <Plus size={14} /> Add New Trigger
+                </Button>
+            </div>
+
+            <div className="wa-triggers-list">
+                {triggers.sort((a,b) => a.priority - b.priority).map((t, idx) => (
+                    <div key={t.id} className="wa-trigger-card">
+                        <div className="wa-card-header">
+                            <div className="wa-priority-controls">
+                                <button onClick={() => moveTrigger(idx, -1)} disabled={idx === 0}><ChevronUp size={14}/></button>
+                                <button onClick={() => moveTrigger(idx, 1)} disabled={idx === triggers.length - 1}><ChevronDown size={14}/></button>
+                            </div>
+                            <input 
+                                className="wa-title-input"
+                                value={t.name} 
+                                onChange={(e) => updateTrigger(t.id, 'name', e.target.value)}
+                                placeholder="Rule Name"
+                            />
+                            <button className="wa-remove-btn" onClick={() => removeTrigger(t.id)}><Trash2 size={14}/></button>
+                        </div>
+                        
+                        <div className="wa-card-body">
+                            <div className="wa-field">
+                                <label>{t.type === 'trigger' ? 'Syntactic Role' : 'English Trigger'}</label>
+                                {t.type === 'trigger' ? (
+                                    <select className="wa-select-v2" value={t.trigger} onChange={(e) => updateTrigger(t.id, 'trigger', e.target.value)}>
+                                        <option value="">Select Role...</option>
+                                        <option value="O">Object (Accusative / Patient)</option>
+                                        <option value="S">Subject (Nominative / Agent)</option>
+                                        <option value="V">Verb (Action)</option>
+                                    </select>
+                                ) : (
+                                    <Input 
+                                        value={t.trigger} 
+                                        onChange={(e) => updateTrigger(t.id, 'trigger', e.target.value)}
+                                        placeholder="e.g. not, from, -ing"
+                                    />
+                                )}
+                            </div>
+                            <div className="wa-field">
+                                <label>Conlang Marker</label>
+                                <Input 
+                                    value={t.marker} 
+                                    onChange={(e) => updateTrigger(t.id, 'marker', e.target.value)}
+                                    placeholder="e.g. un, -m"
+                                />
+                            </div>
+                            <div className="wa-field">
+                                <label>Apply As</label>
+                                <select className="wa-select-v2" value={t.type} onChange={(e) => updateTrigger(t.id, 'type', e.target.value)}>
+                                    <option value="word">Word match</option>
+                                    <option value="suffix">English suffix</option>
+                                    <option value="trigger">Syntactic Role</option>
+                                </select>
+                            </div>
+                            <div className="wa-field">
+                                <label>Position</label>
+                                <select className="wa-select-v2" value={t.position} onChange={(e) => updateTrigger(t.id, 'position', e.target.value)}>
+                                    <option value="prefix">Prefix</option>
+                                    <option value="suffix">Suffix</option>
+                                    <option value="before">Before target</option>
+                                    <option value="after">After target</option>
+                                    <option value="beforeVerb">Before Verb</option>
+                                    <option value="afterVerb">After Verb</option>
+                                    <option value="endOfSentence">End of Sentence</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 
 // The new Interlinear Editor Component
 function CorpusEditor({ content, onSave, writingDirection }) {
@@ -21,6 +134,7 @@ function CorpusEditor({ content, onSave, writingDirection }) {
     const [draggedChip, setDraggedChip] = useState(null); // { suggIdx, chipIdx }
     const [showWaTip, setShowWaTip] = useState(true);
     const [wordRange, setWordRange] = useState(null); // { start, end } of current word in text
+    const [isWaSettingsOpen, setIsWaSettingsOpen] = useState(false);
     const textareaRef = useRef(null);
 
     const lexicon = useLexiconStore((state) => state.lexicon);
@@ -28,6 +142,8 @@ function CorpusEditor({ content, onSave, writingDirection }) {
     const personRulesStr = useConfigStore(state => state.personRules) || "";
     const grammarRules   = useConfigStore(state => state.grammarRules) || [];
     const syntaxOrder    = useConfigStore(state => state.syntaxOrder) || 'SVO';
+    const waConfig       = useConfigStore(state => state.wordAssistConfig) || {};
+    const updateConfig   = useConfigStore(state => state.updateConfig);
 
 
     // Auto-save and content sync
@@ -250,6 +366,7 @@ function CorpusEditor({ content, onSave, writingDirection }) {
         let activeContinuous = false;
         let activeCompSuper = null; // 'comparative' or 'superlative'
         let activeAuxRule = null;
+        let phraseIsNegative = false;
 
         const protectedMorphemes = new Set();
         grammarRules?.forEach(r => {
@@ -289,6 +406,44 @@ function CorpusEditor({ content, onSave, writingDirection }) {
                              q === "'d"  ? "would" : 
                              q === "'re" ? "are" : q;
             const { lemma, tense: wordTense, isPlural, isParticiple, case: wordCase, isAgentive } = lemmatize(fullForm);
+            
+            const pInfo = PRONOUN_MAP[q] || PRONOUN_MAP[fullForm];
+            const role = pInfo?.role || (i === 0 ? 'S' : (i === words.length - 1 ? 'O' : (lexicon.some(e => e.wordClass?.toLowerCase().includes('verb') && matchesTranslation(e.translation, q)) ? 'V' : 'O')));
+
+            // ── Multi-Trigger Logic ──────────────────────────────────────────────
+            if (waConfig.triggers) {
+                waConfig.triggers.sort((a,b) => a.priority - b.priority).forEach(t => {
+                    if (!t.trigger || !t.marker) return;
+                    
+                    const triggerList = t.trigger.split(',').map(x => x.trim().toLowerCase());
+                    const suffixes = [t.trigger.trim().toLowerCase().replace(/^-/, '')];
+                    const isMatch = t.type === 'word' ? (triggerList.includes(q) || triggerList.includes(fullForm)) :
+                                    t.type === 'suffix' ? suffixes.some(s => q.endsWith(s)) :
+                                    t.type === 'trigger' ? (t.trigger === role) : false;
+
+                    if (isMatch) {
+                        let targetIdx = i;
+                        if (['beforeVerb', 'afterVerb'].includes(t.position)) {
+                            const vIdx = words.slice(i).findIndex((w, idx) => {
+                                const lq = w.replace(/[.,!?;:]/g, '').toLowerCase();
+                                return lexicon.some(e => e.wordClass?.toLowerCase().includes('verb') && matchesTranslation(e.translation, lq));
+                            });
+                            if (vIdx !== -1) targetIdx = i + vIdx;
+                        } else if (['before', 'after'].includes(t.position) && t.type === 'word') {
+                            let next = i + 1;
+                            while (next < words.length && ['the', 'a', 'an'].includes(words[next].toLowerCase())) next++;
+                            targetIdx = next;
+                        }
+
+                        if (!breakdown[targetIdx]) breakdown[targetIdx] = { markers: [] };
+                        if (!breakdown[targetIdx].markers) breakdown[targetIdx].markers = [];
+                        breakdown[targetIdx].markers.push(t);
+                        
+                        if (t.type === 'word' && targetIdx !== i) found = true;
+                    }
+                });
+            }
+            if (found) { i++; continue; }
 
             // Tense/Voice/Mood Triggers
             if (fullForm === 'will' || fullForm === 'was') {
@@ -301,11 +456,18 @@ function CorpusEditor({ content, onSave, writingDirection }) {
                     role: 'V', 
                     found: true, 
                     isAuxiliary: true,
-                    swallowed: false // Starts as visible, swallowed only if merged into a verb
+                    swallowed: false
                 });
                 activeAuxRule = rule;
                 i++; continue;
             }
+
+            // Negation Detection
+            if (['not', "n't", 'no', 'never'].includes(q)) {
+                phraseIsNegative = true;
+                i++; continue;
+            }
+
             if (fullForm === 'have') activeTense = 'perfect';
             if (['be', 'am', 'is', 'are', 'was', 'were', 'been'].includes(fullForm)) {
                 activePassive = true;
@@ -314,87 +476,12 @@ function CorpusEditor({ content, onSave, writingDirection }) {
             if (fullForm === 'more') activeCompSuper = 'comparative';
             if (fullForm === 'most') activeCompSuper = 'superlative';
 
-            const pInfo = PRONOUN_MAP[q] || PRONOUN_MAP[fullForm];
-
-            // 4. Lexicon Match (Strict Hierarchy)
-            const allMatches = lexicon.filter(e => {
+            const match = lexicon.find(e => {
                 const t1 = (e.translation || '').toLowerCase();
                 const t2 = (e.shortTranslation || '').toLowerCase();
                 const searchTerms = [q, lemma, fullForm];
-                if (q === "'ll") searchTerms.push("future");
-                if (q === "'ve") searchTerms.push("perfect");
-                if (q === "'d") searchTerms.push("past", "would");
-
-                return searchTerms.some(term => 
-                    matchesTranslation(t1, term) || matchesTranslation(t2, term)
-                );
+                return searchTerms.some(term => matchesTranslation(t1, term) || matchesTranslation(t2, term));
             });
-
-            // If no exact matches, try fallback
-            if (allMatches.length === 0 && fullForm.length >= 3) {
-                const partials = lexicon.filter(e => {
-                    const t1 = (e.translation || '').toLowerCase();
-                    const t2 = (e.shortTranslation || '').toLowerCase();
-                    return t1.includes(fullForm) || t1.includes(lemma) || t2.includes(fullForm) || t2.includes(lemma);
-                });
-                allMatches.push(...partials);
-            }
-
-            let match = allMatches[0];
-            if (allMatches.length > 1) {
-                const nextWord = words[i+1]?.replace(/[.,!?;:]/g, '').toLowerCase();
-                const { isPlural: nextIsPlural } = nextWord ? lemmatize(nextWord) : { isPlural: false };
-                
-                match = allMatches.sort((a, b) => {
-                    const aT1 = (a.translation || '').toLowerCase();
-                    const aT2 = (a.shortTranslation || '').toLowerCase();
-                    const bT1 = (b.translation || '').toLowerCase();
-                    const bT2 = (b.shortTranslation || '').toLowerCase();
-                    const aWC = (a.wordClass || '').toLowerCase();
-                    const bWC = (b.wordClass || '').toLowerCase();
-                    let sA = 0, sB = 0;
-                    
-                    // AVOID CONFLICT: If lexicon word is a grammar particle, penalize heavily
-                    if (protectedMorphemes.has(a.word.toLowerCase())) sA -= 100;
-                    if (protectedMorphemes.has(b.word.toLowerCase())) sB -= 100;
-
-                    // PRIORITIZE SHORT/EXACT MATCHES (Penalize long definitions)
-                    if (aT2 === q || aT2 === lemma) sA += 60;
-                    if (bT2 === q || bT2 === lemma) sB += 60;
-                    if (aT1 === q || aT1 === lemma) sA += 40;
-                    if (bT1 === q || bT1 === lemma) sB += 40;
-                    
-                    // Length penalty: long definitions should lose to short translations
-                    sA -= Math.min(aT1.length, 50) / 2;
-                    sB -= Math.min(bT1.length, 50) / 2;
-
-                    // CLASS BONUS: If searching for function words (the, a), prefer articles/determinatives
-                    if (FUNCTION_WORDS.has(q)) {
-                        if (aWC.includes('article') || aWC.includes('det')) sA += 30;
-                        if (bWC.includes('article') || bWC.includes('det')) sB += 30;
-                    }
-
-                    if (nextIsPlural && aWC.includes('plural')) sA += 10;
-                    if (nextIsPlural && bWC.includes('plural')) sB += 10;
-                    
-                    return sB - sA;
-                })[0];
-            }
-
-            // 4b. Simple typo tolerance if still no match
-            if (!match && q.length > 3) {
-                match = lexicon.find(e => {
-                    const t = (e.translation || '').toLowerCase();
-                    if (t.length < 3) return false;
-                    const dist = (a, b) => {
-                        if (Math.abs(a.length - b.length) > 1) return 99;
-                        let errors = 0;
-                        for(let j=0; j < Math.min(a.length, b.length); j++) if (a[j] !== b[j]) errors++;
-                        return errors + Math.abs(a.length - b.length);
-                    };
-                    return dist(t, q) <= 1 || dist(t, lemma) <= 1;
-                });
-            }
 
             if (match) {
                 const base = match.word.replace(/\*/g, '');
@@ -402,46 +489,32 @@ function CorpusEditor({ content, onSave, writingDirection }) {
                 const isAuxiliary = (fullForm === 'will' || fullForm === 'have' || fullForm === 'can' || fullForm === 'must' || fullForm === 'should' || ['be', 'am', 'is', 'are', 'was', 'were', 'been'].includes(fullForm));
                 const isArticle   = ['the', 'a', 'an'].includes(q) || ['the', 'a', 'an'].includes(fullForm);
                 const isPronoun   = wc.includes('pronoun');
-                const pInfo = isPronoun ? (PRONOUN_MAP[q] || PRONOUN_MAP[fullForm]) : null;
-                const personRule = pInfo ? personRulesArray.find(r => r.person === pInfo.person && (!pInfo.number || r.number === pInfo.number) && (!pInfo.gender || !r.gender || r.gender === pInfo.gender)) : null;
+                const pInfoLex = isPronoun ? (PRONOUN_MAP[q] || PRONOUN_MAP[fullForm]) : null;
+                const personRule = pInfoLex ? personRulesArray?.find(r => r.person === pInfoLex.person && (!pInfoLex.number || r.number === pInfoLex.number) && (!pInfoLex.gender || !r.gender || r.gender === pInfoLex.gender)) : null;
 
-                // Force Role V for auxiliaries, A for articles, S for pronouns, O for others
-                let role = (isAuxiliary || wc.includes('verb') || wc.includes('particle')) ? 'V' : 
-                           (wc.includes('article') || isArticle) ? 'A' : 
-                           (isPronoun) ? 'S' : 'O';
                 let conlang = base;
                 let inflected = false;
                 let appliedRuleName = null;
-                
-                // Apply Grammar Rules based on triggers
-                let ruleToApply = null;
+
                 const isVerb = wc.includes('verb'); 
                 const isAdj  = wc.includes('adj') || wc.includes('adv');
                 const isNoun = wc.includes('noun');
                 const isFunctionWord = FUNCTION_WORDS.has(q);
-                
-                // Only calculate effectiveTense if it's a verb to prevent leakage
+
+                const wordMarkers = (breakdown[i]?.markers || []).sort((a,b) => a.priority - b.priority);
+
+                // 1. Apply Grammar Rules FIRST (Lower Priority)
+                let ruleToApply = null;
                 if (isVerb) {
-                    if (activePassive && (wordTense === 'past_participle' || isParticiple)) {
-                        ruleToApply = findGrammarRule('passive', 'passive');
-                    } else if (activeContinuous && wordTense === 'gerund') {
-                        ruleToApply = findGrammarRule('gerund', 'gerund') || findGrammarRule('continuous', 'continuous');
-                    } else {
+                    if (activePassive && (wordTense === 'past_participle' || isParticiple)) ruleToApply = findGrammarRule('passive', 'passive');
+                    else if (activeContinuous && wordTense === 'gerund') ruleToApply = findGrammarRule('gerund', 'gerund') || findGrammarRule('continuous', 'continuous');
+                    else {
                         const effectiveTense = (wordTense === 'past' || activeTense === 'past') ? 'past' : 
                                              (activeTense === 'future') ? 'future' : 
                                              (activeTense === 'perfect') ? 'perfect' : null;
-
-                        if (effectiveTense) {
-                            ruleToApply = findGrammarRule(effectiveTense, effectiveTense);
-                        }
+                        if (effectiveTense) ruleToApply = findGrammarRule(effectiveTense, effectiveTense);
                     }
-
-                    // Special case: Agentive (baker -> bake + agentive)
-                    if (!ruleToApply && wordCase === 'comparative' && isAgentive) {
-                        ruleToApply = findGrammarRule('agentive', 'agentive');
-                    }
-                    
-
+                    if (!ruleToApply && wordCase === 'comparative' && isAgentive) ruleToApply = findGrammarRule('agentive', 'agentive');
                 } else if (wordCase) {
                     ruleToApply = findGrammarRule(wordCase, wordCase);
                 } else if (activeCompSuper && isAdj) {
@@ -450,87 +523,62 @@ function CorpusEditor({ content, onSave, writingDirection }) {
                     ruleToApply = findGrammarRule('plural', 'plural');
                 }
 
-                if (ruleToApply) {
+                // Only apply Grammar Rule if there is NO Word Assist trigger taking over this word
+                // (e.g. if we have a WA trigger for "-s", we skip the grammar rule for plural)
+                // We assume if wordMarkers has items, WA is handling it (Priority: WA > Grammar)
+                if (ruleToApply && wordMarkers.length === 0) {
                     const ruleApplies = (ruleToApply.appliesTo || 'all').toLowerCase();
-                    let shouldApply = (ruleApplies === 'all') || 
-                                     (ruleApplies === 'verb' && isVerb) || 
-                                     (ruleApplies === 'noun' && wc.includes('noun'));
-
+                    let shouldApply = (ruleApplies === 'all') || (ruleApplies === 'verb' && isVerb) || (ruleApplies === 'noun' && isNoun);
                     if (shouldApply) {
-                        const vowels = useConfigStore.getState().vowels || [];
-                        const consonants = useConfigStore.getState().consonants || [];
-                        const otherPhonemes = useConfigStore.getState().otherPhonemes || '';
                         try {
-                            conlang = applyRuleToWord(base, ruleToApply, grammarRules, vowels, consonants, otherPhonemes);
+                            const vStore = useConfigStore.getState();
+                            conlang = applyRuleToWord(base, ruleToApply, grammarRules, vStore.vowels, vStore.consonants, vStore.otherPhonemes);
                             inflected = true;
                             appliedRuleName = ruleToApply.name;
                         } catch(e) { console.error(e); }
                     }
                 }
 
-                // Auxiliary Merging Logic:
-                // Applied AFTER the current word's rule to ensure markers like 'kin' are not lost.
-                // We allow merging into auxiliaries themselves (chaining) OR into the main verb.
-                if (activeAuxRule && isVerb && !wc.includes('particle')) {
-                    try {
-                        const vStore = useConfigStore.getState();
-                        let merged = applyRuleToWord(conlang, activeAuxRule, grammarRules, vStore.vowels, vStore.consonants, vStore.otherPhonemes);
-                        if (!merged) {
-                            merged = applyAffixToBase(conlang, activeAuxRule.affix);
-                        }
-                        if (merged && merged !== conlang) {
-                            conlang = merged;
-                            inflected = true;
-                            // Mark the previous auxiliary as "swallowed"
-                            const lastAux = breakdown.slice().reverse().find(w => w.isAuxiliary && !w.swallowed);
-                            if (lastAux) {
-                                // Don't swallow 'be' if we are merging into another verb (keep 'be' in 'will be seeing')
-                                // Unless the user wants 'was seeing' -> 'kin soirium'
-                                const isBe = ['be', 'am', 'is', 'are', 'was', 'were', 'been'].includes(lastAux.original.toLowerCase());
-                                if (!isBe || activeTense === 'past') {
-                                    lastAux.swallowed = true;
-                                }
-                            }
-                            
-                            // Clear the aux rule after it has been consumed by the first available verb/modal
-                            activeAuxRule = null;
-                            // Reset activeTense to avoid repeating tense markers, 
-                            // BUT KEEP activePassive/activeContinuous for the rest of the phrase
-                            activeTense = null;
-                        }
-                    } catch(e) { console.error(e); }
+                // 2. Apply Lexicon Exact Match if NO Grammar Rule and NO WA Trigger applied
+                // (Priority: WA > Grammar > Lexicon)
+                if (!inflected && wordMarkers.length === 0) {
+                    // If the original translation exactly matched the inflected English word (q), use it
+                    if (matchesTranslation(match.translation?.toLowerCase(), q) || matchesTranslation(match.shortTranslation?.toLowerCase(), q)) {
+                        conlang = match.word;
+                    }
                 }
-                if (isAuxiliary && ruleToApply) {
-                    activeAuxRule = ruleToApply;
-                }
-                breakdown.push({ 
-                    original: currentWord, 
-                    conlang, 
-                    role, 
-                    found: true, 
-                    entry: match, 
-                    inflected, 
+
+                // 3. Apply Word Assist Triggers (Highest Priority - applied on top or overrides Lexicon)
+                wordMarkers.forEach(t => {
+                    if (t.position === 'prefix' || t.position === 'before') conlang = t.marker.replace(/-$/, '') + (t.position === 'before' ? ' ' : '') + conlang;
+                    else if (t.position === 'suffix' || t.position === 'after') conlang = conlang + (t.position === 'after' ? ' ' : '') + t.marker.replace(/^-/, '');
+                    else if (t.position === 'beforeVerb') conlang = t.marker + ' ' + conlang;
+                    else if (t.position === 'afterVerb') conlang = conlang + ' ' + t.marker;
+                    else if (t.position === 'endOfSentence') phraseIsNegative = true;
+                    inflected = true;
+                });
+
+                breakdown[i] = {
+                    original: currentWord,
+                    conlang: conlang,
+                    found: true,
+                    entry: match,
+                    role,
+                    inflected,
                     ruleName: appliedRuleName,
-                    matchCount: allMatches.length,
-                    alternatives: allMatches.slice(1, 4).map(m => m.word),
                     isAuxiliary,
                     isArticle,
                     personRule
-                });
+                };
             } else {
-                const searchTerms = [q, lemma, fullForm];
-                if (q === "'ll") searchTerms.push("future");
-                if (q === "'ve") searchTerms.push("perfect");
-                if (q === "'d") searchTerms.push("past", "would");
-                
-                breakdown.push({ 
-                    original: currentWord, 
-                    conlang: `[${currentWord}]`, 
-                    role: null, 
-                    found: false,
-                    debugSearch: searchTerms.filter(Boolean).join('/')
-                });
+                breakdown[i] = {
+                    original: currentWord,
+                    conlang: `[${currentWord}]`,
+                    role,
+                    found: false
+                };
             }
+
             if (!['will', 'have', 'be', 'am', 'is', 'are', 'was', 'were', 'been', 'more', 'most'].includes(fullForm) && 
                 !q.endsWith("'ll") && !q.endsWith("'ve") && !q.endsWith("'re")) {
                 activeTense = null; 
@@ -599,8 +647,16 @@ function CorpusEditor({ content, onSave, writingDirection }) {
         const results = [{
             key: 'phrase-free', type: 'phrase', romanized: romFree,
             display: transliterate(romFree, lexicon),
-            gloss: line + " (Free Form)", lineStart, lineEnd, wordBreakdown: bFree, reordered: rFree, label: 'Free Form'
+            wordBreakdown: bFree, reordered: rFree, label: 'Free Form'
         }];
+
+        // Add sentence-end negation if configured
+        if (phraseIsNegative && waConfig.negation?.type === 'word' && waConfig.negation?.position === 'endOfSentence') {
+            results.forEach(res => {
+                res.romanized += ' ' + waConfig.negation.content;
+                res.display = transliterate(res.romanized, lexicon);
+            });
+        }
 
         // Build Sug 2: Affix Form
         const bAffix = JSON.parse(JSON.stringify(breakdown));
@@ -963,18 +1019,44 @@ function CorpusEditor({ content, onSave, writingDirection }) {
                     </label>
                 )}
 
+                {mode === 'edit' && wordAssist && (
+                    <Button 
+                        variant={isWaSettingsOpen ? 'imp' : 'default'} 
+                        onClick={() => setIsWaSettingsOpen(!isWaSettingsOpen)}
+                        style={{ padding: '4px 10px' }}
+                        title="Word Assist Grammar Settings"
+                    >
+                        <Settings size={16} />
+                    </Button>
+                )}
+
                 <Button variant="save" onClick={() => onSave(text)}>
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}><Save size={16} /> Save Document</div>
                 </Button>
             </div>
 
-            {/* ── Word Assist suggestion panel ── sits between toolbar and writing area, never clipped */}
+            {/* ── Word Assist settings & suggestions panel ── */}
             {mode === 'edit' && wordAssist && (
                 <div style={{
-                    borderBottom: suggestions.length > 0 ? '1px solid var(--acc)' : '1px solid var(--bd)',
-                    background: suggestions.length > 0 ? 'var(--s4)' : 'var(--s1)',
+                    borderBottom: (suggestions.length > 0 || isWaSettingsOpen) ? '1px solid var(--acc)' : '1px solid var(--bd)',
+                    background: (suggestions.length > 0 || isWaSettingsOpen) ? 'var(--s4)' : 'var(--s1)',
                     transition: 'all 0.2s'
                 }}>
+                    {isWaSettingsOpen && (
+                        <div className="wa-settings-overlay">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><Wand2 size={18} color="var(--acc)" /> Word Assist Configuration</h4>
+                                <Button variant="default" onClick={() => setIsWaSettingsOpen(false)} style={{ padding: '2px 8px' }}>Close</Button>
+                            </div>
+                            <WordAssistSettingsMenu config={{ wordAssistConfig: waConfig }} updateConfig={updateConfig} />
+                            <div style={{ marginTop: '15px', padding: '10px', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '8px', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--tx3)', display: 'flex', gap: '6px' }}>
+                                    <Info size={14} /> These settings help the translation engine handle complex syntax. Changes take effect immediately as you type.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Status bar — always visible when word assist is on */}
                     {showWaTip && (
                         <div className="wa-tip-box">

@@ -109,7 +109,15 @@ export const INITIAL_CONFIG = {
         year: ''
     },
     alphabetGlyphs: {}, // { 'a': '\uE001', 'b': '\uE002' }
-    semanticMappings: {} // { [synsetId]: { word: '...', ipa: '...', meaning: '...' } }
+    semanticMappings: {}, // { [synsetId]: { word: '...', ipa: '...', meaning: '...' } },
+    wordAssistConfig: {
+        triggers: [
+            { id: 'obj-1', name: 'Direct Object', trigger: 'O', marker: '', type: 'trigger', position: 'suffix', priority: 4 },
+            { id: 'neg-1', name: 'Negation', trigger: 'not', marker: '', type: 'word', position: 'beforeVerb', priority: 1 },
+            { id: 'comp-1', name: 'Comparative', trigger: 'more, -er', marker: '', type: 'word', position: 'before', priority: 2 },
+            { id: 'pl-1', name: 'Plural', trigger: '-s', marker: '', type: 'suffix', position: 'suffix', priority: 3 }
+        ]
+    },
 };
 
 // IndexedDB Helper for handling massive data without breaking local storage quotas

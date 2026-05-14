@@ -5,7 +5,7 @@ import RulesManager from './grammarMatrix/RulesManager.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import PersonRulesEditor from './PersonRulesEditor.jsx'; // Import the new component
 import Button from '../../UI/Buttons/Buttons.jsx';
-import { TextInitial, TextAlignStart, Users, Wand2 } from 'lucide-react';
+import { TextInitial, TextAlignStart, Users, Wand2, Languages, Plus, Info } from 'lucide-react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import './grammartab.css';
 
@@ -15,7 +15,46 @@ export default function GrammarTab(){
     const writingDirection = useConfigStore((state) => state.writingDirection) || 'ltr';
     const verbMarker = useConfigStore((state) => state.verbMarker) || '';
     const cliticsRules = useConfigStore((state) => state.cliticsRules) || '';
+    const waConfig = useConfigStore((state) => state.wordAssistConfig) || {};
     const updateConfig = useConfigStore((state) => state.updateConfig);
+
+    const updateWa = (path, value) => {
+        const newWa = { ...waConfig };
+        const parts = path.split('.');
+        if (parts.length === 1) {
+            newWa[parts[0]] = value;
+        } else {
+            newWa[parts[0]] = { ...newWa[parts[0]], [parts[1]]: value };
+        }
+        updateConfig({ wordAssistConfig: newWa });
+    };
+
+    const triggers = waConfig.triggers || [];
+
+    const updateTrigger = (id, field, value) => {
+        const newTriggers = triggers.map(t => t.id === id ? { ...t, [field]: value } : t);
+        updateConfig({ wordAssistConfig: { ...waConfig, triggers: newTriggers } });
+    };
+
+    const addTrigger = () => {
+        const newId = `tr-${Date.now()}`;
+        const newTrigger = { id: newId, name: 'New Rule', trigger: '', marker: '', type: 'word', position: 'before', priority: triggers.length + 1 };
+        updateConfig({ wordAssistConfig: { ...waConfig, triggers: [...triggers, newTrigger] } });
+    };
+
+    const removeTrigger = (id) => {
+        const newTriggers = triggers.filter(t => t.id !== id);
+        updateConfig({ wordAssistConfig: { ...waConfig, triggers: newTriggers } });
+    };
+
+    const moveTrigger = (idx, direction) => {
+        const newTriggers = [...triggers];
+        const targetIdx = idx + direction;
+        if (targetIdx < 0 || targetIdx >= newTriggers.length) return;
+        const [moved] = newTriggers.splice(idx, 1);
+        newTriggers.splice(targetIdx, 0, moved);
+        updateConfig({ wordAssistConfig: { ...waConfig, triggers: newTriggers } });
+    };
 
     return (
         <div className="grammar-tab-container">
@@ -111,6 +150,76 @@ export default function GrammarTab(){
                     • <b>Root Tag:</b> Advanced scoping. Link this rule to dictionary words that share a specific tag.
                 </Infobox>
                 <PersonRulesEditor />
+            </Card>
+
+            {/* --- WORD ASSIST AUTOMATION --- */}
+            <Card>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                    <h2 className="flex sg-title" style={{ margin: 0 }}><Wand2 /> Word Assist & Automation</h2>
+                    <Button variant="default" onClick={addTrigger} style={{ padding: '6px 15px' }}><Plus size={16} /> Add Rule</Button>
+                </div>
+                <Infobox title="Smart Translation Settings">
+                    Configure how the <b>Word Assist</b> engine handles complex grammar automatically.
+                    Triggers are processed in order of <b>priority</b>. You can drag rules to reorder them in the Wiki tab, or use arrows here.
+                </Infobox>
+
+                <div className="wa-triggers-list-main">
+                    {triggers.map((t, idx) => (
+                        <div key={t.id} className="wa-trigger-card-main">
+                            <div className="wa-card-header-main">
+                                <div className="wa-controls">
+                                    <button onClick={() => moveTrigger(idx, -1)} disabled={idx === 0}><ChevronUp size={16}/></button>
+                                    <button onClick={() => moveTrigger(idx, 1)} disabled={idx === triggers.length - 1}><ChevronDown size={16}/></button>
+                                </div>
+                                <input 
+                                    className="wa-title-input-main"
+                                    value={t.name} 
+                                    onChange={(e) => updateTrigger(t.id, 'name', e.target.value)}
+                                />
+                                <button className="wa-del-btn" onClick={() => removeTrigger(t.id)}><Trash2 size={16}/></button>
+                            </div>
+                            <div className="wa-card-body-main">
+                                <div className="input-wrapper">
+                                    <label className="input-label">{t.type === 'trigger' ? 'Syntactic Role' : 'English Trigger'}</label>
+                                    {t.type === 'trigger' ? (
+                                        <select className="fi custom-select" value={t.trigger} onChange={(e) => updateTrigger(t.id, 'trigger', e.target.value)}>
+                                            <option value="">Select Role...</option>
+                                            <option value="O">Object (Accusative / Patient)</option>
+                                            <option value="S">Subject (Nominative / Agent)</option>
+                                            <option value="V">Verb (Action)</option>
+                                        </select>
+                                    ) : (
+                                        <Input value={t.trigger} onChange={(e) => updateTrigger(t.id, 'trigger', e.target.value)} placeholder="not, from, -ing" />
+                                    )}
+                                </div>
+                                <div className="input-wrapper">
+                                    <label className="input-label">Conlang Marker</label>
+                                    <Input value={t.marker} onChange={(e) => updateTrigger(t.id, 'marker', e.target.value)} placeholder="un, -m" />
+                                </div>
+                                <div className="input-wrapper">
+                                    <label className="input-label">Apply As</label>
+                                    <select className="fi custom-select" value={t.type} onChange={(e) => updateTrigger(t.id, 'type', e.target.value)}>
+                                        <option value="word">Word match</option>
+                                        <option value="suffix">English suffix</option>
+                                        <option value="trigger">Syntactic Role</option>
+                                    </select>
+                                </div>
+                                <div className="input-wrapper">
+                                    <label className="input-label">Position</label>
+                                    <select className="fi custom-select" value={t.position} onChange={(e) => updateTrigger(t.id, 'position', e.target.value)}>
+                                        <option value="prefix">Prefix</option>
+                                        <option value="suffix">Suffix</option>
+                                        <option value="before">Before target</option>
+                                        <option value="after">After target</option>
+                                        <option value="beforeVerb">Before Verb</option>
+                                        <option value="afterVerb">After Verb</option>
+                                        <option value="endOfSentence">End of Sentence</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </Card>
             
         </div>

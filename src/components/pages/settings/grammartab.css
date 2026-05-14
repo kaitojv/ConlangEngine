@@ -182,3 +182,95 @@
 .alignment-header h2 {
     margin: 0;
 }
+
+/* Word Assist Settings V2 (Main Settings Tab) */
+.wa-triggers-list-main {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.wa-trigger-card-main {
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.wa-trigger-card-main:hover {
+    border-color: var(--acc);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.wa-card-header-main {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 20px;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--bd);
+}
+
+.wa-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.wa-controls button {
+    background: transparent;
+    border: none;
+    color: var(--tx3);
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+}
+
+.wa-controls button:hover:not(:disabled) {
+    color: var(--acc);
+    background: rgba(255,255,255,0.05);
+}
+
+.wa-controls button:disabled {
+    opacity: 0.2;
+    cursor: not-allowed;
+}
+
+.wa-title-input-main {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--tx);
+    font-weight: 700;
+    font-size: 0.95rem;
+    outline: none;
+}
+
+.wa-del-btn {
+    background: transparent;
+    border: none;
+    color: var(--tx3);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.wa-del-btn:hover {
+    color: var(--err);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.wa-card-body-main {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+

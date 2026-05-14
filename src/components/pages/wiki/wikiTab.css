@@ -87,3 +87,139 @@
     50% { transform: scale(1.4); opacity: 0.5; }
     100% { transform: scale(1); opacity: 1; }
 }
+
+/* Word Assist Settings V2 */
+.wa-settings-container-v2 {
+    padding: 20px;
+    background: var(--s4);
+    border-bottom: 1px solid var(--bd);
+    animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wa-triggers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 15px;
+}
+
+.wa-trigger-card {
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.wa-trigger-card:hover {
+    border-color: var(--acc);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+
+.wa-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 15px;
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--bd);
+}
+
+.wa-priority-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.wa-priority-controls button {
+    background: transparent;
+    border: none;
+    color: var(--tx3);
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+}
+
+.wa-priority-controls button:hover:not(:disabled) {
+    color: var(--acc);
+    background: rgba(255,255,255,0.05);
+}
+
+.wa-priority-controls button:disabled {
+    opacity: 0.2;
+    cursor: not-allowed;
+}
+
+.wa-title-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--tx);
+    font-weight: 700;
+    font-size: 0.9rem;
+    outline: none;
+    padding: 4px 0;
+}
+
+.wa-remove-btn {
+    background: transparent;
+    border: none;
+    color: var(--tx3);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.wa-remove-btn:hover {
+    color: var(--err);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.wa-card-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    padding: 15px;
+}
+
+.wa-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.wa-field label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--tx3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.wa-select-v2 {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bg);
+    color: var(--tx);
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.wa-select-v2:focus {
+    border-color: var(--acc);
+}
+
+.wa-help {
+    margin: 5px 0 0;
+    font-size: 0.65rem;
+    color: var(--tx3);
+    font-style: italic;
+}

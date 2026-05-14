@@ -14,6 +14,8 @@ import { ALLOWED_REDIRECTS } from '../../../App.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
 import { sanitizeConfig, sanitizeLexicon } from '@/utils/schemaValidator.jsx';
 import { useSharing } from '@/hooks/useSharing.jsx';
+import PayPalButton from '@/components/Payment/PayPalButton.jsx';
+
 
 const BADGES = [
     { id: 'genesis', name: 'Genesis', desc: 'You started a new Conlang.', Icon: Sparkles },
@@ -36,7 +38,7 @@ const BADGES = [
     { id: 'typologist', name: 'Typologist', desc: 'Change the language typology.', Icon: Shapes },
     { id: 'archivist', name: 'Archivist', desc: 'Export a PDF or JSON Backup.', Icon: Download },
     { id: 'multiverse', name: 'Multiverse', desc: 'Create a second conlang project.', Icon: Globe },
-    { id: 'patron', name: 'Patron', desc: 'Upgrade to Conlang Engine LIVE.', Icon: Heart },
+// { id: 'patron', name: 'Patron', desc: 'Upgrade to Conlang Engine LIVE.', Icon: Heart },
 ];
 
 export default function ProfileTab() {
@@ -480,6 +482,7 @@ export default function ProfileTab() {
                 </div>
             </Card>
 
+            {/* 
             {!config.isProActive && (
                 <Card>
                     <div className="free-tier-wrapper">
@@ -492,18 +495,25 @@ export default function ProfileTab() {
                                 Support the project to unlock <b>Cloud Sync</b> and <b>Unlimited Workspaces</b>. Starting at <b>$5 USD/month</b>.
                             </p>
                             <div className="free-tier-actions">
+                                <div className="paypal-integration-area">
+                                    <PayPalButton />
+                                </div>
 
-                                <Button variant="default" className="support-btn" onClick={() => window.open('https://patreon.com/kaitosz', '_blank')}>
-                                    <div className="btn-content"><Heart size={14}/> Support on Patreon</div>
-                                </Button>
-                                <Button variant="default" className="support-alt" onClick={() => window.open('https://ko-fi.com/kaitosz', '_blank')}>
-                                    <div className="btn-content"><Coffee size={14}/> Support on Ko-fi</div>
-                                </Button>
+                                <div className="alt-support-divider">Alternative ways to support:</div>
+                                <div className="alt-support-row">
+                                    <Button variant="default" className="support-btn" onClick={() => window.open('https://patreon.com/kaitosz', '_blank')}>
+                                        <div className="btn-content"><Heart size={14}/> Patreon</div>
+                                    </Button>
+                                    <Button variant="default" className="support-alt" onClick={() => window.open('https://ko-fi.com/kaitosz', '_blank')}>
+                                        <div className="btn-content"><Coffee size={14}/> Ko-fi</div>
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </Card>
             )}
+            */}
 
             <h3 className="section-title mt-10 mb-5">📊 Language Analytics</h3>
             <div className="analytics-grid">
