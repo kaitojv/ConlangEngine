@@ -110,30 +110,6 @@ export const RuleRow = ({ rule, onUpdate, onDelete, allWordClasses }) => {
         </div>
 
         <div className="form-group">
-          <label className="rule-label" style={{ color: 'var(--acc)' }}>Word Assist Trigger</label>
-          <select 
-            name="waTrigger" 
-            className="fi" 
-            style={{ border: '1px solid var(--acc-o)' }}
-            value={rule.waTrigger || ''} 
-            onChange={handleChange}
-          >
-            <option value="">None</option>
-            <option value="past">Past Tense</option>
-            <option value="future">Future Tense</option>
-            <option value="perfect">Perfect Tense</option>
-            <option value="plural">Plural (Noun)</option>
-            <option value="negative">Negative</option>
-            <option value="gerund">Gerund (-ing)</option>
-            <option value="passive">Passive Voice</option>
-            <option value="possessive">Possessive ('s)</option>
-            <option value="agentive">Agentive (-er/or)</option>
-            <option value="comparative">Comparative (-er)</option>
-            <option value="superlative">Superlative (-est)</option>
-          </select>
-        </div>
-
-        <div className="form-group">
           <label className="rule-label">Gloss / Meaning</label>
           <input 
             type="text" 

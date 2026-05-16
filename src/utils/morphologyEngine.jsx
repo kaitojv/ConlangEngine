@@ -93,7 +93,6 @@ export const applyRuleToWord = (baseWord, rule, grammarRules, vowels, consonants
 
         const isVowel = checkAtEdge(vowelList);
         const isOther = checkAtEdge(otherList);
-        // Consonant is either explicitly in the list OR just not a vowel/other
         const isCons = checkAtEdge(consList) || (!isVowel && !isOther);
 
         if (rule.condition === 'vowel' && !isVowel) return null;
@@ -108,12 +107,11 @@ export const applyRuleToWord = (baseWord, rule, grammarRules, vowels, consonants
             const pattern = parts[0].trim();
             const replacement = parts[1].trim();
             try {
-                // We use 'gi' for global and case-insensitive matching
                 const regex = new RegExp(pattern, 'gi');
                 return baseWord.replace(regex, replacement);
             } catch (e) {
                 console.error("Invalid Regex rule:", pattern);
-                return baseWord; // Return unmodified word if the user's regex crashes
+                return baseWord;
             }
         }
     }
@@ -130,7 +128,7 @@ export const applyRuleToWord = (baseWord, rule, grammarRules, vowels, consonants
     } else if (type === 'infix') {
         // 1. Handle @V position (after first vowel)
         if (position === 'V' && vowels) {
-            const vowelList = vowels.split(',').map(v => v.trim().split('=')[0]); // Use IPA part of "u=ú"
+            const vowelList = vowels.split(',').map(v => v.trim().split('=')[0].toLowerCase());
             for (let i = 0; i < baseWord.length; i++) {
                 if (vowelList.includes(baseWord[i].toLowerCase())) {
                     return baseWord.slice(0, i + 1) + clean + baseWord.slice(i + 1);
@@ -139,7 +137,14 @@ export const applyRuleToWord = (baseWord, rule, grammarRules, vowels, consonants
         }
         
         // 2. Handle @C position (after first consonant)
-        // (Optional expansion, but good for completeness)
+        if (position === 'C') {
+             const vowelList = vowels ? vowels.split(',').map(v => v.trim().split('=')[0].toLowerCase()) : [];
+             for (let i = 0; i < baseWord.length; i++) {
+                if (!vowelList.includes(baseWord[i].toLowerCase())) {
+                    return baseWord.slice(0, i + 1) + clean + baseWord.slice(i + 1);
+                }
+            }
+        }
         
         // Default: Insert in the absolute middle
         const middle = Math.floor(baseWord.length / 2);
@@ -147,6 +152,18 @@ export const applyRuleToWord = (baseWord, rule, grammarRules, vowels, consonants
     }
     
     return baseWord;
+};
+
+// Simple helper for person agreement affixes
+export const applyAffixToBase = (base, affix) => {
+    if (!affix || !base) return base;
+    if (affix.startsWith('-') && affix.endsWith('-')) {
+        const middle = Math.floor(base.length / 2);
+        return base.slice(0, middle) + affix.replace(/-/g, '') + base.slice(middle);
+    }
+    if (affix.startsWith('-')) return base + affix.slice(1);
+    if (affix.endsWith('-')) return affix.slice(0, -1) + base;
+    return base + affix; // Fallback to suffix
 };
 
 /**

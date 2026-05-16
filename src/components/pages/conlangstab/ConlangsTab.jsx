@@ -96,10 +96,20 @@ export default function ConlangsTab() {
         // Back up whatever they were just working on
         saveProjectToArchive(useConfigStore.getState(), useLexiconStore.getState().lexicon);
         
-        // Wipe the slate clean for the new language
+        // Wipe the slate clean for the new language but preserve account-wide settings
         const newId = `local_${Date.now()}`;
+        const { isProActive, theme, colors, autoReturnToLexicon } = useConfigStore.getState();
+        
         setLexicon([]);
-        setFullConfig({ ...INITIAL_CONFIG, projectId: newId, conlangName: 'New Conlang' });
+        setFullConfig({ 
+            ...INITIAL_CONFIG, 
+            projectId: newId, 
+            conlangName: 'New Conlang',
+            isProActive,
+            theme,
+            colors,
+            autoReturnToLexicon
+        });
         
         // Send them over to the settings to start customizing
         navigate('/settings');
@@ -133,8 +143,17 @@ export default function ConlangsTab() {
         
         // If they deleted the language they were currently viewing, give them a fresh one
         if (config.projectId === id) {
+            const { isProActive, theme, colors, autoReturnToLexicon } = useConfigStore.getState();
             setLexicon([]);
-            setFullConfig({ ...INITIAL_CONFIG, projectId: `local_${Date.now()}` });
+            setFullConfig({ 
+                ...INITIAL_CONFIG, 
+                projectId: `local_${Date.now()}`,
+                conlangName: 'New Conlang',
+                isProActive,
+                theme,
+                colors,
+                autoReturnToLexicon
+            });
         }
     };
 
