@@ -1,7 +1,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
-import { Menu, Home, Printer, Save, FolderUp, User, Cloud, FileText, Table, FileEdit, Download } from 'lucide-react';
+import { Menu, Home, Printer, Save, FolderUp, User, Cloud, FileText, Table, FileEdit, Download, Gamepad } from 'lucide-react';
 
 // Bring in our UI components and styling
 import Button from '../../UI/Buttons/Buttons.jsx';
@@ -16,6 +16,7 @@ import { generateConlangPDF } from '../../../utils/pdfGenerator.jsx';
 import { generateObsidianMarkdown } from '../../../utils/obsidianExporter.jsx';
 import { generateSheetsExport } from '../../../utils/sheetsExporter.jsx';
 import { generateDocxExport } from '../../../utils/docxExporter.jsx';
+import { exportMinecraftResourcePack } from '../../../utils/minecraftExporter.jsx';
 import { ExportModal } from './ExportModal.jsx';
 import { sanitizeBackup } from '../../../utils/schemaValidator.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
@@ -144,6 +145,8 @@ export default function Header({ openMenu }) {
             generateObsidianMarkdown(config, transliteratedLexicon, options);
         } else if (exportType === 'sheets') {
             generateSheetsExport(config, lexicon, options);
+        } else if (exportType === 'minecraft') {
+            exportMinecraftResourcePack(config, template, options);
         }
         
         setExportType(null);
@@ -190,6 +193,9 @@ export default function Header({ openMenu }) {
                                 </button>
                                 <button className="export-opt" onClick={() => setExportType('sheets')}>
                                     <Table size={14} /> Sheets (CSV)
+                                </button>
+                                <button className="export-opt" onClick={() => setExportType('minecraft')}>
+                                    <Gamepad size={14} /> Minecraft Pack
                                 </button>
                             </div>
                         </div>

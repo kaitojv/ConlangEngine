@@ -39,6 +39,17 @@ export function useSharing(session) {
             }, { onConflict: 'project_id' });
 
             if (error) throw error;
+
+            // If logged in, also push to the conlangs table for syncing across devices
+            if (session?.user?.id) {
+                const { error: conlangError } = await supabase.from('conlangs').upsert({ 
+                    user_id: session.user.id, 
+                    project_id: currentProjectId, 
+                    project_data: payload 
+                }, { onConflict: 'project_id' });
+
+                if (conlangError) throw conlangError;
+            }
             
             if (isManualSync) {
                 toast.success('Cloud Sync Complete!');

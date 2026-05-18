@@ -310,3 +310,355 @@ input:checked + .slider:before {
 .slider.round:before {
     border-radius: 50%;
 }
+
+/* MINECRAFT EXPORTER WIZARD STYLES */
+.export-modal.minecraft-modal-wide {
+    width: 980px;
+    max-width: 95%;
+}
+
+.minecraft-wizard-layout {
+    display: flex;
+    gap: 24px;
+    align-items: stretch;
+    text-align: left;
+}
+
+.mc-settings-panel {
+    flex: 1;
+    max-width: 380px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 12px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.mc-mapper-panel {
+    flex: 1.5;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 12px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+}
+
+.mc-settings-panel .panel-title,
+.mc-mapper-panel .panel-title {
+    margin: 0 0 16px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #f8fafc;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding-bottom: 10px;
+}
+
+.mc-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0; /* Prevents flex children from breaking layouts */
+}
+
+.mc-field label {
+    color: #94a3b8;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.mc-field input,
+.mc-field select {
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: white;
+    font-size: 0.85rem;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.mc-field input:focus,
+.mc-field select:focus {
+    border-color: #8b5cf6;
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+.mc-field-row {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.mc-field-row .mc-field {
+    flex: 1;
+    min-width: 0; /* Allow the fields to shrink in the row */
+}
+
+.mc-field small {
+    color: #64748b;
+    font-size: 0.65rem;
+    margin-top: 2px;
+}
+
+.mc-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    color: #cbd5e1;
+    font-size: 0.8rem;
+    margin-top: 4px;
+}
+
+.mc-checkbox-label input[type="checkbox"] {
+    accent-color: #8b5cf6;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.mc-preview-card {
+    margin-top: 8px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+    padding-top: 16px;
+}
+
+.mc-preview-card h4 {
+    margin: 0 0 8px;
+    font-size: 0.75rem;
+    color: #a855f7;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.mc-code-box {
+    background: #080812;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 12px;
+    overflow-x: auto;
+    max-height: 175px; /* Increased to fit the code content nicely without scrolling */
+}
+
+.mc-code-box pre {
+    margin: 0;
+    font-family: 'Fira Code', 'Courier New', Courier, monospace;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    color: #a78bfa;
+    text-align: left;
+}
+
+.mc-mapper-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.mc-progress-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 9999px;
+}
+
+.mc-mapper-desc {
+    color: #94a3b8;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    margin: 0 0 16px;
+}
+
+.mc-tabs {
+    display: flex;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 3px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    margin-bottom: 14px;
+}
+
+.mc-tab-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 6px 12px;
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mc-tab-btn:hover {
+    color: #e2e8f0;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.mc-tab-btn.active {
+    background: rgba(139, 92, 246, 0.12);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    color: #c084fc;
+}
+
+.mc-keys-scroll {
+    flex: 1;
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px 14px 10px 10px; /* Added right padding for scrollbar clearance */
+}
+
+.mc-keys-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.mc-keys-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.mc-keys-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 99px;
+}
+
+.mc-keys-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.mc-keys-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mc-key-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    padding: 10px 14px;
+    border-radius: 8px;
+    transition: all 0.2s;
+    gap: 16px;
+    min-height: 56px; /* Restrict vertical squishing */
+    box-sizing: border-box;
+}
+
+.mc-key-card:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mc-key-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 0; /* Extremely important for flex text truncation and responsive shrinkage */
+}
+
+.mc-eng {
+    color: #f1f5f9;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mc-key-id {
+    color: #475569;
+    font-size: 0.62rem;
+    font-family: monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mc-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    position: relative;
+    flex-shrink: 0; /* Keep the inputs full size */
+}
+
+.mc-input-wrapper input {
+    width: 220px;
+    max-width: 100%;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: white;
+    font-size: 0.78rem;
+    text-align: right;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.mc-input-wrapper input.auto-matched {
+    border-color: rgba(139, 92, 246, 0.3);
+    background: rgba(139, 92, 246, 0.03);
+    color: #d8b4fe;
+}
+
+.mc-input-wrapper input:focus {
+    border-color: #8b5cf6;
+    background: rgba(0, 0, 0, 0.5);
+    text-align: left;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.1);
+}
+
+.mc-match-badge {
+    color: #a78bfa;
+    font-size: 0.58rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: rgba(139, 92, 246, 0.15);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    padding: 1px 5px;
+    border-radius: 3px;
+}
+
+/* RESPONSIVE LAYOUT BREAKPOINTS */
+@media (max-width: 900px) {
+    .minecraft-wizard-layout {
+        flex-direction: column;
+    }
+    .mc-settings-panel {
+        max-width: 100%;
+    }
+    .mc-input-wrapper input {
+        width: 160px;
+    }
+}
