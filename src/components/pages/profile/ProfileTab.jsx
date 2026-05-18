@@ -320,14 +320,54 @@ export default function ProfileTab() {
         setSyncStatus('⏳ Fetching cloud projects...');
 
         try {
-            const { data: projects, error } = await supabase
+            // Fetch from conlangs
+            const { data: conlangsData, error: conlangsError } = await supabase
                 .from('conlangs')
-                .select('project_id, project_data')
+                .select('project_id, project_data, updated_at')
                 .eq('user_id', session.user.id);
 
-            if (error) throw error;
+            if (conlangsError) throw conlangsError;
+
+            // Fetch from conlang_snapshots
+            const { data: snapshotsData, error: snapshotsError } = await supabase
+                .from('conlang_snapshots')
+                .select('project_id, project_data, created_at')
+                .eq('user_id', session.user.id);
+
+            if (snapshotsError) throw snapshotsError;
+
+            const projectMap = new Map();
+
+            // Process conlangs first
+            if (conlangsData) {
+                for (const p of conlangsData) {
+                    projectMap.set(p.project_id, {
+                        project_id: p.project_id,
+                        project_data: p.project_data,
+                        updated_at: p.updated_at
+                    });
+                }
+            }
+
+            // Process snapshots and override if newer or if it doesn't exist in conlangs
+            if (snapshotsData) {
+                for (const p of snapshotsData) {
+                    const existing = projectMap.get(p.project_id);
+                    const snapshotTime = p.created_at;
+                    
+                    if (!existing || !existing.updated_at || new Date(snapshotTime) > new Date(existing.updated_at)) {
+                        projectMap.set(p.project_id, {
+                            project_id: p.project_id,
+                            project_data: p.project_data,
+                            updated_at: snapshotTime
+                        });
+                    }
+                }
+            }
+
+            const projects = Array.from(projectMap.values());
             
-            if (!projects || projects.length === 0) {
+            if (projects.length === 0) {
                 setSyncStatus('ℹ️ No projects found in the cloud for your account.');
                 setTimeout(() => setSyncStatus(''), 3000);
                 return;
