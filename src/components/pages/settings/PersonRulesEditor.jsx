@@ -183,12 +183,25 @@ export default function PersonRulesEditor() {
         if (viewMode === 'matrix') {
             const initialData = {};
             
+            let nextPersons = {};
+            let nextNumbers = {};
+            let nextGenders = {};
+
             // 1. Pre-fill from personRules (Subjective form)
             rules.forEach(rule => {
                 const g = rule.gender || 'General';
                 const key = `${rule.person}-${rule.number}-${g}-sub`;
                 if (rule.freeForm) {
                     initialData[key] = rule.freeForm;
+                }
+                
+                // Auto-enable checkboxes if they are defined in rules
+                if (rule.person === '4th') nextPersons['4th'] = true;
+                if (rule.number === 'C') nextNumbers['C'] = true;
+                if (rule.number === 'D') nextNumbers['D'] = true;
+                if (g && g !== 'General') {
+                    nextGenders[g] = true;
+                    nextGenders['General'] = false;
                 }
             });
 
@@ -207,16 +220,20 @@ export default function PersonRulesEditor() {
                         for (const n of activeNumbers) {
                             for (const g of activeGenders) {
                                 for (const c of cases) {
-                                    const eng = getEnglishPronoun(p, n, g === 'General' ? '' : g, c);
-                                    if (eng.toLowerCase() === trans || 
-                                        eng.split(' (')[0].toLowerCase() === trans) {
+                                    const eng = getEnglishPronoun(p, n, g === 'General' ? '' : g, c).toLowerCase();
+                                    
+                                    // Exact match to avoid false positives checking everything
+                                    if (eng === trans) {
                                         initialData[`${p}-${n}-${g}-${c}`] = entry.word;
                                         
                                         // Auto-enable checkboxes if they contain data
-                                        if (p === '4th') setDimPersons(prev => ({ ...prev, '4th': true }));
-                                        if (n === 'C') setDimNumbers(prev => ({ ...prev, 'C': true }));
-                                        if (n === 'D') setDimNumbers(prev => ({ ...prev, 'D': true }));
-                                        if (g !== 'General') setDimGenders(prev => ({ ...prev, [g]: true, 'General': false }));
+                                        if (p === '4th') nextPersons['4th'] = true;
+                                        if (n === 'C') nextNumbers['C'] = true;
+                                        if (n === 'D') nextNumbers['D'] = true;
+                                        if (g !== 'General') {
+                                            nextGenders[g] = true;
+                                            nextGenders['General'] = false;
+                                        }
                                     }
                                 }
                             }
@@ -224,6 +241,19 @@ export default function PersonRulesEditor() {
                     }
                 }
             });
+
+            // Apply batched dimension updates
+            if (Object.keys(nextPersons).length > 0) setDimPersons(prev => ({ ...prev, ...nextPersons }));
+            if (Object.keys(nextNumbers).length > 0) setDimNumbers(prev => ({ ...prev, ...nextNumbers }));
+            if (Object.keys(nextGenders).length > 0) {
+                setDimGenders(prev => {
+                    const updated = { ...prev, ...nextGenders };
+                    if (Object.keys(nextGenders).some(k => k !== 'General' && nextGenders[k])) {
+                        updated['General'] = false;
+                    }
+                    return updated;
+                });
+            }
 
             setMatrixData(initialData);
         }
