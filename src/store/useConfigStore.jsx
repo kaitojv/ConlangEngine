@@ -111,6 +111,7 @@ export const INITIAL_CONFIG = {
     alphabetGlyphs: {}, // { 'a': '\uE001', 'b': '\uE002' }
     semanticMappings: {}, // { [synsetId]: { word: '...', ipa: '...', meaning: '...' } },
     wordAssistConfig: {
+        syntaxOrder: 'QCTLJNORVMSAPG',
         triggers: [
             { id: 'obj-1', name: 'Direct Object', trigger: 'O', marker: '', type: 'trigger', position: 'suffix', priority: 4 },
             { id: 'neg-1', name: 'Negation', trigger: 'not', marker: '', type: 'word', position: 'beforeVerb', priority: 1 },

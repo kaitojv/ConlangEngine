@@ -18,7 +18,9 @@ const VALID_CONFIG_KEYS = new Set([
     'customWordClasses', 'customTags',
     'otherPhonemes', 'otherPhonemeMapping', 'skipSyllableValidation',
     'syllabificationAlgorithm', 'blockTemplates',
-    'alphabetNames', 'numberSystem'
+    'alphabetNames', 'numberSystem',
+    'numberMatrix', 'numberDerivedRules', 'timeSystemVocab', 'alphabetGlyphs',
+    'semanticMappings', 'wordAssistConfig', 'autoReturnToLexicon'
 ]);
 
 /**
@@ -70,6 +72,8 @@ export function sanitizeLexicon(rawLexicon) {
         tags: Array.isArray(entry.tags) ? entry.tags.filter(t => typeof t === 'string') : [],
         ideogram: typeof entry.ideogram === 'string' ? entry.ideogram : '',
         personCategory: typeof entry.personCategory === 'string' ? entry.personCategory : '',
+        parentRootId: entry.parentRootId !== undefined ? entry.parentRootId : null,
+        derivationRuleId: entry.derivationRuleId !== undefined ? entry.derivationRuleId : null,
         inflectionOverrides: (entry.inflectionOverrides && typeof entry.inflectionOverrides === 'object')
             ? entry.inflectionOverrides : {},
         createdAt: typeof entry.createdAt === 'number' ? entry.createdAt : Date.now()

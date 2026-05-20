@@ -564,7 +564,7 @@ const NumbersTab = () => {
                                 <label>Separator</label>
                                 <input 
                                     className="fi w-full"
-                                    value={numberSystem.settings?.separator || ' '}
+                                    value={numberSystem.settings?.separator ?? ' '}
                                     onChange={(e) => updateSystem('settings', { ...numberSystem.settings, separator: e.target.value })}
                                 />
                             </div>

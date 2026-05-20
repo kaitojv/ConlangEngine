@@ -454,13 +454,47 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
     ).length;
 
     const roleLabels = {
-        'C': 'Comparative', 'T': 'Time', 'L': 'Place', 'J': 'Adjective', 'N': 'Negation', 'O': 'Object', 'R': 'Adverb', 'M': 'Modal', 'V': 'Verb', 'S': 'Subject'
+        'Q': 'Question Word',
+        'C': 'Comparative',
+        'T': 'Time',
+        'L': 'Place',
+        'J': 'Adjective',
+        'N': 'Negation',
+        'O': 'Object',
+        'R': 'Adverb',
+        'M': 'Modal',
+        'V': 'Verb',
+        'S': 'Subject',
+        'A': 'Article',
+        'P': 'Preposition',
+        'G': 'Genitive'
     };
-    let syntaxOrder = wa.syntaxOrder || 'CTLJNORVMS';
+    let syntaxOrder = wa.syntaxOrder || 'QCTLJNORVMSAPG';
     // Ensure all defined roles are present in the order string
     Object.keys(roleLabels).forEach(r => {
         if (!syntaxOrder.includes(r)) syntaxOrder += r;
     });
+
+    const [draggedRoleIdx, setDraggedRoleIdx] = useState(null);
+
+    const handleRoleDragStart = (e, index) => {
+        setDraggedRoleIdx(index);
+        e.dataTransfer.effectAllowed = "move";
+    };
+
+    const handleRoleDragOver = (e) => {
+        e.preventDefault();
+    };
+
+    const handleRoleDrop = (e, targetIndex) => {
+        e.preventDefault();
+        if (draggedRoleIdx === null || draggedRoleIdx === targetIndex) return;
+        const arr = syntaxOrder.split('');
+        const [moved] = arr.splice(draggedRoleIdx, 1);
+        arr.splice(targetIndex, 0, moved);
+        updateConfig({ wordAssistConfig: { ...wa, syntaxOrder: arr.join('') } });
+        setDraggedRoleIdx(null);
+    };
 
     const moveRole = (idx, dir) => {
         const arr = syntaxOrder.split('');
@@ -475,23 +509,40 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
         <div className="wa-settings-container-v2">
 
             {/* Syntax Priority Editor */}
-            <div style={{ marginBottom: '20px', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <h4 style={{ fontSize: '0.75rem', fontWeight: 700, margin: 0, color: 'var(--acc)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Settings size={14} /> Syntactic Priority (Drag-and-Drop Order)
+            <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(0,0,0,0.25)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.2)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <h4 style={{ fontSize: '0.8rem', fontWeight: 800, margin: 0, color: 'var(--acc)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Settings size={15} /> Syntactic Priority (Drag-and-Drop Order)
                     </h4>
-                    <span style={{ fontSize: '0.6rem', color: 'var(--tx3)' }}>Reorder to change your conlang's syntax sequence</span>
+                    <span style={{ fontSize: '0.62rem', color: 'var(--tx3)' }}>Drag cards or use arrows to sort conlang syntax order</span>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {syntaxOrder.split('').map((role, idx) => (
-                        <div key={role} style={{ 
-                            display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--s2)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--bd)',
-                            fontSize: '0.65rem', fontWeight: 600
-                        }}>
+                        <div 
+                            key={role} 
+                            draggable
+                            onDragStart={(e) => handleRoleDragStart(e, idx)}
+                            onDragOver={handleRoleDragOver}
+                            onDrop={(e) => handleRoleDrop(e, idx)}
+                            style={{ 
+                                display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--s2)', padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--bd)',
+                                fontSize: '0.68rem', fontWeight: 600, cursor: 'grab', transition: 'all 0.15s ease',
+                                userSelect: 'none',
+                                opacity: draggedRoleIdx === idx ? 0.3 : 1
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.borderColor = 'var(--acc)';
+                                e.currentTarget.style.background = 'var(--s3)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.borderColor = 'var(--bd)';
+                                e.currentTarget.style.background = 'var(--s2)';
+                            }}
+                        >
                             <span>{idx + 1}. {roleLabels[role] || role}</span>
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <button onClick={() => moveRole(idx, -1)} disabled={idx === 0} style={{ padding: 0, border: 'none', background: 'none', color: 'var(--tx3)', cursor: 'pointer' }}><ChevronUp size={10}/></button>
-                                <button onClick={() => moveRole(idx, 1)} disabled={idx === syntaxOrder.length - 1} style={{ padding: 0, border: 'none', background: 'none', color: 'var(--tx3)', cursor: 'pointer' }}><ChevronDown size={10}/></button>
+                            <div style={{ display: 'flex', gap: '2px', marginLeft: '4px' }}>
+                                <button onClick={() => moveRole(idx, -1)} disabled={idx === 0} style={{ padding: 0, border: 'none', background: 'none', color: 'var(--tx3)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><ChevronUp size={11}/></button>
+                                <button onClick={() => moveRole(idx, 1)} disabled={idx === syntaxOrder.length - 1} style={{ padding: 0, border: 'none', background: 'none', color: 'var(--tx3)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><ChevronDown size={11}/></button>
                             </div>
                         </div>
                     ))}
@@ -541,9 +592,20 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
                                 {t.type === 'trigger' ? (
                                     <select className="wa-select-v2" value={t.trigger} onChange={(e) => updateTrigger(t.id, 'trigger', e.target.value)}>
                                         <option value="">Select Role...</option>
-                                        <option value="O">Object (Accusative / Patient)</option>
                                         <option value="S">Subject (Nominative / Agent)</option>
                                         <option value="V">Verb (Action)</option>
+                                        <option value="O">Object (Accusative / Patient)</option>
+                                        <option value="A">Article</option>
+                                        <option value="P">Preposition</option>
+                                        <option value="Q">Question Word</option>
+                                        <option value="G">Genitive / Possessive</option>
+                                        <option value="C">Comparative</option>
+                                        <option value="T">Time</option>
+                                        <option value="L">Place</option>
+                                        <option value="J">Adjective</option>
+                                        <option value="N">Negation</option>
+                                        <option value="R">Adverb</option>
+                                        <option value="M">Modal</option>
                                     </select>
                                 ) : (
                                     <Input 
@@ -625,6 +687,145 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
     const writingDirection = props_writingDirection || storedWritingDir;
     const isRTL            = writingDirection === 'rtl';
 
+    const reorderBreakdown = (breakdownArray) => {
+        const roleOrder = {};
+        let customOrder = waConfig.syntaxOrder;
+        let sOrder = customOrder || syntaxOrder || 'QCTLJNORVMSAPG';
+        
+        'QCTLJNORVMSAPG'.split('').forEach(r => { if (!sOrder.includes(r)) sOrder += r; });
+        sOrder.split('').forEach((r, idx) => { roleOrder[r] = idx; });
+
+        const activeTokens = breakdownArray.filter(w => w && !w.swallowed && !w.encodedInVerb);
+        activeTokens.forEach((tok, idx) => {
+            tok.originalPos = idx;
+        });
+        
+        const blocks = [];
+        let currentModifiers = [];
+        let j = 0;
+
+        while (j < activeTokens.length) {
+            const tokenObj = activeTokens[j];
+            const r = tokenObj.role;
+
+            if (r === 'P') {
+                const pBlock = {
+                    type: 'Prepositional',
+                    headRole: 'P',
+                    tokens: [tokenObj]
+                };
+                j++;
+                while (j < activeTokens.length && ['A', 'G', 'J', 'C', 'R'].includes(activeTokens[j].role)) {
+                    pBlock.tokens.push(activeTokens[j]);
+                    j++;
+                }
+                if (j < activeTokens.length && ['O', 'S'].includes(activeTokens[j].role)) {
+                    pBlock.tokens.push(activeTokens[j]);
+                    pBlock.headRole = activeTokens[j].role;
+                    j++;
+                }
+                blocks.push(pBlock);
+                continue;
+            }
+
+            if (['A', 'G', 'J', 'C', 'R'].includes(r)) {
+                currentModifiers.push(tokenObj);
+                j++;
+                continue;
+            }
+
+            if (r === 'S') {
+                blocks.push({
+                    type: 'Subject',
+                    headRole: 'S',
+                    tokens: [...currentModifiers, tokenObj]
+                });
+                currentModifiers = [];
+                j++;
+                continue;
+            }
+
+            if (r === 'O') {
+                blocks.push({
+                    type: 'Object',
+                    headRole: 'O',
+                    tokens: [...currentModifiers, tokenObj]
+                });
+                currentModifiers = [];
+                j++;
+                continue;
+            }
+
+            if (r === 'V' || r === 'M' || r === 'N') {
+                if (currentModifiers.length > 0) {
+                    blocks.push({
+                        type: 'Standalone',
+                        headRole: currentModifiers[0].role,
+                        tokens: currentModifiers
+                    });
+                    currentModifiers = [];
+                }
+                let lastBlock = blocks[blocks.length - 1];
+                if (lastBlock && lastBlock.type === 'Verb') {
+                    lastBlock.tokens.push(tokenObj);
+                } else {
+                    blocks.push({
+                        type: 'Verb',
+                        headRole: 'V',
+                        tokens: [tokenObj]
+                    });
+                }
+                j++;
+                continue;
+            }
+
+            if (currentModifiers.length > 0) {
+                blocks.push({
+                    type: 'Standalone',
+                    headRole: currentModifiers[0].role,
+                    tokens: currentModifiers
+                });
+                currentModifiers = [];
+            }
+            blocks.push({
+                type: 'Standalone',
+                headRole: r,
+                tokens: [tokenObj]
+            });
+            j++;
+        }
+
+        if (currentModifiers.length > 0) {
+            blocks.push({
+                type: 'Standalone',
+                headRole: currentModifiers[0].role,
+                tokens: currentModifiers
+            });
+        }
+
+        blocks.sort((a, b) => {
+            const weightA = roleOrder[a.headRole] ?? 99;
+            const weightB = roleOrder[b.headRole] ?? 99;
+            return weightA - weightB;
+        });
+
+        blocks.forEach(block => {
+            block.tokens.sort((a, b) => {
+                // Prepositions always come first
+                if (a.role === 'P' && b.role !== 'P') return -1;
+                if (b.role === 'P' && a.role !== 'P') return 1;
+                // Otherwise, preserve their original relative position in the sentence
+                return (a.originalPos ?? 0) - (b.originalPos ?? 0);
+            });
+        });
+
+        const result = [];
+        blocks.forEach(block => {
+            result.push(...block.tokens);
+        });
+        return result;
+    };
+
 
     // Auto-save and content sync
     useEffect(() => {
@@ -647,9 +848,20 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
             if (pg.startsWith('1')) person = '1st';
             else if (pg.startsWith('2')) person = '2nd';
             else if (pg.startsWith('3')) person = '3rd';
-            if (pg.toUpperCase().includes('P')) number = 'P';
+            else if (pg.startsWith('4')) person = '4th';
+            
+            const upperPg = pg.toUpperCase();
+            if (upperPg.includes('P')) number = 'P';
+            else if (upperPg.includes('C')) number = 'C';
+            else if (upperPg.includes('D')) number = 'D';
+            else if (upperPg.includes('B')) number = 'B';
+            
             if (/masc/i.test(pg)) gender = 'Masc';
             else if (/fem/i.test(pg)) gender = 'Fem';
+            else if (/neut/i.test(pg)) gender = 'Neut';
+            else if (/anim/i.test(pg)) gender = 'Anim';
+            else if (/inan/i.test(pg)) gender = 'Inan';
+            
             const fap = parts[1].trim().split('/');
             return { id: `pr-${pg}`, person, number, gender, freeForm: fap[0]?.trim() || '', affix: fap[1]?.trim() || '', appliesTo: 'all' };
         }).filter(Boolean);
@@ -770,6 +982,10 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         if (definitions.includes(query)) return true;
         if (definitions.some(d => d === query || d === 'to ' + query)) return true;
 
+        // For short function words/prepositions, strictly require an exact match in definitions.
+        // Prevent them from matching compound verb infinitives (like "to go") or phrases (like "of course").
+        if (FUNCTION_WORDS.has(query)) return false;
+
         // Word boundary match with broad boundaries
         const esc = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         try {
@@ -813,8 +1029,14 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         if (lower.endsWith('s') && !lower.endsWith('ss')) {
              if (VERB_3SG.has(lower)) return { lemma: lower.endsWith('es') ? lower.slice(0, -2) : lower.slice(0, -1), person: '3rd', number: 'S', tense: 'present' };
              if (S_NOUNS_SING.has(lower)) return { lemma: lower, singular: true, wordClass: 'Noun' };
-             if (['he','she','it'].includes(prev1)) return { lemma: lower.endsWith('es') ? lower.slice(0, -2) : lower.slice(0, -1), person: '3rd', number: 'S' };
-             const singular = lower.endsWith('ies') ? lower.slice(0, -3) + 'y' : lower.endsWith('es') ? lower.slice(0, -2) : lower.slice(0, -1);
+             
+             const stem = lower.endsWith('ies') ? lower.slice(0, -3) + 'y' : lower.endsWith('es') ? lower.slice(0, -2) : lower.slice(0, -1);
+             const verbMatch = lexicon.find(e => e.translation && matchesTranslation(e.translation, stem) && e.wordClass?.toLowerCase().includes('verb'));
+             
+             if (verbMatch || ['he','she','it'].includes(prev1)) {
+                 return { lemma: stem, person: '3rd', number: 'S', tense: 'present' };
+             }
+             const singular = stem;
              return { lemma: singular, isPlural: true };
         }
 
@@ -884,16 +1106,12 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         const line      = val.slice(lineStart, lineEnd).trim();
         if (!line) return null;
 
-        const rawTokens = line.split(/\s+/);
-        const tokens = rawTokens.map(t => t.replace(/[.,!?()[\]{}"`:;]/g, ''));
-        const tokenData = tokens.map((t, idx) => {
-            const low = t.toLowerCase();
-            const info = lemmatize(low, { prevTokens: tokens.slice(0, idx) });
-            const context = getDefiniteness(idx, rawTokens.map(rt => ({ original: rt.replace(/[.,!?()[\]{}"`:;]/g, '') })));
-            return { original: t, low, info, context };
-        });
+        const PREPOSITIONS = new Set(['of', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'from', 'about', 'under', 'over', 'into', 'through', 'after', 'before', 'between', 'during', 'without', 'against']);
+        const ARTICLES = new Set(['the', 'a', 'an']);
+        const QUESTION_WORDS = new Set(['who', 'whom', 'whose', 'what', 'which', 'where', 'when', 'why', 'how']);
+        const TIME_WORDS = new Set(['today', 'yesterday', 'tomorrow', 'now', 'then', 'tonight', 'always', 'never', 'sometimes', 'soon', 'already', 'still', 'yet']);
+        const PLACE_WORDS = new Set(['here', 'there', 'everywhere', 'nowhere', 'somewhere', 'anywhere', 'up', 'down', 'left', 'right', 'inside', 'outside']);
 
-        const breakdown = [];
         const resolveTempo = (stack) => {
             const s = stack.join(' ');
             if (s === 'will') return 'future';
@@ -906,332 +1124,406 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
             return null;
         };
 
-        let i = 0;
-        let activeTense = null;
-        let comparisonTargetIdx = -1;
-        let phraseIsNegative = false;
-        let auxiliaryStack = [];
-        
-        // ── Step 0: Pre-scan for role hints ──
-        let verbIdx = -1;
-        const scanRoles = tokens.map((q, idx) => {
-            const low = q.toLowerCase();
-            if (PRONOUN_MAP[low]) return PRONOUN_MAP[low].role || 'O';
-            if (['the','a','an'].includes(low)) return 'ART';
-            if (COPULA_VERBS.has(low)) return 'COP';
-            if (MODAL_VERBS.has(low) || (tokens[idx+1] === 'to' && MODAL_VERBS.has(low + ' to'))) return 'V';
-            // Simple heuristic: if it follows an auxiliary or is a known verb, it's a verb
-            const info = tokenData[idx].info;
-            if (info.tense && info.tense !== 'present') return 'V';
-            return null;
-        });
-        
-        // Find the first verb to determine where objects might start
-        const firstVerbIdx = tokens.findIndex((t, idx) => 
-            scanRoles[idx] === 'V' || 
-            ['will','would','have','has','had','am','is','are','was','were','do','does','did'].includes(t.toLowerCase()) ||
-            lexicon.some(e => e.wordClass?.toLowerCase().includes('verb') && matchesTranslation(e.translation, tokenData[idx].info.lemma))
-        );
-        
-        // Phrase is transitive if there's anything after the first verb that isn't a particle/conjunction
-        let hasObject = firstVerbIdx !== -1 && tokens.slice(firstVerbIdx + 1).some((t, idx) => {
-            const low = t.toLowerCase();
-            if (['the','a','an','and','or','in','on','at','to','not'].includes(low)) return false;
-            if (PRONOUN_MAP[low]) return true;
-            const info = tokenData[firstVerbIdx + 1 + idx].info;
-            const match = lexicon.find(e => e.translation && matchesTranslation(e.translation, info.lemma));
-            return match?.wordClass?.toLowerCase().includes('noun') || !match; // Assume unknown is noun/obj
-        });
-
-        // ── Step 1: Main Loop ──
-        while (i < tokens.length) {
-            const q = tokens[i].toLowerCase();
-            const fullForm = rawTokens[i];
-            const info = tokenData[i].info;
-            const context = tokenData[i].context;
-            const lemma = info.lemma;
-            let role = 'O'; 
-            let isAuxiliary = false;
-            let isArticle = false;
-            let personRule = null;
-
-            if (q === 'than') {
-                comparisonTargetIdx = i + 1;
-                if (tokens[i+1] && ['the','a','an'].includes(tokens[i+1].toLowerCase())) comparisonTargetIdx = i + 2;
-                breakdown[i] = { original: fullForm, conlang: '', role: 'C', swallowed: true };
-                i++; continue;
-            }
-
-            // Handling 'to' as a swallowed infinitive marker
-            if (q === 'to' && tokens[i+1]) {
-                const nextLow = tokens[i+1].toLowerCase();
-                const nextInfo = lemmatize(nextLow);
-                const nextMatch = lexicon.find(e => e.translation && matchesTranslation(e.translation, nextInfo.lemma));
-                
-                // It's a verb if: lexicon says so, it's irregular, OR it's not a common noun/article
-                const isNextVerb = nextMatch?.wordClass?.toLowerCase().includes('verb') || 
-                                 IRREGULAR_VERBS[nextLow] || 
-                                 (!['the','a','an','my','your','his','her','its','our','their'].includes(nextLow) && !ANIMAL_WORDS_EN.has(nextLow) && !HUMAN_WORDS_EN.has(nextLow));
-                
-                if (isNextVerb) {
-                    breakdown[i] = { original: fullForm, conlang: `[${q}]`, role: 'C', swallowed: true };
-                    i++; continue;
-                }
-            }
-
-            if (['will', 'would', 'shall', 'should', 'can', 'could', 'may', 'might', 'must'].includes(q)) { auxiliaryStack.push(q); isAuxiliary = true; }
-            else if (['have', 'has', 'had'].includes(q)) { auxiliaryStack.push(q); isAuxiliary = true; }
-            else if (['am', 'is', 'are'].includes(q)) { auxiliaryStack.push('be_pres'); isAuxiliary = true; }
-            else if (['was', 'were'].includes(q)) { auxiliaryStack.push('be_past'); isAuxiliary = true; }
-            else if (['do', 'does', 'did'].includes(q)) { auxiliaryStack.push('do'); isAuxiliary = true; }
-            else if (q === 'been') { auxiliaryStack.push('been'); isAuxiliary = true; }
-            else if (['the', 'a', 'an'].includes(q)) { isArticle = true; }
-
-            if (MODAL_VERBS.has(q) || (tokens[i+1] === 'to' && MODAL_VERBS.has(q + ' to'))) {
-                role = 'M'; isAuxiliary = true;
-            }
-
-            const matches = lexicon.filter(e => e.translation && matchesTranslation(e.translation, lemma));
-            const match = matches.sort((a, b) => {
-                const ta = (a.translation || '').toLowerCase();
-                const tb = (b.translation || '').toLowerCase();
-                const aExact = ta === lemma || ta.split(/[,;/]/).map(d => d.trim().toLowerCase()).includes(lemma);
-                const bExact = tb === lemma || tb.split(/[,;/]/).map(d => d.trim().toLowerCase()).includes(lemma);
-                if (aExact && !bExact) return -1;
-                if (!aExact && bExact) return 1;
-                return (a.translation || '').length - (b.translation || '').length;
-            })[0];
-            const isLexiconVerb = match?.wordClass?.toLowerCase().includes('verb');
-
-            // Negation Role
-            if (q === 'not' || q === "n't") {
-                role = 'N';
-                phraseIsNegative = true;
-            } else if (info.person || info.number || PRONOUN_MAP[q]) {
-                role = info.role || (info.case === 'genitive' ? 'O' : 'S');
-                if (role === 'S') personRule = personRulesArray.find(r => r.person === info.person && r.number === info.number && (!r.gender || r.gender === info.gender));
-            } else if (isArticle) {
-                role = 'O';
-            } else if (isAuxiliary || MODAL_VERBS.has(q) || isLexiconVerb) {
-                role = 'V';
-                verbIdx = i;
-            } else {
-                // Heuristic for O vs IO vs S
-                if (verbIdx === -1) role = 'S';
-                else {
-                    // Predicative check (Block 9.1)
-                    const prevVerb = tokens.slice(0, i).reverse().find(v => COPULA_VERBS.has(v.toLowerCase()));
-                    if (prevVerb) role = 'J';
-                    else {
-                        // Double object check (Block 9.2)
-                        const hasLaterNoun = tokens.slice(i + 1).some(t => !['the','a','an','and','or','in','on','at'].includes(t.toLowerCase()));
-                        if (hasLaterNoun && (PRONOUN_MAP[q] || HUMAN_WORDS_EN.has(q))) role = 'IO';
-                        else role = 'O';
-                        hasObject = true;
-                    }
-                }
-            }
-
-            // ── Step 2: Trigger Selection ──
-            const wordMarkers = (waConfig.triggers || []).filter(t => {
-                if (t.type === 'trigger' && t.trigger === role) {
-                    // DOM & Transitivity Checks
-                    if (t.domConditions?.requiresTransitive && !hasObject) return false;
-                    return applyCaseToObject({ original: q, role, number: info.isPlural?'P':'S' }, t, match, PRONOUN_MAP[q], context);
-                }
-                if (t.type === 'word' && t.trigger.toLowerCase().split(',').some(s => s.trim() === q)) return true;
-                if (t.type === 'suffix' && q.endsWith(t.trigger.toLowerCase().replace(/^-/, ''))) return true;
-                return false;
+        const parseClause = (clauseText) => {
+            const rawTokens = clauseText.trim().split(/\s+/).filter(Boolean);
+            const tokens = rawTokens.map(t => t.replace(/[.,!?()[\]{}"`:;]/g, ''));
+            const tokenData = tokens.map((t, idx) => {
+                const low = t.toLowerCase();
+                const info = lemmatize(low, { prevTokens: tokens.slice(0, idx) });
+                const context = getDefiniteness(idx, rawTokens.map(rt => ({ original: rt.replace(/[.,!?()[\]{}"`:;]/g, '') })));
+                return { original: t, low, info, context };
             });
 
-            if (i === comparisonTargetIdx) {
-                const tt = (waConfig.triggers || []).find(t => t.position === 'thanTarget');
-                if (tt) wordMarkers.push(tt);
-            }
+            // Pre-classify tokens to find first verb and nouns
+            const preClassified = tokens.map((t, idx) => {
+                const low = t.toLowerCase();
+                const info = tokenData[idx].info;
+                const lemma = info.lemma;
 
-            if (match || personRule) {
-                let conlang = (match ? match.word : personRule.freeForm).replace(/\*/g, '');
-                let inflected = false;
-                let appliedRuleName = '';
-                let appliedRuleSource = '';
+                if (QUESTION_WORDS.has(low)) return 'Q';
+                if (PREPOSITIONS.has(low)) return 'P';
+                if (ARTICLES.has(low)) return 'A';
+                if (low === 'not' || low === "n't") return 'N';
+                if (COPULA_VERBS.has(low) || MODAL_VERBS.has(low) || ['will','would','have','has','had','am','is','are','was','were','do','does','did','been'].includes(low)) return 'M';
+                if (TIME_WORDS.has(low)) return 'T';
+                if (PLACE_WORDS.has(low)) return 'L';
 
-                if (match?.wordClass === 'Verb' && !isAuxiliary) {
-                    activeTense = resolveTempo(auxiliaryStack) || info.tense;
-                    auxiliaryStack = [];
-                    verbIdx = i;
+                // Pronoun map check
+                if (PRONOUN_MAP[low]) {
+                    const pm = PRONOUN_MAP[low];
+                    if (pm.case === 'genitive') return 'G';
+                    return pm.role || 'NOUN';
                 }
 
-                if (wordMarkers.length === 0) {
-                    const possibleRules = [];
-                    if (activeTense) possibleRules.push(findGrammarRule(activeTense));
-                    if (info.isPlural) possibleRules.push(findGrammarRule('plural'));
-                    if (info.case === 'genitive' || q.endsWith("'s")) possibleRules.push(findGrammarRule('genitive', 'possessive'));
-                    if (info.case === 'objective') possibleRules.push(findGrammarRule('objective', 'accusative'));
-                    if (info.case === 'comparative') possibleRules.push(findGrammarRule('comparative'));
-                    if (info.case === 'superlative') possibleRules.push(findGrammarRule('superlative'));
+                // Lexicon check
+                const matches = lexicon.filter(e => e.translation && matchesTranslation(e.translation, lemma));
+                const match = matches.sort((a, b) => {
+                    const ta = (a.translation || '').toLowerCase();
+                    const tb = (b.translation || '').toLowerCase();
+                    const aExact = ta === lemma || ta.split(/[,;/]/).map(d => d.trim().toLowerCase()).includes(lemma);
+                    const bExact = tb === lemma || tb.split(/[,;/]/).map(d => d.trim().toLowerCase()).includes(lemma);
+                    if (aExact && !bExact) return -1;
+                    if (!aExact && bExact) return 1;
+                    return (a.translation || '').length - (b.translation || '').length;
+                })[0];
 
-                    for (const r of possibleRules) {
-                        if (r?.affix) {
-                            try {
-                                const vStore = useConfigStore.getState();
-                                conlang = applyRuleToWord(conlang, r, grammarRules, vStore.vowels, vStore.consonants, vStore.otherPhonemes);
-                                inflected = true;
-                                appliedRuleName = r.name || r.condition;
-                                appliedRuleSource = 'Grammar Rule: ' + appliedRuleName;
-                            } catch(e) { console.error(e); }
-                        }
+                if (match) {
+                    const wc = (match.wordClass || '').toLowerCase();
+                    if (wc.includes('verb')) return 'V';
+                    if (wc.includes('adj')) return 'J';
+                    if (wc.includes('adv')) return 'R';
+                    if (wc.includes('noun')) return 'NOUN';
+                }
+
+                // Suffix check
+                if (low.endsWith('ing') && !ING_NOUNS.has(low) && !ING_ADJECTIVES.has(low)) return 'V';
+                if (low.endsWith('ed') && !ED_ADJECTIVES.has(low)) return 'V';
+                if (low.endsWith('er') && !ER_BLOCKLIST.has(low)) {
+                    const stem = low.endsWith('ier') ? low.slice(0, -3) + 'y' : low.slice(0, -2);
+                    if (lexicon.some(e => e.word.replace(/\*/g,'').toLowerCase() === stem && e.wordClass === 'Adjective')) return 'J';
+                }
+
+                return 'NOUN';
+            });
+
+            // Find first verb index
+            const firstVerbIdx = preClassified.findIndex(role => role === 'V' || role === 'M');
+
+            // Transitivity check
+            let hasObject = false;
+            if (firstVerbIdx !== -1) {
+                hasObject = tokens.slice(firstVerbIdx + 1).some((t, idx) => {
+                    const globalIdx = firstVerbIdx + 1 + idx;
+                    const role = preClassified[globalIdx];
+                    return role === 'NOUN' || role === 'O' || PRONOUN_MAP[t.toLowerCase()]?.role === 'O';
+                });
+            }
+
+            // Assign final roles based on verb position
+            const finalRoles = preClassified.map((role, idx) => {
+                const low = tokens[idx].toLowerCase();
+                
+                if (low === 'her') {
+                    const nextRole = preClassified[idx + 1];
+                    if (nextRole === 'NOUN' || nextRole === 'J') return 'G';
+                    return 'O';
+                }
+
+                if (role === 'NOUN') {
+                    if (firstVerbIdx === -1 || idx < firstVerbIdx) return 'S';
+                    return 'O';
+                }
+
+                if (role === 'S' || role === 'O') {
+                    return role;
+                }
+
+                return role;
+            });
+
+            const breakdown = [];
+            let i = 0;
+            let activeTense = null;
+            let comparisonTargetIdx = -1;
+            let phraseIsNegative = false;
+            let auxiliaryStack = [];
+
+            // Main Loop
+            while (i < tokens.length) {
+                const q = tokens[i].toLowerCase();
+                const fullForm = rawTokens[i];
+                const info = tokenData[i].info;
+                const context = tokenData[i].context;
+                const lemma = info.lemma;
+                const role = finalRoles[i];
+
+                let isAuxiliary = (role === 'M');
+                let isArticle = (role === 'A');
+                let personRule = null;
+
+                if (q === 'than') {
+                    comparisonTargetIdx = i + 1;
+                    if (tokens[i+1] && ['the','a','an'].includes(tokens[i+1].toLowerCase())) comparisonTargetIdx = i + 2;
+                    breakdown[i] = { original: fullForm, conlang: '', role: 'C', swallowed: true };
+                    i++; continue;
+                }
+
+                // Swallow infinitive marker 'to'
+                if (q === 'to' && tokens[i+1]) {
+                    const nextLow = tokens[i+1].toLowerCase();
+                    const nextInfo = lemmatize(nextLow);
+                    const nextMatch = lexicon.find(e => e.translation && matchesTranslation(e.translation, nextInfo.lemma));
+                    const isNextVerb = nextMatch?.wordClass?.toLowerCase().includes('verb') || 
+                                     IRREGULAR_VERBS[nextLow] || 
+                                     (!['the','a','an','my','your','his','her','its','our','their'].includes(nextLow) && !ANIMAL_WORDS_EN.has(nextLow) && !HUMAN_WORDS_EN.has(nextLow));
+                    
+                    if (isNextVerb) {
+                        breakdown[i] = { original: fullForm, conlang: `[${q}]`, role: 'C', swallowed: true };
+                        i++; continue;
                     }
                 }
 
-                wordMarkers.sort((a, b) => (a.priority || 0) - (b.priority || 0)).forEach(t => {
-                    if (t.position === 'prefix' || t.position === 'before') conlang = t.marker.replace(/-$/, '') + (t.position === 'before' ? ' ' : '') + conlang;
-                    else if (t.position === 'suffix' || t.position === 'after') conlang = conlang + (t.position === 'after' ? ' ' : '') + t.marker.replace(/^-/, '');
-                    else if (t.position === 'endOfSentence') phraseIsNegative = true;
-                    inflected = true;
-                    appliedRuleSource = 'Word Assist: ' + (t.name || t.trigger || t.marker);
+                if (['will', 'would', 'shall', 'should', 'can', 'could', 'may', 'might', 'must'].includes(q)) { auxiliaryStack.push(q); }
+                else if (['have', 'has', 'had'].includes(q)) { auxiliaryStack.push(q); }
+                else if (['am', 'is', 'are'].includes(q)) { auxiliaryStack.push('be_pres'); }
+                else if (['was', 'were'].includes(q)) { auxiliaryStack.push('be_past'); }
+                else if (['do', 'does', 'did'].includes(q)) { auxiliaryStack.push('do'); }
+                else if (q === 'been') { auxiliaryStack.push('been'); }
+
+                let matches = lexicon.filter(e => e.translation && matchesTranslation(e.translation, q));
+                let matchTarget = q;
+                if (matches.length === 0) {
+                    matches = lexicon.filter(e => e.translation && matchesTranslation(e.translation, lemma));
+                    matchTarget = lemma;
+                }
+                const match = matches.sort((a, b) => {
+                    const ta = (a.translation || '').toLowerCase();
+                    const tb = (b.translation || '').toLowerCase();
+                    const aExact = ta === matchTarget || ta.split(/[,;/]/).map(d => d.trim().toLowerCase()).includes(matchTarget);
+                    const bExact = tb === matchTarget || tb.split(/[,;/]/).map(d => d.trim().toLowerCase()).includes(matchTarget);
+                    if (aExact && !bExact) return -1;
+                    if (!aExact && bExact) return 1;
+                    return (a.translation || '').length - (b.translation || '').length;
+                })[0];
+
+                if (role === 'N') {
+                    phraseIsNegative = true;
+                } else if (info.person || info.number || PRONOUN_MAP[q]) {
+                    if (role === 'S') personRule = personRulesArray.find(r => r.person === info.person && r.number === info.number && (!r.gender || r.gender === info.gender));
+                }
+
+                // Word Assist triggers for this role
+                const wordMarkers = (waConfig.triggers || []).filter(t => {
+                    if (t.type === 'trigger' && t.trigger === role) {
+                        if (t.domConditions?.requiresTransitive && !hasObject) return false;
+                        return applyCaseToObject({ original: q, role, number: info.isPlural?'P':'S' }, t, match, PRONOUN_MAP[q], context);
+                    }
+                    if (t.type === 'word' && t.trigger.toLowerCase().split(',').some(s => s.trim() === q)) return true;
+                    if (t.type === 'suffix' && q.endsWith(t.trigger.toLowerCase().replace(/^-/, ''))) {
+                        const cleanTrigger = t.trigger.toLowerCase().replace(/^-/, '');
+                        if ((cleanTrigger === 's' || cleanTrigger === 'es') && (role === 'V' || role === 'M')) {
+                            return false;
+                        }
+                        return true;
+                    }
+                    return false;
                 });
 
-                breakdown[i] = {
-                    original: fullForm, conlang, found: true, entry: match, role, inflected,
-                    ruleName: appliedRuleName, ruleSource: appliedRuleSource, isAuxiliary, isArticle, personRule,
-                    swallowed: isAuxiliary || isArticle, context,
-                    animacy: getAnimacyLevel({ original: q }, match, PRONOUN_MAP[q])
-                };
+                if (match || personRule) {
+                    let conlang = (match ? match.word : personRule.freeForm).replace(/\*/g, '');
+                    let inflected = false;
+                    let appliedRuleName = '';
+                    let appliedRuleSource = '';
+
+                    if (match?.wordClass === 'Verb' && !isAuxiliary) {
+                        activeTense = resolveTempo(auxiliaryStack) || info.tense;
+                        auxiliaryStack = [];
+                    }
+
+                    if (wordMarkers.length === 0) {
+                        const possibleRules = [];
+                        if (activeTense) possibleRules.push(findGrammarRule(activeTense));
+                        if (info.isPlural) possibleRules.push(findGrammarRule('plural'));
+                        if (info.case === 'genitive' || q.endsWith("'s") || role === 'G') possibleRules.push(findGrammarRule('genitive', 'possessive'));
+                        if (info.case === 'objective' || role === 'O') possibleRules.push(findGrammarRule('objective', 'accusative'));
+                        if (info.case === 'comparative') possibleRules.push(findGrammarRule('comparative'));
+                        if (info.case === 'superlative') possibleRules.push(findGrammarRule('superlative'));
+
+                        for (const r of possibleRules) {
+                            if (r?.affix) {
+                                try {
+                                    const vStore = useConfigStore.getState();
+                                    conlang = applyRuleToWord(conlang, r, grammarRules, vStore.vowels, vStore.consonants, vStore.otherPhonemes);
+                                    inflected = true;
+                                    appliedRuleName = r.name || r.condition;
+                                    appliedRuleSource = 'Grammar Rule: ' + appliedRuleName;
+                                } catch(e) { console.error(e); }
+                            }
+                        }
+                    }
+
+                    wordMarkers.sort((a, b) => (a.priority || 0) - (b.priority || 0)).forEach(t => {
+                        if (t.position === 'prefix' || t.position === 'before') conlang = t.marker.replace(/-$/, '') + (t.position === 'before' ? ' ' : '') + conlang;
+                        else if (t.position === 'suffix' || t.position === 'after') conlang = conlang + (t.position === 'after' ? ' ' : '') + t.marker.replace(/^-/, '');
+                        else if (t.position === 'endOfSentence') phraseIsNegative = true;
+                        inflected = true;
+                        appliedRuleSource = 'Word Assist: ' + (t.name || t.trigger || t.marker);
+                    });
+
+                    breakdown[i] = {
+                        original: fullForm, conlang, found: true, entry: match, role, inflected,
+                        ruleName: appliedRuleName, ruleSource: appliedRuleSource, isAuxiliary, isArticle, personRule,
+                        swallowed: isAuxiliary || isArticle, context,
+                        animacy: getAnimacyLevel({ original: q }, match, PRONOUN_MAP[q])
+                    };
+                } else {
+                    let conlang = `[${q}]`;
+                    let inflected = false;
+                    let appliedRuleSource = '';
+
+                    wordMarkers.sort((a, b) => (a.priority || 0) - (b.priority || 0)).forEach(t => {
+                        if (t.position === 'prefix' || t.position === 'before') conlang = t.marker.replace(/-$/, '') + (t.position === 'before' ? ' ' : '') + conlang;
+                        else if (t.position === 'suffix' || t.position === 'after') conlang = conlang + (t.position === 'after' ? ' ' : '') + t.marker.replace(/^-/, '');
+                        else if (t.position === 'endOfSentence') phraseIsNegative = true;
+                        inflected = true;
+                        appliedRuleSource = 'Word Assist: ' + (t.name || t.trigger || t.marker);
+                    });
+
+                    breakdown[i] = { 
+                        original: fullForm, conlang, role, found: false, 
+                        inflected, ruleSource: appliedRuleSource,
+                        swallowed: isAuxiliary || isArticle || role === 'P',
+                        animacy: getAnimacyLevel({ original: q }, null, PRONOUN_MAP[q])
+                    };
+                }
+                i++;
+            }
+
+            return { breakdown, phraseIsNegative };
+        };
+
+        // Split by punctuation, keeping the separators
+        const parts = line.split(/([.,;:!?]+)/);
+        const segments = [];
+        for (let idx = 0; idx < parts.length; idx++) {
+            const part = parts[idx];
+            if (idx % 2 === 0) {
+                if (part.trim()) {
+                    segments.push({ type: 'text', text: part });
+                }
             } else {
-                let conlang = `[${q}]`;
-                let inflected = false;
-                let appliedRuleSource = '';
+                segments.push({ type: 'punct', text: part });
+            }
+        }
 
-                // Even if not found in lexicon, apply Word Assist triggers based on role
-                wordMarkers.sort((a, b) => (a.priority || 0) - (b.priority || 0)).forEach(t => {
-                    if (t.position === 'prefix' || t.position === 'before') conlang = t.marker.replace(/-$/, '') + (t.position === 'before' ? ' ' : '') + conlang;
-                    else if (t.position === 'suffix' || t.position === 'after') conlang = conlang + (t.position === 'after' ? ' ' : '') + t.marker.replace(/^-/, '');
-                    else if (t.position === 'endOfSentence') phraseIsNegative = true;
-                    inflected = true;
-                    appliedRuleSource = 'Word Assist: ' + (t.name || t.trigger || t.marker);
-                });
+        if (segments.length === 0) return null;
 
-                breakdown[i] = { 
-                    original: fullForm, conlang, role, found: false, 
-                    inflected, ruleSource: appliedRuleSource,
-                    swallowed: isAuxiliary || isArticle,
-                    animacy: getAnimacyLevel({ original: q }, null, PRONOUN_MAP[q])
+        const finalBFree = [];
+        const finalBAffix = [];
+        const finalBAlt = [];
+        
+        const finalRFree = [];
+        const finalRAffix = [];
+        const finalRAlt = [];
+
+        let totalPhraseIsNegative = false;
+        let hasAlt = false;
+
+        segments.forEach((seg) => {
+            if (seg.type === 'punct') {
+                const punctToken = {
+                    original: seg.text,
+                    conlang: seg.text.trim(),
+                    role: 'PUNCT',
+                    swallowed: false,
+                    found: true,
+                    isPunct: true
                 };
+                finalBFree.push(punctToken);
+                finalBAffix.push(punctToken);
+                finalBAlt.push(punctToken);
+                
+                finalRFree.push(punctToken);
+                finalRAffix.push(punctToken);
+                finalRAlt.push(punctToken);
+            } else {
+                const parsed = parseClause(seg.text);
+                if (parsed.phraseIsNegative) totalPhraseIsNegative = true;
+                
+                const clauseBFree = JSON.parse(JSON.stringify(parsed.breakdown));
+                const clauseBAffix = JSON.parse(JSON.stringify(parsed.breakdown));
+                
+                // Person agreement for this clause
+                const subjToken = clauseBAffix.find(w => w && w.role === 'S' && w.personRule);
+                if (subjToken) {
+                    const verbToken = clauseBAffix.filter(w => w && w.role === 'V' && !w.swallowed && !w.isAuxiliary).pop();
+                    if (verbToken && subjToken.personRule.affix) {
+                        verbToken.conlang = applyAffixToBase(verbToken.conlang, subjToken.personRule.affix);
+                        verbToken.inflected = true;
+                        verbToken.ruleSource = 'Person Agreement: ' + (subjToken.personRule.name || subjToken.personRule.person);
+                        subjToken.encodedInVerb = true;
+                    }
+                }
+                
+                const clauseRFree = reorderBreakdown(clauseBFree);
+                const clauseRAffix = reorderBreakdown(clauseBAffix);
+                
+                finalBFree.push(...clauseBFree);
+                finalBAffix.push(...clauseBAffix);
+                
+                finalRFree.push(...clauseRFree);
+                finalRAffix.push(...clauseRAffix);
+
+                // Alternate reading if ambiguous
+                const ambiguousWords = parsed.breakdown.filter(w =>
+                    w && (w.role === 'S' || w.role === 'O') &&
+                    !PRONOUN_MAP[w.original?.toLowerCase()] &&
+                    w.found
+                );
+                if (ambiguousWords.length >= 2) {
+                    hasAlt = true;
+                    const clauseBAlt = JSON.parse(JSON.stringify(parsed.breakdown));
+                    clauseBAlt.forEach(w => {
+                        if (w && w.role === 'S') w.role = 'O';
+                        else if (w && w.role === 'O') w.role = 'S';
+                    });
+                    const clauseRAlt = reorderBreakdown(clauseBAlt);
+                    finalBAlt.push(...clauseBAlt);
+                    finalRAlt.push(...clauseRAlt);
+                } else {
+                    finalBAlt.push(...clauseBFree);
+                    finalRAlt.push(...clauseRFree);
+                }
             }
-            i++;
-        }
+        });
 
-        // Even if no words are found, we should still return the breakdown as a phrase suggestion
-        // This prevents the UI from hiding the summary when the user is starting a sentence.
-        if (breakdown.length === 0) return null;
-
-        const bFree = JSON.parse(JSON.stringify(breakdown));
-        const bAffix = JSON.parse(JSON.stringify(breakdown));
-        const subjToken = bAffix.find(w => w && w.role === 'S' && w.personRule);
-        if (subjToken) {
-            const verbToken = bAffix.filter(w => w && w.role === 'V' && !w.swallowed && !w.isAuxiliary).pop();
-            if (verbToken && subjToken.personRule.affix) {
-                verbToken.conlang = applyAffixToBase(verbToken.conlang, subjToken.personRule.affix);
-                verbToken.inflected = true;
-                verbToken.ruleSource = 'Person Agreement: ' + (subjToken.personRule.name || subjToken.personRule.person);
-                subjToken.encodedInVerb = true;
-            }
-        }
-
-        const roleOrder = {};
-        // The Drag-and-Drop priority list (customOrder) is the ultimate source of truth.
-        // It allows the user to place Negation, Modals, etc. anywhere in the sequence.
-        // We only use the global dropdown (SVO/OVS) if the custom list hasn't been set.
-        let customOrder = waConfig.syntaxOrder;
-        let sOrder = customOrder || globalSyntaxOrder || 'CTLJNORVMS';
-        
-        // Ensure all possible roles are represented in the priority string
-        'CTLJNORVMS'.split('').forEach(r => { if (!sOrder.includes(r)) sOrder += r; });
-        
-        sOrder.split('').forEach((r, idx) => { roleOrder[r] = idx; });
-        const getSortRole = (r) => r || 'O';
-        const sortFn = (a, b) => (roleOrder[getSortRole(a?.role)] ?? 99) - (roleOrder[getSortRole(b?.role)] ?? 99);
+        const buildRomanizedString = (reorderedList) => {
+            let s = '';
+            reorderedList.forEach((w) => {
+                if (!w || w.swallowed) return;
+                const wordStr = w.conlang;
+                if (!wordStr) return;
+                
+                if (w.isPunct) {
+                    s = s.trim() + wordStr + ' ';
+                } else {
+                    s += wordStr + ' ';
+                }
+            });
+            return s.trim();
+        };
 
         const results = [];
-        const rFree = bFree.filter(w => w && !w.swallowed).sort(sortFn);
-        let romFree = rFree.map(w => w.conlang).join(' ');
-        if (phraseIsNegative && waConfig.negation?.position === 'endOfSentence' && waConfig.negation?.content) romFree += ' ' + waConfig.negation.content;
         
-        // Always push the free form if we have tokens
-        if (romFree.trim() || breakdown.length > 0) {
+        let romFree = buildRomanizedString(finalRFree);
+        if (totalPhraseIsNegative && waConfig.negation?.position === 'endOfSentence' && waConfig.negation?.content) romFree += ' ' + waConfig.negation.content;
+        
+        if (romFree.trim() || finalBFree.length > 0) {
             results.push({
                 key: 'phrase-free', type: 'phrase', label: 'Free Form',
                 romanized: romFree || '[empty]', display: transliterate(romFree || '[empty]', lexicon),
-                breakdown: bFree, reordered: rFree, lineStart, lineEnd
+                wordBreakdown: finalBFree, reordered: finalRFree, lineStart, lineEnd
             });
         }
 
-        const rAffix = bAffix.filter(w => w && !w.swallowed && !w.encodedInVerb).sort(sortFn);
-        let romAffix = rAffix.map(w => w.conlang).join(' ');
-        if (phraseIsNegative && waConfig.negation?.position === 'endOfSentence' && waConfig.negation?.content) romAffix += ' ' + waConfig.negation.content;
+        let romAffix = buildRomanizedString(finalRAffix);
+        if (totalPhraseIsNegative && waConfig.negation?.position === 'endOfSentence' && waConfig.negation?.content) romAffix += ' ' + waConfig.negation.content;
 
-        if (romAffix !== romFree && (romAffix.trim() || breakdown.length > 0)) {
+        if (romAffix !== romFree && (romAffix.trim() || finalBAffix.length > 0)) {
             results.push({
                 key: 'phrase-affix', type: 'phrase', label: 'Person Agreement Form',
                 romanized: romAffix || '[empty]', display: transliterate(romAffix || '[empty]', lexicon),
-                breakdown: bAffix, reordered: rAffix, lineStart, lineEnd
+                wordBreakdown: finalBAffix, reordered: finalRAffix, lineStart, lineEnd
             });
         }
 
-
-        // ── Alternative Readings: swap S ↔ O for ambiguous non-pronoun nouns ───────
-        // Find all words with S or O roles that aren't English pronouns (pronouns have known roles)
-        const ambiguousWords = breakdown.filter(w =>
-            w && (w.role === 'S' || w.role === 'O') &&
-            !PRONOUN_MAP[w.original?.toLowerCase()] &&
-            w.found
-        );
-        // Only generate alternatives if there are 2+ such words (otherwise nothing to swap)
-        if (ambiguousWords.length >= 2) {
-            // Generate one swapped reading: flip all S↔O roles
-            const bAlt = JSON.parse(JSON.stringify(breakdown));
-            bAlt.forEach(w => {
-                if (!w) return;
-                if (!PRONOUN_MAP[w.original?.toLowerCase()]) {
-                    if (w.role === 'S') w.role = 'O';
-                    else if (w.role === 'O') w.role = 'S';
-                }
-            });
-            // Re-apply WA trigger markers that depend on role
-            if (waConfig.triggers) {
-                bAlt.forEach((w, idx) => {
-                    if (!w || !w.found) return;
-                    const newMarkers = [];
-                    waConfig.triggers.forEach(t => {
-                        if (t.type !== 'trigger' || !t.trigger || !t.marker) return;
-                        if (t.trigger === w.role) newMarkers.push(t);
-                    });
-                    if (newMarkers.length > 0) {
-                        let conlang = (w.entry?.word || w.conlang || '').replace(/\*/g, '');
-                        newMarkers.forEach(t => {
-                            if (t.position === 'prefix') conlang = t.marker.replace(/-$/, '') + conlang;
-                            else if (t.position === 'suffix') conlang = conlang + t.marker.replace(/^-/, '');
-                        });
-                        w.conlang = conlang;
-                    } else {
-                        // Reset to base lexicon word if no marker
-                        w.conlang = (w.entry?.word || w.conlang || '').replace(/\*/g, '');
-                    }
-                });
-            }
-            const rAlt = [...bAlt].filter(w => w && !w.swallowed).sort((a, b) => {
-                const roleA = getSortRole(a.role) || 'O';
-                const roleB = getSortRole(b.role) || 'O';
-                if (roleA === roleB) return 0;
-                return (roleOrder[roleA] ?? 99) - (roleOrder[roleB] ?? 99);
-            });
-            const romAlt = rAlt.map(w => w.conlang).join(' ');
-            // Only add if it produces a different output
+        if (hasAlt) {
+            let romAlt = buildRomanizedString(finalRAlt);
             if (romAlt !== romFree) {
                 results.push({
                     key: 'phrase-alt', type: 'phrase', romanized: romAlt,
                     display: transliterate(romAlt, lexicon),
-                    lineStart, lineEnd, wordBreakdown: bAlt, reordered: rAlt, label: 'Alt. Reading'
+                    lineStart, lineEnd, wordBreakdown: finalBAlt, reordered: finalRAlt, label: 'Alt. Reading'
                 });
             }
         }
@@ -1506,64 +1798,70 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         
         const fullList = sugg.wordBreakdown || sugg.reordered || [];
         
-        // If this is an Affix Form, we need to RE-APPLY the person marker across the WHOLE breakdown
+        // If this is an Affix Form, we need to RE-APPLY the person marker per clause
         if (sugg.key === 'phrase-affix' && sugg.wordBreakdown) {
-            
-            // 1. Clear existing person markers from all verbs in the master list
-            fullList.forEach(w => {
-                if (w && w.role === 'V' && w.inflectedByPerson) {
-                    w.conlang = w.originalConlang || w.conlang;
-                    w.inflectedByPerson = false;
-                }
-                if (w && w.role === 'S') w.encodedInVerb = false;
-            });
+            const applyClausePersonAgreement = (clauseTokens) => {
+                // 1. Clear existing person markers in this clause
+                clauseTokens.forEach(w => {
+                    if (w && w.role === 'V' && w.inflectedByPerson) {
+                        w.conlang = w.originalConlang || w.conlang;
+                        w.inflectedByPerson = false;
+                    }
+                    if (w && w.role === 'S') w.encodedInVerb = false;
+                });
 
-            // 2. Find the subject and the new target verb in the master list
-            const subjWord = fullList.find(w => w && w.role === 'S' && w.personRule?.affix);
-            if (subjWord) {
-                let targetVerb = null;
-                // Important: find the last NON-SWALLOWED verb
-                for (let j = fullList.length - 1; j >= 0; j--) {
-                    const w = fullList[j];
-                    if (w && w.role === 'V' && !w.swallowed && w.conlang && !w.conlang.startsWith('[')) {
-                        targetVerb = w;
-                        break;
+                // 2. Find subject and verb in this clause
+                const subjWord = clauseTokens.find(w => w && w.role === 'S' && w.personRule?.affix);
+                if (subjWord) {
+                    let targetVerb = null;
+                    for (let j = clauseTokens.length - 1; j >= 0; j--) {
+                        const w = clauseTokens[j];
+                        if (w && w.role === 'V' && !w.swallowed && w.conlang && !w.conlang.startsWith('[')) {
+                            targetVerb = w;
+                            break;
+                        }
+                    }
+                    if (targetVerb) {
+                        if (!targetVerb.originalConlang) targetVerb.originalConlang = targetVerb.conlang;
+                        targetVerb.conlang = applyAffixToBase(targetVerb.conlang, subjWord.personRule.affix);
+                        targetVerb.inflectedByPerson = true;
+                        subjWord.encodedInVerb = true;
                     }
                 }
-                
-                if (targetVerb) {
-                    if (!targetVerb.originalConlang) targetVerb.originalConlang = targetVerb.conlang;
-                    targetVerb.conlang = applyAffixToBase(targetVerb.conlang, subjWord.personRule.affix);
-                    targetVerb.inflectedByPerson = true;
-                    subjWord.encodedInVerb = true;
+            };
+
+            let currentClause = [];
+            fullList.forEach(w => {
+                if (w && w.isPunct) {
+                    applyClausePersonAgreement(currentClause);
+                    currentClause = [];
+                } else {
+                    currentClause.push(w);
                 }
+            });
+            if (currentClause.length > 0) {
+                applyClausePersonAgreement(currentClause);
             }
-            
-            const roleOrder = {};
-            let sOrder = waConfig.syntaxOrder || 'CTLJNORVMS';
-            'CTLJNORVMS'.split('').forEach(r => { if (!sOrder.includes(r)) sOrder += r; });
-            sOrder.split('').forEach((r, idx) => { roleOrder[r] = idx; });
-            const getSortRole = (r) => r || 'O';
-
-            sugg.reordered = fullList.filter(w => !w.encodedInVerb && !w.swallowed).sort((a, b) => {
-                const roleA = getSortRole(a.role) || 'O';
-                const roleB = getSortRole(b.role) || 'O';
-                if (roleA === roleB) return 0;
-                return (roleOrder[roleA] ?? 99) - (roleOrder[roleB] ?? 99);
-            });
-        } else {
-            const syntaxOrder = waConfig.syntaxOrder || 'OVS';
-            const roleOrder = {};
-            syntaxOrder.split('').forEach((r, idx) => { roleOrder[r] = idx; });
-            const getSortRole = (r) => r === 'A' ? 'O' : r;
-
-            sugg.reordered = reordered.sort((a, b) => {
-                const roleA = getSortRole(a.role) || 'O';
-                const roleB = getSortRole(b.role) || 'O';
-                if (roleA === roleB) return 0;
-                return (roleOrder[roleA] ?? 99) - (roleOrder[roleB] ?? 99);
-            });
         }
+        
+        // Reorder each clause of fullList independently
+        const newReordered = [];
+        let currentClause = [];
+        fullList.forEach(w => {
+            if (w && w.isPunct) {
+                if (currentClause.length > 0) {
+                    newReordered.push(...reorderBreakdown(currentClause));
+                    currentClause = [];
+                }
+                newReordered.push(w);
+            } else {
+                currentClause.push(w);
+            }
+        });
+        if (currentClause.length > 0) {
+            newReordered.push(...reorderBreakdown(currentClause));
+        }
+        sugg.reordered = newReordered;
 
         sugg.romanized = sugg.reordered.filter(w => !w.swallowed).map(w => w.conlang).join(' ');
         sugg.display = transliterate(sugg.romanized, lexicon);
