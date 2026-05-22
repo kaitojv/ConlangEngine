@@ -439,9 +439,10 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
                     {(() => {
                         const char = targetLabel.includes(':') ? targetLabel.split(':')[1].trim() : targetLabel;
                         
-                        // Internal component for the mini-svg
-                        const MiniSVG = () => (
+                        // Render the mini-svg inline
+                        const renderMiniSVG = (key) => (
                             <svg 
+                                key={key}
                                 width="1.2em" 
                                 height="1.2em" 
                                 viewBox="0 0 300 300" 
@@ -476,8 +477,8 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
 
                         return (
                             <>
-                                <MiniSVG /> <MiniSVG /> — 
-                                The quick <MiniSVG /> brown <MiniSVG /> fox jumps over the lazy <MiniSVG />.
+                                {renderMiniSVG('svg-1')} {renderMiniSVG('svg-2')} — 
+                                The quick {renderMiniSVG('svg-3')} brown {renderMiniSVG('svg-4')} fox jumps over the lazy {renderMiniSVG('svg-5')}.
                             </>
                         );
                     })()}

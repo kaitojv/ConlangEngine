@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
@@ -16,7 +16,13 @@ export default function Home() {
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
     const navigate = useNavigate();
 
-    const greeting = useMemo(() => {
+    const [greeting, setGreeting] = useState({
+        base: "Hello",
+        subtext: "Welcome to your linguistic laboratory.",
+        Icon: Sparkles
+    });
+
+    React.useEffect(() => {
         const hour = new Date().getHours();
         
         const greetings = {
@@ -66,11 +72,11 @@ export default function Home() {
         const selected = greetings[timeOfDay];
         const randomPhrase = selected.phrases[Math.floor(Math.random() * selected.phrases.length)];
 
-        return {
+        setGreeting({
             base: selected.base,
             subtext: randomPhrase,
             Icon: selected.Icon
-        };
+        });
     }, []);
 
     const IconComponent = greeting.Icon;

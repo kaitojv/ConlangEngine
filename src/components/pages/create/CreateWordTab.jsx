@@ -166,6 +166,7 @@ export default function CreateWordTab() {
     };
 
     const saveConfirmedWord = (safeWord, cleanTrans, processedTags) => {
+        // eslint-disable-next-line react-hooks/purity
         const rootId = Date.now() + Math.random();
 
         // 1. Save the main root

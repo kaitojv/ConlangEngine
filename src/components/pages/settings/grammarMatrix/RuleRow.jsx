@@ -27,49 +27,17 @@ export const RuleRow = ({ rule, onUpdate, onDelete, allWordClasses }) => {
         <Trash2 size={16} />
       </button>
 
-      <div className="rule-grid">
-        <div className="form-group">
-          <label className="rule-label">Rule Name</label>
-          <input type="text" name="name" className="fi" value={rule.name} onChange={handleChange} placeholder="e.g., Plural" />
-        </div>
-
-        <div className="form-group">
-          <label className="rule-label">Affix / Formula</label>
-          <div className="vrb-input-container" style={{ position: 'relative', display: 'flex', gap: '0.5rem' }}>
-            <input type="text" name="affix" className="fi" value={rule.affix} onChange={handleChange} placeholder="-s, ir-, =>" spellCheck="false" style={{ flexGrow: 1 }} />
-            <button 
-              type="button" 
-              className="vrb-open-btn" 
-              onClick={() => setIsBuilderOpen(true)}
-              title="Open Visual Rule Builder"
-              style={{
-                background: 'rgba(168, 85, 247, 0.1)',
-                border: '1px solid rgba(168, 85, 247, 0.3)',
-                borderRadius: '0.5rem',
-                padding: '0.25rem',
-                color: '#a855f7',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <Wand2 size={16} />
-            </button>
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label className="rule-label">Applies To</label>
+      <div className="nl-rule-builder">
+        <div className="nl-rule-row">
+          <span className="nl-text">Rule</span>
+          <input type="text" name="name" className="nl-input fi" value={rule.name} onChange={handleChange} placeholder="Name (e.g. Plural)" style={{ width: '130px', fontWeight: 'bold', color: 'var(--acc)' }} />
+          
+          <span className="nl-text">: For</span>
           <input 
-            type="text" 
-            name="appliesTo" 
-            className="fi" 
-            value={rule.appliesTo} 
-            onChange={handleChange} 
-            placeholder="e.g. noun, verb" 
-            spellCheck="false" 
-            list={`pos-list-${rule.id}`}
+            type="text" name="appliesTo" className="nl-input fi" 
+            value={rule.appliesTo} onChange={handleChange} 
+            placeholder="all" list={`pos-list-${rule.id}`}
+            style={{ width: '90px' }}
           />
           <datalist id={`pos-list-${rule.id}`}>
             <option value="all" />
@@ -77,29 +45,36 @@ export const RuleRow = ({ rule, onUpdate, onDelete, allWordClasses }) => {
               <option key={cls} value={cls} />
             ))}
           </datalist>
-        </div>
 
-        <div className="form-group">
-          <label className="rule-label">Condition</label>
-          <select name="condition" className="fi" value={rule.condition} onChange={handleChange}>
-            <option value="always">Always</option>
-            <option value="vowel">After Vowel</option>
-            <option value="consonant">After Cons</option>
-            <option value="other">After Other</option>
+          <span className="nl-text">words,</span>
+          <select name="condition" className="nl-select fi" value={rule.condition} onChange={handleChange}>
+            <option value="always">always</option>
+            <option value="vowel">after vowel</option>
+            <option value="consonant">after consonant</option>
+            <option value="other">after other</option>
           </select>
         </div>
 
-        <div className="form-group">
-          <label className="rule-label">Target POS</label>
+        <div className="nl-rule-row">
+          <span className="nl-text">add</span>
+          <div className="nl-affix-wrapper">
+            <input type="text" name="affix" className="nl-input fi" value={rule.affix} onChange={handleChange} placeholder="-s, ir-, =>" spellCheck="false" style={{ width: '120px' }} />
+            <button 
+              type="button" 
+              className="vrb-open-btn" 
+              onClick={() => setIsBuilderOpen(true)}
+              title="Open Visual Rule Builder"
+            >
+              <Wand2 size={14} /> Builder
+            </button>
+          </div>
+
+          <span className="nl-text">to make it</span>
           <input 
-            type="text" 
-            name="targetPOS" 
-            className="fi" 
-            value={rule.targetPOS || ''} 
-            onChange={handleChange} 
-            placeholder="Inherit" 
-            spellCheck="false" 
-            list={`target-pos-list-${rule.id}`}
+            type="text" name="targetPOS" className="nl-input fi" 
+            value={rule.targetPOS || ''} onChange={handleChange} 
+            placeholder="inherit POS" list={`target-pos-list-${rule.id}`}
+            style={{ width: '100px' }}
           />
           <datalist id={`target-pos-list-${rule.id}`}>
             <option value="" />
@@ -107,39 +82,35 @@ export const RuleRow = ({ rule, onUpdate, onDelete, allWordClasses }) => {
               <option key={cls} value={cls} />
             ))}
           </datalist>
-        </div>
 
-        <div className="form-group">
-          <label className="rule-label">Gloss / Meaning</label>
+          <span className="nl-text">(Meaning:</span>
           <input 
-            type="text" 
-            name="gloss" 
-            className="fi" 
-            value={rule.gloss || ''} 
-            onChange={handleChange} 
-            placeholder="e.g. plural, years" 
+            type="text" name="gloss" className="nl-input fi" 
+            value={rule.gloss || ''} onChange={handleChange} 
+            placeholder="e.g. plural" style={{ width: '100px' }} 
           />
-        </div>
-      </div>
-
-      <div className="rule-footer">
-        <div className="dependency-group">
-          <Link size={14} className="dependency-icon" />
-          <span>Depends on:</span>
-          <input type="text" name="dependency" className="fi rule-dependency" value={rule.dependency} onChange={handleChange} placeholder="Rule Name (Optional)" />
+          <span className="nl-text">).</span>
         </div>
 
-        <div className="standalone-group">
-          <div className="divider"></div>
-          <label className="cb-wrap">
-            <input className="check-rule" type="checkbox" name="standalone" checked={!!rule.standalone} onChange={handleChange} />
-            <span>Standalone Rule</span>
-          </label>
-          <div className="divider"></div>
-          <label className="cb-wrap" title="Allow this rule to apply to Person and Class markers (Pronouns)">
-            <input className="check-rule" type="checkbox" name="applyToPersons" checked={!!rule.applyToPersons} onChange={handleChange} />
-            <span>Apply to Persons</span>
-          </label>
+        <div className="nl-rule-footer">
+          <div className="dependency-group">
+            <Link size={14} className="dependency-icon" />
+            <span className="nl-sub-text">Depends on:</span>
+            <input type="text" name="dependency" className="nl-input fi" value={rule.dependency} onChange={handleChange} placeholder="Rule Name" style={{ width: '120px' }} />
+          </div>
+
+          <div className="standalone-group">
+            <div className="divider"></div>
+            <label className="cb-wrap nl-cb">
+              <input className="check-rule" type="checkbox" name="standalone" checked={!!rule.standalone} onChange={handleChange} />
+              <span>Standalone</span>
+            </label>
+            <div className="divider"></div>
+            <label className="cb-wrap nl-cb" title="Allow this rule to apply to Person and Class markers (Pronouns)">
+              <input className="check-rule" type="checkbox" name="applyToPersons" checked={!!rule.applyToPersons} onChange={handleChange} />
+              <span>Apply to Persons</span>
+            </label>
+          </div>
         </div>
       </div>
       <VisualRuleBuilder 

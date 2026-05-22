@@ -461,82 +461,101 @@ export default function PersonRulesEditor() {
                         Alignments allow you to define how your grammar changes based on the <b>Person</b> (1st, 2nd, 3rd) or <b>Noun Class</b> (Animate, Inanimate, etc.). Define both the standalone pronoun (Free Form) and the suffix/prefix (Affix), and specify which word classes use each rule.
                     </p>
 
-                    <div className="rules-column-headers">
-                        <span>Person</span>
-                        <span>Number</span>
-                        <span>Gender</span>
-                        <span>Free Form</span>
-                        <span>Affix</span>
-                        <span>Applies To</span>
-                        <span>Root Tag</span>
-                        <span></span>
-                    </div>
-
                     <div className="rules-list">
                         {rules.map(rule => (
-                            <div key={rule.id} className="rule-item">
-                                <input
-                                    type="text"
-                                    className="rule-input"
-                                    value={rule.person}
-                                    list="person-options"
-                                    placeholder="Person (e.g. 1st)"
-                                    onChange={(e) => handleRuleChange(rule.id, 'person', e.target.value)}
-                                />
+                            <div key={rule.id} className="rule-item nl-rule-builder" style={{ position: 'relative', padding: '16px' }}>
+                                <div className="nl-rule-row">
+                                    <span className="nl-text">For</span>
+                                    <select
+                                        className="nl-select fi"
+                                        value={rule.person}
+                                        onChange={(e) => handleRuleChange(rule.id, 'person', e.target.value)}
+                                        style={{ width: '110px' }}
+                                    >
+                                        <option value="1st">1st Person</option>
+                                        <option value="2nd">2nd Person</option>
+                                        <option value="3rd">3rd Person</option>
+                                        <option value="4th">4th Person</option>
+                                    </select>
 
-                                <input
-                                    type="text"
-                                    className="rule-input"
-                                    value={rule.number}
-                                    list="number-options"
-                                    placeholder="Number (e.g. S)"
-                                    onChange={(e) => handleRuleChange(rule.id, 'number', e.target.value)}
-                                />
+                                    <select
+                                        className="nl-select fi"
+                                        value={rule.number}
+                                        onChange={(e) => handleRuleChange(rule.id, 'number', e.target.value)}
+                                        style={{ width: '110px' }}
+                                    >
+                                        <option value="S">Singular</option>
+                                        <option value="P">Plural</option>
+                                        <option value="C">Collective</option>
+                                        <option value="D">Dual</option>
+                                        <option value="B">Bilabial</option>
+                                    </select>
 
-                                <input
-                                    type="text"
-                                    className="rule-input"
-                                    value={rule.gender}
-                                    list="gender-options"
-                                    placeholder="Gender (Optional)"
-                                    onChange={(e) => handleRuleChange(rule.id, 'gender', e.target.value)}
-                                />
+                                    <select
+                                        className="nl-select fi"
+                                        value={rule.gender}
+                                        onChange={(e) => handleRuleChange(rule.id, 'gender', e.target.value)}
+                                        style={{ width: '110px' }}
+                                    >
+                                        <option value="">(No Gender)</option>
+                                        <option value="Masc">Masculine</option>
+                                        <option value="Fem">Feminine</option>
+                                        <option value="Neut">Neuter</option>
+                                        <option value="Anim">Animate</option>
+                                        <option value="Inan">Inanimate</option>
+                                    </select>
+                                    <span className="nl-text">,</span>
+                                </div>
+                                <div className="nl-rule-row">
+                                    <span className="nl-text">the standalone pronoun is</span>
+                                    <input
+                                        type="text"
+                                        className="nl-input fi"
+                                        placeholder="e.g. I, he"
+                                        value={rule.freeForm}
+                                        onChange={(e) => handleRuleChange(rule.id, 'freeForm', e.target.value)}
+                                        style={{ width: '120px' }}
+                                    />
+                                    <span className="nl-text">and the affix is</span>
+                                    <input
+                                        type="text"
+                                        className="nl-input fi"
+                                        placeholder="e.g. -m, s-"
+                                        value={rule.affix}
+                                        onChange={(e) => handleRuleChange(rule.id, 'affix', e.target.value)}
+                                        style={{ width: '120px' }}
+                                    />
+                                </div>
+                                <div className="nl-rule-row">
+                                    <span className="nl-text">This rule applies to</span>
+                                    <input
+                                        type="text"
+                                        className="nl-input fi"
+                                        placeholder="all"
+                                        value={rule.appliesTo || ''}
+                                        list="applies-to-options"
+                                        onChange={(e) => handleRuleChange(rule.id, 'appliesTo', e.target.value.toLowerCase())}
+                                        style={{ width: '100px' }}
+                                    />
+                                    <span className="nl-text">words</span>
+                                    {rule.appliesTo && rule.appliesTo !== 'all' && (
+                                        <>
+                                            <span className="nl-text">with root tag</span>
+                                            <input
+                                                type="text"
+                                                className="nl-input fi"
+                                                placeholder="(optional tag)"
+                                                value={rule.rootTag || ''}
+                                                list="root-tag-options"
+                                                onChange={(e) => handleRuleChange(rule.id, 'rootTag', e.target.value.toLowerCase())}
+                                                style={{ width: '120px' }}
+                                            />
+                                        </>
+                                    )}
+                                    <span className="nl-text">.</span>
+                                </div>
 
-                                <input
-                                    type="text"
-                                    className="rule-input"
-                                    placeholder="Free Form (e.g., I)"
-                                    value={rule.freeForm}
-                                    onChange={(e) => handleRuleChange(rule.id, 'freeForm', e.target.value)}
-                                />
-
-                                <input
-                                    type="text"
-                                    className="rule-input"
-                                    placeholder="Affix (e.g., -m, s-, -ma-@V)"
-                                    value={rule.affix}
-                                    onChange={(e) => handleRuleChange(rule.id, 'affix', e.target.value)}
-                                />
-
-                                <input
-                                    type="text"
-                                    className="rule-input"
-                                    placeholder="all"
-                                    value={rule.appliesTo || ''}
-                                    list="applies-to-options"
-                                    onChange={(e) => handleRuleChange(rule.id, 'appliesTo', e.target.value.toLowerCase())}
-                                />
-
-                                <input
-                                    type="text"
-                                    className="rule-input"
-                                    placeholder="Optional tag"
-                                    value={rule.rootTag || ''}
-                                    list="root-tag-options"
-                                    onChange={(e) => handleRuleChange(rule.id, 'rootTag', e.target.value.toLowerCase())}
-                                />
-
-                                <button type="button" className="btn-delete-rule" onClick={() => deleteRule(rule.id)}>
+                                <button type="button" className="btn-delete-rule" onClick={() => deleteRule(rule.id)} style={{ position: 'absolute', top: '10px', right: '10px' }} title="Delete Rule">
                                     <Trash2 size={16} />
                                 </button>
                             </div>
@@ -633,31 +652,38 @@ export default function PersonRulesEditor() {
                     </div>
 
                     {/* Table Matrix */}
-                    <div className="matrix-table-wrapper" style={{ overflowX: 'auto', marginTop: '16px', background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                        <table className="matrix-grid-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.72rem' }}>
+                    <div className="matrix-table-wrapper" style={{ overflowX: 'auto', maxHeight: '500px', overflowY: 'auto', marginTop: '16px', background: 'var(--card)', padding: '0', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <table className="matrix-grid-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
                             <thead>
-                                <tr style={{ borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
-                                    <th style={{ padding: '8px', textAlign: 'left', color: 'var(--tx3)' }}>Category</th>
-                                    <th style={{ padding: '8px', textAlign: 'left', color: 'var(--tx3)' }}>Subjective (I, we, one)</th>
-                                    <th style={{ padding: '8px', textAlign: 'left', color: 'var(--tx3)' }}>Objective (me, us)</th>
-                                    <th style={{ padding: '8px', textAlign: 'left', color: 'var(--tx3)' }}>Poss. Determiner (my, our)</th>
-                                    <th style={{ padding: '8px', textAlign: 'left', color: 'var(--tx3)' }}>Poss. Pronoun (mine, ours)</th>
-                                    <th style={{ padding: '8px', textAlign: 'left', color: 'var(--tx3)' }}>Reflexive (myself)</th>
+                                <tr style={{ borderBottom: '1px solid var(--bd)' }}>
+                                    <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Category</th>
+                                    <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Subjective</th>
+                                    <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Objective</th>
+                                    <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Possessive</th>
+                                    <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Poss. Pronoun</th>
+                                    <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Reflexive</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {activeCombinations.map(({ person, number, gender }) => {
                                     const label = `${person} ${number === 'S' ? 'Singular' : number === 'P' ? 'Plural' : number === 'C' ? 'Collective' : 'Dual'} ${gender !== 'General' ? '(' + gender + ')' : ''}`;
                                     
+                                    let rowBg = 'transparent';
+                                    let borderCol = 'rgba(255,255,255,0.03)';
+                                    if (person === '1st') { rowBg = 'rgba(59, 130, 246, 0.03)'; borderCol = 'rgba(59, 130, 246, 0.15)'; }
+                                    if (person === '2nd') { rowBg = 'rgba(16, 185, 129, 0.03)'; borderCol = 'rgba(16, 185, 129, 0.15)'; }
+                                    if (person === '3rd') { rowBg = 'rgba(168, 85, 247, 0.03)'; borderCol = 'rgba(168, 85, 247, 0.15)'; }
+                                    if (person === '4th') { rowBg = 'rgba(245, 158, 11, 0.03)'; borderCol = 'rgba(245, 158, 11, 0.15)'; }
+
                                     return (
-                                        <tr key={`${person}-${number}-${gender}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', height: '42px' }}>
-                                            <td style={{ padding: '8px', fontWeight: 700, color: 'var(--acc)' }}>{label}</td>
+                                        <tr key={`${person}-${number}-${gender}`} style={{ borderBottom: `1px solid ${borderCol}`, background: rowBg }}>
+                                            <td style={{ padding: '12px', fontWeight: 700, color: 'var(--acc)' }}>{label}</td>
                                             {['sub', 'obj', 'det', 'pos', 'ref'].map(caseType => {
                                                 const engPlaceholder = getEnglishPronoun(person, number, gender === 'General' ? '' : gender, caseType);
                                                 const val = matrixData[`${person}-${number}-${gender}-${caseType}`] || '';
                                                 
                                                 return (
-                                                    <td key={caseType} style={{ padding: '4px' }}>
+                                                    <td key={caseType} style={{ padding: '6px' }}>
                                                         <input
                                                             type="text"
                                                             value={val}
@@ -665,17 +691,18 @@ export default function PersonRulesEditor() {
                                                             onChange={(e) => handleMatrixInputChange(person, number, gender, caseType, e.target.value)}
                                                             style={{
                                                                 width: '100%',
-                                                                background: 'var(--s1)',
+                                                                background: val ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.1)',
                                                                 border: '1px solid var(--bd)',
                                                                 color: 'var(--tx1)',
-                                                                borderRadius: '4px',
-                                                                padding: '6px 8px',
-                                                                fontSize: '0.72rem',
+                                                                borderRadius: '6px',
+                                                                padding: '8px 10px',
+                                                                fontSize: '0.8rem',
                                                                 outline: 'none',
-                                                                transition: 'all 0.15s ease'
+                                                                transition: 'all 0.15s ease',
+                                                                fontWeight: val ? 600 : 400
                                                             }}
-                                                            onFocus={(e) => e.target.style.borderColor = 'var(--acc)'}
-                                                            onBlur={(e) => e.target.style.borderColor = 'var(--bd)'}
+                                                            onFocus={(e) => { e.target.style.borderColor = 'var(--acc)'; e.target.style.background = 'var(--s2)'; }}
+                                                            onBlur={(e) => { e.target.style.borderColor = 'var(--bd)'; e.target.style.background = val ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.1)'; }}
                                                         />
                                                     </td>
                                                 );

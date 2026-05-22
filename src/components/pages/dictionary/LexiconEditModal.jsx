@@ -145,6 +145,27 @@ export default function LexiconEditModal({ wordObj, onClose }) {
         toast.custom(content, { duration: Infinity, id: 'validation-toast' });
     };
 
+    const doSave = (sWord, cTrans, pTags) => {
+        updateWord(wordObj.id, {
+            word: sWord,
+            ipa: ipa.trim(),
+            wordClass: wordClass.trim(),
+            translation: cTrans,
+            definition: formData.definition.trim(),
+            tags: pTags,
+            ideogram: ideogram.trim(),
+            personCategory: personCategory.trim()
+        });
+
+        if (wordClass && !STANDARD_WORD_CLASSES.includes(wordClass.trim().toLowerCase())) {
+            addCustomWordClass(wordClass);
+        }
+        pTags.forEach(tag => addCustomTag(tag));
+
+        toast.success("Word updated successfully!");
+        onClose();
+    };
+
     // Validate everything before saving changes to the lexicon
     const handleSave = () => {
         const cleanInputWord = word.trim();
@@ -167,27 +188,6 @@ export default function LexiconEditModal({ wordObj, onClose }) {
 
         const processedTags = [...formData.tags].sort();
         const validation = validateNewWord(safeWord, useConfigStore.getState());
-        
-        const doSave = (sWord = safeWord, cTrans = cleanInputTrans, pTags = processedTags) => {
-            updateWord(wordObj.id, {
-                word: sWord,
-                ipa: ipa.trim(),
-                wordClass: wordClass.trim(),
-                translation: cTrans,
-                definition: formData.definition.trim(),
-                tags: pTags,
-                ideogram: ideogram.trim(),
-                personCategory: personCategory.trim()
-            });
-
-            if (wordClass && !STANDARD_WORD_CLASSES.includes(wordClass.trim().toLowerCase())) {
-                addCustomWordClass(wordClass);
-            }
-            pTags.forEach(tag => addCustomTag(tag));
-
-            toast.success("Word updated successfully!");
-            onClose();
-        };
 
         if (isDuplicateWord || isDuplicateTranslation) {
             let warningMsg = "";
@@ -206,7 +206,7 @@ export default function LexiconEditModal({ wordObj, onClose }) {
                     <div className="toast-actions-v">
                         <button onClick={() => {
                             toast.dismiss(t.id);
-                            proceedToValidation(safeWord, cleanInputTrans, processedTags, doSave);
+                            proceedToValidation(safeWord, cleanInputTrans, processedTags, () => doSave(safeWord, cleanInputTrans, processedTags));
                         }} className="btn-v btn-err-v">Save Anyway</button>
                         <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
                     </div>
@@ -215,7 +215,7 @@ export default function LexiconEditModal({ wordObj, onClose }) {
             return;
         }
 
-        proceedToValidation(safeWord, cleanInputTrans, processedTags, doSave);
+        proceedToValidation(safeWord, cleanInputTrans, processedTags, () => doSave(safeWord, cleanInputTrans, processedTags));
     };
 
     const proceedToValidation = (safeWord, cleanInputTrans, processedTags, doSave, charIndex = 0) => {

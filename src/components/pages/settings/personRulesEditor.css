@@ -55,14 +55,10 @@
 }
 
 .rule-item {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1.5fr 1.5fr 1.2fr 1.2fr auto; /* Person, Number, Gender, Free, Affix, Applies, Tag, Delete */
-    gap: 10px;
-    align-items: center;
-    padding: 10px;
+    padding: 16px;
     border: 1px solid var(--bd);
-    border-radius: var(--radius); /* Use --radius from theme */
-    background-color: var(--card); /* Use --card for item background */
+    border-radius: var(--radius);
+    background-color: var(--card);
 }
 
 .rule-select,
@@ -132,19 +128,9 @@
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    .rule-item {
-        grid-template-columns: 1fr 1fr; /* Stack on smaller screens */
-    }
-    .rule-item > *:nth-child(3), /* Gender */
-    .rule-item > *:nth-child(4), /* Free Form */
-    .rule-item > *:nth-child(5), /* Affix */
-    .rule-item > *:nth-child(6), /* Applies To */
-    .rule-item > *:nth-child(7) { /* Root Tag */
-        grid-column: span 2; /* Make these span full width */
-    }
     .btn-delete-rule {
-        grid-column: 2 / 3; /* Position delete button */
-        justify-self: end;
+        position: relative;
+        align-self: flex-end;
     }
 }
 
@@ -159,14 +145,8 @@
 }
 
 @media (max-width: 480px) {
-    .rule-item {
-        grid-template-columns: 1fr; /* Full stack on very small screens */
-    }
-    .rule-item > * {
-        grid-column: span 1;
-    }
     .btn-delete-rule {
-        justify-self: center;
+        align-self: flex-end;
     }
     .rules-column-headers {
         grid-template-columns: 1fr;

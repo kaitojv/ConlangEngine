@@ -40,7 +40,7 @@ export default function LexiconList() {
     const isScriptMode = ['syllabic', 'featural_block', 'logographic', 'featural', 'block'].includes(phonologyTypes);
     
     // Spin up the transliterator to convert base words into the language's custom script
-    const { transliterate } = useTransliterator();
+    const { transliterate, normalizeToBase } = useTransliterator();
 
     // Let's bundle all our sorting and filtering logic into one neat state object
     const [filters, setFilters] = useState({
@@ -115,12 +115,25 @@ export default function LexiconList() {
         }
 
         if (filters.search) {
-            const q = filters.search.toLowerCase();
-            result = result.filter(e => 
-                e.word.replace(/\*/g, '').toLowerCase().includes(q) || 
-                e.translation.toLowerCase().includes(q) ||
-                (e.tags && e.tags.some(tag => tag.toLowerCase().includes(q)))
-            );
+            const q = filters.search.toLowerCase().trim();
+            if (q) {
+                result = result.filter(e => {
+                    const safeWord = (e.word || '').replace(/\*/g, '').toLowerCase();
+                    const normalizedWord = normalizeToBase(safeWord).toLowerCase();
+                    const displayWord = transliterate(e.word || '', lexicon).toLowerCase();
+                    const trans = (e.translation || '').toLowerCase();
+                    const def = (e.definition || '').toLowerCase();
+                    const ipa = (e.ipa || '').toLowerCase();
+                    
+                    return safeWord.includes(q) || 
+                           normalizedWord.includes(q) ||
+                           displayWord.includes(q) || 
+                           trans.includes(q) || 
+                           def.includes(q) ||
+                           ipa.includes(q) ||
+                           (e.tags && e.tags.some(tag => tag.toLowerCase().includes(q)));
+                });
+            }
         }
 
         if (filters.tag !== 'all') {

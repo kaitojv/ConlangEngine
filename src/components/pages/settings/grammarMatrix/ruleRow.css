@@ -16,3 +16,88 @@
 .dependency-icon {
   color: var(--acc2);
 }
+
+.nl-rule-builder {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.nl-rule-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--tx2);
+}
+
+.nl-text {
+  font-weight: 500;
+  color: var(--tx2);
+}
+
+.nl-input, .nl-select {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--bd);
+  background: var(--s1);
+  color: var(--tx);
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.nl-input:focus, .nl-select:focus {
+  border-color: var(--acc);
+  outline: none;
+  background: var(--s2);
+}
+
+.nl-affix-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nl-rule-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--bd);
+  font-size: 0.8rem;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.nl-cb span {
+  font-size: 0.8rem;
+}
+
+.nl-sub-text {
+  font-size: 0.8rem;
+  color: var(--tx3);
+}
+
+.vrb-open-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 6px;
+  padding: 4px 10px;
+  color: #c084fc;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.vrb-open-btn:hover {
+  background: rgba(168, 85, 247, 0.25);
+  border-color: rgba(168, 85, 247, 0.5);
+  color: #d8b4fe;
+}
