@@ -449,6 +449,20 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
         updateConfig({ wordAssistConfig: { ...wa, triggers: newTriggers } });
     };
 
+    const roleOverrides = wa.roleOverrides || [];
+    const addRoleOverride = () => {
+        updateConfig({ wordAssistConfig: { ...wa, roleOverrides: [...roleOverrides, { word: '', role: 'V' }] } });
+    };
+    const updateRoleOverride = (idx, field, value) => {
+        const newOverrides = [...roleOverrides];
+        newOverrides[idx][field] = field === 'word' ? value.toLowerCase() : value;
+        updateConfig({ wordAssistConfig: { ...wa, roleOverrides: newOverrides } });
+    };
+    const removeRoleOverride = (idx) => {
+        const newOverrides = roleOverrides.filter((_, i) => i !== idx);
+        updateConfig({ wordAssistConfig: { ...wa, roleOverrides: newOverrides } });
+    };
+
     const importableCount = (grammarRules || []).filter(r =>
         r.affix && r.name && !triggers.some(t => t.name.trim().toLowerCase() === r.name.trim().toLowerCase())
     ).length;
@@ -581,6 +595,71 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
                 </div>
             </div>
 
+            {/* Copula Settings */}
+            <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(0,0,0,0.25)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <h4 style={{ fontSize: '0.8rem', fontWeight: 800, margin: 0, color: 'var(--acc)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Settings size={15} /> Copula (To Be) Settings
+                    </h4>
+                </div>
+                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: '200px' }}>
+                        <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>Behavior</label>
+                        <select 
+                            className="wa-select-v2" 
+                            value={wa.copulaBehavior === 'replace' || wa.copulaBehavior === 'both' || wa.copulaBehavior === 'omit' ? 'zero_copula' : (wa.copulaBehavior || 'normal')} 
+                            onChange={(e) => updateConfig({ wordAssistConfig: { ...wa, copulaBehavior: e.target.value } })}
+                        >
+                            <option value="normal">Normal (Parse as Verb/Modal)</option>
+                            <option value="zero_copula">Enable Zero Copula</option>
+                        </select>
+                    </div>
+                    {wa.copulaBehavior === 'zero_copula' && (
+                        <div style={{ flex: 1, minWidth: '200px' }}>
+                            <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>Replacement Marker (Optional)</label>
+                            <Input 
+                                value={wa.copulaReplacement || ''} 
+                                onChange={(e) => updateConfig({ wordAssistConfig: { ...wa, copulaReplacement: e.target.value } })}
+                                placeholder="e.g. vu"
+                                style={{ width: '100%', padding: '8px 12px', fontSize: '0.85rem' }}
+                            />
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Global Dictionary Overrides */}
+            <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(0,0,0,0.25)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <h4 style={{ fontSize: '0.8rem', fontWeight: 800, margin: 0, color: 'var(--acc)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Settings size={15} /> Global Dictionary Overrides
+                    </h4>
+                    <Button variant="default" onClick={addRoleOverride} style={{ fontSize: '0.65rem', padding: '2px 8px' }}>
+                        <Plus size={12} /> Add Word
+                    </Button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {roleOverrides.map((ro, idx) => (
+                        <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <Input 
+                                value={ro.word} 
+                                onChange={(e) => updateRoleOverride(idx, 'word', e.target.value)}
+                                placeholder="Words separated by commas (e.g. today, tomorrow)"
+                                style={{ flex: 1, padding: '4px 8px', fontSize: '0.8rem' }}
+                            />
+                            <span style={{ color: 'var(--tx3)' }}>→</span>
+                            <select className="wa-select-v2" value={ro.role} onChange={(e) => updateRoleOverride(idx, 'role', e.target.value)} style={{ flex: 1, minWidth: '150px' }}>
+                                {Object.entries(roleLabels).map(([val, label]) => (
+                                    <option key={val} value={val}>{label}</option>
+                                ))}
+                            </select>
+                            <button onClick={() => removeRoleOverride(idx)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '4px' }}><Trash2 size={14}/></button>
+                        </div>
+                    ))}
+                    {roleOverrides.length === 0 && <div style={{ fontSize: '0.7rem', color: 'var(--tx3)' }}>No overrides set. Use this to force specific English words into strict roles.</div>}
+                </div>
+            </div>
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--tx3)', fontStyle: 'italic' }}>
                     Define triggers (words or suffixes) and how they should be marked in your conlang.
@@ -695,6 +774,70 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
 
 
 // The new Interlinear Editor Component
+function WordAssistTutorial({ onClose }) {
+    const [step, setStep] = useState(1);
+    
+    return (
+        <div className="wa-tip-box" style={{ background: 'var(--s2)', border: '1px solid var(--acc)' }}>
+            <button 
+                onClick={onClose}
+                style={{ position: 'absolute', top: '8px', right: '8px', background: 'transparent', border: 'none', color: 'var(--tx3)', cursor: 'pointer', padding: '4px' }}
+            >
+                <Plus size={14} style={{ transform: 'rotate(45deg)' }} />
+            </button>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                <div style={{ background: '#8b5cf6', padding: '8px', borderRadius: '10px', color: 'white', boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)' }}>
+                    <Languages size={18} />
+                </div>
+                <div style={{ flex: 1 }}>
+                    <h4 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: 700, color: 'var(--tx)' }}>Word Assist: The Ultimate Guide</h4>
+                    
+                    {step === 1 && (
+                        <div>
+                            <h5 style={{ margin: '0 0 4px 0', color: '#8b5cf6', fontSize: '0.8rem' }}>1. How it works</h5>
+                            <p style={{ margin: '0 0 10px 0', fontSize: '0.78rem', color: 'var(--tx2)', lineHeight: '1.4' }}>
+                                Word Assist parses your English sentence and automatically assigns a <strong>Grammatical Role</strong> to each word (like Subject, Verb, or Object). It then uses your drag-and-drop Syntactic Priority to reorder the sentence into your conlang's syntax.
+                            </p>
+                        </div>
+                    )}
+                    {step === 2 && (
+                        <div>
+                            <h5 style={{ margin: '0 0 4px 0', color: '#ec4899', fontSize: '0.8rem' }}>2. Creating Grammar Rules (Triggers)</h5>
+                            <p style={{ margin: '0 0 10px 0', fontSize: '0.78rem', color: 'var(--tx2)', lineHeight: '1.4' }}>
+                                Open the Word Assist Settings (gear icon) to create rules. You can map a specific role to a marker (e.g. "If a word is an Object, add the suffix '-m' for Accusative case"). The engine will automatically apply it for you.
+                            </p>
+                        </div>
+                    )}
+                    {step === 3 && (
+                        <div>
+                            <h5 style={{ margin: '0 0 4px 0', color: '#f59e0b', fontSize: '0.8rem' }}>3. Manual Overrides (Maximum Precision)</h5>
+                            <p style={{ margin: '0 0 10px 0', fontSize: '0.78rem', color: 'var(--tx2)', lineHeight: '1.4' }}>
+                                English is ambiguous! If the engine thinks a word is a Noun, but you meant it as a Verb, you can <strong>click the [role] badge</strong> under the suggested word to manually force it to be a Verb. You can also set permanent global overrides in the settings.
+                            </p>
+                        </div>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                            {[1, 2, 3].map(s => (
+                                <div key={s} onClick={() => setStep(s)} style={{ width: '8px', height: '8px', borderRadius: '50%', background: step === s ? 'var(--acc)' : 'var(--bd)', cursor: 'pointer' }} />
+                            ))}
+                        </div>
+                        <div>
+                            {step > 1 && <Button variant="default" onClick={() => setStep(s => s - 1)} style={{ fontSize: '0.65rem', padding: '2px 8px', marginRight: '6px' }}>Back</Button>}
+                            {step < 3 ? (
+                                <Button variant="imp" onClick={() => setStep(s => s + 1)} style={{ fontSize: '0.65rem', padding: '2px 8px' }}>Next</Button>
+                            ) : (
+                                <Button variant="default" onClick={onClose} style={{ fontSize: '0.65rem', padding: '2px 8px' }}>Got it</Button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function CorpusEditor({ content, onSave, writingDirection: props_writingDirection }) {
     const [mode, setMode] = useState('edit');
     const [text, setText] = useState(content || '');
@@ -705,6 +848,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
     const [showWaTip, setShowWaTip] = useState(true);
     const [wordRange, setWordRange] = useState(null); // { start, end } of current word in text
     const [isWaSettingsOpen, setIsWaSettingsOpen] = useState(false);
+    const [manualRoles, setManualRoles] = useState({}); // Local manual overrides for parsing (keyed by lowercase word)
     const textareaRef = useRef(null);
 
     const lexicon = useLexiconStore((state) => state.lexicon);
@@ -1133,6 +1277,17 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         return { lemma: lower, tense: 'present' };
     };
 
+    const resolveTempo = (stack) => {
+        if (!stack || stack.length === 0) return null;
+        if (stack.includes('will') || stack.includes('shall')) return 'future';
+        if (stack.includes('have') || stack.includes('has')) return 'perfect';
+        if (stack.includes('had')) return 'past_perfect';
+        if (stack.includes('be_past') || stack.includes('was') || stack.includes('were')) return 'past';
+        if (stack.includes('did')) return 'past';
+        if (stack.includes('would')) return 'conditional';
+        return null;
+    };
+
     const findGrammarRule = (trigger, fallbackName) => {
         if (!grammarRules) return null;
         const lt = (trigger || '').toLowerCase();
@@ -1168,7 +1323,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         });
     };
 
-    const computePhraseSuggestion = (val, cursor, globalSyntaxOrder) => {
+    const computePhraseSuggestion = (val, cursor, syntaxOrder, userManualRoles = manualRoles, overrideCopulaBehavior = null) => {
         const lineStart = val.lastIndexOf('\n', cursor - 1) + 1;
         const rawEnd    = val.indexOf('\n', cursor);
         const lineEnd   = rawEnd === -1 ? val.length : rawEnd;
@@ -1177,25 +1332,25 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
 
         const PREPOSITIONS = new Set(['of', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'from', 'about', 'under', 'over', 'into', 'through', 'after', 'before', 'between', 'during', 'without', 'against']);
         const ARTICLES = new Set(['the', 'a', 'an']);
-        const QUESTION_WORDS = new Set(['who', 'whom', 'whose', 'what', 'which', 'where', 'when', 'why', 'how']);
-        const TIME_WORDS = new Set(['today', 'yesterday', 'tomorrow', 'now', 'then', 'tonight', 'always', 'never', 'sometimes', 'soon', 'already', 'still', 'yet']);
+        const QUESTION_WORDS = new Set(['who', 'what', 'where', 'when', 'why', 'how', 'which']);
+        const TIME_WORDS = new Set(['now', 'then', 'today', 'tomorrow', 'yesterday', 'tonight', 'always', 'never', 'sometimes', 'often']);
         const PLACE_WORDS = new Set(['here', 'there', 'everywhere', 'nowhere', 'somewhere', 'anywhere', 'up', 'down', 'left', 'right', 'inside', 'outside']);
         const CONJUNCTIONS = new Set(['and', 'or', 'but', 'if', 'as', 'because', 'so', 'although', 'though', 'unless', 'until', 'while', 'since', 'then']);
 
-        const resolveTempo = (stack) => {
-            const s = stack.join(' ');
-            if (s === 'will') return 'future';
-            if (s === 'will have') return 'future_perfect';
-            if (s === 'would') return 'conditional';
-            if (s === 'have' || s === 'has') return 'perfect';
-            if (s === 'had') return 'past_perfect';
-            if (s === 'be_pres') return 'progressive';
-            if (s === 'be_past') return 'past_prog';
-            return null;
-        };
+        const globalOverrides = (waConfig.roleOverrides || []).reduce((acc, curr) => {
+            if (curr.word && curr.role) {
+                curr.word.split(',').map(w => w.trim().toLowerCase()).filter(Boolean).forEach(w => {
+                    acc[w] = curr.role;
+                });
+            }
+            return acc;
+        }, {});
+        const mergedOverrides = { ...globalOverrides, ...userManualRoles };
 
         const parseClause = (clauseText, inheritedRole = 'S') => {
             const rawTokens = clauseText.trim().split(/\s+/).filter(Boolean);
+            if (rawTokens.length === 0) return { breakdown: [], phraseIsNegative: false };
+            
             const tokens = rawTokens.map(t => t.replace(/[.,!?()[\]{}"`:;]/g, ''));
             const tokenData = tokens.map((t, idx) => {
                 const low = t.toLowerCase();
@@ -1209,13 +1364,33 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                 const low = t.toLowerCase();
                 const info = tokenData[idx].info;
                 const lemma = info.lemma;
-
+                
+                // 1. Manual/Global Overrides (Highest Priority)
+                if (mergedOverrides[low]) return mergedOverrides[low];
+                
+                // 2. Lexicon / Heuristics
+                if (TIME_WORDS.has(low)) return 'T';
                 if (QUESTION_WORDS.has(low)) return 'Q';
                 if (CONJUNCTIONS.has(low)) return 'K';
                 if (PREPOSITIONS.has(low)) return 'P';
                 if (ARTICLES.has(low)) return 'A';
                 if (low === 'not' || low === "n't") return 'N';
-                if (COPULA_VERBS.has(low) || MODAL_VERBS.has(low) || ['will','would','have','has','had','am','is','are','was','were','do','does','did','been'].includes(low)) return 'M';
+                if (COPULA_VERBS.has(low) || MODAL_VERBS.has(low) || ['will','would','have','has','had','am','is','are','was','were','do','does','did','been'].includes(low)) {
+                    if (['am','is','are','was','were','be','been','being'].includes(low)) {
+                        const behavior = overrideCopulaBehavior || waConfig.copulaBehavior || 'normal';
+                        if (behavior === 'omit') return 'SKIP';
+                        if (behavior === 'replace') {
+                            const repl = waConfig.copulaReplacement || 'be';
+                            tokens[idx] = repl;
+                            tokenData[idx].original = repl;
+                            tokenData[idx].low = repl.toLowerCase();
+                            tokenData[idx].info = { lemma: repl.toLowerCase(), tense: 'present' };
+                            tokenData[idx].isCopulaReplacement = true;
+                            return 'V'; // Treat replacement copula as a verb so it can take person agreement
+                        }
+                    }
+                    return 'M';
+                }
                 if (TIME_WORDS.has(low)) return 'T';
                 if (PLACE_WORDS.has(low)) return 'L';
 
@@ -1228,7 +1403,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
 
                 // Lexicon check
                 const matches = lexicon.filter(e => e.translation && matchesTranslation(e.translation, lemma));
-                const match = matches.sort((a, b) => {
+                let match = matches.sort((a, b) => {
                     const ta = (a.translation || '').toLowerCase();
                     const tb = (b.translation || '').toLowerCase();
                     const aExact = ta === lemma || ta.split(/[,;/]/).map(d => d.trim().toLowerCase()).includes(lemma);
@@ -1257,6 +1432,36 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                 return 'NOUN';
             });
 
+            // Pass 2: Contextual Verb Identification
+            for (let idx = 0; idx < preClassified.length; idx++) {
+                const low = tokens[idx].toLowerCase();
+                const prevLow = idx > 0 ? tokens[idx-1].toLowerCase() : '';
+                const prevPrevLow = idx > 1 ? tokens[idx-2].toLowerCase() : '';
+                
+                // Contextual Verb Identification (only if not manually overridden)
+                if (!mergedOverrides[low]) {
+                    if (idx > 0 && preClassified[idx-1] === 'M' && (preClassified[idx] === 'NOUN' || preClassified[idx] === 'O' || preClassified[idx] === 'S')) {
+                        preClassified[idx] = 'V';
+                    } else if (prevLow === 'to') {
+                        const catenativeVerbs = new Set(['want', 'wants', 'wanted', 'need', 'needs', 'needed', 'try', 'tries', 'tried', 'like', 'likes', 'liked', 'love', 'loves', 'loved', 'hate', 'hates', 'hated', 'start', 'starts', 'started', 'begin', 'begins', 'began', 'continue', 'continues', 'continued', 'hope', 'hopes', 'hoped', 'plan', 'plans', 'planned', 'expect', 'expects', 'expected', 'decide', 'decides', 'decided', 'going', 'used', 'ought', 'have', 'has', 'had', 'got', 'able', 'about', 'ready', 'supposed']);
+                        if (catenativeVerbs.has(prevPrevLow)) {
+                            if (preClassified[idx-2] === 'V' && !mergedOverrides[prevPrevLow]) {
+                                preClassified[idx-2] = 'M';
+                            }
+                            if (preClassified[idx] === 'NOUN' || preClassified[idx] === 'O' || preClassified[idx] === 'S') {
+                                preClassified[idx] = 'V';
+                            }
+                        } else if (preClassified[idx] === 'NOUN' || preClassified[idx] === 'O' || preClassified[idx] === 'S') {
+                            const info = lemmatize(low);
+                            const matches = lexicon.filter(e => e.translation && matchesTranslation(e.translation, info.lemma));
+                            if (matches.some(m => m.wordClass?.toLowerCase().includes('verb'))) {
+                                preClassified[idx] = 'V';
+                            }
+                        }
+                    }
+                }
+            }
+
             // Find first verb index
             const firstVerbIdx = preClassified.findIndex(role => role === 'V' || role === 'M');
             const lastVerbIdx = preClassified.map(r => r === 'V' || r === 'M').lastIndexOf(true);
@@ -1282,6 +1487,9 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
             // Assign final roles based on verb position
             const finalRoles = preClassified.map((role, idx) => {
                 const low = tokens[idx].toLowerCase();
+                
+                // Manual/Global Overrides MUST bypass context checks
+                if (mergedOverrides[low]) return mergedOverrides[low];
 
                 if (idx === lastVerbIdx && (role === 'M' || role === 'V')) {
                     return 'V';
@@ -1305,6 +1513,8 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                     }
                     if (isPronoun) {
                         return (firstVerbIdx === -1 || idx < firstVerbIdx) ? 'S' : 'O';
+                    } else {
+                        return 'J';
                     }
                 }
 
@@ -1347,6 +1557,12 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                     breakdown[i] = { original: fullForm, conlang: '', role: 'C', swallowed: true };
                     i++; continue;
                 }
+                
+                if (role === 'SKIP') {
+                    // Zero Copula omission
+                    breakdown[i] = { original: fullForm, conlang: `[${q}]`, role: 'M', swallowed: true };
+                    i++; continue;
+                }
 
                 // Swallow infinitive marker 'to'
                 if (q === 'to' && tokens[i+1]) {
@@ -1387,7 +1603,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                     });
                     matchTarget = lemma;
                 }
-                const match = matches.sort((a, b) => {
+                let match = matches.sort((a, b) => {
                     const ta = (a.shortTranslation || a.translation || '').toLowerCase();
                     const tb = (b.shortTranslation || b.translation || '').toLowerCase();
                     const aExact = ta === matchTarget || ta.split(/[,;/]/).map(d => d.trim().toLowerCase()).includes(matchTarget);
@@ -1400,7 +1616,24 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                 if (role === 'N') {
                     phraseIsNegative = true;
                 } else if (info.person || info.number || PRONOUN_MAP[q]) {
-                    if (role === 'S') personRule = personRulesArray.find(r => r.person === info.person && r.number === info.number && (!r.gender || r.gender === info.gender));
+                    if (role === 'S') {
+                        if (overrideCopulaBehavior === 'omit' || overrideCopulaBehavior === 'replace') {
+                            personRule = personRulesArray.find(r => 
+                                (!r.person || r.person === info.person) && 
+                                (!r.number || r.number === info.number) && 
+                                (!r.gender || r.gender === info.gender) && 
+                                r.appliesTo && r.appliesTo.replace(/[\s_]/g, '').toLowerCase().includes('zerocopula')
+                            );
+                        }
+                        if (!personRule) {
+                            personRule = personRulesArray.find(r => 
+                                (!r.person || r.person === info.person) && 
+                                (!r.number || r.number === info.number) && 
+                                (!r.gender || r.gender === info.gender) && 
+                                (!r.appliesTo || !r.appliesTo.replace(/[\s_]/g, '').toLowerCase().includes('zerocopula'))
+                            );
+                        }
+                    }
                 }
 
                 // Word Assist triggers for this role
@@ -1419,6 +1652,11 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                     }
                     return false;
                 });
+
+                if (tokenData[i].isCopulaReplacement && !match) {
+                    // Force the replacement marker to be recognized even if it's not in the dictionary
+                    match = { word: tokens[i], wordClass: 'Verb', translation: tokens[i] };
+                }
 
                 if (match || personRule) {
                     let conlang = (match ? match.word : personRule.freeForm).replace(/\*/g, '');
@@ -1442,6 +1680,11 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
 
                         for (const r of possibleRules) {
                             if (r?.affix) {
+                                const tClass = (match?.wordClass || '').toLowerCase();
+                                if (r.appliesTo && r.appliesTo !== 'all' && r.appliesTo.trim() !== '') {
+                                    if (!tClass.includes(r.appliesTo.toLowerCase())) continue;
+                                }
+
                                 try {
                                     const vStore = useConfigStore.getState();
                                     conlang = applyRuleToWord(conlang, r, grammarRules, vStore.vowels, vStore.consonants, vStore.otherPhonemes);
@@ -1556,11 +1799,17 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                 // Person agreement for this clause
                 const subjToken = clauseBAffix.find(w => w && w.role === 'S' && w.personRule);
                 if (subjToken) {
-                    const verbToken = clauseBAffix.filter(w => w && w.role === 'V' && !w.swallowed && !w.isAuxiliary).pop();
-                    if (verbToken && subjToken.personRule.affix) {
-                        verbToken.conlang = applyAffixToBase(verbToken.conlang, subjToken.personRule.affix);
-                        verbToken.inflected = true;
-                        verbToken.ruleSource = 'Person Agreement: ' + (subjToken.personRule.name || subjToken.personRule.person);
+                    let targetToken = clauseBAffix.filter(w => w && w.role === 'V' && !w.swallowed && !w.isAuxiliary).pop();
+                    
+                    // Fallback: If there is no verb (e.g. Zero Copula omission), attach to the predicate (Adjective/Noun)
+                    if (!targetToken) {
+                        targetToken = clauseBAffix.filter(w => w && (w.role === 'J' || w.role === 'NOUN') && !w.swallowed).pop();
+                    }
+
+                    if (targetToken && subjToken.personRule.affix) {
+                        targetToken.conlang = applyAffixToBase(targetToken.conlang, subjToken.personRule.affix);
+                        targetToken.inflected = true;
+                        targetToken.ruleSource = 'Person Agreement: ' + (subjToken.personRule.name || subjToken.personRule.person);
                         subjToken.encodedInVerb = true;
                     }
                 }
@@ -1629,10 +1878,43 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         
         if (primaryRom.trim() || primaryBreakdown.length > 0) {
             results.push({
-                key: 'phrase-primary', type: 'phrase', label: 'Translation Suggestion',
+                key: 'phrase-primary', type: 'phrase', label: 'TRANSLATION SUGGESTION',
                 romanized: primaryRom || '[empty]', display: transliterate(primaryRom || '[empty]', lexicon),
                 wordBreakdown: primaryBreakdown, reordered: primaryReordered, lineStart, lineEnd
             });
+        }
+
+        if (useAffix && romAffix.trim() && romFree.trim()) {
+            results.push({
+                key: 'phrase-affix', type: 'phrase', label: 'TRANSLATION SUGGESTION (Affix Form)',
+                romanized: romAffix || '[empty]', display: transliterate(romAffix || '[empty]', lexicon),
+                wordBreakdown: finalBAffix, reordered: finalRAffix, lineStart, lineEnd
+            });
+            results[0].label = 'TRANSLATION SUGGESTION (Free Form)';
+            results[0].romanized = romFree;
+            results[0].display = transliterate(romFree, lexicon);
+            results[0].wordBreakdown = finalBFree;
+            results[0].reordered = finalRFree;
+        }
+
+        if (!overrideCopulaBehavior && waConfig.copulaBehavior === 'zero_copula') {
+            const suggsOmit = computePhraseSuggestion(val, cursor, syntaxOrder, userManualRoles, 'omit') || [];
+            let suggsReplace = [];
+            
+            if (waConfig.copulaReplacement && waConfig.copulaReplacement.trim() !== '') {
+                suggsReplace = computePhraseSuggestion(val, cursor, syntaxOrder, userManualRoles, 'replace') || [];
+            }
+            
+            suggsOmit.forEach(s => {
+                if (s.label) s.label = s.label.replace('TRANSLATION SUGGESTION', 'TRANSLATION (Zero Copula: Omit)');
+                s.key = s.key + '-omit';
+            });
+            suggsReplace.forEach(s => {
+                if (s.label) s.label = s.label.replace('TRANSLATION SUGGESTION', 'TRANSLATION (Zero Copula: Marker)');
+                s.key = s.key + '-replace';
+            });
+            
+            return [...suggsOmit, ...suggsReplace];
         }
 
         return results.map(res => {
@@ -1657,7 +1939,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         const query = word.replace(/[.,!?()[\]{}"`:;]/g, '').toLowerCase();
 
         // ── Phrase translation — always computed so the summary stays visible ──────
-        const phraseSuggs = computePhraseSuggestion(val, cursor, syntaxOrder);
+        const phraseSuggs = computePhraseSuggestion(val, cursor, syntaxOrder, manualRoles);
         const combined = [...(Array.isArray(phraseSuggs) ? phraseSuggs : [])];
 
         // ── Lexicon & Inflections — only if query is long enough ──────────────────
@@ -2124,49 +2406,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
 
                     {/* Status bar — always visible when word assist is on */}
                     {showWaTip && (
-                        <div className="wa-tip-box">
-                            <button 
-                                onClick={() => setShowWaTip(false)}
-                                style={{ position: 'absolute', top: '8px', right: '8px', background: 'transparent', border: 'none', color: 'var(--tx3)', cursor: 'pointer', padding: '4px' }}
-                            >
-                                <Plus size={14} style={{ transform: 'rotate(45deg)' }} />
-                            </button>
-                            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                                <div style={{ background: '#8b5cf6', padding: '8px', borderRadius: '10px', color: 'white', boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)' }}>
-                                    <Languages size={18} />
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                    <h4 style={{ margin: '0 0 4px 0', fontSize: '0.9rem', fontWeight: 700, color: 'var(--tx)' }}>Word Assist Guide</h4>
-                                    <p style={{ margin: '0 0 10px 0', fontSize: '0.78rem', color: 'var(--tx2)', lineHeight: '1.4' }}>
-                                        Word Assist is an experimental syntactic engine that helps you build phrases in your conlang in real-time.
-                                    </p>
-                                    
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '12px' }}>
-                                        <div style={{ background: 'rgba(255,255,255,0.03)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#8b5cf6', marginBottom: '4px' }}>1. SETUP</div>
-                                            <div style={{ fontSize: '0.65rem', color: 'var(--tx3)' }}>Define classes (Verb, Noun) in Lexicon and use "WA Triggers" in Grammar.</div>
-                                        </div>
-                                        <div style={{ background: 'rgba(255,255,255,0.03)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#ec4899', marginBottom: '4px' }}>2. SYNTAX</div>
-                                            <div style={{ fontSize: '0.65rem', color: 'var(--tx3)' }}>Word order (SVO, OSV, etc.) is pulled from your global settings.</div>
-                                        </div>
-                                        <div style={{ background: 'rgba(255,255,255,0.03)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#f59e0b', marginBottom: '4px' }}>3. INTERACTIVE</div>
-                                            <div style={{ fontSize: '0.65rem', color: 'var(--tx3)' }}>Drag chips to reorder. Use Tab to insert the suggested phrase.</div>
-                                        </div>
-                                    </div>
-
-                                    <div style={{ 
-                                        display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', 
-                                        background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', 
-                                        borderRadius: '6px', color: '#f87171', fontSize: '0.65rem', fontWeight: 600
-                                    }}>
-                                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f87171', animation: 'pulse 2s infinite' }}></div>
-                                        EXPERIMENTAL: This engine is limited and subject to grammatical errors in complex phrases.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <WordAssistTutorial onClose={() => setShowWaTip(false)} />
                     )}
 
                     {wordRange && (suggestions.length > 0 || !FUNCTION_WORDS.has(text.slice(wordRange.start, wordRange.end).toLowerCase())) && (
@@ -2294,8 +2534,43 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                                                         <span>→</span>
                                                         <span style={{ color: pc, fontWeight: 700 }}>{breakdown.conlang}</span>
                                                     </div>
-                                                    <div style={{ fontSize: '0.55rem', opacity: 0.6, display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                                                        <span style={{ fontWeight: 600 }}>[{breakdown.role === 'V' ? 'verb' : breakdown.role === 'S' ? 'subject' : breakdown.role === 'O' ? 'object' : breakdown.role}]</span>
+                                                    <div style={{ fontSize: '0.55rem', opacity: 0.6, display: 'flex', flexWrap: 'wrap', gap: '5px', alignItems: 'center' }}>
+                                                        <span 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const ROLES = ['S', 'V', 'O', 'M', 'J', 'R', 'P', 'A', 'Q', 'G', 'C', 'T', 'L', 'N'];
+                                                                const currentRole = breakdown.role || 'O';
+                                                                const idx = ROLES.indexOf(currentRole);
+                                                                const nextRole = ROLES[(idx + 1) % ROLES.length];
+                                                                
+                                                                const newManualRoles = { ...manualRoles, [breakdown.original.toLowerCase()]: nextRole };
+                                                                setManualRoles(newManualRoles);
+                                                                
+                                                                // Re-trigger suggestion compilation by faking a text change event
+                                                                setTimeout(() => {
+                                                                    const phraseSuggs = computePhraseSuggestion(text, textareaRef.current?.selectionStart || 0, syntaxOrder, newManualRoles);
+                                                                    setSuggestions(prev => {
+                                                                        const combined = [...(Array.isArray(phraseSuggs) ? phraseSuggs : [])];
+                                                                        const others = prev.filter(p => p.type !== 'phrase');
+                                                                        return [...combined, ...others];
+                                                                    });
+                                                                }, 0);
+                                                            }}
+                                                            style={{ 
+                                                                fontWeight: 600, 
+                                                                cursor: 'pointer', 
+                                                                background: 'rgba(255,255,255,0.1)', 
+                                                                padding: '1px 4px', 
+                                                                borderRadius: '4px',
+                                                                border: '1px dashed rgba(255,255,255,0.3)',
+                                                                transition: 'all 0.1s'
+                                                            }}
+                                                            title="Click to manually override this grammatical role"
+                                                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.2)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.8)'; }}
+                                                            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}
+                                                        >
+                                                            [{breakdown.role === 'V' ? 'verb' : breakdown.role === 'S' ? 'subject' : breakdown.role === 'O' ? 'object' : breakdown.role}]
+                                                        </span>
                                                         {breakdown.entry?.wordClass && <span>[{breakdown.entry.wordClass}]</span>}
                                                         {breakdown.ruleName && <span style={{ color: '#ffcc00' }}>({breakdown.ruleName})</span>}
                                                         {breakdown.inflected && <span title={breakdown.ruleSource || 'Grammar Rule Applied'} style={{ color: '#ffcc00', cursor: 'help' }}>✦</span>}

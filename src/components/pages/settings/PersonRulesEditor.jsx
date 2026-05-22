@@ -776,6 +776,7 @@ export default function PersonRulesEditor() {
                 <option value="adj">Adjectives Only</option>
                 <option value="adv">Adverbs Only</option>
                 <option value="pronoun">Pronouns Only</option>
+                <option value="zero_copula">Zero Copula Only</option>
             </datalist>
             <datalist id="root-tag-options">
                 <option value="1p">1st Person Root</option>

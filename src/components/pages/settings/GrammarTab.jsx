@@ -15,6 +15,7 @@ export default function GrammarTab(){
     const writingDirection = useConfigStore((state) => state.writingDirection) || 'ltr';
     const verbMarker = useConfigStore((state) => state.verbMarker) || '';
     const cliticsRules = useConfigStore((state) => state.cliticsRules) || '';
+    const waConfig = useConfigStore((state) => state.wordAssistConfig) || {};
     const updateConfig = useConfigStore((state) => state.updateConfig);
 
     return (
@@ -95,6 +96,27 @@ export default function GrammarTab(){
                         value={cliticsRules}
                         onChange={(e) => updateConfig({ cliticsRules: e.target.value })}
                     />
+
+                    <div className="input-wrapper">
+                        <label className="input-label">Copula (To Be) Behavior</label>
+                        <select 
+                            className="fi custom-select"
+                            value={waConfig.copulaBehavior === 'replace' || waConfig.copulaBehavior === 'both' || waConfig.copulaBehavior === 'omit' ? 'zero_copula' : (waConfig.copulaBehavior || 'normal')}
+                            onChange={(e) => updateConfig({ wordAssistConfig: { ...waConfig, copulaBehavior: e.target.value } })}
+                        >
+                            <option value="normal">Normal (Parse as Verb/Modal)</option>
+                            <option value="zero_copula">Enable Zero Copula</option>
+                        </select>
+                    </div>
+
+                    {waConfig.copulaBehavior === 'zero_copula' && (
+                        <Input 
+                            label="Copula Replacement Marker"
+                            value={waConfig.copulaReplacement || ''}
+                            placeholder="e.g. vu"
+                            onChange={(e) => updateConfig({ wordAssistConfig: { ...waConfig, copulaReplacement: e.target.value } })}
+                        />
+                    )}
                 </div>
             </Card>
             
