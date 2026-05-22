@@ -483,11 +483,18 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
         'P': 'Preposition',
         'G': 'Genitive'
     };
-    let syntaxOrder = wa.syntaxOrder || 'QCTLJNORVMSAPG';
-    // Ensure all defined roles are present in the order string
-    Object.keys(roleLabels).forEach(r => {
-        if (!syntaxOrder.includes(r)) syntaxOrder += r;
-    });
+    let syntaxOrder = wa.syntaxOrder;
+    if (!syntaxOrder) {
+        syntaxOrder = config.syntaxOrder || 'SVO';
+        const defaultRest = 'QCTLJNORVMSAPG';
+        defaultRest.split('').forEach(r => {
+            if (!syntaxOrder.includes(r)) syntaxOrder += r;
+        });
+    } else {
+        Object.keys(roleLabels).forEach(r => {
+            if (!syntaxOrder.includes(r)) syntaxOrder += r;
+        });
+    }
 
     const [draggedRoleIdx, setDraggedRoleIdx] = useState(null);
 
@@ -576,6 +583,7 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
                         <select className="wa-select-v2" value={wa.adjPos || 'before'} onChange={(e) => updateConfig({ wordAssistConfig: { ...wa, adjPos: e.target.value } })}>
                             <option value="before">Before Noun (e.g. red cat)</option>
                             <option value="after">After Noun (e.g. cat red)</option>
+                            <option value="priority">Follow Syntactic Priority</option>
                         </select>
                     </div>
                     <div style={{ flex: 1 }}>
@@ -583,6 +591,7 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
                         <select className="wa-select-v2" value={wa.genPos || 'before'} onChange={(e) => updateConfig({ wordAssistConfig: { ...wa, genPos: e.target.value } })}>
                             <option value="before">Before Noun (e.g. my cat)</option>
                             <option value="after">After Noun (e.g. cat my)</option>
+                            <option value="priority">Follow Syntactic Priority</option>
                         </select>
                     </div>
                     <div style={{ flex: 1 }}>
@@ -590,6 +599,7 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
                         <select className="wa-select-v2" value={wa.advPos || 'before'} onChange={(e) => updateConfig({ wordAssistConfig: { ...wa, advPos: e.target.value } })}>
                             <option value="before">Before Verb (e.g. fast run)</option>
                             <option value="after">After Verb (e.g. run fast)</option>
+                            <option value="priority">Follow Syntactic Priority</option>
                         </select>
                     </div>
                 </div>
@@ -900,22 +910,51 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                     let before = [];
                     let after = [];
                     pMods.forEach(m => {
-                        const pos = (m.role === 'G' ? waConfig.genPos : waConfig.adjPos) || 'before';
-                        if (pos === 'after') after.push(m);
-                        else before.push(m);
+                        const pos = (m.role === 'G' ? waConfig.genPos : (m.role === 'R' ? waConfig.advPos : waConfig.adjPos)) || 'before';
+                        if (pos === 'priority') {
+                            blocks.push({ type: 'Standalone', headRole: m.role, tokens: [m] });
+                        } else if (pos === 'after') {
+                            after.push(m);
+                        } else {
+                            before.push(m);
+                        }
                     });
                     pBlock.tokens.push(...before, activeTokens[j], ...after);
                     pBlock.headRole = activeTokens[j].role;
                     j++;
                 } else {
-                    pBlock.tokens.push(...pMods);
+                    pMods.forEach(m => {
+                        const pos = (m.role === 'G' ? waConfig.genPos : (m.role === 'R' ? waConfig.advPos : waConfig.adjPos)) || 'before';
+                        if (pos === 'priority') {
+                            blocks.push({ type: 'Standalone', headRole: m.role, tokens: [m] });
+                        } else {
+                            pBlock.tokens.push(m);
+                        }
+                    });
                 }
                 blocks.push(pBlock);
                 continue;
             }
 
             if (['A', 'G', 'J', 'C', 'R'].includes(r)) {
-                currentModifiers.push(tokenObj);
+                const pos = (r === 'G' ? waConfig.genPos : (r === 'R' ? waConfig.advPos : waConfig.adjPos)) || 'before';
+                if (pos === 'priority') {
+                    if (currentModifiers.length > 0) {
+                        blocks.push({
+                            type: 'Standalone',
+                            headRole: currentModifiers[0].role,
+                            tokens: currentModifiers
+                        });
+                        currentModifiers = [];
+                    }
+                    blocks.push({
+                        type: 'Standalone',
+                        headRole: r,
+                        tokens: [tokenObj]
+                    });
+                } else {
+                    currentModifiers.push(tokenObj);
+                }
                 j++;
                 continue;
             }
@@ -924,7 +963,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                 let before = [];
                 let after = [];
                 currentModifiers.forEach(m => {
-                    const pos = (m.role === 'G' ? waConfig.genPos : waConfig.adjPos) || 'before';
+                    const pos = (m.role === 'G' ? waConfig.genPos : (m.role === 'R' ? waConfig.advPos : waConfig.adjPos)) || 'before';
                     if (pos === 'after') after.push(m);
                     else before.push(m);
                 });
@@ -942,7 +981,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                 let before = [];
                 let after = [];
                 currentModifiers.forEach(m => {
-                    const pos = (m.role === 'G' ? waConfig.genPos : waConfig.adjPos) || 'before';
+                    const pos = (m.role === 'G' ? waConfig.genPos : (m.role === 'R' ? waConfig.advPos : waConfig.adjPos)) || 'before';
                     if (pos === 'after') after.push(m);
                     else before.push(m);
                 });
@@ -960,7 +999,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                 let before = [];
                 let after = [];
                 currentModifiers.forEach(m => {
-                    const pos = (m.role === 'R' ? waConfig.advPos : waConfig.adjPos) || 'before';
+                    const pos = (m.role === 'G' ? waConfig.genPos : (m.role === 'R' ? waConfig.advPos : waConfig.adjPos)) || 'before';
                     if (pos === 'after') after.push(m);
                     else before.push(m);
                 });
@@ -1027,8 +1066,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                 // Prepositions always come first
                 if (a.role === 'P' && b.role !== 'P') return -1;
                 if (b.role === 'P' && a.role !== 'P') return 1;
-                // Otherwise, preserve their original relative position in the sentence
-                return (a.originalPos ?? 0) - (b.originalPos ?? 0);
+                return 0; // preserve before/after order
             });
         });
 
