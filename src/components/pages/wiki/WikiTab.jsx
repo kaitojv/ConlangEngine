@@ -549,6 +549,38 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
                 </div>
             </div>
 
+            {/* Modifier Placement Options */}
+            <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(0,0,0,0.25)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <h4 style={{ fontSize: '0.8rem', fontWeight: 800, margin: 0, color: 'var(--acc)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Settings size={15} /> Modifier Position
+                    </h4>
+                </div>
+                <div style={{ display: 'flex', gap: '20px' }}>
+                    <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>Adjectives</label>
+                        <select className="wa-select-v2" value={wa.adjPos || 'before'} onChange={(e) => updateConfig({ wordAssistConfig: { ...wa, adjPos: e.target.value } })}>
+                            <option value="before">Before Noun (e.g. red cat)</option>
+                            <option value="after">After Noun (e.g. cat red)</option>
+                        </select>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>Genitives/Possessives</label>
+                        <select className="wa-select-v2" value={wa.genPos || 'before'} onChange={(e) => updateConfig({ wordAssistConfig: { ...wa, genPos: e.target.value } })}>
+                            <option value="before">Before Noun (e.g. my cat)</option>
+                            <option value="after">After Noun (e.g. cat my)</option>
+                        </select>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>Adverbs</label>
+                        <select className="wa-select-v2" value={wa.advPos || 'before'} onChange={(e) => updateConfig({ wordAssistConfig: { ...wa, advPos: e.target.value } })}>
+                            <option value="before">Before Verb (e.g. fast run)</option>
+                            <option value="after">After Verb (e.g. run fast)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--tx3)', fontStyle: 'italic' }}>
                     Define triggers (words or suffixes) and how they should be marked in your conlang.
@@ -695,7 +727,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         'QCTLJNORVMSAPG'.split('').forEach(r => { if (!sOrder.includes(r)) sOrder += r; });
         sOrder.split('').forEach((r, idx) => { roleOrder[r] = idx; });
 
-        const activeTokens = breakdownArray.filter(w => w && !w.swallowed && !w.encodedInVerb);
+        const activeTokens = breakdownArray.filter(w => w);
         activeTokens.forEach((tok, idx) => {
             tok.originalPos = idx;
         });
@@ -715,14 +747,24 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                     tokens: [tokenObj]
                 };
                 j++;
+                let pMods = [];
                 while (j < activeTokens.length && ['A', 'G', 'J', 'C', 'R'].includes(activeTokens[j].role)) {
-                    pBlock.tokens.push(activeTokens[j]);
+                    pMods.push(activeTokens[j]);
                     j++;
                 }
                 if (j < activeTokens.length && ['O', 'S'].includes(activeTokens[j].role)) {
-                    pBlock.tokens.push(activeTokens[j]);
+                    let before = [];
+                    let after = [];
+                    pMods.forEach(m => {
+                        const pos = (m.role === 'G' ? waConfig.genPos : waConfig.adjPos) || 'before';
+                        if (pos === 'after') after.push(m);
+                        else before.push(m);
+                    });
+                    pBlock.tokens.push(...before, activeTokens[j], ...after);
                     pBlock.headRole = activeTokens[j].role;
                     j++;
+                } else {
+                    pBlock.tokens.push(...pMods);
                 }
                 blocks.push(pBlock);
                 continue;
@@ -735,10 +777,17 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
             }
 
             if (r === 'S') {
+                let before = [];
+                let after = [];
+                currentModifiers.forEach(m => {
+                    const pos = (m.role === 'G' ? waConfig.genPos : waConfig.adjPos) || 'before';
+                    if (pos === 'after') after.push(m);
+                    else before.push(m);
+                });
                 blocks.push({
                     type: 'Subject',
                     headRole: 'S',
-                    tokens: [...currentModifiers, tokenObj]
+                    tokens: [...before, tokenObj, ...after]
                 });
                 currentModifiers = [];
                 j++;
@@ -746,10 +795,17 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
             }
 
             if (r === 'O') {
+                let before = [];
+                let after = [];
+                currentModifiers.forEach(m => {
+                    const pos = (m.role === 'G' ? waConfig.genPos : waConfig.adjPos) || 'before';
+                    if (pos === 'after') after.push(m);
+                    else before.push(m);
+                });
                 blocks.push({
                     type: 'Object',
                     headRole: 'O',
-                    tokens: [...currentModifiers, tokenObj]
+                    tokens: [...before, tokenObj, ...after]
                 });
                 currentModifiers = [];
                 j++;
@@ -757,24 +813,25 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
             }
 
             if (r === 'V' || r === 'M' || r === 'N') {
-                if (currentModifiers.length > 0) {
-                    blocks.push({
-                        type: 'Standalone',
-                        headRole: currentModifiers[0].role,
-                        tokens: currentModifiers
-                    });
-                    currentModifiers = [];
-                }
+                let before = [];
+                let after = [];
+                currentModifiers.forEach(m => {
+                    const pos = (m.role === 'R' ? waConfig.advPos : waConfig.adjPos) || 'before';
+                    if (pos === 'after') after.push(m);
+                    else before.push(m);
+                });
+
                 let lastBlock = blocks[blocks.length - 1];
                 if (lastBlock && lastBlock.type === 'Verb') {
-                    lastBlock.tokens.push(tokenObj);
+                    lastBlock.tokens.push(...before, tokenObj, ...after);
                 } else {
                     blocks.push({
                         type: 'Verb',
                         headRole: 'V',
-                        tokens: [tokenObj]
+                        tokens: [...before, tokenObj, ...after]
                     });
                 }
+                currentModifiers = [];
                 j++;
                 continue;
             }
@@ -796,16 +853,28 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         }
 
         if (currentModifiers.length > 0) {
-            blocks.push({
-                type: 'Standalone',
-                headRole: currentModifiers[0].role,
-                tokens: currentModifiers
-            });
+            let lastBlock = blocks[blocks.length - 1];
+            if (lastBlock) {
+                let before = [];
+                let after = [];
+                currentModifiers.forEach(m => {
+                    const pos = (m.role === 'G' ? waConfig.genPos : (m.role === 'R' ? waConfig.advPos : waConfig.adjPos)) || 'before';
+                    if (pos === 'after') after.push(m);
+                    else before.push(m);
+                });
+                lastBlock.tokens.push(...before, ...after);
+            } else {
+                blocks.push({
+                    type: 'Standalone',
+                    headRole: currentModifiers[0].role,
+                    tokens: currentModifiers
+                });
+            }
         }
 
         blocks.sort((a, b) => {
-            const weightA = roleOrder[a.headRole] ?? 99;
-            const weightB = roleOrder[b.headRole] ?? 99;
+            const weightA = a.headRole === 'K' ? -1 : (roleOrder[a.headRole] ?? 99);
+            const weightB = b.headRole === 'K' ? -1 : (roleOrder[b.headRole] ?? 99);
             return weightA - weightB;
         });
 
@@ -1111,6 +1180,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         const QUESTION_WORDS = new Set(['who', 'whom', 'whose', 'what', 'which', 'where', 'when', 'why', 'how']);
         const TIME_WORDS = new Set(['today', 'yesterday', 'tomorrow', 'now', 'then', 'tonight', 'always', 'never', 'sometimes', 'soon', 'already', 'still', 'yet']);
         const PLACE_WORDS = new Set(['here', 'there', 'everywhere', 'nowhere', 'somewhere', 'anywhere', 'up', 'down', 'left', 'right', 'inside', 'outside']);
+        const CONJUNCTIONS = new Set(['and', 'or', 'but', 'if', 'as', 'because', 'so', 'although', 'though', 'unless', 'until', 'while', 'since', 'then']);
 
         const resolveTempo = (stack) => {
             const s = stack.join(' ');
@@ -1124,7 +1194,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
             return null;
         };
 
-        const parseClause = (clauseText) => {
+        const parseClause = (clauseText, inheritedRole = 'S') => {
             const rawTokens = clauseText.trim().split(/\s+/).filter(Boolean);
             const tokens = rawTokens.map(t => t.replace(/[.,!?()[\]{}"`:;]/g, ''));
             const tokenData = tokens.map((t, idx) => {
@@ -1141,6 +1211,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                 const lemma = info.lemma;
 
                 if (QUESTION_WORDS.has(low)) return 'Q';
+                if (CONJUNCTIONS.has(low)) return 'K';
                 if (PREPOSITIONS.has(low)) return 'P';
                 if (ARTICLES.has(low)) return 'A';
                 if (low === 'not' || low === "n't") return 'N';
@@ -1188,6 +1259,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
 
             // Find first verb index
             const firstVerbIdx = preClassified.findIndex(role => role === 'V' || role === 'M');
+            const lastVerbIdx = preClassified.map(r => r === 'V' || r === 'M').lastIndexOf(true);
 
             // Transitivity check
             let hasObject = false;
@@ -1199,9 +1271,21 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                 });
             }
 
+            const PRONOUN_OR_DET = new Set([
+                'all', 'some', 'none', 'any', 'both', 'each', 'few', 'many', 'several', 
+                'everything', 'nothing', 'anything', 'something', 'everyone', 'someone', 
+                'anyone', 'nobody', 'everybody', 'somebody', 'anybody', 'much', 'more', 
+                'most', 'enough', 'other', 'others', 'another',
+                'this', 'that', 'these', 'those'
+            ]);
+
             // Assign final roles based on verb position
             const finalRoles = preClassified.map((role, idx) => {
                 const low = tokens[idx].toLowerCase();
+
+                if (idx === lastVerbIdx && (role === 'M' || role === 'V')) {
+                    return 'V';
+                }
                 
                 if (low === 'her') {
                     const nextRole = preClassified[idx + 1];
@@ -1209,8 +1293,24 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                     return 'O';
                 }
 
+                if (PRONOUN_OR_DET.has(low)) {
+                    let isPronoun = true;
+                    for (let k = idx + 1; k < preClassified.length; k++) {
+                        const r = preClassified[k];
+                        if (r === 'NOUN' || (tokens[k] && PRONOUN_MAP[tokens[k].toLowerCase()])) {
+                            isPronoun = false;
+                            break;
+                        }
+                        if (r === 'V' || r === 'M' || r === 'P' || r === 'K') break;
+                    }
+                    if (isPronoun) {
+                        return (firstVerbIdx === -1 || idx < firstVerbIdx) ? 'S' : 'O';
+                    }
+                }
+
                 if (role === 'NOUN') {
-                    if (firstVerbIdx === -1 || idx < firstVerbIdx) return 'S';
+                    if (firstVerbIdx === -1) return inheritedRole;
+                    if (idx < firstVerbIdx) return 'S';
                     return 'O';
                 }
 
@@ -1258,8 +1358,11 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                                      (!['the','a','an','my','your','his','her','its','our','their'].includes(nextLow) && !ANIMAL_WORDS_EN.has(nextLow) && !HUMAN_WORDS_EN.has(nextLow));
                     
                     if (isNextVerb) {
-                        breakdown[i] = { original: fullForm, conlang: `[${q}]`, role: 'C', swallowed: true };
-                        i++; continue;
+                        const toMatch = lexicon.find(e => e.translation && matchesTranslation(e.translation, 'to'));
+                        if (!toMatch) {
+                            breakdown[i] = { original: fullForm, conlang: `[${q}]`, role: 'C', swallowed: true };
+                            i++; continue;
+                        }
                     }
                 }
 
@@ -1270,20 +1373,28 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                 else if (['do', 'does', 'did'].includes(q)) { auxiliaryStack.push('do'); }
                 else if (q === 'been') { auxiliaryStack.push('been'); }
 
-                let matches = lexicon.filter(e => e.translation && matchesTranslation(e.translation, q));
+                let matches = lexicon.filter(e => {
+                    const transMatch = e.translation && matchesTranslation(e.translation, q);
+                    const shortMatch = e.shortTranslation && matchesTranslation(e.shortTranslation, q);
+                    return transMatch || shortMatch;
+                });
                 let matchTarget = q;
                 if (matches.length === 0) {
-                    matches = lexicon.filter(e => e.translation && matchesTranslation(e.translation, lemma));
+                    matches = lexicon.filter(e => {
+                        const transMatch = e.translation && matchesTranslation(e.translation, lemma);
+                        const shortMatch = e.shortTranslation && matchesTranslation(e.shortTranslation, lemma);
+                        return transMatch || shortMatch;
+                    });
                     matchTarget = lemma;
                 }
                 const match = matches.sort((a, b) => {
-                    const ta = (a.translation || '').toLowerCase();
-                    const tb = (b.translation || '').toLowerCase();
+                    const ta = (a.shortTranslation || a.translation || '').toLowerCase();
+                    const tb = (b.shortTranslation || b.translation || '').toLowerCase();
                     const aExact = ta === matchTarget || ta.split(/[,;/]/).map(d => d.trim().toLowerCase()).includes(matchTarget);
                     const bExact = tb === matchTarget || tb.split(/[,;/]/).map(d => d.trim().toLowerCase()).includes(matchTarget);
                     if (aExact && !bExact) return -1;
                     if (!aExact && bExact) return 1;
-                    return (a.translation || '').length - (b.translation || '').length;
+                    return ta.length - tb.length;
                 })[0];
 
                 if (role === 'N') {
@@ -1353,7 +1464,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                     breakdown[i] = {
                         original: fullForm, conlang, found: true, entry: match, role, inflected,
                         ruleName: appliedRuleName, ruleSource: appliedRuleSource, isAuxiliary, isArticle, personRule,
-                        swallowed: isAuxiliary || isArticle, context,
+                        swallowed: false, context,
                         animacy: getAnimacyLevel({ original: q }, match, PRONOUN_MAP[q])
                     };
                 } else {
@@ -1372,7 +1483,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                     breakdown[i] = { 
                         original: fullForm, conlang, role, found: false, 
                         inflected, ruleSource: appliedRuleSource,
-                        swallowed: isAuxiliary || isArticle || role === 'P',
+                        swallowed: isAuxiliary || isArticle,
                         animacy: getAnimacyLevel({ original: q }, null, PRONOUN_MAP[q])
                     };
                 }
@@ -1408,6 +1519,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
 
         let totalPhraseIsNegative = false;
         let hasAlt = false;
+        let currentInheritedRole = 'S';
 
         segments.forEach((seg) => {
             if (seg.type === 'punct') {
@@ -1427,7 +1539,15 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                 finalRAffix.push(punctToken);
                 finalRAlt.push(punctToken);
             } else {
-                const parsed = parseClause(seg.text);
+                const parsed = parseClause(seg.text, currentInheritedRole);
+                
+                const roles = parsed.breakdown.map(w => w?.role).filter(Boolean);
+                if (roles.includes('V') || roles.includes('M')) {
+                    currentInheritedRole = 'O';
+                } else if (roles.includes('S')) {
+                    currentInheritedRole = 'S';
+                }
+                
                 if (parsed.phraseIsNegative) totalPhraseIsNegative = true;
                 
                 const clauseBFree = JSON.parse(JSON.stringify(parsed.breakdown));
@@ -1480,7 +1600,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         const buildRomanizedString = (reorderedList) => {
             let s = '';
             reorderedList.forEach((w) => {
-                if (!w || w.swallowed) return;
+                if (!w || w.swallowed || w.encodedInVerb) return;
                 const wordStr = w.conlang;
                 if (!wordStr) return;
                 
@@ -1498,34 +1618,21 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         let romFree = buildRomanizedString(finalRFree);
         if (totalPhraseIsNegative && waConfig.negation?.position === 'endOfSentence' && waConfig.negation?.content) romFree += ' ' + waConfig.negation.content;
         
-        if (romFree.trim() || finalBFree.length > 0) {
-            results.push({
-                key: 'phrase-free', type: 'phrase', label: 'Free Form',
-                romanized: romFree || '[empty]', display: transliterate(romFree || '[empty]', lexicon),
-                wordBreakdown: finalBFree, reordered: finalRFree, lineStart, lineEnd
-            });
-        }
-
         let romAffix = buildRomanizedString(finalRAffix);
         if (totalPhraseIsNegative && waConfig.negation?.position === 'endOfSentence' && waConfig.negation?.content) romAffix += ' ' + waConfig.negation.content;
 
-        if (romAffix !== romFree && (romAffix.trim() || finalBAffix.length > 0)) {
+        const useAffix = (romAffix !== romFree && (romAffix.trim() || finalBAffix.length > 0));
+        
+        const primaryRom = useAffix ? romAffix : romFree;
+        const primaryBreakdown = useAffix ? finalBAffix : finalBFree;
+        const primaryReordered = useAffix ? finalRAffix : finalRFree;
+        
+        if (primaryRom.trim() || primaryBreakdown.length > 0) {
             results.push({
-                key: 'phrase-affix', type: 'phrase', label: 'Person Agreement Form',
-                romanized: romAffix || '[empty]', display: transliterate(romAffix || '[empty]', lexicon),
-                wordBreakdown: finalBAffix, reordered: finalRAffix, lineStart, lineEnd
+                key: 'phrase-primary', type: 'phrase', label: 'Translation Suggestion',
+                romanized: primaryRom || '[empty]', display: transliterate(primaryRom || '[empty]', lexicon),
+                wordBreakdown: primaryBreakdown, reordered: primaryReordered, lineStart, lineEnd
             });
-        }
-
-        if (hasAlt) {
-            let romAlt = buildRomanizedString(finalRAlt);
-            if (romAlt !== romFree) {
-                results.push({
-                    key: 'phrase-alt', type: 'phrase', romanized: romAlt,
-                    display: transliterate(romAlt, lexicon),
-                    lineStart, lineEnd, wordBreakdown: finalBAlt, reordered: finalRAlt, label: 'Alt. Reading'
-                });
-            }
         }
 
         return results.map(res => {
@@ -1799,7 +1906,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         const fullList = sugg.wordBreakdown || sugg.reordered || [];
         
         // If this is an Affix Form, we need to RE-APPLY the person marker per clause
-        if (sugg.key === 'phrase-affix' && sugg.wordBreakdown) {
+        if (sugg.wordBreakdown) {
             const applyClausePersonAgreement = (clauseTokens) => {
                 // 1. Clear existing person markers in this clause
                 clauseTokens.forEach(w => {
@@ -1863,7 +1970,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         }
         sugg.reordered = newReordered;
 
-        sugg.romanized = sugg.reordered.filter(w => !w.swallowed).map(w => w.conlang).join(' ');
+        sugg.romanized = sugg.reordered.filter(w => !w.swallowed && !w.encodedInVerb).map(w => w.conlang).join(' ');
         sugg.display = transliterate(sugg.romanized, lexicon);
 
         
