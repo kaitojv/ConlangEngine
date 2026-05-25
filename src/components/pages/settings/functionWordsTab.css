@@ -1,4 +1,4 @@
-/* src/components/pages/settings/personRulesEditor.css */
+/* src/components/pages/settings/functionWordsTab.css */
 
 .person-rules-editor {
     display: flex;
@@ -14,7 +14,7 @@
 }
 
 .person-rules-header .input-label {
-    margin-bottom: 0; /* Override default margin for input-label */
+    margin-bottom: 0;
 }
 
 .btn-auto-fill {
@@ -24,7 +24,7 @@
     padding: 8px 12px;
     border-radius: var(--radius);
     background-color: var(--acc);
-    color: var(--tx); /* Use --tx for text color */
+    color: var(--tx);
     border: none;
     cursor: pointer;
     font-size: 0.9em;
@@ -37,15 +37,15 @@
 
 .rules-column-headers {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1.5fr 1.5fr 1.2fr 1.2fr auto; /* Matches rule-item grid */
+    grid-template-columns: 1fr 1fr 1fr 1.5fr 1.5fr 1.2fr 1.2fr auto;
     gap: 10px;
-    padding: 0 10px; /* Align with rule-item padding */
+    padding: 0 10px;
     font-weight: 600;
-    color: var(--tx2); /* Lighter text for headers */
+    color: var(--tx2);
     font-size: 0.85em;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-bottom: -5px; /* Pull it closer to the first rule item */
+    margin-bottom: -5px;
 }
 
 .rules-list {
@@ -67,10 +67,10 @@
     padding: 8px;
     border: 1px solid var(--bd);
     border-radius: var(--radius);
-    background-color: var(--s4); /* Use --s4 for input background, consistent with Input.jsx */
+    background-color: var(--s4);
     color: var(--tx);
     font-size: 0.9em;
-    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    box-sizing: border-box;
 }
 
 .rule-select:focus,
@@ -104,7 +104,7 @@
     padding: 10px 15px;
     border-radius: var(--radius);
     background-color: var(--acc);
-    color: var(--tx); /* Use --tx for text color */
+    color: var(--tx);
     border: none;
     cursor: pointer;
     font-size: 1em;
@@ -126,21 +126,16 @@
     background-color: var(--s4);
 }
 
-/* Responsive adjustments */
 @media (max-width: 768px) {
     .btn-delete-rule {
         position: relative;
         align-self: flex-end;
     }
-}
-
-/* Responsive adjustments for headers */
-@media (max-width: 768px) {
     .rules-column-headers {
         grid-template-columns: 1fr 1fr;
     }
     .rules-column-headers > *:nth-child(n+3) {
-        display: none; /* Hide most headers on smaller screens to avoid clutter */
+        display: none;
     }
 }
 
@@ -150,11 +145,10 @@
     }
     .rules-column-headers {
         grid-template-columns: 1fr;
-        display: none; /* Hide headers completely on very small screens if they don't fit well */
+        display: none;
     }
 }
 
-/* Pronoun Matrix Styles */
 .dimension-selector-card {
     background: rgba(0, 0, 0, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.05);
@@ -203,6 +197,22 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.matrix-input {
+    width: 100%;
+    background: rgba(0,0,0,0.1);
+    border: 1px solid var(--bd);
+    color: var(--tx1);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    outline: none;
+    transition: all 0.15s ease;
+}
+.matrix-input:focus {
+    border-color: var(--acc);
+    background: var(--s2);
 }
 
 .wa-tabs {

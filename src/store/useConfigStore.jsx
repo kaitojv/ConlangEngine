@@ -121,6 +121,7 @@ export const INITIAL_CONFIG = {
             { id: 'pl-1', name: 'Plural', trigger: '-s', marker: '', type: 'suffix', position: 'suffix', priority: 3 }
         ]
     },
+    functionWords: [],
 };
 
 // IndexedDB Helper for handling massive data without breaking local storage quotas

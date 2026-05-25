@@ -3,7 +3,6 @@ import Card from '../../UI/Card/Card.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import RulesManager from './grammarMatrix/RulesManager.jsx';
 import Input from '../../UI/Input/Input.jsx';
-import PersonRulesEditor from './PersonRulesEditor.jsx'; // Import the new component
 import Button from '../../UI/Buttons/Buttons.jsx';
 import { TextInitial, TextAlignStart, Users, Languages, Info } from 'lucide-react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
@@ -118,21 +117,6 @@ export default function GrammarTab(){
                         />
                     )}
                 </div>
-            </Card>
-            
-            {/* --- ALIGNMENT & PRONOUNS --- */}
-            <Card>
-                <h2 className="flex sg-title"><Users /> Person & Class Alignment</h2>
-                <Infobox title="Pronoun & Affix Guide">
-                    Define how each grammatical person (1st, 2nd, 3rd) or noun class is represented.
-                    <br /><br />
-                    • <b>Person/Number/Gender:</b> Select the grammatical category. Use "Person" for pronouns and "Noun Class" for noun alignments.<br />
-                    • <b>Free Form:</b> The standalone pronoun word (e.g., "I", "you").<br />
-                    • <b>Affix:</b> The bound morpheme that attaches to roots (e.g., <code>-m</code>).<br />
-                    • <b>Applies To:</b> Filters which word classes use this rule. Set to <code>all</code> (default) or specify <code>verb</code> for verbal conjugations.<br />
-                    • <b>Root Tag:</b> Advanced scoping. Link this rule to dictionary words that share a specific tag.
-                </Infobox>
-                <PersonRulesEditor />
             </Card>
             
         </div>
