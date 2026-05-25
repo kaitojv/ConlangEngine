@@ -7,7 +7,7 @@
     padding: 30px;
     margin-bottom: 25px;
     box-shadow: var(--shadow);
-    transition: 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     backdrop-filter: blur(var(--blur));
     -webkit-backdrop-filter: blur(var(--blur));
     border: 1px solid var(--bd);
@@ -15,4 +15,6 @@
 
 .card:hover {
     border-color: var(--acc);
+    box-shadow: var(--shadow-hover), inset 0 0 20px color-mix(in srgb, var(--acc) 5%, transparent);
+    transform: translateY(-2px);
 }

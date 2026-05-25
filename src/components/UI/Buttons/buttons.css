@@ -41,7 +41,7 @@
     background: var(--ok);
     color: #fff;
 }
-.btn-save:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+.btn-save:hover { transform: translateY(-2px); box-shadow: 0 4px 12px color-mix(in srgb, var(--ok) 30%, transparent); }
 
 .btn-edit {
     background: var(--acc);
@@ -63,14 +63,17 @@
 .btn-cancel:hover { background: var(--s3); }
 
 .btn-default {
-    background-color: transparent;
+    background-color: color-mix(in srgb, var(--s2) 40%, transparent);
     color: var(--tx);
     border: 1px solid var(--bd);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 .btn-default:hover {
-    background-color: var(--s2);
+    background-color: var(--s3);
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--s3) 30%, transparent);
 }
 
 .btn-ipa {
@@ -86,7 +89,7 @@
 .btn-error:hover {
     filter: brightness(1.1);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(255, 0, 0, 0.3);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--err) 30%, transparent);
 }
 
 .btn-import {
@@ -97,7 +100,7 @@
 .btn-import:hover {
     filter: brightness(1.1);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--acc2) 20%, transparent);
 }
 
 .btn-listen {
