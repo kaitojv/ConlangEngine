@@ -278,7 +278,7 @@ export default function ProfileTab() {
             );
 
             setLexicon(safeLexicon);
-            config.updateConfig(safeConfig);
+            config.setFullConfig(safeConfig);
             
             if (project.project_data.wiki) {
                 config.updateConfig({ wikiPages: project.project_data.wiki });
