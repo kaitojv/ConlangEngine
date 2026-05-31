@@ -16,13 +16,79 @@ import { supabase } from '../../../utils/supabaseClient.js';
 import { useSharing } from '../../../hooks/useSharing.jsx';
 import './lexiconList.css';
 
+const StressWave = ({ word, stress, tone, customVowelsStr }) => {
+    if (!stress && !tone) return null;
+    
+    let vowelsArr = [];
+    if (customVowelsStr) {
+        vowelsArr = customVowelsStr.split(',').map(v => v.trim().toLowerCase()).filter(Boolean);
+    }
+    
+    // Intelligent fallback: if the word contains standard/IPA vowels that the user forgot to add to their config, include them anyway so the UI doesn't break.
+    const fallbackVowels = [
+        'a', 'e', 'i', 'o', 'u', 
+        'á', 'é', 'í', 'ó', 'ú', 'à', 'è', 'ì', 'ò', 'ù', 'â', 'ê', 'î', 'ô', 'û', 'ä', 'ë', 'ï', 'ö', 'ü', 
+        'ɑ', 'æ', 'ɛ', 'ə', 'ɪ', 'ɔ', 'ʊ', 'ʌ', 'ʉ', 'ɯ', 'ʏ', 'ø', 'œ', 'ɒ', 'ɐ', 'ɨ', 'ɤ'
+    ];
+    const wordLower = (word || '').toLowerCase();
+    fallbackVowels.forEach(fv => {
+        if (wordLower.includes(fv) && !vowelsArr.includes(fv)) {
+            vowelsArr.push(fv);
+        }
+    });
+
+    vowelsArr.sort((a, b) => b.length - a.length);
+    const escapedVowels = vowelsArr.map(v => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const regex = new RegExp(`(${escapedVowels.join('|')})`, 'gi');
+    
+    const match = (word || '').match(regex);
+    const syllableCount = match ? match.length : 1;
+    
+    let stressIndex = -1;
+    if (stress) {
+        const s = String(stress).toLowerCase();
+        if (s.includes('ante') && s.includes('penult')) stressIndex = syllableCount - 3;
+        else if (s.includes('penult')) stressIndex = syllableCount - 2;
+        else if (s.includes('init') || s.includes('first') || s === '1') stressIndex = 0;
+        else if (s.includes('ult') || s.includes('final') || s.includes('last')) stressIndex = syllableCount - 1;
+        else if (s === '2') stressIndex = 1;
+        else if (s === '3') stressIndex = 2;
+    }
+    if (stressIndex === -1 && (stress || tone)) {
+        stressIndex = 0;
+    }
+    
+    stressIndex = Math.max(0, Math.min(stressIndex, syllableCount - 1));
+    
+    const W = 100 / Math.max(1, syllableCount);
+    let path = `M 0 15 `;
+    for (let i = 0; i < syllableCount; i++) {
+        const endX = (i + 1) * W;
+        const midX = i * W + W / 2;
+        
+        if (i === stressIndex) {
+            path += `Q ${midX} -5, ${endX} 15 `;
+        } else {
+            path += `L ${endX} 15 `;
+        }
+    }
+    
+    return (
+        <svg viewBox="0 0 100 20" preserveAspectRatio="none" style={{ width: '100%', height: '15px', display: 'block', overflow: 'visible', opacity: 0.6, marginBottom: '-5px' }}>
+            <path d={path} fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+};
+
 export default function LexiconList() {
     // Grab the global stores for our lexicon and language settings
     const rawLexicon = useLexiconStore((state) => state.lexicon);
     const lexicon = Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []);
     const deleteWord = useLexiconStore((state) => state.deleteWord);
-    const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
-    const grammarRules = useConfigStore((state) => state.grammarRules) || [];
+    const phonologyTypes = useConfigStore(state => state.phonologyTypes);
+    const enableToneAndStress = useConfigStore(state => state.enableToneAndStress) ?? true;
+    const syllabificationAlgorithm = useConfigStore(state => state.syllabificationAlgorithm) || 'ltr';
+    const updateConfig = useConfigStore(state => state.updateConfig);
     const conlangName = useConfigStore((state) => state.conlangName);
     const navigate = useNavigate();
 
@@ -117,7 +183,7 @@ export default function LexiconList() {
         if (filters.search) {
             const q = filters.search.toLowerCase().trim();
             if (q) {
-                result = result.filter(e => {
+                result = result.map(e => {
                     const safeWord = (e.word || '').replace(/\*/g, '').toLowerCase();
                     const normalizedWord = normalizeToBase(safeWord).toLowerCase();
                     const displayWord = transliterate(e.word || '', lexicon).toLowerCase();
@@ -125,14 +191,18 @@ export default function LexiconList() {
                     const def = (e.definition || '').toLowerCase();
                     const ipa = (e.ipa || '').toLowerCase();
                     
-                    return safeWord.includes(q) || 
-                           normalizedWord.includes(q) ||
-                           displayWord.includes(q) || 
-                           trans.includes(q) || 
-                           def.includes(q) ||
-                           ipa.includes(q) ||
-                           (e.tags && e.tags.some(tag => tag.toLowerCase().includes(q)));
-                });
+                    let score = 0;
+                    
+                    if (safeWord === q || normalizedWord === q || displayWord === q) score = 100;
+                    else if (trans === q) score = 90;
+                    else if (safeWord.startsWith(q) || normalizedWord.startsWith(q) || displayWord.startsWith(q)) score = 80;
+                    else if (trans.startsWith(q)) score = 70;
+                    else if (safeWord.includes(q) || normalizedWord.includes(q) || displayWord.includes(q)) score = 60;
+                    else if (trans.includes(q)) score = 50;
+                    else if (def.includes(q) || ipa.includes(q) || (e.tags && e.tags.some(tag => tag.toLowerCase().includes(q)))) score = 40;
+                    
+                    return { ...e, searchScore: score };
+                }).filter(e => e.searchScore > 0);
             }
         }
 
@@ -158,7 +228,9 @@ export default function LexiconList() {
             });
         }
 
-        if (filters.sort === 'newest') result.sort((a, b) => b.createdAt - a.createdAt);
+        if (filters.search && filters.search.trim() !== '') {
+            result.sort((a, b) => b.searchScore - a.searchScore);
+        } else if (filters.sort === 'newest') result.sort((a, b) => b.createdAt - a.createdAt);
         else if (filters.sort === 'oldest') result.sort((a, b) => a.createdAt - b.createdAt);
         else if (filters.sort === 'az') result.sort((a, b) => a.word.replace(/\*/g, '').localeCompare(b.word.replace(/\*/g, '')));
         else if (filters.sort === 'za') result.sort((a, b) => b.word.replace(/\*/g, '').localeCompare(a.word.replace(/\*/g, '')));
@@ -275,6 +347,15 @@ export default function LexiconList() {
                             Show Romanization
                         </label>
                     )}
+                    <label className="bound-toggle">
+                        <input 
+                            type="checkbox" 
+                            className="bound-checkbox"
+                            checked={enableToneAndStress}
+                            onChange={(e) => updateConfig({ enableToneAndStress: e.target.checked })}
+                        />
+                        Tones/Stress
+                    </label>
                 </div>
 
                 {/* Active Filters Bar */}
@@ -376,9 +457,12 @@ export default function LexiconList() {
                         <Card key={entry.id} className="lexicon-entry">
                             <div className="entry-header">
                                 <div className="entry-words">
-                                    <span className={`notranslate entry-main-word custom-font-text ${phonologyTypes === 'featural_block' ? 'featural-block-render' : ''}`}>
-                                        {displayWord}
-                                    </span>
+                                    <div className="entry-word-with-wave" style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'stretch' }}>
+                                        {enableToneAndStress && <StressWave word={safeWord} stress={entry.stress} tone={entry.tone} customVowelsStr={useConfigStore.getState().vowels} />}
+                                        <span className={`notranslate entry-main-word custom-font-text ${phonologyTypes === 'featural_block' ? 'featural-block-render' : ''}`} style={{ textAlign: 'center' }}>
+                                            {displayWord}
+                                        </span>
+                                    </div>
 
                                     {/* Romanized form — shown as a dedicated readable line when toggle is on */}
                                     {isScriptMode && showRomanization && (
@@ -399,8 +483,27 @@ export default function LexiconList() {
                                             /{entry.ipa}/
                                         </span>
                                     )}
+
+                                    {showRomanization && (
+                                        <span className="entry-romanization">
+                                            {transliterate(safeWord)}
+                                        </span>
+                                    )}
+
+                                    {enableToneAndStress && entry.tone && (
+                                        <span className="notranslate entry-tone" style={{fontSize: '0.8rem', opacity: 0.7, marginLeft: '4px'}}>
+                                            • {entry.tone} Tone
+                                        </span>
+                                    )}
+
+                                    {enableToneAndStress && entry.stress && (
+                                        <span className="notranslate entry-stress" style={{fontSize: '0.8rem', opacity: 0.7, marginLeft: '4px'}}>
+                                            • {entry.stress} Stress
+                                        </span>
+                                    )}
                                 </div>
                                 
+
                                 <div className="word-classes-wrapper classes-preview-wrap">
                                     {entry.wordClass ? entry.wordClass.split(',').map((cls, idx) => {
                                         const cleanCls = cls.trim();

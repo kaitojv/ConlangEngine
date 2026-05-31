@@ -16,6 +16,7 @@ import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
 import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import toast from 'react-hot-toast';
+import ToneStressSelector from '../dictionary/ToneStressSelector.jsx';
 
 // Standard POS options that always show in the dropdown
 const STANDARD_WORD_CLASSES = [
@@ -38,7 +39,7 @@ export default function CreateWordTab() {
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
     const { phonologyTypes, grammarRules, vowels, consonants, otherPhonemes, syllablePattern, verbMarker,
             customWordClasses, customTags, addCustomWordClass, addCustomTag,
-            updateConfig } = useConfigStore(useShallow(state => ({
+            enableToneAndStress, updateConfig } = useConfigStore(useShallow(state => ({
         phonologyTypes: state.phonologyTypes,
         grammarRules: state.grammarRules,
         vowels: state.vowels,
@@ -51,6 +52,7 @@ export default function CreateWordTab() {
         addCustomWordClass: state.addCustomWordClass,
         addCustomTag: state.addCustomTag,
         autoReturnToLexicon: state.autoReturnToLexicon,
+        enableToneAndStress: state.enableToneAndStress ?? true,
         updateConfig: state.updateConfig
     })));
     
@@ -62,10 +64,12 @@ export default function CreateWordTab() {
         translation: '',
         definition: '',
         tags: [],
-        ideogram: ''
+        ideogram: '',
+        tone: '',
+        stress: ''
     });
     
-    const { word, ipa, wordClass, translation, definition, tags, ideogram } = formData;
+    const { word, ipa, wordClass, translation, definition, tags, ideogram, tone, stress } = formData;
     const [isFontStudioOpen, setIsFontStudioOpen] = useState(false);
     const [selectedDerivs, setSelectedDerivs] = useState({});
     const [customTranslations, setCustomTranslations] = useState({});
@@ -178,7 +182,9 @@ export default function CreateWordTab() {
             translation: cleanTrans,
             definition: definition.trim(),
             tags: processedTags,
-            ideogram: ideogram.trim()
+            ideogram: ideogram.trim(),
+            tone: tone.trim(),
+            stress: stress.trim()
         });
 
         // 2. Save any selected derivations
@@ -222,7 +228,7 @@ export default function CreateWordTab() {
         processedTags.forEach(tag => addCustomTag(tag));
 
         // Reset the form for the next word
-        setFormData({ word: '', ipa: '', wordClass: 'noun', translation: '', definition: '', tags: [], ideogram: '' });
+        setFormData({ word: '', ipa: '', wordClass: 'noun', translation: '', definition: '', tags: [], ideogram: '', tone: '', stress: '' });
         setSelectedDerivs({});
         setCustomTranslations({});
         toast.success((t) => (
@@ -542,6 +548,23 @@ export default function CreateWordTab() {
                             </Button>
                         </div>
                     </div>
+                )}
+
+                {enableToneAndStress && (
+                    <details className="tone-stress-details">
+                        <summary className="tone-stress-summary">
+                            Tone & Stress Options
+                        </summary>
+                        <div className="tone-stress-content">
+                            <ToneStressSelector 
+                                word={word} 
+                                tone={tone} 
+                                stress={stress} 
+                                onToneChange={(v) => updateField('tone', v)} 
+                                onStressChange={(v) => updateField('stress', v)} 
+                            />
+                        </div>
+                    </details>
                 )}
 
                 <div className="input-grid trans-def-grid">

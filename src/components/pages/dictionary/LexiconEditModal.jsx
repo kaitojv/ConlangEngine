@@ -8,6 +8,7 @@ import Button from '../../UI/Buttons/Buttons.jsx';
 import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
 import { Search, Volume2, Save, Trash2, X, Link as LinkIcon, GitBranch, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ToneStressSelector from './ToneStressSelector.jsx';
 import './lexiconEditModal.css';
 
 // Standard POS options
@@ -20,26 +21,27 @@ export default function LexiconEditModal({ wordObj, onClose }) {
     // Grab our global lexicon tools
     const updateWord = useLexiconStore((state) => state.updateWord);
     const lexicon = useLexiconStore((state) => state.lexicon);
-    const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
-    const customWordClasses = useConfigStore((state) => state.customWordClasses) || [];
-    const customTags = useConfigStore((state) => state.customTags) || [];
     const addCustomWordClass = useConfigStore((state) => state.addCustomWordClass);
     const addCustomTag = useConfigStore((state) => state.addCustomTag);
     const updateConfig = useConfigStore((state) => state.updateConfig);
-    const consonants = useConfigStore((state) => state.consonants);
-    const vowels = useConfigStore((state) => state.vowels);
-    const syllablePattern = useConfigStore((state) => state.syllablePattern);
+    const phonologyTypes = useConfigStore(state => state.phonologyTypes);
+    const grammarRules = useConfigStore(state => state.grammarRules);
+    const vowels = useConfigStore(state => state.vowels);
+    const consonants = useConfigStore(state => state.consonants);
+    const syllablePattern = useConfigStore(state => state.syllablePattern);
+    const enableToneAndStress = useConfigStore(state => state.enableToneAndStress) ?? true;
+    const customWordClasses = useConfigStore((state) => state.customWordClasses) || [];
+    const customTags = useConfigStore((state) => state.customTags) || [];
     
     const [activeField, setActiveField] = useState('word');
 
     // Bundle all the form fields into one neat state object
     const [formData, setFormData] = useState({
-        word: '', ipa: '', wordClass: '', translation: '', definition: '', tags: [], ideogram: '', personCategory: ''
+        word: '', ipa: '', wordClass: '', translation: '', definition: '', tags: [], ideogram: '', personCategory: '', tone: '', stress: ''
     });
     const [tagInput, setTagInput] = useState('');
-    const { word, ipa, wordClass, translation, tags, ideogram, personCategory } = formData;
+    const { word, ipa, wordClass, translation, tags, ideogram, personCategory, tone, stress } = formData;
 
-    const grammarRules = useConfigStore(state => state.grammarRules) || [];
     const parentWord = useMemo(() => {
         if (!wordObj.parentRootId) return null;
         return lexicon.find(w => w.id === wordObj.parentRootId);
@@ -89,7 +91,9 @@ export default function LexiconEditModal({ wordObj, onClose }) {
                 definition: wordObj.definition || '',
                 tags: Array.isArray(wordObj.tags) ? wordObj.tags : (typeof wordObj.tags === 'string' ? wordObj.tags.split(',').map(t => t.trim()).filter(Boolean) : []),
                 ideogram: wordObj.ideogram || '',
-                personCategory: wordObj.personCategory || ''
+                personCategory: wordObj.personCategory || '',
+                tone: wordObj.tone || '',
+                stress: wordObj.stress || ''
             });
         }
         return () => toast.dismiss();
@@ -154,7 +158,9 @@ export default function LexiconEditModal({ wordObj, onClose }) {
             definition: formData.definition.trim(),
             tags: pTags,
             ideogram: ideogram.trim(),
-            personCategory: personCategory.trim()
+            personCategory: personCategory.trim(),
+            tone: tone.trim(),
+            stress: stress.trim()
         });
 
         if (wordClass && !STANDARD_WORD_CLASSES.includes(wordClass.trim().toLowerCase())) {
@@ -357,21 +363,40 @@ export default function LexiconEditModal({ wordObj, onClose }) {
                 </div>
             )}
 
-            <div>
-                <Input 
-                    label="Person Category (for pronouns)"
-                    value={personCategory}
-                    onChange={(e) => updateField('personCategory', e.target.value)}
-                    list="person-cat-options"
-                    placeholder="e.g. 1st, 2nd, 3rd"
-                />
-                <datalist id="person-cat-options">
-                    <option value="1st" />
-                    <option value="2nd" />
-                    <option value="3rd" />
-                    <option value="4th" />
-                </datalist>
+            <div className="edit-modal-grid">
+                <div>
+                    <Input 
+                        label="Person Category (for pronouns)"
+                        value={personCategory}
+                        onChange={(e) => updateField('personCategory', e.target.value)}
+                        list="person-cat-options"
+                        placeholder="e.g. 1st, 2nd, 3rd"
+                    />
+                    <datalist id="person-cat-options">
+                        <option value="1st" />
+                        <option value="2nd" />
+                        <option value="3rd" />
+                        <option value="4th" />
+                    </datalist>
+                </div>
             </div>
+
+            {enableToneAndStress && (
+                <details className="tone-stress-details">
+                    <summary className="tone-stress-summary">
+                        Tone & Stress Options
+                    </summary>
+                    <div className="tone-stress-content">
+                        <ToneStressSelector 
+                            word={word} 
+                            tone={tone} 
+                            stress={stress} 
+                            onToneChange={(v) => updateField('tone', v)} 
+                            onStressChange={(v) => updateField('stress', v)} 
+                        />
+                    </div>
+                </details>
+            )}
 
             <div>
             <div className="edit-modal-grid trans-def-grid">

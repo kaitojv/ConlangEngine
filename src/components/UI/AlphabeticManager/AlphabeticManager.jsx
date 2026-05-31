@@ -79,66 +79,78 @@ export default function AlphabeticManager() {
                 You can also <b>Draw</b> your custom alphabetic characters using the Font Studio! These custom characters will automatically render when you select "Custom Script (Font Studio)" in your Basic Settings.
             </Infobox>
 
-            <div className="alphabet-grid">
+            <div className="alphabet-table-container">
                 {allChars.length > 0 ? (
-                    allChars.map((char) => {
-                        const isEditing = editingChar === char;
-                        const charName = alphabetNames[char] || '';
-                        const customGlyph = alphabetGlyphs[char];
-                        
-                        return (
-                            <div 
-                                key={char} 
-                                className={`char-card glass ${isEditing ? 'is-editing' : ''}`}
-                                onClick={() => !isEditing && setEditingChar(char)}
-                            >
-                                <div className="char-display custom-font-text" style={{ fontSize: customGlyph ? '2.5rem' : '1.5rem', marginBottom: customGlyph ? '0' : '0.5rem' }}>
-                                    {customGlyph || char}
-                                </div>
-                                {customGlyph && (
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '8px' }}>
-                                        ({char})
-                                    </div>
-                                )}
+                    <table className="alphabet-table">
+                        <thead>
+                            <tr>
+                                <th>IPA</th>
+                                <th>Character Name</th>
+                                <th>Custom Glyph</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {allChars.map((char) => {
+                                const isEditing = editingChar === char;
+                                const charName = alphabetNames[char] || '';
+                                const customGlyph = alphabetGlyphs[char];
                                 
-                                <div className="char-info">
-                                    {isEditing ? (
-                                        <div className="char-edit-wrapper" onClick={e => e.stopPropagation()}>
-                                            <input 
-                                                autoFocus
-                                                className="char-name-input-active"
-                                                value={charName}
-                                                placeholder="Name..."
-                                                onChange={(e) => updateName(char, e.target.value)}
-                                                onBlur={() => setEditingChar(null)}
-                                                onKeyDown={(e) => e.key === 'Enter' && setEditingChar(null)}
-                                            />
-                                            <button className="char-save-btn" onClick={() => setEditingChar(null)}>
-                                                <Check size={14} />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="char-name-display" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center', width: '100%' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <span className="name-label">{charName || 'unnamed'}</span>
-                                                <Edit2 size={12} className="edit-icon" />
-                                            </div>
+                                return (
+                                    <tr key={char}>
+                                        <td className="ipa-cell">
+                                            <span className="ipa-badge custom-font-text">{char}</span>
+                                        </td>
+                                        
+                                        <td className="name-cell" onClick={() => !isEditing && setEditingChar(char)}>
+                                            {isEditing ? (
+                                                <div className="char-edit-wrapper" onClick={e => e.stopPropagation()}>
+                                                    <input 
+                                                        autoFocus
+                                                        className="char-name-input-active"
+                                                        value={charName}
+                                                        placeholder="Name..."
+                                                        onChange={(e) => updateName(char, e.target.value)}
+                                                        onBlur={() => setEditingChar(null)}
+                                                        onKeyDown={(e) => e.key === 'Enter' && setEditingChar(null)}
+                                                    />
+                                                    <button className="char-save-btn" onClick={() => setEditingChar(null)}>
+                                                        <Check size={14} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="name-display">
+                                                    <span>{charName || <span style={{ color: 'var(--tx3)', fontStyle: 'italic' }}>unnamed</span>}</span>
+                                                    <Edit2 size={12} className="edit-icon" />
+                                                </div>
+                                            )}
+                                        </td>
+                                        
+                                        <td className="glyph-cell">
+                                            {customGlyph ? (
+                                                <span className="custom-font-text drawn-glyph">{customGlyph}</span>
+                                            ) : (
+                                                <span style={{ color: 'var(--tx3)', fontStyle: 'italic' }}>None</span>
+                                            )}
+                                        </td>
+                                        
+                                        <td className="actions-cell">
                                             <button 
-                                                className="btn-add" 
-                                                style={{ display: 'flex', gap: '6px', alignItems: 'center', padding: '0.3rem 0.8rem', fontSize: '0.8rem', height: 'auto', background: 'var(--s3)', color: 'var(--tx)', width: '100%', justifyContent: 'center' }}
+                                                className="btn-v btn-sec-v" 
+                                                style={{ display: 'flex', gap: '6px', alignItems: 'center' }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setDrawingChar(char);
                                                 }}
                                             >
-                                                <Brush size={14} /> Draw
+                                                <Brush size={14} /> {customGlyph ? 'Redraw' : 'Draw'}
                                             </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
                 ) : (
                     <div className="empty-state glass">
                         <Type size={48} className="text-tx2 opacity-20" />

@@ -20,6 +20,8 @@ export const useLexiconStore = create(
                     tags: newWordData.tags || [],
                     ideogram: newWordData.ideogram || '',
                     personCategory: newWordData.personCategory || '',
+                    tone: newWordData.tone || '',
+                    stress: newWordData.stress || '',
                     parentRootId: newWordData.parentRootId || null,
                     derivationRuleId: newWordData.derivationRuleId || null,
                     inflectionOverrides: {},

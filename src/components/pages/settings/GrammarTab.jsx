@@ -33,7 +33,8 @@ export default function GrammarTab(){
                     • <b>Standalone Rules:</b> Check <b>"Standalone"</b> for rules that conjugate independently (e.g., Passive Voice or Infinitives).<br />
                     • <b>Applies To (Constraint):</b> Filters which words are allowed to use this rule (e.g., "This rule only applies to <b>Nouns</b>").<br />
                     • <b>Target POS (Transformation):</b> Defines what the word becomes after the rule is applied (e.g., "This rule turns a Verb into a <b>Noun</b>").<br />
-                    • <b>Rule Scoping:</b> Use Person Categories or Root Tags to restrict rules to specific dictionary words.
+                    • <b>Rule Scoping:</b> Use Person Categories or Root Tags to restrict rules to specific dictionary words.<br />
+                    • <b>Genealogy:</b> Use "Target POS" in grammar rules to automatically categorize derived words (e.g., Noun to Adjective).
                 </Infobox>
                 
                 <div className="rules-wrapper">

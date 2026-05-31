@@ -437,3 +437,41 @@ select option {
 .input-wrapper:hover .clear-input-btn {
     opacity: 1;
 }
+
+/* Tone & Stress Collapsible */
+.tone-stress-details {
+    background: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    margin-top: 15px;
+    margin-bottom: 15px;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.tone-stress-summary {
+    padding: 14px 16px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--tx2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    user-select: none;
+    background: transparent;
+}
+
+.tone-stress-summary:hover {
+    background: var(--s2);
+}
+
+.tone-stress-summary::marker {
+    color: var(--acc);
+}
+
+.tone-stress-content {
+    padding: 15px;
+    background: var(--s4);
+    border-top: 1px solid var(--bd);
+}

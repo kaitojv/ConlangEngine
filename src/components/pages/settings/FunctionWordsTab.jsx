@@ -144,7 +144,6 @@ export default function FunctionWordsTab() {
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
     const setLexicon = useLexiconStore((state) => state.setLexicon);
 
-    const [viewMode, setViewMode] = useState('list'); // 'list' or 'matrix'
     const [rules, setRules] = useState([]);
     
     // Matrix dimensions - Personal Pronouns
@@ -207,19 +206,20 @@ export default function FunctionWordsTab() {
         }
     }, [storedPersonRules]);
 
-    // Populate Matrix from Lexicon
+    // Populate Matrix from Lexicon and Rules
     useEffect(() => {
-        if (viewMode === 'matrix') {
-            const initialData = {};
-            
-            // 1. Pre-fill from personRules (Subjective form)
-            rules.forEach(rule => {
-                const g = rule.gender || 'General';
-                const key = `${rule.person}-${rule.number}-${g}-sub`;
-                if (rule.freeForm) {
-                    initialData[key] = rule.freeForm;
-                }
-            });
+        const initialData = {};
+        
+        // 1. Pre-fill from personRules (Subjective form & Affix)
+        rules.forEach(rule => {
+            const g = rule.gender || 'General';
+            if (rule.freeForm) {
+                initialData[`${rule.person}-${rule.number}-${g}-sub`] = rule.freeForm;
+            }
+            if (rule.affix) {
+                initialData[`${rule.person}-${rule.number}-${g}-affix`] = rule.affix;
+            }
+        });
 
             // 2. Pre-fill from Lexicon
             lexicon.forEach(entry => {
@@ -268,8 +268,7 @@ export default function FunctionWordsTab() {
             });
 
             setMatrixData(initialData);
-        }
-    }, [viewMode, rules, lexicon]);
+    }, [rules, lexicon]);
 
     const updateStore = (updatedRules) => {
         const sortedRules = [...updatedRules].sort((a, b) => {
@@ -291,31 +290,6 @@ export default function FunctionWordsTab() {
         });
         setRules(sortedRules);
         updateConfig({ personRules: sortedRules });
-    };
-
-    const handleRuleChange = (id, field, value) => {
-        const updatedRules = rules.map(rule =>
-            rule.id === id ? { ...rule, [field]: value } : rule
-        );
-        updateStore(updatedRules);
-    };
-
-    const addRule = () => {
-        const newRule = {
-            id: Math.random().toString(36).substring(2, 9),
-            person: '1st',
-            number: 'S',
-            gender: '',
-            freeForm: '',
-            affix: '',
-            appliesTo: 'all'
-        };
-        updateStore([...rules, newRule]);
-    };
-
-    const deleteRule = (id) => {
-        const updatedRules = rules.filter(rule => rule.id !== id);
-        updateStore(updatedRules);
     };
 
     // Matrix Generation Combinations
@@ -366,8 +340,39 @@ export default function FunctionWordsTab() {
         let addedCount = 0;
         let updatedCount = 0;
 
-        // Save Personal Pronouns
+        // Save Personal Pronouns & Affixes
         activePersonalCombinations.forEach(({ person, number, gender }) => {
+            const cleanGender = gender === 'General' ? '' : gender;
+            const existingRuleIdx = newRules.findIndex(
+                r => r.person === person && r.number === number && (r.gender || '') === cleanGender
+            );
+
+            const subKey = `${person}-${number}-${gender}-sub`;
+            const subVal = matrixData[subKey]?.trim() || '';
+
+            const affixKey = `${person}-${number}-${gender}-affix`;
+            const affixVal = matrixData[affixKey]?.trim() || '';
+
+            // Update Person Rules store with Affix & Standalone
+            if (subVal || affixVal) {
+                if (existingRuleIdx !== -1) {
+                    newRules[existingRuleIdx] = { 
+                        ...newRules[existingRuleIdx], 
+                        freeForm: subVal || newRules[existingRuleIdx].freeForm, 
+                        affix: affixVal 
+                    };
+                } else {
+                    newRules.push({
+                        id: Math.random().toString(36).substring(2, 9),
+                        person, number, gender: cleanGender, freeForm: subVal, affix: affixVal, appliesTo: 'all'
+                    });
+                }
+            } else if (!subVal && !affixVal && existingRuleIdx !== -1) {
+                // If user cleared both, remove the rule
+                newRules.splice(existingRuleIdx, 1);
+            }
+
+            // Also save all pronoun cases to lexicon
             const cases = ['sub', 'obj', 'det', 'pos', 'ref'];
             cases.forEach(caseType => {
                 const key = `${person}-${number}-${gender}-${caseType}`;
@@ -397,22 +402,6 @@ export default function FunctionWordsTab() {
                         createdAt: Date.now()
                     });
                     addedCount++;
-                }
-
-                if (caseType === 'sub') {
-                    const cleanGender = gender === 'General' ? '' : gender;
-                    const existingRuleIdx = newRules.findIndex(
-                        r => r.person === person && r.number === number && (r.gender || '') === cleanGender
-                    );
-
-                    if (existingRuleIdx !== -1) {
-                        newRules[existingRuleIdx] = { ...newRules[existingRuleIdx], freeForm: conlangVal };
-                    } else {
-                        newRules.push({
-                            id: Math.random().toString(36).substring(2, 9),
-                            person, number, gender: cleanGender, freeForm: conlangVal, affix: '', appliesTo: 'all'
-                        });
-                    }
                 }
             });
         });
@@ -467,127 +456,11 @@ export default function FunctionWordsTab() {
                 <Infobox title="Pronoun & Affix Guide">
                     Define how each grammatical person (1st, 2nd, 3rd) or noun class is represented.
                     <br /><br />
-                    • <b>List View (Rules):</b> Define standalone pronouns and affixes (bound morphemes that attach to roots).<br />
-                    • <b>Matrix View:</b> Generate and sync massive pronoun tables (Personal, Demonstrative, Relative) directly to your Lexicon.
+                    • Use the Matrix below to generate and sync massive pronoun tables (Personal, Demonstrative, Relative) directly to your Lexicon.
                 </Infobox>
 
                 <div className="person-rules-editor">
-                    
-                    <div className="wa-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '16px', marginTop: '1rem' }}>
-                        <button
-                            type="button"
-                            className={`wa-tab-btn ${viewMode === 'list' ? 'active' : ''}`}
-                            onClick={() => setViewMode('list')}
-                        >
-                            <List size={15} /> Person Rules & Affixes
-                        </button>
-                        <button
-                            type="button"
-                            className={`wa-tab-btn ${viewMode === 'matrix' ? 'active' : ''}`}
-                            onClick={() => setViewMode('matrix')}
-                        >
-                            <Grid size={15} /> Pronoun Matrix Generator
-                        </button>
-                    </div>
-
-                    {viewMode === 'list' ? (
-                        <>
-                            <div className="rules-list">
-                                {rules.map(rule => (
-                                    <div key={rule.id} className="rule-item nl-rule-builder" style={{ position: 'relative', padding: '16px' }}>
-                                        <div className="nl-rule-row">
-                                            <span className="nl-text">For</span>
-                                            <select
-                                                className="nl-select fi"
-                                                value={rule.person}
-                                                onChange={(e) => handleRuleChange(rule.id, 'person', e.target.value)}
-                                                style={{ width: '110px' }}
-                                            >
-                                                <option value="1st">1st Person</option>
-                                                <option value="2nd">2nd Person</option>
-                                                <option value="3rd">3rd Person</option>
-                                                <option value="4th">4th Person</option>
-                                            </select>
-
-                                            <select
-                                                className="nl-select fi"
-                                                value={rule.number}
-                                                onChange={(e) => handleRuleChange(rule.id, 'number', e.target.value)}
-                                                style={{ width: '110px' }}
-                                            >
-                                                <option value="S">Singular</option>
-                                                <option value="P">Plural</option>
-                                                <option value="C">Collective</option>
-                                                <option value="D">Dual</option>
-                                                <option value="N">None</option>
-                                            </select>
-
-                                            <select
-                                                className="nl-select fi"
-                                                value={rule.gender}
-                                                onChange={(e) => handleRuleChange(rule.id, 'gender', e.target.value)}
-                                                style={{ width: '110px' }}
-                                            >
-                                                <option value="">(No Gender)</option>
-                                                <option value="Masc">Masculine</option>
-                                                <option value="Fem">Feminine</option>
-                                                <option value="Neut">Neuter</option>
-                                                <option value="Anim">Animate</option>
-                                                <option value="Inan">Inanimate</option>
-                                            </select>
-                                            <span className="nl-text">,</span>
-                                        </div>
-                                        <div className="nl-rule-row">
-                                            <span className="nl-text">the standalone pronoun is</span>
-                                            <input
-                                                type="text"
-                                                className="nl-input fi"
-                                                placeholder="e.g. I, he"
-                                                value={rule.freeForm}
-                                                onChange={(e) => handleRuleChange(rule.id, 'freeForm', e.target.value)}
-                                                style={{ width: '120px' }}
-                                            />
-                                            <span className="nl-text">and the affix is</span>
-                                            <input
-                                                type="text"
-                                                className="nl-input fi"
-                                                placeholder="e.g. -m, s-"
-                                                value={rule.affix}
-                                                onChange={(e) => handleRuleChange(rule.id, 'affix', e.target.value)}
-                                                style={{ width: '120px' }}
-                                            />
-                                        </div>
-                                        <div className="nl-rule-row">
-                                            <span className="nl-text">This rule applies to</span>
-                                            <input
-                                                type="text"
-                                                className="nl-input fi"
-                                                placeholder="all"
-                                                value={rule.appliesTo || ''}
-                                                list="applies-to-options"
-                                                onChange={(e) => handleRuleChange(rule.id, 'appliesTo', e.target.value.toLowerCase())}
-                                                style={{ width: '100px' }}
-                                            />
-                                            <span className="nl-text">words</span>
-                                        </div>
-
-                                        <button type="button" className="btn-delete-rule" onClick={() => deleteRule(rule.id)} style={{ position: 'absolute', top: '10px', right: '10px' }} title="Delete Rule">
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                ))}
-                                {rules.length === 0 && (
-                                    <p className="no-rules-message">No person rules defined. Click "Add Rule" to start.</p>
-                                )}
-                            </div>
-
-                            <button type="button" className="btn-add-rule" onClick={addRule}>
-                                <Plus size={16} /> Add Rule
-                            </button>
-                        </>
-                    ) : (
-                        <div className="pronoun-matrix-container">
-                            
+                    <div className="pronoun-matrix-container">
                             {/* Dimension Selection Dashboard */}
                             <div className="dimension-selector-card">
                                 <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '0 0 12px 0', fontSize: '0.8rem', color: 'var(--acc)' }}>
@@ -693,6 +566,7 @@ export default function FunctionWordsTab() {
                                     <thead>
                                         <tr style={{ borderBottom: '1px solid var(--bd)' }}>
                                             <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Category</th>
+                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Affix</th>
                                             <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Subjective</th>
                                             <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Objective</th>
                                             <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Poss. Determiner</th>
@@ -706,8 +580,8 @@ export default function FunctionWordsTab() {
                                             return (
                                                 <tr key={`${person}-${number}-${gender}`} style={{ borderBottom: `1px solid rgba(255,255,255,0.03)` }}>
                                                     <td style={{ padding: '12px', fontWeight: 700, color: 'var(--acc)' }}>{label}</td>
-                                                    {['sub', 'obj', 'det', 'pos', 'ref'].map(caseType => {
-                                                        const engPlaceholder = getEnglishPronoun(person, number, gender === 'General' ? '' : gender, caseType);
+                                                    {['affix', 'sub', 'obj', 'det', 'pos', 'ref'].map(caseType => {
+                                                        const engPlaceholder = caseType === 'affix' ? 'e.g. -m, s-' : getEnglishPronoun(person, number, gender === 'General' ? '' : gender, caseType);
                                                         const key = `${person}-${number}-${gender}-${caseType}`;
                                                         const val = matrixData[key] || '';
                                                         return (
@@ -801,8 +675,7 @@ export default function FunctionWordsTab() {
                                 </button>
                             </div>
                         </div>
-                    )}
-                </div>
+                    </div>
             </Card>
         </div>
     );

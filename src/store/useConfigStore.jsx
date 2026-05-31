@@ -30,6 +30,7 @@ export const INITIAL_CONFIG = {
     syllablePattern: 'CVC, VC, CV',
     otherPhonemes: '',
     otherPhonemeMapping: 'X',
+    enableToneAndStress: true,
     skipSyllableValidation: false,
     historicalRules:'^(.{2})(.*)',
     syllabaryMap: {},

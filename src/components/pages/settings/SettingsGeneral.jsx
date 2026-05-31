@@ -11,7 +11,6 @@ export default function SettingsGeneral() {
     const description = useConfigStore((state) => state.description) || '';
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const alphabeticScript = useConfigStore((state) => state.alphabeticScript);
-    const autoReturnToLexicon = useConfigStore((state) => state.autoReturnToLexicon);
     const updateConfig = useConfigStore((state) => state.updateConfig);
 
     const handleTypologyChange = (newType) => {
@@ -110,26 +109,6 @@ export default function SettingsGeneral() {
                     </Infobox>
                 </>
             )}
-
-            <div className="sg-footer-settings">
-                <label className="cb-wrap auto-return-row">
-                    <input 
-                        type="checkbox" 
-                        className="check-rule-sm"
-                        checked={!!autoReturnToLexicon}
-                        onChange={(e) => updateConfig({ autoReturnToLexicon: e.target.checked })}
-                    />
-                    <span className="auto-return-label">Auto-return to Lexicon after word creation</span>
-                </label>
-                <p className="auto-return-desc">
-                    If enabled, the app will automatically navigate back to the lexicon list after you successfully save a new root.
-                </p>
-            </div>
-
-            <Infobox title="Workflow Tips">
-                • <b>Auto-return:</b> Enable this to jump back to the Lexicon immediately after saving a new root.<br />
-                • <b>Genealogy:</b> Use "Target POS" in grammar rules to automatically categorize derived words (e.g., Noun to Adjective).
-            </Infobox>
 
         </Card>
     );

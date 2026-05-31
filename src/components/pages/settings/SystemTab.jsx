@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Card from '../../UI/Card/Card.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import './systemtab.css';
-import { Palette, CaseLower, Database } from 'lucide-react';
+import { Palette, CaseLower, Database, ToggleLeft } from 'lucide-react';
 import { useConfigStore, INITIAL_CONFIG } from '../../../store/useConfigStore.jsx';
 import { useProjectStore } from '../../../store/useProjectStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
@@ -22,6 +22,7 @@ export default function SystemTab() {
     const customFontBase64 = useConfigStore((state) => state.customFontBase64);
     const customFont = useConfigStore((state) => state.customFont);
     const customGlyphs = useConfigStore((state) => state.customGlyphs) || {};
+    const autoReturnToLexicon = useConfigStore((state) => state.autoReturnToLexicon);
     const setFullConfig = useConfigStore((state) => state.setFullConfig);
     const updateConfig = useConfigStore((state) => state.updateConfig);
     const setLexicon = useLexiconStore((state) => state.setLexicon);
@@ -307,6 +308,24 @@ export default function SystemTab() {
                     <input type='color' className='color-selector' value={getSafeColor(colors.glow, '#1a1638')} onChange={(e) => updateConfig({ colors: { ...colors, glow: e.target.value } })} />
                 </div>
             </Card>
+            <Card>
+                <h2 className='flex sg-title'><ToggleLeft /> Workflow Preferences</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600 }}>
+                        <input 
+                            type="checkbox" 
+                            style={{ width: '18px', height: '18px', accentColor: 'var(--acc)', cursor: 'pointer' }}
+                            checked={!!autoReturnToLexicon}
+                            onChange={(e) => updateConfig({ autoReturnToLexicon: e.target.checked })}
+                        />
+                        Auto-return to Lexicon after word creation
+                    </label>
+                    <p style={{ color: 'var(--tx2)', fontSize: '0.9rem', marginLeft: '26px' }}>
+                        If enabled, the app will automatically navigate back to the dictionary view after you successfully save a new root in the Create Word tab.
+                    </p>
+                </div>
+            </Card>
+
             <Card>
                 <h2>Danger Zone</h2>
                 <p>This action will permanently delete your current local project. Your entire lexicon, grammar rules, and settings will be wiped out.</p>

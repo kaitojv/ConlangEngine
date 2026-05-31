@@ -11,6 +11,12 @@ export default function NumeralTab() {
     const updateConfig = useConfigStore(s => s.updateConfig);
     const numeralBase = useConfigStore(s => s.numeralBase) || 10;
 
+    const [customBaseInput, setCustomBaseInput] = React.useState(numeralBase.toString());
+    
+    React.useEffect(() => {
+        setCustomBaseInput(numeralBase.toString());
+    }, [numeralBase]);
+
     // Converter state
     const [decimalInput, setDecimalInput] = useState('');
     
@@ -123,10 +129,19 @@ export default function NumeralTab() {
                             type="number"
                             min="2"
                             max="36"
-                            value={numeralBase}
+                            value={customBaseInput}
                             onChange={(e) => {
+                                setCustomBaseInput(e.target.value);
                                 const v = parseInt(e.target.value);
-                                if (v >= 2 && v <= 36) updateConfig({ numeralBase: v });
+                                if (!isNaN(v) && v >= 2 && v <= 36) {
+                                    updateConfig({ numeralBase: v });
+                                }
+                            }}
+                            onBlur={() => {
+                                const v = parseInt(customBaseInput);
+                                if (isNaN(v) || v < 2 || v > 36) {
+                                    setCustomBaseInput(numeralBase.toString());
+                                }
                             }}
                             className="fi num-custom-base-input"
                         />
