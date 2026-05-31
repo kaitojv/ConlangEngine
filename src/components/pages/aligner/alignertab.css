@@ -283,3 +283,56 @@
     from { opacity: 0; }
     to { opacity: 1; }
 }
+
+.saved-maps-details {
+    background: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad);
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.saved-maps-summary {
+    padding: 1.2rem 1.5rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--tx);
+    cursor: pointer;
+    background: var(--s4);
+    user-select: none;
+    outline: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid transparent;
+    list-style: none; /* Hide default marker in FF */
+}
+
+.saved-maps-summary::-webkit-details-marker {
+    display: none; /* Hide default marker in Safari/Chrome */
+}
+
+.saved-maps-details[open] .saved-maps-summary {
+    border-bottom-color: var(--bd);
+    background: var(--s3);
+}
+
+.saved-maps-summary:hover {
+    background: var(--s2);
+}
+
+.drop-arrow {
+    transition: transform 0.3s ease;
+    color: var(--tx2);
+}
+
+.saved-maps-details[open] .drop-arrow {
+    transform: rotate(180deg);
+}
+
+.maps-container {
+    padding: 1.5rem;
+}

@@ -602,10 +602,10 @@ export default function ProfileTab() {
                 <Card className="card-no-margin">
                     <h3 className="section-title mb-20"><Activity /> Recent Activity</h3>
                     <div className="activity-timeline">
-                        {(!config.activity || config.activity.length === 0) ? (
+                        {(!config.activity || config.activity.filter(a => !a.text.includes('isProActive')).length === 0) ? (
                             <div className="activity-empty">No activity yet. Start building!</div>
                         ) : (
-                            config.activity.map((item, idx) => {
+                            config.activity.filter(a => !a.text.includes('isProActive')).map((item, idx) => {
                                 const date = new Date(item.time);
                                 const { Icon, cleanText } = getActivityDetails(item.text);
                                 return (

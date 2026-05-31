@@ -321,10 +321,15 @@ export const useConfigStore = create(
 
                 const text = `Updated ${label}`;
                 const now = new Date().toISOString();
-                let newActivity = [...(state.activity || [])];
+                let newActivity = [...(state.activity || [])].filter(a => !a.text.includes('isProActive'));
                 
-                // Prevent spamming the timeline with rapid identical updates (e.g., dragging a color picker)
-                newActivity = [{ text, time: now }, ...newActivity].slice(0, 15);
+                // Prevent spamming the timeline with system updates or rapid identical updates
+                const systemKeys = ['isProActive', 'activity', 'theme', 'autoReturnToLexicon', 'conlangName'];
+                const isSystemOnly = keys.every(k => systemKeys.includes(k));
+                
+                if (!isSystemOnly) {
+                    newActivity = [{ text, time: now }, ...newActivity].slice(0, 15);
+                }
                 
                 if (state.projectId) {
                     const bloat = {};

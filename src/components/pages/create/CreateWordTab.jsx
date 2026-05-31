@@ -39,7 +39,7 @@ export default function CreateWordTab() {
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
     const { phonologyTypes, grammarRules, vowels, consonants, otherPhonemes, syllablePattern, verbMarker,
             customWordClasses, customTags, addCustomWordClass, addCustomTag,
-            enableToneAndStress, updateConfig } = useConfigStore(useShallow(state => ({
+            updateConfig } = useConfigStore(useShallow(state => ({
         phonologyTypes: state.phonologyTypes,
         grammarRules: state.grammarRules,
         vowels: state.vowels,
@@ -52,7 +52,6 @@ export default function CreateWordTab() {
         addCustomWordClass: state.addCustomWordClass,
         addCustomTag: state.addCustomTag,
         autoReturnToLexicon: state.autoReturnToLexicon,
-        enableToneAndStress: state.enableToneAndStress ?? true,
         updateConfig: state.updateConfig
     })));
     
@@ -550,22 +549,20 @@ export default function CreateWordTab() {
                     </div>
                 )}
 
-                {enableToneAndStress && (
-                    <details className="tone-stress-details">
-                        <summary className="tone-stress-summary">
-                            Tone & Stress Options
-                        </summary>
-                        <div className="tone-stress-content">
-                            <ToneStressSelector 
-                                word={word} 
-                                tone={tone} 
-                                stress={stress} 
-                                onToneChange={(v) => updateField('tone', v)} 
-                                onStressChange={(v) => updateField('stress', v)} 
-                            />
-                        </div>
-                    </details>
-                )}
+                <details className="tone-stress-details">
+                    <summary className="tone-stress-summary">
+                        Tone & Stress Options
+                    </summary>
+                    <div className="tone-stress-content">
+                        <ToneStressSelector 
+                            word={formData.word} 
+                            tone={formData.tone} 
+                            stress={formData.stress} 
+                            onToneChange={(v) => handleInputChange({ target: { name: 'tone', value: v } })} 
+                            onStressChange={(v) => handleInputChange({ target: { name: 'stress', value: v } })} 
+                        />
+                    </div>
+                </details>
 
                 <div className="input-grid trans-def-grid">
                     <div>

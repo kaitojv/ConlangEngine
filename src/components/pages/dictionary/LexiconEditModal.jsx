@@ -29,7 +29,6 @@ export default function LexiconEditModal({ wordObj, onClose }) {
     const vowels = useConfigStore(state => state.vowels);
     const consonants = useConfigStore(state => state.consonants);
     const syllablePattern = useConfigStore(state => state.syllablePattern);
-    const enableToneAndStress = useConfigStore(state => state.enableToneAndStress) ?? true;
     const customWordClasses = useConfigStore((state) => state.customWordClasses) || [];
     const customTags = useConfigStore((state) => state.customTags) || [];
     
@@ -381,22 +380,20 @@ export default function LexiconEditModal({ wordObj, onClose }) {
                 </div>
             </div>
 
-            {enableToneAndStress && (
-                <details className="tone-stress-details">
-                    <summary className="tone-stress-summary">
-                        Tone & Stress Options
-                    </summary>
-                    <div className="tone-stress-content">
-                        <ToneStressSelector 
-                            word={word} 
-                            tone={tone} 
-                            stress={stress} 
-                            onToneChange={(v) => updateField('tone', v)} 
-                            onStressChange={(v) => updateField('stress', v)} 
-                        />
-                    </div>
-                </details>
-            )}
+            <details className="tone-stress-details">
+                <summary className="tone-stress-summary">
+                    Tone & Stress Options
+                </summary>
+                <div className="tone-stress-content">
+                    <ToneStressSelector 
+                        word={word} 
+                        tone={tone} 
+                        stress={stress} 
+                        onToneChange={(v) => updateField('tone', v)} 
+                        onStressChange={(v) => updateField('stress', v)} 
+                    />
+                </div>
+            </details>
 
             <div>
             <div className="edit-modal-grid trans-def-grid">

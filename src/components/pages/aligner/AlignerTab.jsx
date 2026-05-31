@@ -4,7 +4,7 @@ import Button from '../../UI/Buttons/Buttons.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { stripAffix, getPersonRules } from '../../../utils/morphologyEngine.jsx';
-import { Trash2, Save, X, Info, Palette, Link2, ArrowRight } from 'lucide-react';
+import { Trash2, Save, X, Info, Palette, Link2, ArrowRight, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './alignertab.css';
 
@@ -195,8 +195,11 @@ export default function AlignerTab() {
                 )}
             </Card>
 
-            <div className="saved-maps-grid">
-                <h3>Saved Mappings</h3>
+            <details className="saved-maps-details">
+                <summary className="saved-maps-summary">
+                    <span>Saved Mappings</span>
+                    <ChevronDown size={20} className="drop-arrow" />
+                </summary>
                 <div className="maps-container">
                     {sentenceMaps.map(map => (
                         <div key={map.id} className="map-card-clickable" onClick={() => setViewingMap(map)}>
@@ -211,7 +214,7 @@ export default function AlignerTab() {
                         </div>
                     ))}
                 </div>
-            </div>
+            </details>
 
             {tooltip.visible && <div className="aligner-tooltip-wrapper" style={{ left: tooltip.x, top: tooltip.y }}>{tooltip.content}</div>}
         </div>

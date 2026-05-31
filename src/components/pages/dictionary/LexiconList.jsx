@@ -86,6 +86,9 @@ export default function LexiconList() {
     const lexicon = Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []);
     const deleteWord = useLexiconStore((state) => state.deleteWord);
     const phonologyTypes = useConfigStore(state => state.phonologyTypes);
+    const consonants = useConfigStore(state => state.consonants) || '';
+    const vowels = useConfigStore(state => state.vowels) || '';
+    const otherPhonemes = useConfigStore(state => state.otherPhonemes) || '';
     const enableToneAndStress = useConfigStore(state => state.enableToneAndStress) ?? true;
     const syllabificationAlgorithm = useConfigStore(state => state.syllabificationAlgorithm) || 'ltr';
     const updateConfig = useConfigStore(state => state.updateConfig);
@@ -114,7 +117,8 @@ export default function LexiconList() {
         tag: 'all',
         type: 'all',
         letter: 'all',
-        sort: 'newest'
+        sort: 'newest',
+        showTones: false
     });
 
     // Track which words are currently selected for our popup modals
@@ -131,13 +135,41 @@ export default function LexiconList() {
 
     // Extract all the unique first letters from the lexicon so we can build our A-Z quick jump bar
     const firstLetters = useMemo(() => {
-        const letters = new Set(lexicon.map(w => {
+        const letters = new Set();
+        
+        // 1. Add letters defined by the user in Phonology settings
+        const parseChars = (str) => {
+            if (!str) return [];
+            return str.split(',')
+                .map(s => s.trim())
+                .filter(Boolean)
+                .map(s => {
+                    if (s.includes('=')) return s.split('=')[1].trim();
+                    return s;
+                });
+        };
+        
+        const configChars = [
+            ...parseChars(consonants),
+            ...parseChars(vowels),
+            ...parseChars(otherPhonemes)
+        ];
+        
+        configChars.forEach(char => {
+            if (char) letters.add(char.charAt(0).toUpperCase());
+        });
+
+        // 2. Add first letters from actual lexicon words (fallback / auto-discovery)
+        lexicon.forEach(w => {
             const cleanWord = w.word.replace(/\*/g, '');
             const displayWord = transliterate(cleanWord, lexicon);
-            return displayWord ? displayWord.charAt(0).toUpperCase() : '';
-        }).filter(Boolean));
+            if (displayWord) {
+                letters.add(displayWord.charAt(0).toUpperCase());
+            }
+        });
+        
         return [...letters].sort();
-    }, [lexicon, transliterate]);
+    }, [lexicon, transliterate, consonants, vowels, otherPhonemes]);
 
     // Do the same for word classes (Noun, Verb, etc.) to populate the dropdown
     const uniqueClasses = useMemo(() => {
@@ -351,8 +383,8 @@ export default function LexiconList() {
                         <input 
                             type="checkbox" 
                             className="bound-checkbox"
-                            checked={enableToneAndStress}
-                            onChange={(e) => updateConfig({ enableToneAndStress: e.target.checked })}
+                            checked={filters.showTones}
+                            onChange={(e) => updateFilter('showTones', e.target.checked)}
                         />
                         Tones/Stress
                     </label>
@@ -458,7 +490,7 @@ export default function LexiconList() {
                             <div className="entry-header">
                                 <div className="entry-words">
                                     <div className="entry-word-with-wave" style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'stretch' }}>
-                                        {enableToneAndStress && <StressWave word={safeWord} stress={entry.stress} tone={entry.tone} customVowelsStr={useConfigStore.getState().vowels} />}
+                                        {filters.showTones && <StressWave word={safeWord} stress={entry.stress} tone={entry.tone} customVowelsStr={useConfigStore.getState().vowels} />}
                                         <span className={`notranslate entry-main-word custom-font-text ${phonologyTypes === 'featural_block' ? 'featural-block-render' : ''}`} style={{ textAlign: 'center' }}>
                                             {displayWord}
                                         </span>
@@ -490,15 +522,15 @@ export default function LexiconList() {
                                         </span>
                                     )}
 
-                                    {enableToneAndStress && entry.tone && (
+                                    {filters.showTones && entry.tone && (
                                         <span className="notranslate entry-tone" style={{fontSize: '0.8rem', opacity: 0.7, marginLeft: '4px'}}>
-                                            • {entry.tone} Tone
+                                            🎵 {entry.tone} Tone
                                         </span>
                                     )}
 
-                                    {enableToneAndStress && entry.stress && (
+                                    {filters.showTones && entry.stress && (
                                         <span className="notranslate entry-stress" style={{fontSize: '0.8rem', opacity: 0.7, marginLeft: '4px'}}>
-                                            • {entry.stress} Stress
+                                            ⚡ {entry.stress} Stress
                                         </span>
                                     )}
                                 </div>
