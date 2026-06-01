@@ -126,13 +126,13 @@
     top: 100%;
     right: 0;
     margin-top: 8px;
-    background: rgba(15, 23, 42, 0.9); /* Deep dark glass */
+    background: var(--h-bg);
     backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--bd);
     border-radius: 12px;
     padding: 6px;
     width: 180px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -167,13 +167,17 @@
 }
 
 .export-opt:hover:not(.disabled) {
-    background: rgba(124, 58, 237, 0.2);
-    color: var(--acc2);
+    background: var(--acc);
+    color: white;
 }
 
 .export-opt svg {
     color: var(--acc);
     opacity: 0.8;
+}
+
+.export-opt:hover:not(.disabled) svg {
+    color: white;
 }
 
 .export-opt.disabled {
