@@ -12,6 +12,7 @@ import opentype from 'opentype.js';
 import { DARK_THEMES, LIGHT_THEMES } from '../../../utils/themePresets.js';
 import { Info, User, Type } from 'lucide-react';
 import { supabase } from '../../../utils/supabaseClient.js';
+import { sanitizeConfig } from '../../../utils/schemaValidator.jsx';
 import toast from 'react-hot-toast';
 
 export default function SystemTab() {
@@ -40,6 +41,48 @@ export default function SystemTab() {
         updateConfig({ colors: preset });
     };
 
+    const handleManualUpdatePublic = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            toast.error("You're not logged in");
+            return;
+        }
+
+        const toastId = toast.loading("Updating public conlang...");
+        const currentStore = useConfigStore.getState();
+        const currentProjectId = currentStore.projectId;
+        if (!currentProjectId) {
+            toast.error("Project ID missing", { id: toastId });
+            return;
+        }
+
+        const configData = sanitizeConfig(currentStore);
+        const payload = {
+            dictionary: useLexiconStore.getState().lexicon || [],
+            config: configData,
+            wiki: configData.wikiPages || {}
+        };
+
+        try {
+            await supabase.from('conlang_snapshots').upsert({
+                user_id: session.user.id,
+                project_id: currentProjectId,
+                project_data: payload
+            }, { onConflict: 'project_id' });
+            
+            await supabase.from('conlangs').upsert({
+                user_id: session.user.id,
+                project_id: currentProjectId,
+                project_data: payload
+            }, { onConflict: 'project_id' });
+
+            toast.success("Public conlang updated!", { id: toastId });
+        } catch (err) {
+            console.error("Update failed", err);
+            toast.error("Failed to update public conlang", { id: toastId });
+        }
+    };
+
     const handleVisibilityToggle = async (e) => {
         const checked = e.target.checked;
         const { data: { session } } = await supabase.auth.getSession();
@@ -48,6 +91,10 @@ export default function SystemTab() {
             return;
         }
         updateConfig({ isPublic: checked });
+    };
+
+    const handleIconChange = async (iconName) => {
+        updateConfig({ conlangIcon: iconName });
     };
 
     const getSafeColor = (colorString, fallback) => {
@@ -276,7 +323,7 @@ export default function SystemTab() {
                             {Object.keys(CONLANG_ICONS).map(iconName => (
                                 <button
                                     key={iconName}
-                                    onClick={() => updateConfig({ conlangIcon: iconName })}
+                                    onClick={() => handleIconChange(iconName)}
                                     title={iconName}
                                     style={{
                                         display: 'flex',
@@ -294,6 +341,14 @@ export default function SystemTab() {
                                     {getConlangIcon(iconName, 18)}
                                 </button>
                             ))}
+                        </div>
+                        <div style={{ marginTop: '1rem' }}>
+                            <Button variant="primary" onClick={handleManualUpdatePublic} style={{ width: '100%' }}>
+                                <Globe size={16} /> Update Public Conlang
+                            </Button>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--tx2)', marginTop: '0.5rem', textAlign: 'center' }}>
+                                Click this button whenever you add new words or change settings to update your public page.
+                            </p>
                         </div>
                     </div>
                 )}
