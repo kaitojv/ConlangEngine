@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../utils/supabaseClient.js';
 import { Globe, BookA, User, Loader2 } from 'lucide-react';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import './explorePage.css';
 
 export default function ExplorePage() {
+    const navigate = useNavigate();
     const [conlangs, setConlangs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -42,8 +44,8 @@ export default function ExplorePage() {
     }, []);
 
     const handleCardClick = (projectId) => {
-        // Open the public viewer in a new tab
-        window.open(`/view/${projectId}`, '_blank');
+        // Open the public viewer in the same tab
+        navigate(`/view/${projectId}`);
     };
 
     if (loading) {
