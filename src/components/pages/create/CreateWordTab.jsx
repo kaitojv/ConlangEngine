@@ -558,8 +558,8 @@ export default function CreateWordTab() {
                             word={formData.word} 
                             tone={formData.tone} 
                             stress={formData.stress} 
-                            onToneChange={(v) => handleInputChange({ target: { name: 'tone', value: v } })} 
-                            onStressChange={(v) => handleInputChange({ target: { name: 'stress', value: v } })} 
+                            onToneChange={(v) => updateField('tone', v)} 
+                            onStressChange={(v) => updateField('stress', v)} 
                         />
                     </div>
                 </details>
