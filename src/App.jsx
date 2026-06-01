@@ -34,6 +34,7 @@ const PublicViewer = lazy(() => import('./components/pages/viewer/PublicViewer.j
 const AlignerTab = lazy(() => import('./components/pages/aligner/AlignerTab.jsx'));
 const OrthographyPage = lazy(() => import('./components/pages/orthography/OrthographyPage.jsx'));
 const SemanticExplorer = lazy(() => import('./components/pages/lexicon/SemanticExplorer.jsx'));
+const ExplorePage = lazy(() => import('./components/pages/explore/ExplorePage.jsx'));
 
 // Define your allowlist of safe relative routes based on your actual Route paths
 export const ALLOWED_REDIRECTS = [
@@ -52,7 +53,8 @@ export const ALLOWED_REDIRECTS = [
   '/help',
   '/aligner',
   '/orthography',
-  '/semantic'
+  '/semantic',
+  '/explore'
 ];
 
 function App(){
@@ -156,6 +158,7 @@ function App(){
         <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', padding: '50px', color: 'var(--tx2)' }}>Loading...</div>}>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/explore" element={<ExplorePage />} />
             <Route path="/help" element={<HelpTab />} />
             
             <Route path="/lexicon" element={<Lexicon />} />

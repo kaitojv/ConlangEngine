@@ -1,7 +1,6 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
-import { Menu, Home, Printer, Save, FolderUp, User, Cloud, FileText, Table, FileEdit, Download, Gamepad } from 'lucide-react';
+import { Menu, Home, Printer, Save, FolderUp, User, Cloud, FileText, Table, FileEdit, Download, Gamepad, Globe } from 'lucide-react';
 
 // Bring in our UI components and styling
 import Button from '../../UI/Buttons/Buttons.jsx';
@@ -178,6 +177,9 @@ export default function Header({ openMenu }) {
                     <div className="hdr-right">
                         <Button className="hdr-btn" onClick={() => navigate('/')}>
                             <Home /> <span>Home</span>
+                        </Button>
+                        <Button className="hdr-btn" onClick={() => navigate('/explore')}>
+                            <Globe /> <span>Explore</span>
                         </Button>
                         <div className="export-menu-wrapper">
                             <Button className="hdr-btn export-trigger">

@@ -1,10 +1,21 @@
 import React from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
+import { computeProsody } from '../../../utils/prosodyEngine.jsx';
 
 const TONE_OPTIONS = ["High", "Low", "Mid", "Rising", "Falling", "Dipping", "Peaking"];
 
 export default function ToneStressSelector({ word, tone, stress, onToneChange, onStressChange }) {
     const customVowelsStr = useConfigStore(state => state.vowels);
+    const stressRules = useConfigStore(state => state.stressRules) || [];
+    const toneRules = useConfigStore(state => state.toneRules) || [];
+
+    // Compute auto values from prosody rules
+    const hasRules = stressRules.length > 0 || toneRules.length > 0;
+    const computed = hasRules ? computeProsody((word || '').replace(/\*/g, ''), {
+        vowels: customVowelsStr,
+        stressRules,
+        toneRules
+    }) : null;
     
     let vowelsArr = [];
     if (customVowelsStr) {
@@ -73,6 +84,11 @@ export default function ToneStressSelector({ word, tone, stress, onToneChange, o
                         );
                     })}
                 </div>
+                {hasRules && computed?.stress && !stress && (
+                    <div style={{ marginTop: '6px', fontSize: '0.72rem', color: 'var(--acc2)', opacity: 0.8, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        ⚡ Auto-computed: syllable {computed.stress} — click above to override
+                    </div>
+                )}
             </div>
 
             <div>
@@ -119,6 +135,11 @@ export default function ToneStressSelector({ word, tone, stress, onToneChange, o
                         </div>
                     )}
                 </div>
+                {hasRules && computed?.tone && !tone && (
+                    <div style={{ marginTop: '6px', fontSize: '0.72rem', color: 'var(--acc2)', opacity: 0.8, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        🎵 Auto-computed: {computed.tone} — click above to override
+                    </div>
+                )}
             </div>
         </div>
     );

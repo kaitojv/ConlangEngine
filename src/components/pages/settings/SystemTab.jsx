@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Card from '../../UI/Card/Card.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import './systemtab.css';
-import { Palette, CaseLower, Database, ToggleLeft } from 'lucide-react';
+import { Palette, CaseLower, Database, ToggleLeft, Globe } from 'lucide-react';
 import { useConfigStore, INITIAL_CONFIG } from '../../../store/useConfigStore.jsx';
 import { useProjectStore } from '../../../store/useProjectStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
@@ -23,6 +23,8 @@ export default function SystemTab() {
     const customFont = useConfigStore((state) => state.customFont);
     const customGlyphs = useConfigStore((state) => state.customGlyphs) || {};
     const autoReturnToLexicon = useConfigStore((state) => state.autoReturnToLexicon);
+    const isPublic = useConfigStore((state) => state.isPublic) || false;
+    const conlangIcon = useConfigStore((state) => state.conlangIcon) || '🌐';
     const setFullConfig = useConfigStore((state) => state.setFullConfig);
     const updateConfig = useConfigStore((state) => state.updateConfig);
     const setLexicon = useLexiconStore((state) => state.setLexicon);
@@ -229,6 +231,48 @@ export default function SystemTab() {
 
     return (
         <>
+            <Card>
+                <h2 className='flex sg-title'><Globe /> Visibility & Sharing</h2>
+                <p>
+                    Make your conlang public so others can see it in the Explore tab. 
+                    Anyone with the link can view your dictionary and grammar rules.
+                </p>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '1rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input 
+                            type="checkbox" 
+                            checked={isPublic} 
+                            onChange={(e) => updateConfig({ isPublic: e.target.checked })} 
+                            style={{ transform: 'scale(1.2)' }}
+                        />
+                        <span style={{ fontWeight: 600 }}>Publicly Visible</span>
+                    </label>
+                </div>
+                
+                {isPublic && (
+                    <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <label style={{ fontWeight: 600, fontSize: '0.85rem' }}>Conlang Icon (Emoji)</label>
+                        <input 
+                            type="text" 
+                            maxLength={2} 
+                            value={conlangIcon} 
+                            onChange={(e) => updateConfig({ conlangIcon: e.target.value })} 
+                            style={{ 
+                                width: '60px', 
+                                padding: '0.5rem', 
+                                fontSize: '1.5rem', 
+                                textAlign: 'center',
+                                background: 'var(--s1)',
+                                border: '1px solid var(--bd)',
+                                borderRadius: '8px',
+                                color: 'var(--tx)'
+                            }} 
+                            title="Pick an emoji to represent your conlang in the Explore tab"
+                        />
+                        <p style={{ fontSize: '0.75rem', color: 'var(--tx2)' }}>This emoji will be displayed alongside your conlang's name.</p>
+                    </div>
+                )}
+            </Card>
 
             <Card>
                 <h2 className='flex sg-title'><CaseLower /> Typography & Custom Font</h2>

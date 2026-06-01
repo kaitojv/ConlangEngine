@@ -1,0 +1,155 @@
+/* explorePage.css */
+
+.explore-container {
+    padding: 2rem 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.explore-header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.explore-header h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--tx);
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, var(--acc), var(--acc2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.explore-header p {
+    color: var(--tx2);
+    font-size: 0.95rem;
+}
+
+/* Grid */
+.explore-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+/* Card */
+.conlang-explore-card {
+    background: var(--s1);
+    border: 1px solid var(--bd);
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.conlang-explore-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--card-theme, var(--acc));
+}
+
+.conlang-explore-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), 0 0 0 1px var(--card-theme, var(--acc));
+    background: var(--s2);
+}
+
+.explore-card-top {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.explore-icon {
+    font-size: 2.5rem;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--s3);
+    border-radius: 12px;
+    flex-shrink: 0;
+    border: 1px solid var(--bd);
+}
+
+.explore-titles {
+    flex: 1;
+    min-width: 0;
+}
+
+.explore-name {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--tx);
+    margin: 0 0 0.2rem 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.explore-author {
+    font-size: 0.8rem;
+    color: var(--tx2);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.explore-desc {
+    font-size: 0.85rem;
+    color: var(--tx2);
+    line-height: 1.5;
+    flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.explore-stats {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--bd);
+}
+
+.explore-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    color: var(--tx2);
+    font-weight: 600;
+}
+
+.explore-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem;
+    color: var(--tx2);
+    gap: 1rem;
+}
+
+.explore-empty {
+    text-align: center;
+    padding: 4rem;
+    color: var(--tx2);
+    background: var(--s1);
+    border-radius: 12px;
+    border: 1px dashed var(--bd);
+}

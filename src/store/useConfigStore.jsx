@@ -7,6 +7,8 @@ export const INITIAL_CONFIG = {
     authorName: 'Author Name',
     description: 'A brief description of your conlang.',
     phonologyTypes: 'alphabetic',
+    isPublic: false,
+    conlangIcon: '🌐',
     alphabeticScript: 'latin', // e.g. latin, cyrillic, runic, greek
     featuralComponents: {}, // Stores strokes for initials, vowels, finals
     blockSettings: {
@@ -123,6 +125,9 @@ export const INITIAL_CONFIG = {
         ]
     },
     functionWords: [],
+    // Prosody rules — evaluated at display time to auto-compute stress & tone
+    stressRules: [],   // Array of { id, type, value, fallback? }
+    toneRules: [],     // Array of { id, condition, value }
 };
 
 // IndexedDB Helper for handling massive data without breaking local storage quotas

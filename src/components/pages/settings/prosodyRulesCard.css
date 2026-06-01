@@ -1,0 +1,309 @@
+/* prosodyRulesCard.css — Tone & Stress Rules Engine UI */
+
+.prosody-card {
+    margin-top: 1rem;
+}
+
+.prosody-card .sg-title {
+    gap: 0.5rem;
+    align-items: center;
+}
+
+/* ─── Section Blocks ─── */
+.prosody-section {
+    margin-top: 1.25rem;
+    padding: 1rem;
+    border-radius: 10px;
+    background: var(--s1);
+    border: 1px solid var(--bd);
+}
+
+.prosody-section-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--tx2);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/* ─── Stress Type Selector ─── */
+.prosody-stress-type-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+}
+
+.prosody-type-btn {
+    padding: 0.4rem 0.9rem;
+    border-radius: 8px;
+    background: var(--s4);
+    color: var(--tx);
+    border: 1px solid var(--bd);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.prosody-type-btn:hover {
+    background: var(--s3);
+    border-color: var(--acc);
+}
+
+.prosody-type-btn.active {
+    background: var(--acc);
+    color: #fff;
+    border-color: var(--acc);
+    font-weight: 700;
+    box-shadow: 0 0 12px rgba(124, 58, 237, 0.25);
+}
+
+/* ─── Fallback Row ─── */
+.prosody-fallback-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: 8px;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+}
+
+.prosody-fallback-label {
+    font-size: 0.75rem;
+    color: var(--tx2);
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.prosody-fallback-select {
+    flex: 1;
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid var(--bd);
+    background: var(--s4);
+    color: var(--tx);
+    font-size: 0.8rem;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.prosody-fallback-select:focus {
+    border-color: var(--acc);
+}
+
+/* ─── Tone Rules List ─── */
+.prosody-tone-rules {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.prosody-tone-rule-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 8px;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    transition: border-color 0.2s ease;
+}
+
+.prosody-tone-rule-row:hover {
+    border-color: var(--acc);
+}
+
+.prosody-tone-select {
+    flex: 1;
+    padding: 0.35rem 0.5rem;
+    border-radius: 6px;
+    border: 1px solid var(--bd);
+    background: var(--s4);
+    color: var(--tx);
+    font-size: 0.8rem;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.prosody-tone-select:focus {
+    border-color: var(--acc);
+}
+
+.prosody-tone-arrow {
+    color: var(--acc);
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.prosody-tone-remove {
+    flex-shrink: 0;
+    cursor: pointer;
+    color: var(--tx2);
+    opacity: 0.5;
+    transition: all 0.2s ease;
+    background: none;
+    border: none;
+    padding: 0.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.prosody-tone-remove:hover {
+    opacity: 1;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.prosody-add-tone-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--acc);
+    border: 1px dashed var(--acc);
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    margin-top: 0.25rem;
+    width: fit-content;
+    opacity: 0.8;
+}
+
+.prosody-add-tone-btn:hover {
+    opacity: 1;
+    background: rgba(124, 58, 237, 0.08);
+}
+
+/* ─── Live Preview ─── */
+.prosody-preview {
+    margin-top: 1.25rem;
+    padding: 1rem;
+    border-radius: 10px;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+}
+
+.prosody-preview-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--tx2);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.prosody-preview-input-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.prosody-preview-input {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--bd);
+    background: var(--s4);
+    color: var(--tx);
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.prosody-preview-input:focus {
+    border-color: var(--acc);
+}
+
+.prosody-preview-result {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: flex-start;
+}
+
+.prosody-preview-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.prosody-preview-badge.stress {
+    background: rgba(124, 58, 237, 0.15);
+    color: var(--acc2);
+    border: 1px solid rgba(124, 58, 237, 0.3);
+}
+
+.prosody-preview-badge.tone {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.prosody-preview-badge.syllables {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.prosody-preview-wave-wrap {
+    margin-top: 0.5rem;
+    max-width: 200px;
+}
+
+/* ─── Empty State ─── */
+.prosody-empty {
+    text-align: center;
+    padding: 1rem;
+    color: var(--tx2);
+    font-size: 0.8rem;
+    font-style: italic;
+    opacity: 0.7;
+}
+
+/* ─── Clear All ─── */
+.prosody-clear-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.75rem;
+}
+
+.prosody-clear-btn {
+    background: transparent;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    padding: 0.3rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.prosody-clear-btn:hover {
+    opacity: 1;
+    background: rgba(239, 68, 68, 0.1);
+}

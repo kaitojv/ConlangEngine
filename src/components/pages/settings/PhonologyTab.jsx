@@ -11,6 +11,7 @@ import AlphabeticManager from '../../UI/AlphabeticManager/AlphabeticManager.jsx'
 import Button from '../../UI/Buttons/Buttons.jsx';
 import applySoundChanges from '../../../utils/applysoundchanges.jsx';
 import { VisualRuleBuilder } from './grammarMatrix/VisualRuleBuilder.jsx';
+import ProsodyRulesCard from './ProsodyRulesCard.jsx';
 import { Wand2, Info, AudioLines, Hourglass, Eye, BookCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../../UI/Modal/Modal.jsx';
@@ -235,6 +236,8 @@ export default function PhonologyTab() {
                     <BlockManager />
                 </div>
             )}
+
+            <ProsodyRulesCard />
 
             <Card>
                 <h2 className="flex sg-title"><Hourglass /> Historical Sound Changer</h2>

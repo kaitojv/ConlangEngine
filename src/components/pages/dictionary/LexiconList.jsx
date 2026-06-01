@@ -14,71 +14,11 @@ import { exportTextAsSVG } from '../../../utils/svgExporter.jsx';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../utils/supabaseClient.js';
 import { useSharing } from '../../../hooks/useSharing.jsx';
+import { computeProsody } from '../../../utils/prosodyEngine.jsx';
+import StressWave from '../../UI/StressWave/StressWave.jsx';
 import './lexiconList.css';
 
-const StressWave = ({ word, stress, tone, customVowelsStr }) => {
-    if (!stress && !tone) return null;
-    
-    let vowelsArr = [];
-    if (customVowelsStr) {
-        vowelsArr = customVowelsStr.split(',').map(v => v.trim().toLowerCase()).filter(Boolean);
-    }
-    
-    // Intelligent fallback: if the word contains standard/IPA vowels that the user forgot to add to their config, include them anyway so the UI doesn't break.
-    const fallbackVowels = [
-        'a', 'e', 'i', 'o', 'u', 
-        'á', 'é', 'í', 'ó', 'ú', 'à', 'è', 'ì', 'ò', 'ù', 'â', 'ê', 'î', 'ô', 'û', 'ä', 'ë', 'ï', 'ö', 'ü', 
-        'ɑ', 'æ', 'ɛ', 'ə', 'ɪ', 'ɔ', 'ʊ', 'ʌ', 'ʉ', 'ɯ', 'ʏ', 'ø', 'œ', 'ɒ', 'ɐ', 'ɨ', 'ɤ'
-    ];
-    const wordLower = (word || '').toLowerCase();
-    fallbackVowels.forEach(fv => {
-        if (wordLower.includes(fv) && !vowelsArr.includes(fv)) {
-            vowelsArr.push(fv);
-        }
-    });
 
-    vowelsArr.sort((a, b) => b.length - a.length);
-    const escapedVowels = vowelsArr.map(v => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    const regex = new RegExp(`(${escapedVowels.join('|')})`, 'gi');
-    
-    const match = (word || '').match(regex);
-    const syllableCount = match ? match.length : 1;
-    
-    let stressIndex = -1;
-    if (stress) {
-        const s = String(stress).toLowerCase();
-        if (s.includes('ante') && s.includes('penult')) stressIndex = syllableCount - 3;
-        else if (s.includes('penult')) stressIndex = syllableCount - 2;
-        else if (s.includes('init') || s.includes('first') || s === '1') stressIndex = 0;
-        else if (s.includes('ult') || s.includes('final') || s.includes('last')) stressIndex = syllableCount - 1;
-        else if (s === '2') stressIndex = 1;
-        else if (s === '3') stressIndex = 2;
-    }
-    if (stressIndex === -1 && (stress || tone)) {
-        stressIndex = 0;
-    }
-    
-    stressIndex = Math.max(0, Math.min(stressIndex, syllableCount - 1));
-    
-    const W = 100 / Math.max(1, syllableCount);
-    let path = `M 0 15 `;
-    for (let i = 0; i < syllableCount; i++) {
-        const endX = (i + 1) * W;
-        const midX = i * W + W / 2;
-        
-        if (i === stressIndex) {
-            path += `Q ${midX} -5, ${endX} 15 `;
-        } else {
-            path += `L ${endX} 15 `;
-        }
-    }
-    
-    return (
-        <svg viewBox="0 0 100 20" preserveAspectRatio="none" style={{ width: '100%', height: '15px', display: 'block', overflow: 'visible', opacity: 0.6, marginBottom: '-5px' }}>
-            <path d={path} fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-    );
-};
 
 export default function LexiconList() {
     // Grab the global stores for our lexicon and language settings
@@ -93,6 +33,8 @@ export default function LexiconList() {
     const syllabificationAlgorithm = useConfigStore(state => state.syllabificationAlgorithm) || 'ltr';
     const updateConfig = useConfigStore(state => state.updateConfig);
     const conlangName = useConfigStore((state) => state.conlangName);
+    const stressRules = useConfigStore(state => state.stressRules) || [];
+    const toneRules = useConfigStore(state => state.toneRules) || [];
     const navigate = useNavigate();
 
     const [session, setSession] = React.useState(null);
@@ -484,13 +426,21 @@ export default function LexiconList() {
                 {filteredLexicon.slice(0, visibleCount).map((entry) => {
                     const safeWord = entry.word.replace(/\*/g, '');
                     const displayWord = transliterate(safeWord, lexicon);
+
+                    // Auto-compute prosody from rules if no manual values set
+                    const computed = (filters.showTones && (!entry.stress || !entry.tone) && (stressRules.length > 0 || toneRules.length > 0))
+                        ? computeProsody(safeWord, { vowels, stressRules, toneRules })
+                        : null;
+                    const displayStress = entry.stress || (computed?.stress ?? '');
+                    const displayTone = entry.tone || (computed?.tone ?? '');
+                    const isAutoComputed = (!entry.stress && computed?.stress) || (!entry.tone && computed?.tone);
                     
                     return (
                         <Card key={entry.id} className="lexicon-entry">
                             <div className="entry-header">
                                 <div className="entry-words">
                                     <div className="entry-word-with-wave" style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'stretch' }}>
-                                        {filters.showTones && <StressWave word={safeWord} stress={entry.stress} tone={entry.tone} customVowelsStr={useConfigStore.getState().vowels} />}
+                                        {filters.showTones && <StressWave word={safeWord} stress={displayStress} tone={displayTone} customVowelsStr={useConfigStore.getState().vowels} />}
                                         <span className={`notranslate entry-main-word custom-font-text ${phonologyTypes === 'featural_block' ? 'featural-block-render' : ''}`} style={{ textAlign: 'center' }}>
                                             {displayWord}
                                         </span>
@@ -522,15 +472,15 @@ export default function LexiconList() {
                                         </span>
                                     )}
 
-                                    {filters.showTones && entry.tone && (
-                                        <span className="notranslate entry-tone" style={{fontSize: '0.8rem', opacity: 0.7, marginLeft: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px'}}>
-                                            <Music size={12} /> {entry.tone} Tone
+                                    {filters.showTones && displayTone && (
+                                        <span className="notranslate entry-tone" style={{fontSize: '0.8rem', opacity: isAutoComputed && !entry.tone ? 0.5 : 0.7, marginLeft: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px'}}>
+                                            <Music size={12} /> {displayTone} Tone{isAutoComputed && !entry.tone ? ' (auto)' : ''}
                                         </span>
                                     )}
 
-                                    {filters.showTones && entry.stress && (
-                                        <span className="notranslate entry-stress" style={{fontSize: '0.8rem', opacity: 0.7, marginLeft: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px'}}>
-                                            <Zap size={12} /> {entry.stress} Stress
+                                    {filters.showTones && displayStress && (
+                                        <span className="notranslate entry-stress" style={{fontSize: '0.8rem', opacity: isAutoComputed && !entry.stress ? 0.5 : 0.7, marginLeft: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px'}}>
+                                            <Zap size={12} /> {displayStress} Stress{isAutoComputed && !entry.stress ? ' (auto)' : ''}
                                         </span>
                                     )}
                                 </div>

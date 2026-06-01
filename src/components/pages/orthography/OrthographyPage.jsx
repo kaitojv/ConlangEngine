@@ -4,7 +4,8 @@ import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
-import { Languages, Hash, Plus, Trash2, Calculator, Settings, Edit2, Check, Table2, BookA, Type } from 'lucide-react';
+import { Languages, Hash, Plus, Trash2, Calculator, Settings, Edit2, Check, Table2, BookA, Type, Mic2 } from 'lucide-react';
+import IpaReferencePage from './IpaReferencePage.jsx';
 import './orthographyPage.css';
 import '../../UI/AlphabeticManager/alphabeticManager.css';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
@@ -1050,11 +1051,19 @@ export default function OrthographyPage() {
                     >
                         <Hash size={18} /> Numeric System
                     </button>
+                    <button 
+                        className={`tab ${activeTab === 'ipa' ? 'tab-active' : ''}`}
+                        onClick={() => setActiveTab('ipa')}
+                    >
+                        <Mic2 size={18} /> IPA Reference
+                    </button>
                 </nav>
             </header>
 
             <main className="page-main-content">
-                {activeTab === 'script' ? renderScriptManager() : <NumbersTab />}
+                {activeTab === 'script'  && renderScriptManager()}
+                {activeTab === 'numbers' && <NumbersTab />}
+                {activeTab === 'ipa'     && <IpaReferencePage />}
             </main>
         </div>
     );
