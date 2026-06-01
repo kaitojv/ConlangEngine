@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../utils/supabaseClient.js';
 import { Globe, BookA, User, Loader2 } from 'lucide-react';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
+import toast from 'react-hot-toast';
 import './explorePage.css';
 
 export default function ExplorePage() {
@@ -14,6 +15,13 @@ export default function ExplorePage() {
     useEffect(() => {
         async function fetchPublicConlangs() {
             try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) {
+                    toast.error("You're not logged in");
+                    navigate('/');
+                    return;
+                }
+
                 // Fetch projects from the snapshots table where isPublic is true.
                 // We use .contains on the JSONB column to match { config: { isPublic: true } }
                 const { data, error: fetchError } = await supabase

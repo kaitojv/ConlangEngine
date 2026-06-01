@@ -11,6 +11,8 @@ import { CONLANG_ICONS, getConlangIcon } from '../../../utils/iconMap.jsx';
 import opentype from 'opentype.js';
 import { DARK_THEMES, LIGHT_THEMES } from '../../../utils/themePresets.js';
 import { Info, User, Type } from 'lucide-react';
+import { supabase } from '../../../utils/supabaseClient.js';
+import toast from 'react-hot-toast';
 
 export default function SystemTab() {
 
@@ -36,6 +38,16 @@ export default function SystemTab() {
     const applyThemePreset = (preset) => {
         // Fully replace colors with preset to avoid stale keys from previous themes
         updateConfig({ colors: preset });
+    };
+
+    const handleVisibilityToggle = async (e) => {
+        const checked = e.target.checked;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            toast.error("You're not logged in");
+            return;
+        }
+        updateConfig({ isPublic: checked });
     };
 
     const getSafeColor = (colorString, fallback) => {
@@ -243,7 +255,7 @@ export default function SystemTab() {
                         <input 
                             type="checkbox" 
                             checked={isPublic} 
-                            onChange={(e) => updateConfig({ isPublic: e.target.checked })} 
+                            onChange={handleVisibilityToggle} 
                             style={{ transform: 'scale(1.2)' }}
                         />
                         <span style={{ fontWeight: 600 }}>Publicly Visible</span>
