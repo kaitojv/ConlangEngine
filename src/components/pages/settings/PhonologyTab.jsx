@@ -13,6 +13,7 @@ import applySoundChanges from '../../../utils/applysoundchanges.jsx';
 import { VisualRuleBuilder } from './grammarMatrix/VisualRuleBuilder.jsx';
 import { Wand2, Info, AudioLines, Hourglass, Eye, BookCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Modal from '../../UI/Modal/Modal.jsx';
 import './phonologyTab.css'
 
 export default function PhonologyTab() {
@@ -36,8 +37,11 @@ export default function PhonologyTab() {
     // Local state to handle the real-time sound evolution preview
     const [testWords, setTestWords] = useState('');
     const [previewResults, setPreviewResults] = useState([]);
-    const [showApplyConfirm, setShowApplyConfirm] = useState(false);
     const [isBuilderOpen, setIsBuilderOpen] = useState(false);
+    
+    // Selective sound changes state
+    const [pendingChanges, setPendingChanges] = useState(null);
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
     // Run the user's test words through the sound change engine
     const handlePreview = () => {
@@ -49,8 +53,8 @@ export default function PhonologyTab() {
         setPreviewResults(results);
     };
 
-    // Permanently apply all sound-change rules to every word in the lexicon
-    const handleApplyToLexicon = () => {
+    // Prepare the list of words that would be affected by the current sound changes
+    const handlePrepareApplyToLexicon = () => {
         if (!historicalRules.trim()) {
             toast.error('No rules to apply. Write some rules first.');
             return;
@@ -60,24 +64,64 @@ export default function PhonologyTab() {
             return;
         }
 
-        let changed = 0;
+        const changes = [];
         lexicon.forEach((entry) => {
             const safeWord = entry.word.replace(/\*/g, '');
             const results = applySoundChanges(safeWord, historicalRules);
             if (results.length > 0 && results[0].evolved !== safeWord) {
-                // Preserve any leading * (root marker)
                 const prefix = entry.word.startsWith('*') ? '*' : '';
-                updateWord(entry.id, { word: prefix + results[0].evolved });
-                changed++;
+                changes.push({
+                    id: entry.id,
+                    original: entry.word,
+                    evolved: prefix + results[0].evolved,
+                    translation: entry.translation,
+                    wordClass: entry.wordClass,
+                    tags: entry.tags,
+                    selected: true
+                });
             }
         });
 
-        setShowApplyConfirm(false);
-        if (changed > 0) {
-            toast.success(`✅ Applied rules to ${changed} word${changed !== 1 ? 's' : ''} in your lexicon.`);
+        if (changes.length > 0) {
+            setPendingChanges(changes);
+            setIsReviewModalOpen(true);
         } else {
             toast(`No words were changed — the rules may not match any stored phonemes.`, { icon: 'ℹ️' });
         }
+    };
+
+    // Apply the selected changes
+    const handleConfirmSelectedChanges = () => {
+        if (!pendingChanges) return;
+        
+        let appliedCount = 0;
+        pendingChanges.forEach(change => {
+            if (change.selected) {
+                updateWord(change.id, { word: change.evolved });
+                appliedCount++;
+            }
+        });
+        
+        setIsReviewModalOpen(false);
+        setPendingChanges(null);
+        
+        if (appliedCount > 0) {
+            toast.success(`✅ Applied rules to ${appliedCount} word${appliedCount !== 1 ? 's' : ''} in your lexicon.`);
+        } else {
+            toast(`No changes were applied.`, { icon: 'ℹ️' });
+        }
+    };
+
+    const togglePendingChange = (index) => {
+        setPendingChanges(prev => {
+            const next = [...prev];
+            next[index] = { ...next[index], selected: !next[index].selected };
+            return next;
+        });
+    };
+
+    const setAllPendingChanges = (value) => {
+        setPendingChanges(prev => prev.map(c => ({ ...c, selected: value })));
     };
    
     return (
@@ -245,28 +289,12 @@ export default function PhonologyTab() {
                     }}
                 />
 
-                {/* Apply to Lexicon — destructive action, gated behind a confirmation */}
-                {!showApplyConfirm ? (
-                    <div className="pt-button-row">
-                        <Button variant="edit" onClick={() => setShowApplyConfirm(true)}>
-                            <BookCheck size={16} /> Apply to Lexicon
-                        </Button>
-                    </div>
-                ) : (
-                    <div className="apply-confirm-box">
-                        <p className="apply-confirm-text">
-                            ⚠️ This will <strong>permanently rewrite</strong> the stored phoneme spelling of every matching word. This cannot be undone. Are you sure?
-                        </p>
-                        <div className="apply-confirm-actions">
-                            <Button variant="error" onClick={handleApplyToLexicon}>
-                                Yes, apply to all {lexicon.length} words
-                            </Button>
-                            <Button variant="edit" onClick={() => setShowApplyConfirm(false)}>
-                                Cancel
-                            </Button>
-                        </div>
-                    </div>
-                )}
+                {/* Apply to Lexicon — opens the review modal */}
+                <div className="pt-button-row">
+                    <Button variant="edit" onClick={handlePrepareApplyToLexicon}>
+                        <BookCheck size={16} /> Apply to Lexicon
+                    </Button>
+                </div>
 
                 <div className="preview-container">
                     <label className="preview-label">Test your rules</label>
@@ -299,6 +327,69 @@ export default function PhonologyTab() {
                 </div>
             </Card>
             
+            <Modal
+                isOpen={isReviewModalOpen}
+                onClose={() => {
+                    setIsReviewModalOpen(false);
+                    setPendingChanges(null);
+                }}
+                title="Review Sound Changes"
+            >
+                <div className="historical-review-modal">
+                    <p className="historical-review-desc">
+                        ⚠️ These changes will rewrite the phoneme spelling of the selected words. This cannot be undone.
+                    </p>
+                    
+                    {pendingChanges && (
+                        <>
+                            <div className="historical-review-actions">
+                                <Button variant="edit" onClick={() => setAllPendingChanges(true)}>Select All</Button>
+                                <Button variant="edit" onClick={() => setAllPendingChanges(false)}>Deselect All</Button>
+                            </div>
+                            
+                            <div className="historical-review-list">
+                                {pendingChanges.map((change, index) => (
+                                    <label key={change.id} className={`historical-review-item ${change.selected ? 'selected' : ''}`}>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={change.selected} 
+                                            onChange={() => togglePendingChange(index)} 
+                                        />
+                                        <div className="historical-review-item-content">
+                                            <div className="historical-review-words">
+                                                <span className="historical-review-original">{change.original}</span>
+                                                <span className="historical-review-arrow">➔</span>
+                                                <span className="historical-review-evolved">{change.evolved}</span>
+                                            </div>
+                                            <div className="historical-review-meta">
+                                                {change.translation && <span className="historical-meta-trans">"{change.translation}"</span>}
+                                                {change.wordClass && <span className="historical-meta-pos">{change.wordClass}</span>}
+                                                {change.tags && change.tags.length > 0 && (
+                                                    <span className="historical-meta-tags">
+                                                        {change.tags.map(t => `#${t}`).join(', ')}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </label>
+                                ))}
+                            </div>
+                            
+                            <div className="historical-review-footer">
+                                <Button variant="error" onClick={handleConfirmSelectedChanges}>
+                                    Apply {pendingChanges.filter(c => c.selected).length} Selected Changes
+                                </Button>
+                                <Button variant="edit" onClick={() => {
+                                    setIsReviewModalOpen(false);
+                                    setPendingChanges(null);
+                                }}>
+                                    Cancel
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </Modal>
         </div>
     );
 }

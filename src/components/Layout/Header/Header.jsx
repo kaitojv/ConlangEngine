@@ -18,6 +18,7 @@ import { generateSheetsExport } from '../../../utils/sheetsExporter.jsx';
 import { generateDocxExport } from '../../../utils/docxExporter.jsx';
 import { exportMinecraftResourcePack } from '../../../utils/minecraftExporter.jsx';
 import { ExportModal } from './ExportModal.jsx';
+import { CsvImportModal } from './CsvImportModal.jsx';
 import { sanitizeBackup } from '../../../utils/schemaValidator.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 
@@ -29,6 +30,7 @@ export default function Header({ openMenu }) {
     const [session, setSession] = useState(null);
     const [isLive, setIsLive] = useState(false);
     const [exportType, setExportType] = useState(null); // 'pdf', 'docx', 'obsidian', 'sheets'
+    const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
 
     // Listen for auth changes and figure out if the user has an active Pro subscription
     useEffect(() => {
@@ -202,16 +204,26 @@ export default function Header({ openMenu }) {
                         <Button className="hdr-btn" onClick={handleSave}>
                             <Save /> <span>Save</span>
                         </Button>
-                        <input 
-                            type="file" 
-                            accept=".json" 
-                            ref={fileInputRef} 
-                            onChange={handleLoad} 
-                            className="hidden-file-input"
-                        />
-                        <Button className="hdr-btn" onClick={() => fileInputRef.current.click()}>
-                            <FolderUp /> <span>Load</span>
-                        </Button>
+                        <div className="export-menu-wrapper">
+                            <Button className="hdr-btn export-trigger">
+                                <FolderUp /> <span>Load</span>
+                            </Button>
+                            <div className="export-dropdown">
+                                <input 
+                                    type="file" 
+                                    accept=".json" 
+                                    ref={fileInputRef} 
+                                    onChange={handleLoad} 
+                                    className="hidden-file-input"
+                                />
+                                <button className="export-opt" onClick={() => fileInputRef.current.click()}>
+                                    <FolderUp size={14} /> JSON Backup
+                                </button>
+                                <button className="export-opt" onClick={() => setIsCsvModalOpen(true)}>
+                                    <Table size={14} /> Import CSV
+                                </button>
+                            </div>
+                        </div>
                     </div>
                     
                     <NavLink to="/profile" className="profile-header-button" title="Profile">
@@ -226,6 +238,10 @@ export default function Header({ openMenu }) {
             type={exportType}
             onClose={() => setExportType(null)} 
             onExport={handleExport}
+        />
+        <CsvImportModal 
+            isOpen={isCsvModalOpen}
+            onClose={() => setIsCsvModalOpen(false)}
         />
         </>
     );

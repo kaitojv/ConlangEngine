@@ -121,3 +121,134 @@
     justify-content: flex-end;
     margin-top: 8px;
 }
+
+/* Historical Sound Changer - Review Modal */
+.historical-review-modal {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.historical-review-desc {
+    font-size: 0.9rem;
+    color: var(--tx2);
+    margin: 0;
+}
+
+.historical-review-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.historical-review-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    max-height: 40vh;
+    padding-right: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--tx2) var(--s2);
+}
+
+.historical-review-list::-webkit-scrollbar {
+    width: 8px;
+}
+.historical-review-list::-webkit-scrollbar-track {
+    background: var(--s2);
+    border-radius: 4px;
+}
+.historical-review-list::-webkit-scrollbar-thumb {
+    background: var(--tx2);
+    border-radius: 4px;
+}
+
+.historical-review-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.historical-review-item:hover {
+    background: var(--s3);
+}
+
+.historical-review-item.selected {
+    border-color: var(--acc);
+    background: color-mix(in srgb, var(--acc) 10%, var(--s2));
+}
+
+.historical-review-item-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.historical-review-words {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.historical-review-original {
+    color: var(--tx2);
+    text-decoration: line-through;
+    opacity: 0.7;
+    font-size: 0.95rem;
+}
+
+.historical-review-arrow {
+    color: var(--tx3);
+    font-size: 0.8rem;
+}
+
+.historical-review-evolved {
+    color: var(--acc);
+    font-weight: 800;
+    font-size: 1.1rem;
+}
+
+.historical-review-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.historical-meta-trans {
+    color: var(--tx);
+    font-style: italic;
+}
+
+.historical-meta-pos {
+    background: var(--s3);
+    color: var(--tx2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    font-size: 0.65rem;
+    font-weight: 700;
+}
+
+.historical-meta-tags {
+    color: var(--acc2);
+    font-weight: 600;
+}
+
+.historical-review-footer {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--bd);
+}
