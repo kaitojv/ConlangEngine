@@ -3,7 +3,7 @@ import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import Modal from '../../UI/Modal/Modal.jsx';
 import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
-import { Type, Edit2, Check, Brush } from 'lucide-react';
+import { Type, Edit2, Check, Brush, Trash2 } from 'lucide-react';
 import './alphabeticManager.css';
 
 export default function AlphabeticManager() {
@@ -135,16 +135,32 @@ export default function AlphabeticManager() {
                                         </td>
                                         
                                         <td className="actions-cell">
-                                            <button 
-                                                className="btn-v btn-sec-v" 
-                                                style={{ display: 'flex', gap: '6px', alignItems: 'center' }}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setDrawingChar(char);
-                                                }}
-                                            >
-                                                <Brush size={14} /> {customGlyph ? 'Redraw' : 'Draw'}
-                                            </button>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                <button 
+                                                    className="btn-v btn-sec-v" 
+                                                    style={{ display: 'flex', gap: '6px', alignItems: 'center' }}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setDrawingChar(char);
+                                                    }}
+                                                >
+                                                    <Brush size={14} /> {customGlyph ? 'Redraw' : 'Draw'}
+                                                </button>
+                                                {customGlyph && (
+                                                    <button 
+                                                        className="btn-v" 
+                                                        style={{ display: 'flex', gap: '6px', alignItems: 'center', background: 'transparent', border: '1px solid var(--err)', color: 'var(--err)' }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const newGlyphs = { ...alphabetGlyphs };
+                                                            delete newGlyphs[char];
+                                                            updateConfig({ alphabetGlyphs: newGlyphs });
+                                                        }}
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 );
