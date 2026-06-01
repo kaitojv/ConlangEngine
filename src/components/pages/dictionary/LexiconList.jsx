@@ -9,7 +9,7 @@ import Modal from '../../UI/Modal/Modal.jsx'
 import LexiconEditModal from './LexiconEditModal.jsx';
 import MatrixModal from './MatrixModal.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
-import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download, X, Share2 } from 'lucide-react';
+import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download, X, Share2, Music, Zap } from 'lucide-react';
 import { exportTextAsSVG } from '../../../utils/svgExporter.jsx';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../utils/supabaseClient.js';
@@ -523,14 +523,14 @@ export default function LexiconList() {
                                     )}
 
                                     {filters.showTones && entry.tone && (
-                                        <span className="notranslate entry-tone" style={{fontSize: '0.8rem', opacity: 0.7, marginLeft: '4px'}}>
-                                            🎵 {entry.tone} Tone
+                                        <span className="notranslate entry-tone" style={{fontSize: '0.8rem', opacity: 0.7, marginLeft: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px'}}>
+                                            <Music size={12} /> {entry.tone} Tone
                                         </span>
                                     )}
 
                                     {filters.showTones && entry.stress && (
-                                        <span className="notranslate entry-stress" style={{fontSize: '0.8rem', opacity: 0.7, marginLeft: '4px'}}>
-                                            ⚡ {entry.stress} Stress
+                                        <span className="notranslate entry-stress" style={{fontSize: '0.8rem', opacity: 0.7, marginLeft: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px'}}>
+                                            <Zap size={12} /> {entry.stress} Stress
                                         </span>
                                     )}
                                 </div>
