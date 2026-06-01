@@ -12,6 +12,7 @@ import { useFontInjector } from './utils/useFontInjector.jsx';
 import { useGlobalHotkeys } from './hooks/useGlobalHotkeys.jsx';
 import Footer from './components/Layout/Footer/Footer.jsx';
 import FloatingKeyboard from './components/UI/FloatingKeyboard/FloatingKeyboard.jsx';
+import PWAInstallPrompt from './components/UI/PWAInstallPrompt/PWAInstallPrompt.jsx';
 
 import { Toaster } from 'react-hot-toast';
 
@@ -183,6 +184,7 @@ function App(){
       </main>
       <Footer />
       <FloatingKeyboard />
+      <PWAInstallPrompt />
       <Toaster position="bottom-right" toastOptions={{
           style: {
             background: 'var(--s4)',
