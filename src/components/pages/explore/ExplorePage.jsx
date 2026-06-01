@@ -26,9 +26,9 @@ export default function ExplorePage() {
                 // We use .contains on the JSONB column to match { config: { isPublic: true } }
                 const { data, error: fetchError } = await supabase
                     .from('conlang_snapshots')
-                    .select('project_id, project_data, updated_at')
+                    .select('project_id, project_data, created_at')
                     .contains('project_data', { config: { isPublic: true } })
-                    .order('updated_at', { ascending: false })
+                    .order('created_at', { ascending: false })
                     .limit(50);
 
                 if (fetchError) throw fetchError;
@@ -123,7 +123,7 @@ export default function ExplorePage() {
                                         <span>{wordCount} words</span>
                                     </div>
                                     <div className="explore-stat" style={{ marginLeft: 'auto', fontSize: '0.7rem', fontWeight: 'normal', opacity: 0.7 }}>
-                                        {new Date(lang.updated_at).toLocaleDateString()}
+                                        {new Date(lang.created_at).toLocaleDateString()}
                                     </div>
                                 </div>
                             </div>
