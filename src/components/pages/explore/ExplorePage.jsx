@@ -97,6 +97,9 @@ export default function ExplorePage() {
                         const desc = config?.description || 'No description provided.';
                         const themeColor = config?.colors?.accent || 'var(--acc)';
                         const wordCount = dictionary ? dictionary.length : 0;
+                        
+                        const customFont = config?.customFontBase64;
+                        const fontName = customFont ? `ExploreFont_${lang.project_id}` : undefined;
 
                         return (
                             <div 
@@ -105,18 +108,26 @@ export default function ExplorePage() {
                                 style={{ '--card-theme': themeColor }}
                                 onClick={() => handleCardClick(lang.project_id)}
                             >
+                                {customFont && (
+                                    <style>{`
+                                        @font-face {
+                                            font-family: '${fontName}';
+                                            src: url(${customFont});
+                                        }
+                                    `}</style>
+                                )}
                                 <div className="explore-card-top">
                                     <div className="explore-icon" style={{ color: themeColor }}>
                                         {getConlangIcon(icon, 32)}
                                     </div>
                                     <div className="explore-titles">
-                                        <h3 className="explore-name" title={name}>{name}</h3>
+                                        <h3 className="explore-name" title={name} style={customFont ? { fontFamily: `'${fontName}', 'Inter', sans-serif` } : {}}>{name}</h3>
                                         <p className="explore-author">
                                             <User size={12} /> {author}
                                         </p>
                                     </div>
                                 </div>
-                                <p className="explore-desc">{desc}</p>
+                                <p className="explore-desc" style={customFont ? { fontFamily: `'${fontName}', 'Inter', sans-serif` } : {}}>{desc}</p>
                                 <div className="explore-stats">
                                     <div className="explore-stat">
                                         <BookA size={14} />
