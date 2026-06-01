@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/utils/supabaseClient.js';
-import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit } from 'lucide-react';
+import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit, FileText } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import { usePublicThemeInjector, usePublicFontInjector } from '../../../hooks/usePublicInjectors.jsx';
 import PublicFlashcards from './PublicFlashcards.jsx';
@@ -45,6 +46,7 @@ export default function PublicViewer() {
     const config = projectData?.config || {};
     const dictionary = projectData?.dictionary || [];
     const grammarRules = config.grammarRules || [];
+    const wikiPages = config.wikiPages || {};
 
     // Safely inject aesthetics for this viewer only
     usePublicThemeInjector(config);
@@ -289,6 +291,34 @@ export default function PublicViewer() {
                                     </div>
                                 ))}
                             </div>
+                        </div>
+                    </section>
+                )}
+
+                {/* WIKI & DOCUMENTATION */}
+                {Object.keys(wikiPages).length > 0 && (
+                    <section className="pv-section">
+                        <div className="pv-section-header">
+                            <FileText size={20} className="pv-section-icon" />
+                            <h2 className="pv-section-title">Grammar Wiki</h2>
+                        </div>
+                        <div className="pv-section-body" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                            {Object.entries(wikiPages).map(([id, pageData]) => {
+                                const isObj = typeof pageData === 'object' && pageData !== null;
+                                const title = isObj ? pageData.title : (id.charAt(0).toUpperCase() + id.slice(1));
+                                const content = isObj ? pageData.content : pageData;
+                                if (!content) return null;
+                                
+                                return (
+                                    <div key={id} className="pv-wiki-page">
+                                        {isObj && title && <h3 style={{ color: 'var(--acc)', marginTop: 0, marginBottom: '1rem' }}>{title}</h3>}
+                                        <div 
+                                            className="pv-wiki-content"
+                                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }} 
+                                        />
+                                    </div>
+                                );
+                            })}
                         </div>
                     </section>
                 )}
