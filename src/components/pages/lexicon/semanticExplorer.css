@@ -139,7 +139,7 @@
     transition: 0.3s;
 }
 
-.search-icon {
+.sem-search-icon {
     color: var(--tx3);
     opacity: 0.6;
     flex-shrink: 0;

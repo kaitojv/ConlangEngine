@@ -14,11 +14,11 @@
 }
 
 .export-modal {
-    background: #0f172a;
+    background: var(--s1);
     width: 600px;
     max-width: 95%;
     border-radius: 16px;
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid var(--bd);
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     overflow: hidden;
     position: relative;
@@ -37,8 +37,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 20px 24px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--bd);
+    background: var(--s2);
 }
 
 .vrb-header-title-group {
@@ -51,13 +51,13 @@
     margin: 0;
     font-size: 1.25rem;
     font-weight: 700;
-    color: #f8fafc;
+    color: var(--tx);
 }
 
 .export-modal-close-btn {
     background: transparent;
     border: none;
-    color: #64748b;
+    color: var(--tx2);
     cursor: pointer;
     padding: 4px;
     border-radius: 6px;
@@ -65,23 +65,23 @@
 }
 
 .export-modal-close-btn:hover {
-    background: rgba(255,255,255,0.05);
-    color: #f8fafc;
+    background: var(--s3);
+    color: var(--tx);
 }
 
 .export-hint {
-    color: #94a3b8;
+    color: var(--tx2);
     font-size: 0.9rem;
     margin-bottom: 16px;
 }
 
 /* OPTIONS SECTION */
 .export-options-section {
-    background: rgba(255,255,255,0.03);
+    background: var(--s2);
     border-radius: 12px;
     padding: 16px;
     margin-bottom: 24px;
-    border: 1px solid rgba(255,255,255,0.05);
+    border: 1px solid var(--bd);
 }
 
 .export-option-row {
@@ -95,19 +95,19 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    color: #f8fafc;
+    color: var(--tx);
     font-weight: 500;
 }
 
 .export-sub-options {
     margin-top: 16px;
     padding-top: 16px;
-    border-top: 1px dashed rgba(255,255,255,0.1);
+    border-top: 1px dashed var(--bd);
 }
 
 .export-label {
     display: block;
-    color: #94a3b8;
+    color: var(--tx2);
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -122,14 +122,14 @@
 }
 
 .mode-btn {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
+    background: var(--s3);
+    border: 1px solid var(--bd);
     border-radius: 8px;
     padding: 10px;
     text-align: left;
     cursor: pointer;
     transition: all 0.2s;
-    color: white;
+    color: var(--tx);
 }
 
 .mode-btn h4 {
@@ -140,20 +140,20 @@
 .mode-btn p {
     margin: 4px 0 0;
     font-size: 0.7rem;
-    color: #64748b;
+    color: var(--tx2);
 }
 
 .mode-btn:hover {
-    background: rgba(255,255,255,0.1);
+    background: var(--s4);
 }
 
 .mode-btn.active {
-    background: rgba(124, 58, 237, 0.2);
-    border-color: #7c3aed;
+    background: color-mix(in srgb, var(--acc) 20%, transparent);
+    border-color: var(--acc);
 }
 
 .mode-btn.active p {
-    color: #a78bfa;
+    color: var(--acc);
 }
 
 .export-warning-box {
@@ -176,8 +176,8 @@
 }
 
 .template-card {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
+    background: var(--s2);
+    border: 1px solid var(--bd);
     border-radius: 12px;
     padding: 16px;
     display: flex;
@@ -187,9 +187,9 @@
 }
 
 .template-card:hover {
-    background: rgba(255,255,255,0.1);
+    background: var(--s3);
     transform: translateY(-2px);
-    border-color: rgba(255,255,255,0.2);
+    border-color: var(--acc);
 }
 
 .template-icon {
@@ -205,13 +205,13 @@
 .template-info h3 {
     margin: 0;
     font-size: 1rem;
-    color: #f8fafc;
+    color: var(--tx);
 }
 
 .template-info p {
     margin: 4px 0 0;
     font-size: 0.8rem;
-    color: #94a3b8;
+    color: var(--tx2);
     line-height: 1.5;
 }
 
@@ -229,7 +229,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(15, 23, 42, 0.95);
+    background: color-mix(in srgb, var(--bg) 95%, transparent);
     z-index: 100;
     display: flex;
     flex-direction: column;
@@ -240,18 +240,18 @@
 }
 
 .processing-spinner {
-    color: #7c3aed;
+    color: var(--acc);
     animation: spin 2s linear infinite;
     margin-bottom: 24px;
 }
 
 .export-processing-overlay h3 {
-    color: white;
+    color: var(--tx);
     margin-bottom: 12px;
 }
 
 .export-processing-overlay p {
-    color: #94a3b8;
+    color: var(--tx2);
 }
 
 @keyframes spin {
@@ -280,7 +280,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #334155;
+    background-color: var(--s3);
     transition: .4s;
 }
 
@@ -296,7 +296,7 @@
 }
 
 input:checked + .slider {
-    background-color: #7c3aed;
+    background-color: var(--acc);
 }
 
 input:checked + .slider:before {
@@ -327,8 +327,8 @@ input:checked + .slider:before {
 .mc-settings-panel {
     flex: 1;
     max-width: 380px;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.04);
+    background: var(--s2);
+    border: 1px solid var(--bd);
     border-radius: 12px;
     padding: 18px;
     display: flex;
@@ -338,8 +338,8 @@ input:checked + .slider:before {
 
 .mc-mapper-panel {
     flex: 1.5;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.04);
+    background: var(--s2);
+    border: 1px solid var(--bd);
     border-radius: 12px;
     padding: 18px;
     display: flex;
@@ -351,11 +351,11 @@ input:checked + .slider:before {
     margin: 0 0 16px;
     font-size: 1rem;
     font-weight: 700;
-    color: #f8fafc;
+    color: var(--tx);
     display: flex;
     align-items: center;
     gap: 8px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid var(--bd);
     padding-bottom: 10px;
 }
 
@@ -363,11 +363,11 @@ input:checked + .slider:before {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    min-width: 0; /* Prevents flex children from breaking layouts */
+    min-width: 0;
 }
 
 .mc-field label {
-    color: #94a3b8;
+    color: var(--tx2);
     font-size: 0.72rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -378,11 +378,11 @@ input:checked + .slider:before {
 .mc-field select {
     width: 100%;
     box-sizing: border-box;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--s1);
+    border: 1px solid var(--bd);
     border-radius: 8px;
     padding: 10px 12px;
-    color: white;
+    color: var(--tx);
     font-size: 0.85rem;
     outline: none;
     transition: all 0.2s;
@@ -390,9 +390,9 @@ input:checked + .slider:before {
 
 .mc-field input:focus,
 .mc-field select:focus {
-    border-color: #8b5cf6;
-    background: rgba(255, 255, 255, 0.06);
-    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+    border-color: var(--acc);
+    background: var(--s3);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 20%, transparent);
 }
 
 .mc-field-row {
@@ -404,11 +404,11 @@ input:checked + .slider:before {
 
 .mc-field-row .mc-field {
     flex: 1;
-    min-width: 0; /* Allow the fields to shrink in the row */
+    min-width: 0;
 }
 
 .mc-field small {
-    color: #64748b;
+    color: var(--tx3);
     font-size: 0.65rem;
     margin-top: 2px;
 }
@@ -418,13 +418,13 @@ input:checked + .slider:before {
     align-items: center;
     gap: 10px;
     cursor: pointer;
-    color: #cbd5e1;
+    color: var(--tx2);
     font-size: 0.8rem;
     margin-top: 4px;
 }
 
 .mc-checkbox-label input[type="checkbox"] {
-    accent-color: #8b5cf6;
+    accent-color: var(--acc);
     width: 16px;
     height: 16px;
     cursor: pointer;
@@ -432,25 +432,25 @@ input:checked + .slider:before {
 
 .mc-preview-card {
     margin-top: 8px;
-    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+    border-top: 1px dashed var(--bd);
     padding-top: 16px;
 }
 
 .mc-preview-card h4 {
     margin: 0 0 8px;
     font-size: 0.75rem;
-    color: #a855f7;
+    color: var(--acc);
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
 
 .mc-code-box {
-    background: #080812;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--bg);
+    border: 1px solid var(--bd);
     border-radius: 8px;
     padding: 12px;
     overflow-x: auto;
-    max-height: 175px; /* Increased to fit the code content nicely without scrolling */
+    max-height: 175px;
 }
 
 .mc-code-box pre {
@@ -458,7 +458,7 @@ input:checked + .slider:before {
     font-family: 'Fira Code', 'Courier New', Courier, monospace;
     font-size: 0.72rem;
     line-height: 1.4;
-    color: #a78bfa;
+    color: var(--tx);
     text-align: left;
 }
 
@@ -473,9 +473,9 @@ input:checked + .slider:before {
     display: flex;
     align-items: center;
     gap: 4px;
-    background: rgba(16, 185, 129, 0.08);
-    border: 1px solid rgba(16, 185, 129, 0.2);
-    color: #34d399;
+    background: color-mix(in srgb, var(--ok) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ok) 20%, transparent);
+    color: var(--ok);
     font-size: 0.72rem;
     font-weight: 700;
     padding: 4px 10px;
@@ -483,7 +483,7 @@ input:checked + .slider:before {
 }
 
 .mc-mapper-desc {
-    color: #94a3b8;
+    color: var(--tx2);
     font-size: 0.78rem;
     line-height: 1.45;
     margin: 0 0 16px;
@@ -492,10 +492,10 @@ input:checked + .slider:before {
 .mc-tabs {
     display: flex;
     gap: 4px;
-    background: rgba(0, 0, 0, 0.25);
+    background: var(--s3);
     padding: 3px;
     border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--bd);
     margin-bottom: 14px;
 }
 
@@ -504,7 +504,7 @@ input:checked + .slider:before {
     border: none;
     background: transparent;
     padding: 6px 12px;
-    color: #64748b;
+    color: var(--tx2);
     font-size: 0.75rem;
     font-weight: 600;
     border-radius: 6px;
@@ -513,24 +513,24 @@ input:checked + .slider:before {
 }
 
 .mc-tab-btn:hover {
-    color: #e2e8f0;
-    background: rgba(255, 255, 255, 0.02);
+    color: var(--tx);
+    background: var(--s4);
 }
 
 .mc-tab-btn.active {
-    background: rgba(139, 92, 246, 0.12);
-    border: 1px solid rgba(139, 92, 246, 0.2);
-    color: #c084fc;
+    background: color-mix(in srgb, var(--acc) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--acc) 20%, transparent);
+    color: var(--acc);
 }
 
 .mc-keys-scroll {
     flex: 1;
     max-height: 320px;
     overflow-y: auto;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--bd);
     border-radius: 8px;
-    background: rgba(0, 0, 0, 0.2);
-    padding: 10px 14px 10px 10px; /* Added right padding for scrollbar clearance */
+    background: var(--s1);
+    padding: 10px 14px 10px 10px;
 }
 
 .mc-keys-scroll::-webkit-scrollbar {
@@ -542,12 +542,12 @@ input:checked + .slider:before {
 }
 
 .mc-keys-scroll::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--s3);
     border-radius: 99px;
 }
 
 .mc-keys-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--s4);
 }
 
 .mc-keys-grid {
@@ -560,19 +560,19 @@ input:checked + .slider:before {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.04);
+    background: var(--s2);
+    border: 1px solid var(--bd);
     padding: 10px 14px;
     border-radius: 8px;
     transition: all 0.2s;
     gap: 16px;
-    min-height: 56px; /* Restrict vertical squishing */
+    min-height: 56px;
     box-sizing: border-box;
 }
 
 .mc-key-card:hover {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.08);
+    background: var(--s3);
+    border-color: var(--acc);
 }
 
 .mc-key-meta {
@@ -580,11 +580,11 @@ input:checked + .slider:before {
     flex-direction: column;
     gap: 3px;
     flex: 1;
-    min-width: 0; /* Extremely important for flex text truncation and responsive shrinkage */
+    min-width: 0;
 }
 
 .mc-eng {
-    color: #f1f5f9;
+    color: var(--tx);
     font-size: 0.8rem;
     font-weight: 600;
     white-space: nowrap;
@@ -593,7 +593,7 @@ input:checked + .slider:before {
 }
 
 .mc-key-id {
-    color: #475569;
+    color: var(--tx3);
     font-size: 0.62rem;
     font-family: monospace;
     white-space: nowrap;
@@ -607,18 +607,18 @@ input:checked + .slider:before {
     align-items: flex-end;
     gap: 4px;
     position: relative;
-    flex-shrink: 0; /* Keep the inputs full size */
+    flex-shrink: 0;
 }
 
 .mc-input-wrapper input {
     width: 220px;
     max-width: 100%;
     box-sizing: border-box;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--s1);
+    border: 1px solid var(--bd);
     border-radius: 6px;
     padding: 6px 10px;
-    color: white;
+    color: var(--tx);
     font-size: 0.78rem;
     text-align: right;
     outline: none;
@@ -626,26 +626,26 @@ input:checked + .slider:before {
 }
 
 .mc-input-wrapper input.auto-matched {
-    border-color: rgba(139, 92, 246, 0.3);
-    background: rgba(139, 92, 246, 0.03);
-    color: #d8b4fe;
+    border-color: color-mix(in srgb, var(--acc) 30%, transparent);
+    background: color-mix(in srgb, var(--acc) 5%, transparent);
+    color: var(--acc);
 }
 
 .mc-input-wrapper input:focus {
-    border-color: #8b5cf6;
-    background: rgba(0, 0, 0, 0.5);
+    border-color: var(--acc);
+    background: var(--s3);
     text-align: left;
-    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.1);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 10%, transparent);
 }
 
 .mc-match-badge {
-    color: #a78bfa;
+    color: var(--acc);
     font-size: 0.58rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    background: rgba(139, 92, 246, 0.15);
-    border: 1px solid rgba(139, 92, 246, 0.3);
+    background: color-mix(in srgb, var(--acc) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--acc) 30%, transparent);
     padding: 1px 5px;
     border-radius: 3px;
 }

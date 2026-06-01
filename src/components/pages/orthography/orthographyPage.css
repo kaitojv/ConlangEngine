@@ -146,6 +146,57 @@
     fill: none;
 }
 
+/* ─── Alphabet & Logographic Grids ─── */
+.alphabet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.char-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1.5rem 1rem;
+    border-radius: 1rem;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    transition: all 0.25s ease;
+    min-height: 120px;
+}
+
+.char-card:hover {
+    border-color: var(--acc);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px -12px color-mix(in srgb, var(--acc) 30%, transparent);
+}
+
+.char-display {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--acc);
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.char-name-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.char-name-display .name-label {
+    font-size: 0.85rem;
+    color: var(--tx2);
+    text-align: center;
+}
+
 
 .empty-state {
     display: flex;

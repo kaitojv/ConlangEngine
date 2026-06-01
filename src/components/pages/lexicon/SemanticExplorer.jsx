@@ -317,7 +317,7 @@ export default function SemanticExplorer() {
 
                 <div className="main-search-wrapper">
                     <div className="semantic-search-bar">
-                        <Search className="search-icon" size={22} />
+                        <Search className="sem-search-icon" size={22} />
                         <input 
                             type="text" 
                             placeholder="Enter a concept (e.g. 'water', 'justice', 'run')..." 
