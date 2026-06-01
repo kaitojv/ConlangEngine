@@ -29,16 +29,19 @@ const SCRIPT_MAPS = {
     }
 };
 
-export function useTransliterator() {
-    const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
-    const alphabeticScript = useConfigStore((state) => state.alphabeticScript);
-    const alphabetGlyphs = useConfigStore((state) => state.alphabetGlyphs) || {};
-    const syllabaryMap = useConfigStore((state) => state.syllabaryMap) || {};
-    const syllabificationAlgorithm = useConfigStore((state) => state.syllabificationAlgorithm) || 'ltr';
+export function useTransliterator(overrideConfig = null) {
+    const storeConfig = useConfigStore();
+    const activeConfig = overrideConfig || storeConfig;
+
+    const phonologyTypes = activeConfig.phonologyTypes;
+    const alphabeticScript = activeConfig.alphabeticScript;
+    const alphabetGlyphs = activeConfig.alphabetGlyphs || {};
+    const syllabaryMap = activeConfig.syllabaryMap || {};
+    const syllabificationAlgorithm = activeConfig.syllabificationAlgorithm || 'ltr';
     
     // Fetching consonants and vowels from Settings
-    const consonants = useConfigStore((state) => state.consonants) || '';
-    const vowels = useConfigStore((state) => state.vowels) || '';
+    const consonants = activeConfig.consonants || '';
+    const vowels = activeConfig.vowels || '';
 
     // Two-way dictionary mapping
     const getOrthographyMap = () => {

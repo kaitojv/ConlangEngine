@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../../utils/supabaseClient.js';
 import { Globe, BookA, User, Loader2 } from 'lucide-react';
+import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import './explorePage.css';
 
 export default function ExplorePage() {
@@ -95,7 +96,9 @@ export default function ExplorePage() {
                                 onClick={() => handleCardClick(lang.project_id)}
                             >
                                 <div className="explore-card-top">
-                                    <div className="explore-icon">{icon}</div>
+                                    <div className="explore-icon" style={{ color: themeColor }}>
+                                        {getConlangIcon(icon, 32)}
+                                    </div>
                                     <div className="explore-titles">
                                         <h3 className="explore-name" title={name}>{name}</h3>
                                         <p className="explore-author">

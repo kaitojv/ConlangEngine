@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/utils/supabaseClient.js';
-import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2 } from 'lucide-react';
+import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit } from 'lucide-react';
+import { getConlangIcon } from '../../../utils/iconMap.jsx';
+import { usePublicThemeInjector, usePublicFontInjector } from '../../../hooks/usePublicInjectors.jsx';
+import PublicFlashcards from './PublicFlashcards.jsx';
 import './publicViewer.css';
 
 export default function PublicViewer() {
@@ -42,6 +45,10 @@ export default function PublicViewer() {
     const config = projectData?.config || {};
     const dictionary = projectData?.dictionary || [];
     const grammarRules = config.grammarRules || [];
+
+    // Safely inject aesthetics for this viewer only
+    usePublicThemeInjector(config);
+    usePublicFontInjector(config);
 
     // Filter + sort dictionary for the search
     const filteredDictionary = useMemo(() => {
@@ -114,7 +121,12 @@ export default function PublicViewer() {
             {/* ===== HERO HEADER ===== */}
             <header className="pv-hero">
                 <div className="pv-hero-content">
-                    <h1 className="pv-lang-name">{config.conlangName || 'Untitled Conlang'}</h1>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '10px' }}>
+                        <div style={{ color: 'var(--acc)' }}>
+                            {getConlangIcon(config.conlangIcon, 40)}
+                        </div>
+                        <h1 className="pv-lang-name" style={{ margin: 0 }}>{config.conlangName || 'Untitled Conlang'}</h1>
+                    </div>
                     <div className="pv-author">
                         <User size={14} />
                         <span>Created by {config.authorName || 'Anonymous'}</span>
@@ -267,7 +279,7 @@ export default function PublicViewer() {
                             <div className="pv-rules-list">
                                 {grammarRules.map((rule, i) => (
                                     <div key={rule.id || i} className="pv-rule-item">
-                                        <div className="pv-rule-affix">{rule.affix || '—'}</div>
+                                        <div className="pv-rule-affix custom-font-text notranslate">{rule.affix || '—'}</div>
                                         <div className="pv-rule-details">
                                             <div className="pv-rule-name">{rule.name || 'Unnamed Rule'}</div>
                                             <div className="pv-rule-applies">
@@ -278,6 +290,83 @@ export default function PublicViewer() {
                                 ))}
                             </div>
                         </div>
+                    </section>
+                )}
+
+                {/* ALPHABET / ORTHOGRAPHY */}
+                {config.alphabeticScript === 'custom' && config.alphabetNames && Object.keys(config.alphabetNames).length > 0 && (
+                    <section className="pv-section">
+                        <div className="pv-section-header">
+                            <Type size={20} className="pv-section-icon" />
+                            <h2 className="pv-section-title">Alphabet</h2>
+                        </div>
+                        <div className="pv-section-body">
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '1rem' }}>
+                                {Object.entries(config.alphabetNames).map(([phoneme, name]) => {
+                                    const glyph = config.alphabetGlyphs?.[phoneme];
+                                    return (
+                                        <div key={phoneme} style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: '8px', padding: '1rem', textAlign: 'center' }}>
+                                            <div className="custom-font-text notranslate" style={{ fontSize: '2rem', marginBottom: '0.5rem', color: 'var(--acc)' }}>
+                                                {glyph || phoneme}
+                                            </div>
+                                            <div style={{ fontWeight: 600, color: 'var(--tx)' }}>{name}</div>
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--tx2)' }}>/{phoneme}/</div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                {/* NUMBER SYSTEM */}
+                {config.numberSystem && config.numberSystem.stems && Object.keys(config.numberSystem.stems).length > 0 && (
+                    <section className="pv-section">
+                        <div className="pv-section-header">
+                            <Hash size={20} className="pv-section-icon" />
+                            <h2 className="pv-section-title">Numeral System (Base {config.numeralBase || 10})</h2>
+                        </div>
+                        <div className="pv-section-body">
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem' }}>
+                                {Object.entries(config.numberSystem.stems).sort((a,b) => Number(a[0]) - Number(b[0])).map(([val, stem]) => (
+                                    <div key={val} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: '6px' }}>
+                                        <span style={{ fontWeight: 600, color: 'var(--acc)' }}>{val}</span>
+                                        <span className="custom-font-text notranslate">{stem}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                {/* FUNCTION WORDS */}
+                {config.functionWords && config.functionWords.length > 0 && (
+                    <section className="pv-section">
+                        <div className="pv-section-header">
+                            <AlignLeft size={20} className="pv-section-icon" />
+                            <h2 className="pv-section-title">Function Words</h2>
+                        </div>
+                        <div className="pv-section-body">
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                {config.functionWords.map((fw, i) => (
+                                    <div key={i} style={{ padding: '0.5rem 1rem', background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: '20px', fontSize: '0.9rem' }}>
+                                        <span className="custom-font-text notranslate" style={{ color: 'var(--acc)', marginRight: '0.5rem' }}>{fw.word}</span>
+                                        <span style={{ color: 'var(--tx2)' }}>{fw.meaning} ({fw.type})</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                {/* INTERACTIVE FLASHCARDS */}
+                {dictionary.length > 0 && (
+                    <section className="pv-section" style={{ border: 'none', background: 'transparent' }}>
+                        <div className="pv-section-header" style={{ justifyContent: 'center', marginBottom: '2rem' }}>
+                            <BrainCircuit size={28} className="pv-section-icon" />
+                            <h2 className="pv-section-title" style={{ fontSize: '1.8rem' }}>Learn & Study</h2>
+                        </div>
+                        <PublicFlashcards lexicon={dictionary} config={config} />
                     </section>
                 )}
             </div>

@@ -7,6 +7,7 @@ import { Palette, CaseLower, Database, ToggleLeft, Globe } from 'lucide-react';
 import { useConfigStore, INITIAL_CONFIG } from '../../../store/useConfigStore.jsx';
 import { useProjectStore } from '../../../store/useProjectStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
+import { CONLANG_ICONS, getConlangIcon } from '../../../utils/iconMap.jsx';
 import opentype from 'opentype.js';
 import { DARK_THEMES, LIGHT_THEMES } from '../../../utils/themePresets.js';
 import { Info, User, Type } from 'lucide-react';
@@ -24,7 +25,7 @@ export default function SystemTab() {
     const customGlyphs = useConfigStore((state) => state.customGlyphs) || {};
     const autoReturnToLexicon = useConfigStore((state) => state.autoReturnToLexicon);
     const isPublic = useConfigStore((state) => state.isPublic) || false;
-    const conlangIcon = useConfigStore((state) => state.conlangIcon) || '🌐';
+    const conlangIcon = useConfigStore((state) => state.conlangIcon) || 'Globe';
     const setFullConfig = useConfigStore((state) => state.setFullConfig);
     const updateConfig = useConfigStore((state) => state.updateConfig);
     const setLexicon = useLexiconStore((state) => state.setLexicon);
@@ -251,25 +252,37 @@ export default function SystemTab() {
                 
                 {isPublic && (
                     <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <label style={{ fontWeight: 600, fontSize: '0.85rem' }}>Conlang Icon (Emoji)</label>
-                        <input 
-                            type="text" 
-                            maxLength={2} 
-                            value={conlangIcon} 
-                            onChange={(e) => updateConfig({ conlangIcon: e.target.value })} 
-                            style={{ 
-                                width: '60px', 
-                                padding: '0.5rem', 
-                                fontSize: '1.5rem', 
-                                textAlign: 'center',
-                                background: 'var(--s1)',
-                                border: '1px solid var(--bd)',
-                                borderRadius: '8px',
-                                color: 'var(--tx)'
-                            }} 
-                            title="Pick an emoji to represent your conlang in the Explore tab"
-                        />
-                        <p style={{ fontSize: '0.75rem', color: 'var(--tx2)' }}>This emoji will be displayed alongside your conlang's name.</p>
+                        <label style={{ fontWeight: 600, fontSize: '0.85rem' }}>Conlang Icon</label>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--tx2)', marginBottom: '0.5rem' }}>Pick an icon to represent your conlang in the Explore tab.</p>
+                        
+                        <div style={{ 
+                            display: 'grid', 
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(40px, 1fr))', 
+                            gap: '0.5rem',
+                            maxWidth: '100%'
+                        }}>
+                            {Object.keys(CONLANG_ICONS).map(iconName => (
+                                <button
+                                    key={iconName}
+                                    onClick={() => updateConfig({ conlangIcon: iconName })}
+                                    title={iconName}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        padding: '0.5rem',
+                                        background: conlangIcon === iconName ? 'var(--acc)' : 'var(--s1)',
+                                        color: conlangIcon === iconName ? '#fff' : 'var(--tx)',
+                                        border: `1px solid ${conlangIcon === iconName ? 'var(--acc)' : 'var(--bd)'}`,
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease'
+                                    }}
+                                >
+                                    {getConlangIcon(iconName, 18)}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 )}
             </Card>

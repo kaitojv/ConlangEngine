@@ -8,7 +8,7 @@ export const INITIAL_CONFIG = {
     description: 'A brief description of your conlang.',
     phonologyTypes: 'alphabetic',
     isPublic: false,
-    conlangIcon: '🌐',
+    conlangIcon: 'Globe',
     alphabeticScript: 'latin', // e.g. latin, cyrillic, runic, greek
     featuralComponents: {}, // Stores strokes for initials, vowels, finals
     blockSettings: {
