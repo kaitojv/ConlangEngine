@@ -14,10 +14,10 @@ export default function ExplorePage() {
     useEffect(() => {
         async function fetchPublicConlangs() {
             try {
-                // Fetch projects from the primary conlangs table where isPublic is true.
+                // Fetch projects from the snapshots table where isPublic is true.
                 // We use .contains on the JSONB column to match { config: { isPublic: true } }
                 const { data, error: fetchError } = await supabase
-                    .from('conlangs')
+                    .from('conlang_snapshots')
                     .select('project_id, project_data, updated_at')
                     .contains('project_data', { config: { isPublic: true } })
                     .order('updated_at', { ascending: false })
