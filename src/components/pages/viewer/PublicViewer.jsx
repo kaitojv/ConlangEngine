@@ -5,6 +5,7 @@ import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, T
 import DOMPurify from 'dompurify';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import { usePublicThemeInjector, usePublicFontInjector } from '../../../hooks/usePublicInjectors.jsx';
+import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import PublicFlashcards from './PublicFlashcards.jsx';
 import './publicViewer.css';
 
@@ -47,6 +48,9 @@ export default function PublicViewer() {
     const dictionary = projectData?.dictionary || [];
     const grammarRules = config.grammarRules || [];
     const wikiPages = config.wikiPages || {};
+
+    const { transliterate } = useTransliterator(config);
+    const isLogographic = ['logographic', 'syllabic', 'featural_block'].includes(config.phonologyTypes);
 
     // Safely inject aesthetics for this viewer only
     usePublicThemeInjector(config);
@@ -242,7 +246,11 @@ export default function PublicViewer() {
                                         <tbody>
                                             {visibleDictionary.map((entry, i) => (
                                                 <tr key={entry.id || i}>
-                                                    <td className="pv-word-cell">{entry.word?.replace(/\*/g, '')}</td>
+                                                    <td className="pv-word-cell">
+                                                        <span className={`custom-font-text notranslate ${isLogographic && entry.ideogram ? 'pv-featural-word' : ''}`}>
+                                                            {isLogographic && entry.ideogram ? entry.ideogram : transliterate(entry.word, dictionary)}
+                                                        </span>
+                                                    </td>
                                                     <td className="pv-ipa-cell">{entry.ipa ? `/${entry.ipa}/` : '—'}</td>
                                                     <td>{entry.wordClass ? <span className="pv-class-cell">{entry.wordClass}</span> : '—'}</td>
                                                     <td className="pv-trans-cell">{entry.translation}</td>
@@ -324,7 +332,7 @@ export default function PublicViewer() {
                 )}
 
                 {/* ALPHABET / ORTHOGRAPHY */}
-                {config.alphabeticScript === 'custom' && config.alphabetNames && Object.keys(config.alphabetNames).length > 0 && (
+                {config.alphabetNames && Object.keys(config.alphabetNames).length > 0 && (
                     <section className="pv-section">
                         <div className="pv-section-header">
                             <Type size={20} className="pv-section-icon" />

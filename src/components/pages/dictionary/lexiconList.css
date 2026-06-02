@@ -454,3 +454,79 @@
     border-radius: 4px;
     cursor: pointer;
 }
+
+/* Senses Grouping Styles */
+.entry-actions-top {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.btn-icon-only {
+    padding: 8px;
+}
+
+.entry-senses {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 1rem;
+    border-top: 1px solid var(--bd);
+}
+
+.sense-row {
+    display: flex;
+    gap: 12px;
+    padding: 1rem 0;
+}
+
+.sense-row.has-multiple:not(:last-child) {
+    border-bottom: 1px dashed var(--bd);
+}
+
+.sense-index {
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: var(--acc2);
+    min-width: 20px;
+    text-align: right;
+    margin-top: 2px;
+}
+
+.sense-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sense-actions {
+    display: flex;
+    gap: 4px;
+    align-items: flex-start;
+}
+
+.sense-btn {
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    color: var(--tx2);
+    padding: 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sense-btn:hover {
+    background: var(--acc);
+    color: white;
+    border-color: var(--acc);
+}
+
+.sense-btn-err:hover {
+    background: var(--err);
+    color: white;
+    border-color: var(--err);
+}

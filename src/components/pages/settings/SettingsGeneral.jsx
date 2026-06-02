@@ -90,7 +90,7 @@ export default function SettingsGeneral() {
                         <label className="form-label">Pre-existing Script Mapping</label>
                         <select 
                             className="fi settings-select-full" 
-                            value={alphabeticScript || 'latin'}
+                            value={alphabeticScript === 'custom' ? 'latin' : (alphabeticScript || 'latin')}
                             onChange={(e) => updateConfig({ alphabeticScript: e.target.value })}
                         >
                             <option value="latin">Latin (Default)</option>
@@ -98,7 +98,6 @@ export default function SettingsGeneral() {
                             <option value="greek">Greek</option>
                             <option value="runic">Runic</option>
                             <option value="georgian">Georgian</option>
-                            <option value="custom">Custom Script (Font Studio)</option>
                         </select>
                     </div>
                     <Infobox title="Writing System Guide">

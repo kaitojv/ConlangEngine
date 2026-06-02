@@ -309,6 +309,12 @@
     font-size: 1.05rem;
 }
 
+.pv-featural-word {
+    font-size: 2rem;
+    font-weight: normal;
+    line-height: 1.1;
+}
+
 .pv-ipa-cell {
     color: var(--tx2, #64748b);
     font-style: italic;

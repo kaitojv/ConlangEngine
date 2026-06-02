@@ -7,7 +7,7 @@ import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import Modal from '@/components/UI/Modal/Modal.jsx';
-import { Book, Plus, Trash2, Bold, Italic, Underline, Link, Save, Type, Languages, FileText, Settings, ChevronDown, ChevronUp, Info, Wand2 } from 'lucide-react';
+import { Book, Plus, Trash2, Bold, Italic, Underline, Link, Save, Type, Languages, FileText, Settings, ChevronDown, ChevronUp, Info, Wand2, Quote } from 'lucide-react';
 import { applyRuleToWord } from '@/utils/morphologyEngine.jsx';
 import './wikiTab.css';
 
@@ -2761,6 +2761,7 @@ function LegacyWikiEditor({ content, onSave }) {
                 <button className="wiki-tool-btn" title="Bold" onClick={() => formatText('bold')}><Bold size={16} /></button>
                 <button className="wiki-tool-btn" title="Italic" onClick={() => formatText('italic')}><Italic size={16} /></button>
                 <button className="wiki-tool-btn" title="Underline" onClick={() => formatText('underline')}><Underline size={16} /></button>
+                <button className="wiki-tool-btn" title="Quote / Callout" onClick={() => formatText('formatBlock', 'blockquote')}><Quote size={16} /></button>
                 <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px' }}></div>
                 <button className="wiki-tool-btn" title="Insert Link" onClick={() => setLinkModalOpen(true)}><Link size={16} /></button>
                 <button className="wiki-tool-btn" title="Format as Conlang Font" onClick={applyConlangFont}><Type size={16} /> <span style={{fontSize: '0.7rem', marginLeft: '4px', fontWeight: 'bold'}}>CONLANG</span></button>
@@ -2788,6 +2789,7 @@ export default function WikiTab() {
     const saveWikiPage = useConfigStore((state) => state.saveWikiPage);
     const addWikiPage = useConfigStore((state) => state.addWikiPage);
     const deleteWikiPage = useConfigStore((state) => state.deleteWikiPage);
+    const reorderWikiPage = useConfigStore((state) => state.reorderWikiPage);
     const writingDirection = useConfigStore(state => state.writingDirection);
 
     const [currentPageId, setCurrentPageId] = useState(() => Object.keys(wikiPages)[0] || null);
@@ -2851,11 +2853,17 @@ export default function WikiTab() {
                                     className={`wiki-page-item ${currentPageId === pageId ? 'active' : ''}`}
                                     onClick={() => setCurrentPageId(pageId)}
                                 >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        {isCorp ? <Languages size={14} color="var(--acc)" /> : <FileText size={14} color="var(--tx2)" />}
-                                        <span style={{ fontWeight: 'bold', color: 'var(--tx)' }}>{pTitle}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                                        <div style={{ flexShrink: 0, display: 'flex' }}>
+                                            {isCorp ? <Languages size={14} color="var(--acc)" /> : <FileText size={14} color="var(--tx2)" />}
+                                        </div>
+                                        <span style={{ fontWeight: 'bold', color: 'var(--tx)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pTitle}</span>
                                     </div>
-                                    <button className="wiki-del-btn" onClick={(e) => handleDeletePage(pageId, e)}><Trash2 size={16} /></button>
+                                    <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
+                                        <button className="wiki-del-btn" title="Move Up" onClick={(e) => { e.stopPropagation(); reorderWikiPage(pageId, 'up'); }}><ChevronUp size={14} /></button>
+                                        <button className="wiki-del-btn" title="Move Down" onClick={(e) => { e.stopPropagation(); reorderWikiPage(pageId, 'down'); }}><ChevronDown size={14} /></button>
+                                        <button className="wiki-del-btn" title="Delete" onClick={(e) => handleDeletePage(pageId, e)}><Trash2 size={14} /></button>
+                                    </div>
                                 </div>
                             );
                         })

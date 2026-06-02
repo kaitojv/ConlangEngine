@@ -5,7 +5,7 @@ import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useProjectStore } from '@/store/useProjectStore.jsx';
 import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
-import { Languages, Plus, Trash2, CheckCircle2, Lock } from 'lucide-react';
+import { Languages, Plus, Trash2, CheckCircle2, Lock, Copy } from 'lucide-react';
 import { supabase } from '@/utils/supabaseClient.js';
 import { sanitizeConfig, sanitizeLexicon } from '@/utils/schemaValidator.jsx';
 import './conlangsTab.css';
@@ -157,6 +157,23 @@ export default function ConlangsTab() {
         }
     };
 
+    const handleDuplicateProject = (e, project) => {
+        e.stopPropagation();
+        const newId = `local_${Date.now()}`;
+        const newProjectData = JSON.parse(JSON.stringify(project.project_data || {}));
+        
+        if (newProjectData.config) {
+            newProjectData.config.projectId = newId;
+            newProjectData.config.conlangName = `${newProjectData.config.conlangName || 'Untitled'} (Copy)`;
+            newProjectData.config.isPublic = false; // Reset public flag for the fork
+        }
+        
+        saveProjectToArchive(
+            newProjectData.config || { ...INITIAL_CONFIG, projectId: newId }, 
+            newProjectData.dictionary || []
+        );
+    };
+
     if (loading) {
         return (
             <div className="conlangs-container">
@@ -199,9 +216,14 @@ export default function ConlangsTab() {
                         
                         return (
                             <div key={project.id} className={`project-card ${isCurrent ? 'active-workspace' : ''}`} onClick={() => handleOpenProject(project.id)}>
-                                <button className="project-delete-btn" onClick={(e) => handleDeleteProject(e, project.id)} title="Delete Project">
-                                    <Trash2 size={16} />
-                                </button>
+                                <div className="project-card-actions" style={{ position: 'absolute', top: '12px', right: '12px', display: 'flex', gap: '8px' }}>
+                                    <button className="project-delete-btn" style={{ position: 'relative', top: 0, right: 0 }} onClick={(e) => handleDuplicateProject(e, project)} title="Duplicate Project">
+                                        <Copy size={16} />
+                                    </button>
+                                    <button className="project-delete-btn" style={{ position: 'relative', top: 0, right: 0 }} onClick={(e) => handleDeleteProject(e, project.id)} title="Delete Project">
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
                                 
                                 <div className="project-title notranslate">
                                     {project.project_data?.config?.conlangName || "Untitled"}

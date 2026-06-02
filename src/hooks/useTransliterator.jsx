@@ -72,9 +72,16 @@ export function useTransliterator(overrideConfig = null) {
             
             let result = cleanWord;
 
-            // Apply pre-existing script mapping if chosen
-            if (alphabeticScript && alphabeticScript !== 'latin') {
-                const scriptMap = alphabeticScript === 'custom' ? alphabetGlyphs : (SCRIPT_MAPS[alphabeticScript] || {});
+            // Apply pre-existing script mapping if chosen, and overlay custom drawn glyphs
+            let scriptMap = {};
+            if (alphabeticScript && alphabeticScript !== 'latin' && alphabeticScript !== 'custom') {
+                scriptMap = { ...(SCRIPT_MAPS[alphabeticScript] || {}) };
+            }
+            if (Object.keys(alphabetGlyphs).length > 0) {
+                scriptMap = { ...scriptMap, ...alphabetGlyphs };
+            }
+
+            if (Object.keys(scriptMap).length > 0) {
                 const sortedKeys = Object.keys(scriptMap).sort((a, b) => b.length - a.length);
                 let out = "";
                 let i = 0;
@@ -194,8 +201,15 @@ export function useTransliterator(overrideConfig = null) {
             baseWord = baseWord.replace(regex, base);
         }
 
-        if (alphabeticScript && alphabeticScript !== 'latin') {
-            const scriptMap = alphabeticScript === 'custom' ? alphabetGlyphs : (SCRIPT_MAPS[alphabeticScript] || {});
+        let scriptMap = {};
+        if (alphabeticScript && alphabeticScript !== 'latin' && alphabeticScript !== 'custom') {
+            scriptMap = { ...(SCRIPT_MAPS[alphabeticScript] || {}) };
+        }
+        if (Object.keys(alphabetGlyphs).length > 0) {
+            scriptMap = { ...scriptMap, ...alphabetGlyphs };
+        }
+
+        if (Object.keys(scriptMap).length > 0) {
             for (const [base, text] of Object.entries(scriptMap)) {
                 const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 const regex = new RegExp(escapedText, 'g');

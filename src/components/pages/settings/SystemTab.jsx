@@ -64,6 +64,20 @@ export default function SystemTab() {
         };
 
         try {
+            // SEC: Before upserting, verify that this project_id doesn't belong to another user
+            if (session?.user?.id && currentProjectId) {
+                const { data: existingSnapshot } = await supabase
+                    .from('conlang_snapshots')
+                    .select('user_id')
+                    .eq('project_id', currentProjectId)
+                    .single();
+
+                if (existingSnapshot && existingSnapshot.user_id && existingSnapshot.user_id !== session.user.id) {
+                    toast.error("You cannot update a public project owned by another account.", { id: toastId });
+                    return;
+                }
+            }
+
             await supabase.from('conlang_snapshots').upsert({
                 user_id: session.user.id,
                 project_id: currentProjectId,

@@ -223,3 +223,29 @@
     color: var(--tx3);
     font-style: italic;
 }
+/* Callout / Quote Blocks */
+.wiki-editor blockquote {
+    margin: 15px 0;
+    padding: 15px 20px;
+    background: color-mix(in srgb, var(--acc) 12%, transparent);
+    border-left: 4px solid var(--acc);
+    border-radius: 6px;
+    color: var(--tx);
+    font-weight: 500;
+    transition: background 0.2s ease;
+}
+
+.wiki-editor blockquote:hover {
+    background: color-mix(in srgb, var(--acc) 18%, transparent);
+}
+
+/* Nested Callouts (Darker) */
+.wiki-editor blockquote blockquote {
+    background: var(--s2);
+    border-left: 4px solid var(--bd);
+    color: var(--tx2);
+}
+
+.wiki-editor blockquote blockquote:hover {
+    background: var(--s3);
+}

@@ -31,6 +31,23 @@ export function useSharing(session) {
         };
         
         try {
+            // SEC: Before upserting, verify that this project_id doesn't belong to another user
+            if (session?.user?.id && currentProjectId) {
+                const { data: existingSnapshot } = await supabase
+                    .from('conlang_snapshots')
+                    .select('user_id')
+                    .eq('project_id', currentProjectId)
+                    .single();
+
+                if (existingSnapshot && existingSnapshot.user_id && existingSnapshot.user_id !== session.user.id) {
+                    // Project belongs to someone else! (e.g., imported from a different account)
+                    // Generate a new project ID to fork it instead of overwriting
+                    currentProjectId = 'proj_' + crypto.randomUUID();
+                    config.updateConfig({ projectId: currentProjectId });
+                    toast('Forked project to avoid overwriting another account.');
+                }
+            }
+
             // Always push to the snapshots table for public links
             const { error } = await supabase.from('conlang_snapshots').upsert({ 
                 user_id: session?.user?.id || null, 

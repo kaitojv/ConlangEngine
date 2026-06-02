@@ -212,6 +212,21 @@ export default function LexiconList() {
         return result;
     }, [lexicon, filters, transliterate]);
 
+    // Group identical conlang words visually so the user can see multiple senses under 1 dictionary entry
+    const groupedLexicon = useMemo(() => {
+        const groups = new Map();
+        
+        filteredLexicon.forEach(entry => {
+            const key = (entry.word || '').replace(/\*/g, '').toLowerCase().trim();
+            if (!groups.has(key)) {
+                groups.set(key, { baseEntry: entry, senses: [] });
+            }
+            groups.get(key).senses.push(entry);
+        });
+        
+        return Array.from(groups.values());
+    }, [filteredLexicon]);
+
     // Quick action to bin a word
     const handleDelete = (id) => {
         toast.custom((t) => (
@@ -380,7 +395,7 @@ export default function LexiconList() {
                 </span>
                 <div className="list-header-actions">
                     <span className="list-total">
-                        Total: <span className="list-total-count">{filteredLexicon.length}</span>
+                        <span className="list-total-count">{groupedLexicon.length}</span> words <span style={{fontSize: '0.75rem', opacity: 0.7}}>({filteredLexicon.length} entries)</span>
                     </span>
                     {session && (
                         <Button variant="default" className="btn-sm" onClick={handleShareLink} disabled={isSharing}>
@@ -423,20 +438,22 @@ export default function LexiconList() {
             )}
 
             <div className="lexicon-cards">
-                {filteredLexicon.slice(0, visibleCount).map((entry) => {
-                    const safeWord = entry.word.replace(/\*/g, '');
+                {groupedLexicon.slice(0, visibleCount).map((group, groupIdx) => {
+                    const baseEntry = group.baseEntry;
+                    const senses = group.senses;
+                    const safeWord = baseEntry.word.replace(/\*/g, '');
                     const displayWord = transliterate(safeWord, lexicon);
 
                     // Auto-compute prosody from rules if no manual values set
-                    const computed = (filters.showTones && (!entry.stress || !entry.tone) && (stressRules.length > 0 || toneRules.length > 0))
+                    const computed = (filters.showTones && (!baseEntry.stress || !baseEntry.tone) && (stressRules.length > 0 || toneRules.length > 0))
                         ? computeProsody(safeWord, { vowels, stressRules, toneRules })
                         : null;
-                    const displayStress = entry.stress || (computed?.stress ?? '');
-                    const displayTone = entry.tone || (computed?.tone ?? '');
-                    const isAutoComputed = (!entry.stress && computed?.stress) || (!entry.tone && computed?.tone);
+                    const displayStress = baseEntry.stress || (computed?.stress ?? '');
+                    const displayTone = baseEntry.tone || (computed?.tone ?? '');
+                    const isAutoComputed = (!baseEntry.stress && computed?.stress) || (!baseEntry.tone && computed?.tone);
                     
                     return (
-                        <Card key={entry.id} className="lexicon-entry">
+                        <Card key={`${baseEntry.id}-${groupIdx}`} className="lexicon-entry">
                             <div className="entry-header">
                                 <div className="entry-words">
                                     <div className="entry-word-with-wave" style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'stretch' }}>
@@ -460,9 +477,9 @@ export default function LexiconList() {
                                         </span>
                                     )}
 
-                                    {entry.ipa && (
+                                    {baseEntry.ipa && (
                                         <span className="notranslate entry-ipa">
-                                            /{entry.ipa}/
+                                            /{baseEntry.ipa}/
                                         </span>
                                     )}
 
@@ -473,108 +490,90 @@ export default function LexiconList() {
                                     )}
 
                                     {filters.showTones && displayTone && (
-                                        <span className="notranslate entry-tone" style={{fontSize: '0.8rem', opacity: isAutoComputed && !entry.tone ? 0.5 : 0.7, marginLeft: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px'}}>
-                                            <Music size={12} /> {displayTone} Tone{isAutoComputed && !entry.tone ? ' (auto)' : ''}
+                                        <span className="notranslate entry-tone" style={{fontSize: '0.8rem', opacity: isAutoComputed && !baseEntry.tone ? 0.5 : 0.7, marginLeft: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px'}}>
+                                            <Music size={12} /> {displayTone} Tone{isAutoComputed && !baseEntry.tone ? ' (auto)' : ''}
                                         </span>
                                     )}
 
                                     {filters.showTones && displayStress && (
-                                        <span className="notranslate entry-stress" style={{fontSize: '0.8rem', opacity: isAutoComputed && !entry.stress ? 0.5 : 0.7, marginLeft: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px'}}>
-                                            <Zap size={12} /> {displayStress} Stress{isAutoComputed && !entry.stress ? ' (auto)' : ''}
+                                        <span className="notranslate entry-stress" style={{fontSize: '0.8rem', opacity: isAutoComputed && !baseEntry.stress ? 0.5 : 0.7, marginLeft: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px'}}>
+                                            <Zap size={12} /> {displayStress} Stress{isAutoComputed && !baseEntry.stress ? ' (auto)' : ''}
                                         </span>
                                     )}
                                 </div>
                                 
-
-                                <div className="word-classes-wrapper classes-preview-wrap">
-                                    {entry.wordClass ? entry.wordClass.split(',').map((cls, idx) => {
-                                        const cleanCls = cls.trim();
-                                        const safeClassBadge = cleanCls.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-                                        return (
-                                            <span key={idx} className={`word-class-badge badge-${safeClassBadge}`}>
-                                                {cleanCls}
-                                            </span>
-                                        );
-                                    }) : (
-                                        <span className="word-class-badge badge-other">Other</span>
+                                <div className="entry-actions-top">
+                                    <Button variant="listen" onClick={() => handleListen(baseEntry.ipa || safeWord)} title="Listen" className="btn-icon-only">
+                                        <Volume2 size={16} />
+                                    </Button>
+                                    {phonologyTypes !== 'alphabetic' && (
+                                        <Button variant="default" onClick={() => exportTextAsSVG(displayWord, `${safeWord}.svg`)} title="Download SVG" className="btn-icon-only">
+                                            <Download size={16} />
+                                        </Button>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="entry-translation">
-                                {entry.translation}
-                            </div>
+                            <div className="entry-senses">
+                                {senses.map((entry, index) => (
+                                    <div key={entry.id} className={`sense-row ${senses.length > 1 ? 'has-multiple' : ''}`}>
+                                        {senses.length > 1 && <div className="sense-index">{index + 1}.</div>}
+                                        <div className="sense-content">
+                                            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                                                <div className="word-classes-wrapper classes-preview-wrap">
+                                                    {entry.wordClass ? entry.wordClass.split(',').map((cls, idx) => {
+                                                        const cleanCls = cls.trim();
+                                                        const safeClassBadge = cleanCls.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+                                                        return (
+                                                            <span key={idx} className={`word-class-badge badge-${safeClassBadge}`}>
+                                                                {cleanCls}
+                                                            </span>
+                                                        );
+                                                    }) : (
+                                                        <span className="word-class-badge badge-other">Other</span>
+                                                    )}
+                                                </div>
+                                                <div className="entry-translation">{entry.translation}</div>
+                                            </div>
 
-                            {entry.definition && (
-                                <div className="entry-definition">
-                                    {entry.definition}
-                                </div>
-                            )}
+                                            {entry.definition && (
+                                                <div className="entry-definition">
+                                                    {entry.definition}
+                                                </div>
+                                            )}
 
-                            {entry.tags && entry.tags.length > 0 && (
-                                <div className="entry-tags">
-                                    {[...entry.tags].sort().map((tag, i) => (
-                                        <span 
-                                            key={i} 
-                                            className={`entry-tag ${filters.tag === tag ? 'active' : ''}`}
-                                            onClick={() => updateFilter('tag', filters.tag === tag ? 'all' : tag)}
-                                        >
-                                            #{tag}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
+                                            {entry.tags && entry.tags.length > 0 && (
+                                                <div className="entry-tags">
+                                                    {[...entry.tags].sort().map((tag, i) => (
+                                                        <span 
+                                                            key={i} 
+                                                            className={`entry-tag ${filters.tag === tag ? 'active' : ''}`}
+                                                            onClick={() => updateFilter('tag', filters.tag === tag ? 'all' : tag)}
+                                                        >
+                                                            #{tag}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
 
-                            <div className="entry-actions">
-                                <Button 
-                                    variant="listen" 
-                                    onClick={() => handleListen(entry.ipa || safeWord)}
-                                >
-                                    <Volume2 size={14} /> Listen
-                                </Button>
-                                
-                                <Button 
-                                    variant="edit" 
-                                    onClick={() => setSelectedWordForEdit(entry)}
-                                >
-                                    <Edit size={14} /> Edit
-                                </Button>
-                                
-                                <Button 
-                                    variant="error" 
-                                    onClick={() => handleDelete(entry.id)}
-                                >
-                                    <Trash2 size={14} /> Delete
-                                </Button>
-
-                                {phonologyTypes !== 'alphabetic' && (
-                                    <Button 
-                                        variant="default" 
-                                        onClick={() => exportTextAsSVG(displayWord, `${safeWord}.svg`)}
-                                        title="Download SVG"
-                                    >
-                                        <Download size={14} />
-                                    </Button>
-                                )}
-
-                                <div className="action-matrix">
-                                    <Button 
-                                        variant="save" 
-                                        onClick={() => setSelectedWordForMatrix(entry)}
-                                    >
-                                        <Table2 size={14} /> Matrix
-                                    </Button>
-                                </div>
+                                        <div className="sense-actions">
+                                            <button className="sense-btn" onClick={() => setSelectedWordForEdit(entry)} title="Edit Entry"><Edit size={14}/></button>
+                                            <button className="sense-btn" onClick={() => setSelectedWordForMatrix(entry)} title="Inflection Matrix"><Table2 size={14}/></button>
+                                            <button className="sense-btn sense-btn-err" onClick={() => handleDelete(entry.id)} title="Delete Entry"><Trash2 size={14}/></button>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </Card>
                     );
                 })}
             </div>
 
-            {visibleCount < filteredLexicon.length && (
+            {visibleCount < groupedLexicon.length && (
                 <div className="load-more-wrap">
                     <Button variant="edit" onClick={() => setVisibleCount(prev => prev + 50)}>
-                        Load More ({filteredLexicon.length - visibleCount} remaining)
+                        Load More ({groupedLexicon.length - visibleCount} remaining)
                     </Button>
                 </div>
             )}

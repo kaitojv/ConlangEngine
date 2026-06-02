@@ -76,7 +76,7 @@ export default function AlphabeticManager() {
 
             <Infobox title="Naming & Drawing your Alphabet">
                 This section allows you to define how each character in your writing system is named (e.g., 'A' is called 'Ah'). 
-                You can also <b>Draw</b> your custom alphabetic characters using the Font Studio! These custom characters will automatically render when you select "Custom Script (Font Studio)" in your Basic Settings.
+                You can also <b>Draw</b> your custom alphabetic characters using the Font Studio! These custom characters will automatically replace the default letters across your entire lexicon, regardless of your chosen base script.
             </Infobox>
 
             <div className="alphabet-table-container">

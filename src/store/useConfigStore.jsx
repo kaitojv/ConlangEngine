@@ -301,6 +301,25 @@ export const useConfigStore = create(
                     activity: [{ text: `Deleted wiki page`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15)
                 };
             }),
+            reorderWikiPage: (pageId, direction) => set((state) => {
+                const keys = Object.keys(state.wikiPages || {});
+                const idx = keys.indexOf(pageId);
+                if (idx < 0) return {};
+                
+                const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+                if (newIdx < 0 || newIdx >= keys.length) return {};
+                
+                // Swap keys
+                const newKeys = [...keys];
+                [newKeys[idx], newKeys[newIdx]] = [newKeys[newIdx], newKeys[idx]];
+                
+                // Reconstruct object
+                const newPages = {};
+                for (const k of newKeys) {
+                    newPages[k] = state.wikiPages[k];
+                }
+                return { wikiPages: newPages };
+            }),
 
             logActivity: (text) => set((state) => ({
                 activity: [{ text, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15)

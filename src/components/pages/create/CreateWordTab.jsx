@@ -168,10 +168,10 @@ export default function CreateWordTab() {
         updateField('tags', formData.tags.filter(t => t !== tagToRemove));
     };
 
-    const saveConfirmedWord = (safeWord, cleanTrans, processedTags) => {
+    const saveConfirmedWord = (safeWord, cleanTrans, processedTags, keepRoot = false) => {
         // eslint-disable-next-line react-hooks/purity
         const rootId = Date.now() + Math.random();
-
+        
         // 1. Save the main root
         addWord({
             id: rootId,
@@ -227,25 +227,32 @@ export default function CreateWordTab() {
         processedTags.forEach(tag => addCustomTag(tag));
 
         // Reset the form for the next word
-        setFormData({ word: '', ipa: '', wordClass: 'noun', translation: '', definition: '', tags: [], ideogram: '', tone: '', stress: '' });
+        if (keepRoot) {
+            setFormData(prev => ({ ...prev, translation: '', definition: '', tags: [] }));
+        } else {
+            setFormData({ word: '', ipa: '', wordClass: 'noun', translation: '', definition: '', tags: [], ideogram: '', tone: '', stress: '' });
+        }
+        
         setSelectedDerivs({});
         setCustomTranslations({});
         toast.success((t) => (
             <div className="toast-inner-flex">
-                <span>Root and derivations saved!</span>
-                <button 
-                    onClick={() => {
-                        toast.dismiss(t.id);
-                        navigate('/lexicon');
-                    }}
-                    className="toast-view-btn"
-                >
-                    View Lexicon
-                </button>
+                <span>{keepRoot ? 'Meaning saved! Add another...' : 'Root and derivations saved!'}</span>
+                {!keepRoot && (
+                    <button 
+                        onClick={() => {
+                            toast.dismiss(t.id);
+                            navigate('/lexicon');
+                        }}
+                        className="toast-view-btn"
+                    >
+                        View Lexicon
+                    </button>
+                )}
             </div>
         ));
 
-        if (autoReturnToLexicon) {
+        if (!keepRoot && autoReturnToLexicon) {
             navigate('/lexicon');
         }
     };
@@ -255,7 +262,7 @@ export default function CreateWordTab() {
     };
 
     // Validate and save the new root to our lexicon
-    const handleSave = () => {
+    const handleSave = (keepRoot = false) => {
         const cleanWord = word.trim();
         const cleanTrans = translation.trim();
 
@@ -291,7 +298,7 @@ export default function CreateWordTab() {
                         <button onClick={() => {
                             toast.dismiss(t.id);
                             // Bypass duplicate check and continue to validation
-                            proceedToValidation(safeWord, cleanTrans, processedTags);
+                            proceedToValidation(safeWord, cleanTrans, processedTags, 0, keepRoot);
                         }} className="btn-v btn-err-v">Save Anyway</button>
                         <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
                     </div>
@@ -300,10 +307,10 @@ export default function CreateWordTab() {
             return;
         }
 
-        proceedToValidation(safeWord, cleanTrans, processedTags);
+        proceedToValidation(safeWord, cleanTrans, processedTags, 0, keepRoot);
     };
 
-    const proceedToValidation = (safeWord, cleanTrans, processedTags, charIndex = 0) => {
+    const proceedToValidation = (safeWord, cleanTrans, processedTags, charIndex = 0, keepRoot = false) => {
         const validation = validateNewWord(safeWord, useConfigStore.getState());
 
         // 2. PHONOTACTIC VALIDATION
@@ -314,7 +321,7 @@ export default function CreateWordTab() {
                 
                 // If we've processed all individual characters, proceed to the final step (pattern validation)
                 if (!char) {
-                    return proceedToGrammarValidation(safeWord, cleanTrans, processedTags);
+                    return proceedToGrammarValidation(safeWord, cleanTrans, processedTags, keepRoot);
                 }
 
                 showValidationToast((t) => (
@@ -326,19 +333,19 @@ export default function CreateWordTab() {
                                 toast.dismiss(t.id);
                                 handleAddCharsToInventory([char], 'consonants');
                                 // Delay slightly to let the toast animation complete before showing the next one
-                                setTimeout(() => proceedToValidation(safeWord, cleanTrans, processedTags, charIndex + 1), 100);
+                                setTimeout(() => proceedToValidation(safeWord, cleanTrans, processedTags, charIndex + 1, keepRoot), 100);
                             }} className="btn-v btn-acc-v">Add to Consonants</button>
                             
                             <button onClick={() => {
                                 toast.dismiss(t.id);
                                 handleAddCharsToInventory([char], 'vowels');
-                                setTimeout(() => proceedToValidation(safeWord, cleanTrans, processedTags, charIndex + 1), 100);
+                                setTimeout(() => proceedToValidation(safeWord, cleanTrans, processedTags, charIndex + 1, keepRoot), 100);
                             }} className="btn-v btn-acc2-v">Add to Vowels</button>
 
                             <button onClick={() => {
                                 toast.dismiss(t.id);
                                 // Skip this character but keep going with the next one
-                                setTimeout(() => proceedToValidation(safeWord, cleanTrans, processedTags, charIndex + 1), 100);
+                                setTimeout(() => proceedToValidation(safeWord, cleanTrans, processedTags, charIndex + 1, keepRoot), 100);
                             }} className="btn-v btn-err-v">Save as Irregular</button>
                             
                             <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
@@ -360,7 +367,7 @@ export default function CreateWordTab() {
                     <div className="toast-actions-v">
                         <button onClick={() => {
                             toast.dismiss(t.id);
-                            proceedToGrammarValidation(safeWord, cleanTrans, processedTags);
+                            proceedToGrammarValidation(safeWord, cleanTrans, processedTags, keepRoot);
                         }} className="btn-v btn-err-v">Save Anyway</button>
                         
                         {validation.type === 'invalid_pattern' && validation.detectedPattern && (
@@ -376,10 +383,10 @@ export default function CreateWordTab() {
             return;
         }
 
-        proceedToGrammarValidation(safeWord, cleanTrans, processedTags);
+        proceedToGrammarValidation(safeWord, cleanTrans, processedTags, keepRoot);
     };
 
-    const proceedToGrammarValidation = (safeWord, cleanTrans, processedTags) => {
+    const proceedToGrammarValidation = (safeWord, cleanTrans, processedTags, keepRoot = false) => {
         // 3. POS CONFIRMATION (If new)
         const normalizedPOS = wordClass.toLowerCase().trim();
         if (normalizedPOS && !allWordClasses.includes(normalizedPOS)) {
@@ -390,7 +397,7 @@ export default function CreateWordTab() {
                     <div className="toast-actions-v">
                         <button onClick={() => {
                             toast.dismiss(t.id);
-                            finalizeSave(safeWord, cleanTrans, processedTags);
+                            finalizeSave(safeWord, cleanTrans, processedTags, keepRoot);
                         }} className="btn-v btn-acc-v">Add & Save</button>
                         <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
                     </div>
@@ -399,10 +406,10 @@ export default function CreateWordTab() {
             return;
         }
 
-        finalizeSave(safeWord, cleanTrans, processedTags);
+        finalizeSave(safeWord, cleanTrans, processedTags, keepRoot);
     };
 
-    const finalizeSave = (safeWord, cleanTrans, processedTags) => {
+    const finalizeSave = (safeWord, cleanTrans, processedTags, keepRoot = false) => {
         const currentClasses = wordClass ? wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
         if (currentClasses.includes('verb') && verbMarker) {
             const markers = verbMarker.split(',').map(m => m.trim().replace(/^-/, ''));
@@ -415,7 +422,7 @@ export default function CreateWordTab() {
                         <div className="toast-actions-v">
                             <button onClick={() => {
                                 toast.dismiss(t.id);
-                                saveConfirmedWord(safeWord, cleanTrans, processedTags);
+                                saveConfirmedWord(safeWord, cleanTrans, processedTags, keepRoot);
                             }} className="btn-v btn-err-v">Save Anyway</button>
                             <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
                         </div>
@@ -425,7 +432,7 @@ export default function CreateWordTab() {
             }
         }
 
-        saveConfirmedWord(safeWord, cleanTrans, processedTags);
+        saveConfirmedWord(safeWord, cleanTrans, processedTags, keepRoot);
     };
 
     // Spin up a live preview of how this word will interact with the language's grammar rules
@@ -683,22 +690,30 @@ export default function CreateWordTab() {
                     </div>
                 )}
 
-                <div className="create-actions-wrap">
-                    <Button 
-                        variant="save" 
-                        className="create-save-main"
-                        onClick={handleSave}
-                    >
-                        <Save size={20} /> Save Root to Lexicon
-                    </Button>
-                    <Button 
-                        variant="edit" 
-                        className="create-view-lexicon"
-                        onClick={() => navigate('/lexicon')}
-                    >
-                        View Lexicon
-                    </Button>
-                </div>
+                <div className="create-actions-wrap" style={{ gap: '10px' }}>
+                        <Button 
+                            variant="save" 
+                            className="create-save-main"
+                            onClick={() => handleSave(false)}
+                        >
+                            <Save size={20} /> Save Root
+                        </Button>
+                        <Button 
+                            variant="default" 
+                            className="create-save-main"
+                            onClick={() => handleSave(true)}
+                        >
+                            <Plus size={20} /> Save & Add Another Meaning
+                        </Button>
+                        <div style={{ flex: 1 }}></div>
+                        <Button 
+                            variant="edit" 
+                            className="create-view-lexicon"
+                            onClick={() => navigate('/lexicon')}
+                        >
+                            View Lexicon
+                        </Button>
+                    </div>
 
             </Card>
 
