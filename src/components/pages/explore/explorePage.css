@@ -153,3 +153,39 @@
     border-radius: 12px;
     border: 1px dashed var(--bd);
 }
+
+/* Like Button */
+.explore-like-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: transparent;
+    border: none;
+    color: var(--tx2);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.3rem 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.explore-like-btn:hover {
+    background: var(--s3);
+    color: var(--tx);
+}
+
+.explore-like-btn.liked {
+    color: #ff4b4b; /* A vibrant red for likes */
+}
+
+.explore-like-btn.liked svg {
+    fill: #ff4b4b;
+    animation: heartBurst 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes heartBurst {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}

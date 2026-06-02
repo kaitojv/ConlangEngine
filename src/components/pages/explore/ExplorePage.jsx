@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../utils/supabaseClient.js';
-import { Globe, BookA, User, Loader2 } from 'lucide-react';
+import { Globe, BookA, User, Loader2, Heart } from 'lucide-react';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import toast from 'react-hot-toast';
 import './explorePage.css';
@@ -11,6 +11,9 @@ export default function ExplorePage() {
     const [conlangs, setConlangs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [likesData, setLikesData] = useState({}); // { projectId: count }
+    const [userLikes, setUserLikes] = useState(new Set()); // Set of projectIds liked by user
+    const [sessionUser, setSessionUser] = useState(null);
 
     useEffect(() => {
         async function fetchPublicConlangs() {
@@ -21,6 +24,7 @@ export default function ExplorePage() {
                     navigate('/');
                     return;
                 }
+                setSessionUser(session.user);
 
                 // Fetch projects from the snapshots table where isPublic is true.
                 // We use .contains on the JSONB column to match { config: { isPublic: true } }
@@ -40,6 +44,28 @@ export default function ExplorePage() {
                 );
 
                 setConlangs(validConlangs);
+
+                // Fetch likes for these projects
+                const projectIds = validConlangs.map(c => c.project_id);
+                if (projectIds.length > 0) {
+                    const { data: likesResult, error: likesError } = await supabase
+                        .from('conlang_likes')
+                        .select('project_id, user_id')
+                        .in('project_id', projectIds);
+
+                    if (!likesError && likesResult) {
+                        const counts = {};
+                        const userSet = new Set();
+                        likesResult.forEach(like => {
+                            counts[like.project_id] = (counts[like.project_id] || 0) + 1;
+                            if (like.user_id === session.user.id) {
+                                userSet.add(like.project_id);
+                            }
+                        });
+                        setLikesData(counts);
+                        setUserLikes(userSet);
+                    }
+                }
             } catch (err) {
                 console.error("Error fetching public conlangs:", err);
                 setError(err.message);
@@ -54,6 +80,52 @@ export default function ExplorePage() {
     const handleCardClick = (projectId) => {
         // Open the public viewer in the same tab
         navigate(`/view/${projectId}`);
+    };
+
+    const toggleLike = async (e, projectId) => {
+        e.stopPropagation(); // prevent card click
+
+        if (!sessionUser) return;
+
+        const isLiked = userLikes.has(projectId);
+        const previousLikes = { ...likesData };
+        const previousUserLikes = new Set(userLikes);
+
+        // Optimistic update
+        const newSet = new Set(userLikes);
+        const newCounts = { ...likesData };
+
+        if (isLiked) {
+            newSet.delete(projectId);
+            newCounts[projectId] = Math.max(0, (newCounts[projectId] || 0) - 1);
+        } else {
+            newSet.add(projectId);
+            newCounts[projectId] = (newCounts[projectId] || 0) + 1;
+        }
+
+        setUserLikes(newSet);
+        setLikesData(newCounts);
+
+        try {
+            if (isLiked) {
+                const { error } = await supabase
+                    .from('conlang_likes')
+                    .delete()
+                    .match({ project_id: projectId, user_id: sessionUser.id });
+                if (error) throw error;
+            } else {
+                const { error } = await supabase
+                    .from('conlang_likes')
+                    .insert({ project_id: projectId, user_id: sessionUser.id });
+                if (error) throw error;
+            }
+        } catch (err) {
+            console.error("Error toggling like:", err);
+            toast.error("Failed to update like status");
+            // Revert on error
+            setUserLikes(previousUserLikes);
+            setLikesData(previousLikes);
+        }
     };
 
     if (loading) {
@@ -133,8 +205,18 @@ export default function ExplorePage() {
                                         <BookA size={14} />
                                         <span>{wordCount} words</span>
                                     </div>
-                                    <div className="explore-stat" style={{ marginLeft: 'auto', fontSize: '0.7rem', fontWeight: 'normal', opacity: 0.7 }}>
-                                        {new Date(lang.created_at).toLocaleDateString()}
+                                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                        <button 
+                                            className={`explore-like-btn ${userLikes.has(lang.project_id) ? 'liked' : ''}`}
+                                            onClick={(e) => toggleLike(e, lang.project_id)}
+                                            title={userLikes.has(lang.project_id) ? "Unlike" : "Like"}
+                                        >
+                                            <Heart size={14} />
+                                            <span>{likesData[lang.project_id] || 0}</span>
+                                        </button>
+                                        <div className="explore-stat" style={{ fontSize: '0.7rem', fontWeight: 'normal', opacity: 0.7 }}>
+                                            {new Date(lang.created_at).toLocaleDateString()}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
