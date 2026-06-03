@@ -143,7 +143,7 @@ export default function Home() {
                 {/* Flashcards & Gamification Status */}
                 <Card 
                     className="interactive-card training-card"
-                    onClick={() => navigate('/flashcards')} 
+                    onClick={() => navigate('/study')} 
                 >
                     <h3>
                         <BrainCircuit size={24} /> Daily Training

@@ -4,11 +4,13 @@ import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
-import { BrainCircuit, Flame, RotateCcw, Check, X, Play, Map, Zap } from 'lucide-react';
+import { BrainCircuit, Flame, RotateCcw, Check, X, Play, Map, Zap, Volume2 } from 'lucide-react';
 import Mascot from './Mascot.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import ExercisePlayer from './ExercisePlayer.jsx';
 import CourseBuilder from './CourseBuilder.jsx';
+import { playAzureTTS } from '../../../utils/azureTTS.js';
+import toast from 'react-hot-toast';
 import './studyTab.css';
 
 // We no longer use static PATH_LEVELS. We pull them from user config!
@@ -83,6 +85,32 @@ export default function StudyTab() {
 
     const handleFlip = () => {
         if (!hasFinished) setIsFlipped(!isFlipped);
+    };
+
+    const handleListen = async (e, wordObj) => {
+        e.stopPropagation(); // Don't flip the card when clicking listen
+        const text = wordObj.word;
+        if (!text) return;
+
+        const globalConfig = useConfigStore.getState();
+        if (globalConfig.azureTtsVoice) {
+            const toastId = toast.loading("Generating audio...");
+            try {
+                await playAzureTTS({
+                    text: text,
+                    ipa: wordObj.ipa,
+                    voice: globalConfig.azureTtsVoice
+                });
+                toast.dismiss(toastId);
+            } catch (err) {
+                toast.error("Azure TTS failed: " + err.message, { id: toastId });
+            }
+            return;
+        }
+
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
     };
 
     // Move to the next card, and maybe toss this one back in the pile if they need to review it
@@ -436,7 +464,12 @@ export default function StudyTab() {
                                         {currentWord.ipa && (
                                             <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>
                                         )}
-                                        <div className="flip-hint">Click to flip</div>
+                                        <div style={{ marginTop: '15px' }}>
+                                            <Button variant="default" onClick={(e) => handleListen(e, currentWord)} style={{ padding: '6px 12px' }}>
+                                                <div className="btn-content-flex"><Volume2 size={16} /> Listen</div>
+                                            </Button>
+                                        </div>
+                                        <div className="flip-hint" style={{ marginTop: '15px' }}>Click to flip</div>
                                     </>
                                 ) : null}
                             </div>

@@ -98,6 +98,7 @@ export const INITIAL_CONFIG = {
             order: 'digit-first' // or 'unit-first'
         }
     },
+    azureTtsUseIpa: true,
     numberMatrix: {},
     numberDerivedRules: {
         ordinal: '',

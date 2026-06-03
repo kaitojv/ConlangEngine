@@ -1,8 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import Card from '../../UI/Card/Card.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
-import { BrainCircuit, Play, X, Check } from 'lucide-react';
+import { BrainCircuit, Play, X, Check, Volume2 } from 'lucide-react';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
+import { playAzureTTS } from '../../../utils/azureTTS.js';
+
+import toast from 'react-hot-toast';
 import '../../pages/study/studyTab.css';
 
 export default function PublicFlashcards({ lexicon = [], config = {} }) {
@@ -41,6 +44,31 @@ export default function PublicFlashcards({ lexicon = [], config = {} }) {
 
     const handleFlip = () => {
         if (!hasFinished) setIsFlipped(!isFlipped);
+    };
+
+    const handleListen = async (e, wordObj) => {
+        e.stopPropagation(); // Don't flip the card when clicking listen
+        const text = wordObj.word;
+        if (!text) return;
+
+        if (config.azureTtsVoice) {
+            const toastId = toast.loading("Generating audio...");
+            try {
+                await playAzureTTS({
+                    text: text,
+                    ipa: wordObj.ipa,
+                    voice: config.azureTtsVoice
+                });
+                toast.dismiss(toastId);
+            } catch (err) {
+                toast.error("Azure TTS failed: " + err.message, { id: toastId });
+            }
+            return;
+        }
+
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
     };
 
     // Move to the next card, and maybe toss this one back in the pile if they need to review it
@@ -132,7 +160,12 @@ export default function PublicFlashcards({ lexicon = [], config = {} }) {
                                         {currentWord.ipa && (
                                             <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>
                                         )}
-                                        <div className="flip-hint">Click to flip</div>
+                                        <div style={{ marginTop: '15px' }}>
+                                            <Button variant="default" onClick={(e) => handleListen(e, currentWord)} style={{ padding: '6px 12px' }}>
+                                                <div className="btn-content-flex"><Volume2 size={16} /> Listen</div>
+                                            </Button>
+                                        </div>
+                                        <div className="flip-hint" style={{ marginTop: '15px' }}>Click to flip</div>
                                     </>
                                 ) : null}
                             </div>

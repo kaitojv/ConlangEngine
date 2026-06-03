@@ -213,14 +213,7 @@ export default function CourseBuilder({ onExit }) {
                             </Button>
                         </div>
                         
-                        <div className="cb-lesson-notes" style={{ marginBottom: '20px' }}>
-                            <textarea 
-                                value={level.lessonNotes || ''}
-                                onChange={(e) => updateLevelNotes(level.id, e.target.value)}
-                                placeholder="Optional: Add grammar explanations, vocabulary lists, or lesson notes here. The user will see this before starting the exercises."
-                                style={{ width: '100%', height: '80px', padding: '10px', borderRadius: '8px', border: '1px solid var(--bd)', background: 'var(--s1)', color: 'var(--tx)', fontFamily: 'inherit', resize: 'vertical' }}
-                            />
-                        </div>
+                        {/* Removed lesson notes textbox as per user request to use teaching cards instead */}
 
                         <div className="cb-phrases">
                             {level.phrases.map((phrase, pIdx) => (
@@ -240,6 +233,7 @@ export default function CourseBuilder({ onExit }) {
                                                 <option value="word_bank">Word Bank</option>
                                                 <option value="multiple_choice">Multiple Choice</option>
                                                 <option value="matching_pairs">Matching Pairs</option>
+                                                <option value="teach">Teaching Card (Info)</option>
                                             </select>
                                         </div>
                                         <button className="cb-delete-phrase" onClick={() => deletePhrase(level.id, phrase.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '5px' }}>
@@ -248,7 +242,19 @@ export default function CourseBuilder({ onExit }) {
                                     </div>
                                     
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                        {phrase.type !== 'matching_pairs' && (
+                                        {phrase.type === 'teach' && (
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>Teaching Content</label>
+                                                <textarea 
+                                                    value={phrase.english || ''}
+                                                    onChange={(e) => updatePhrase(level.id, phrase.id, 'english', e.target.value)}
+                                                    placeholder="e.g. In this lesson, we will learn about... (Line breaks supported)"
+                                                    style={{ width: '100%', height: '100px', padding: '10px', borderRadius: '8px', border: '1px solid var(--bd)', background: 'var(--s1)', color: 'var(--tx)', fontFamily: 'inherit', resize: 'vertical' }}
+                                                />
+                                            </div>
+                                        )}
+
+                                        {phrase.type !== 'matching_pairs' && phrase.type !== 'teach' && (
                                             <div style={{ display: 'flex', gap: '15px' }}>
                                                 <div style={{ flex: 1 }}>
                                                     <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>Conlang Prompt</label>

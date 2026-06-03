@@ -12,7 +12,7 @@ import Button from '../../UI/Buttons/Buttons.jsx';
 import applySoundChanges from '../../../utils/applysoundchanges.jsx';
 import { VisualRuleBuilder } from './grammarMatrix/VisualRuleBuilder.jsx';
 import ProsodyRulesCard from './ProsodyRulesCard.jsx';
-import { Wand2, Info, AudioLines, Hourglass, Eye, BookCheck } from 'lucide-react';
+import { Wand2, Info, AudioLines, Hourglass, Eye, BookCheck, Headphones } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../../UI/Modal/Modal.jsx';
 import './phonologyTab.css'
@@ -28,7 +28,33 @@ export default function PhonologyTab() {
     const historicalRules = useConfigStore((state) => state.historicalRules) || '';
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const syllabificationAlgorithm = useConfigStore((state) => state.syllabificationAlgorithm) || 'ltr';
+    const azureTtsVoice = useConfigStore((state) => state.azureTtsVoice) || 'en-US-JennyNeural';
+    const azureTtsUseIpa = useConfigStore((state) => state.azureTtsUseIpa) ?? true;
     const updateConfig = useConfigStore((state) => state.updateConfig);
+
+    const AZURE_VOICES = [
+        { value: 'ipa-default', label: 'IPA Reading (Strict Pronunciation)' },
+        { value: 'en-US-JennyNeural', label: 'US English (Jenny)' },
+        { value: 'en-US-GuyNeural', label: 'US English (Guy)' },
+        { value: 'en-GB-SoniaNeural', label: 'UK English (Sonia)' },
+        { value: 'en-GB-RyanNeural', label: 'UK English (Ryan)' },
+        { value: 'en-AU-NatashaNeural', label: 'Australian English (Natasha)' },
+        { value: 'fr-FR-DeniseNeural', label: 'French (Denise)' },
+        { value: 'fr-FR-HenriNeural', label: 'French (Henri)' },
+        { value: 'es-ES-ElviraNeural', label: 'Spanish (Elvira)' },
+        { value: 'es-ES-AlvaroNeural', label: 'Spanish (Alvaro)' },
+        { value: 'de-DE-KatjaNeural', label: 'German (Katja)' },
+        { value: 'de-DE-ConradNeural', label: 'German (Conrad)' },
+        { value: 'it-IT-ElsaNeural', label: 'Italian (Elsa)' },
+        { value: 'ja-JP-NanamiNeural', label: 'Japanese (Nanami)' },
+        { value: 'ja-JP-KeitaNeural', label: 'Japanese (Keita)' },
+        { value: 'zh-CN-XiaoxiaoNeural', label: 'Mandarin (Xiaoxiao)' },
+        { value: 'ko-KR-SunHiNeural', label: 'Korean (SunHi)' },
+        { value: 'ru-RU-SvetlanaNeural', label: 'Russian (Svetlana)' },
+        { value: 'pt-BR-FranciscaNeural', label: 'Portuguese BR (Francisca)' },
+        { value: 'ar-EG-SalmaNeural', label: 'Arabic EG (Salma)' },
+        { value: 'hi-IN-SwaraNeural', label: 'Hindi (Swara)' }
+    ];
 
     // Lexicon store — needed to permanently apply sound changes
     const rawLexicon = useLexiconStore((state) => state.lexicon);
@@ -238,6 +264,26 @@ export default function PhonologyTab() {
             )}
 
             <ProsodyRulesCard />
+
+            <Card>
+                <h2 className="flex sg-title"><Headphones /> Text-to-Speech (Azure)</h2>
+                <Infobox title="SSML Phonetic Pronunciation">
+                    The app uses Microsoft's Neural voices to read the exact <b>IPA</b> of your conlang instead of guessing the pronunciation from its spelling. Select the base accent for your language below.
+                </Infobox>
+                
+                <div className="settings-section-wrapper" style={{ marginTop: '15px' }}>
+                    <label className="form-label settings-label-block">Base Accent (Voice Model)</label>
+                    <select 
+                        className="settings-select-full"
+                        value={azureTtsVoice}
+                        onChange={(e) => updateConfig({ azureTtsVoice: e.target.value })}
+                    >
+                        {AZURE_VOICES.map(voice => (
+                            <option key={voice.value} value={voice.value}>{voice.label}</option>
+                        ))}
+                    </select>
+                </div>
+            </Card>
 
             <Card>
                 <h2 className="flex sg-title"><Hourglass /> Historical Sound Changer</h2>

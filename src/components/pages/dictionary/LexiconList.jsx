@@ -11,6 +11,7 @@ import MatrixModal from './MatrixModal.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download, X, Share2, Music, Zap } from 'lucide-react';
 import { exportTextAsSVG } from '../../../utils/svgExporter.jsx';
+import { playAzureTTS } from '../../../utils/azureTTS.js';
 import toast from 'react-hot-toast';
 import { supabase } from '../../../utils/supabaseClient.js';
 import { useSharing } from '../../../hooks/useSharing.jsx';
@@ -247,18 +248,38 @@ export default function LexiconList() {
         ), { duration: Infinity });
     };
 
-    // Try to pronounce the word using the browser's built-in text-to-speech
-    const handleListen = (word) => {
+    // Try to pronounce the word using Azure TTS if configured, or fallback to the browser's built-in text-to-speech
+    const handleListen = async (wordObj) => {
+        const text = wordObj.word;
+        if (!text) {
+            return toast.error("This word is empty and cannot be pronounced.");
+        }
+
+        const config = useConfigStore.getState();
+        if (config.azureTtsVoice) {
+            const toastId = toast.loading("Generating audio...");
+            try {
+                await playAzureTTS({
+                    text: text,
+                    ipa: wordObj.ipa, // This might be undefined, but Azure TTS utility handles it
+                    voice: config.azureTtsVoice
+                });
+                toast.dismiss(toastId);
+            } catch (err) {
+                toast.error("Azure TTS failed: " + err.message, { id: toastId });
+                console.error(err);
+            }
+            return;
+        }
+
+        // Fallback to browser TTS
         if (!('speechSynthesis' in window)) {
             return toast.error("Sorry, your browser doesn't support text-to-speech.");
-        }
-        if (!word) {
-            return toast.error("This word is empty and cannot be pronounced.");
         }
 
         // Interrupt any ongoing speech so it doesn't queue up a dozen words if the user spams the button
         window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(new SpeechSynthesisUtterance(word));
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
     };
 
     return (
@@ -505,7 +526,7 @@ export default function LexiconList() {
                                 </div>
                                 
                                 <div className="entry-actions-top">
-                                    <Button variant="listen" onClick={() => handleListen(baseEntry.ipa || safeWord)} title="Listen" className="btn-icon-only">
+                                    <Button variant="listen" onClick={() => handleListen(baseEntry)} title="Listen" className="btn-icon-only">
                                         <Volume2 size={16} />
                                     </Button>
                                     <Button variant="edit" onClick={() => setNewSenseBase(baseEntry)} title="Add new definition" className="btn-icon-only">

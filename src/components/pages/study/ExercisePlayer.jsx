@@ -11,10 +11,14 @@ import './exercisePlayer.css';
 
 const EXERCISE_COUNT = 5;
 
-export default function ExercisePlayer({ levelNode, onComplete, onExit }) {
-    const lexicon = useLexiconStore((state) => state.lexicon);
-    const config = useConfigStore();
-    const { transliterate } = useTransliterator();
+export default function ExercisePlayer({ levelNode, onComplete, onExit, customLexicon, customConfig }) {
+    const storeLexicon = useLexiconStore((state) => state.lexicon);
+    const storeConfig = useConfigStore();
+    
+    const lexicon = customLexicon || storeLexicon;
+    const config = customConfig || storeConfig;
+
+    const { transliterate } = useTransliterator(customConfig);
 
     const [currentIndex, setCurrentIndex] = useState(() => {
         return (levelNode && levelNode.lessonNotes && levelNode.lessonNotes.trim().length > 0) ? -1 : 0;
@@ -93,22 +97,25 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit }) {
     const currentEx = exercises[currentIndex];
     const progressPercent = (currentIndex / exercises.length) * 100;
 
+    const advanceToNext = () => {
+        const nextIdx = currentIndex + 1;
+        if (nextIdx >= exercises.length) {
+            setIsFinished(true);
+        } else {
+            setCurrentIndex(nextIdx);
+            setFeedback(null);
+            setCurrentAnswer('');
+            setWordBankSelected([]);
+            setSelectedOption(null);
+            setMatchingSelected({ conlang: null, english: null });
+            setMatchedPairs([]);
+        }
+    };
+
     const checkAnswer = (e) => {
         if (e) e.preventDefault();
         if (feedback) {
-            // Move to next
-            const nextIdx = currentIndex + 1;
-            if (nextIdx >= exercises.length) {
-                setIsFinished(true);
-            } else {
-                setCurrentIndex(nextIdx);
-                setFeedback(null);
-                setCurrentAnswer('');
-                setWordBankSelected([]);
-                setSelectedOption(null);
-                setMatchingSelected({ conlang: null, english: null });
-                setMatchedPairs([]);
-            }
+            advanceToNext();
             return;
         }
 
@@ -196,15 +203,22 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit }) {
             </div>
 
             <div className="ep-content">
-                <h3 className="ep-instruction">
-                    {currentEx.type === 'translate_to_english' ? 'Translate this sentence into English:' 
-                    : currentEx.type === 'translate_to_conlang' ? `Translate into ${config.conlangName || 'your conlang'}:`
-                    : currentEx.type === 'word_bank' ? `Translate into ${config.conlangName || 'your conlang'}:`
-                    : currentEx.type === 'multiple_choice' ? 'Select the correct translation:'
-                    : 'Match the pairs:'}
-                </h3>
+                {currentEx.type === 'teach' && (
+                    <h3 className="ep-instruction" style={{ color: 'var(--acc)' }}>
+                        Lesson Information
+                    </h3>
+                )}
+                {currentEx.type !== 'teach' && (
+                    <h3 className="ep-instruction">
+                        {currentEx.type === 'translate_to_english' ? 'Translate this sentence into English:' 
+                        : currentEx.type === 'translate_to_conlang' ? `Translate into ${config.conlangName || 'your conlang'}:`
+                        : currentEx.type === 'word_bank' ? `Translate into ${config.conlangName || 'your conlang'}:`
+                        : currentEx.type === 'multiple_choice' ? 'Select the correct translation:'
+                        : 'Match the pairs:'}
+                    </h3>
+                )}
 
-                {currentEx.type !== 'matching_pairs' && (
+                {currentEx.type !== 'matching_pairs' && currentEx.type !== 'teach' && (
                     <div className="ep-prompt custom-font-text notranslate" style={{ fontSize: currentEx.type === 'translate_to_conlang' ? '1.5rem' : '2rem' }}>
                         {currentEx.type === 'translate_to_english' ? transliterate(currentEx.conlangSentence)
                         : currentEx.type === 'multiple_choice' ? transliterate(currentEx.conlangSentence)
@@ -275,7 +289,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit }) {
                             })}
                         </div>
                     </div>
-                ) : (
+                ) : currentEx.type === 'word_bank' ? (
                     <div className="ep-word-bank-area">
                         <div className="ep-sentence-builder custom-font-text notranslate">
                             {wordBankSelected.length > 0 ? transliterate(wordBankSelected.join(' ')) : <span className="ep-placeholder">Construct your sentence...</span>}
@@ -293,24 +307,41 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit }) {
                             ))}
                         </div>
                     </div>
-                )}
+                ) : currentEx.type === 'teach' ? (
+                    <div className="ep-teach" style={{ padding: '20px', background: 'var(--s1)', borderRadius: '8px', border: '1px solid var(--bd)', whiteSpace: 'pre-wrap', lineHeight: '1.6', fontSize: '1.1rem', marginTop: '10px' }}>
+                        {currentEx.englishSentence}
+                    </div>
+                ) : null}
             </div>
 
             <div className={`ep-footer ${feedback ? feedback.status : ''}`}>
-                {feedback && (
-                    <div className="ep-feedback-msg">
-                        <Mascot state={feedback.status} isSpeaking={false} size="small" />
-                        <p>{feedback.message}</p>
-                    </div>
+                {currentEx.type === 'teach' ? (
+                    <Button 
+                        variant="imp" 
+                        onClick={advanceToNext} 
+                        style={{ width: '100%', padding: '15px' }}
+                        className="ep-check-btn"
+                    >
+                        Got it! Continue
+                    </Button>
+                ) : (
+                    <>
+                        {feedback && (
+                            <div className="ep-feedback-msg">
+                                <Mascot state={feedback.status} isSpeaking={false} size="small" />
+                                <p>{feedback.message}</p>
+                            </div>
+                        )}
+                        <Button 
+                            variant={feedback ? (feedback.status === 'correct' ? 'save' : 'error') : 'imp'} 
+                            onClick={checkAnswer}
+                            disabled={!feedback && currentEx.type === 'matching_pairs' && matchedPairs.length !== currentEx.pairs.length}
+                            className="ep-check-btn"
+                        >
+                            {feedback ? 'Continue' : 'Check'}
+                        </Button>
+                    </>
                 )}
-                <Button 
-                    variant={feedback ? (feedback.status === 'correct' ? 'save' : 'error') : 'imp'} 
-                    onClick={checkAnswer}
-                    disabled={!feedback && currentEx.type === 'matching_pairs' && matchedPairs.length !== currentEx.pairs.length}
-                    className="ep-check-btn"
-                >
-                    {feedback ? 'Continue' : 'Check'}
-                </Button>
             </div>
         </Card>
     );

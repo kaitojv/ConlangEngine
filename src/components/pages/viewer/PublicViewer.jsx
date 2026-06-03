@@ -7,6 +7,7 @@ import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import { usePublicThemeInjector, usePublicFontInjector } from '../../../hooks/usePublicInjectors.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import PublicFlashcards from './PublicFlashcards.jsx';
+import ExercisePlayer from '../study/ExercisePlayer.jsx';
 import './publicViewer.css';
 import '../study/studyTab.css'; // Required for the course map layout
 
@@ -17,6 +18,8 @@ export default function PublicViewer() {
     const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [visibleCount, setVisibleCount] = useState(50);
+    const [activeTab, setActiveTab] = useState('overview'); // overview, course, flashcards
+    const [activeLevel, setActiveLevel] = useState(null);
 
     // Fetch the project from Supabase using the project_id
     useEffect(() => {
@@ -169,8 +172,35 @@ export default function PublicViewer() {
                 </div>
             </div>
 
+            {/* ===== TAB NAVIGATION ===== */}
+            <div className="pv-tabs" style={{ display: 'flex', justifyContent: 'center', gap: '20px', padding: '20px', background: 'var(--s1)', borderBottom: '1px solid var(--bd)', flexWrap: 'wrap' }}>
+                <button 
+                    className={`pv-tab-btn ${activeTab === 'overview' ? 'active' : ''}`} 
+                    onClick={() => { setActiveTab('overview'); setActiveLevel(null); }}
+                    style={{ padding: '10px 20px', border: 'none', background: activeTab === 'overview' ? 'var(--acc)' : 'transparent', color: activeTab === 'overview' ? '#fff' : 'var(--tx)', borderRadius: '20px', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s' }}
+                >
+                    <BookOpen size={16} style={{display: 'inline', marginRight: '8px', marginBottom: '-3px'}}/> Overview
+                </button>
+                <button 
+                    className={`pv-tab-btn ${activeTab === 'course' ? 'active' : ''}`} 
+                    onClick={() => { setActiveTab('course'); setActiveLevel(null); }}
+                    style={{ padding: '10px 20px', border: 'none', background: activeTab === 'course' ? 'var(--acc)' : 'transparent', color: activeTab === 'course' ? '#fff' : 'var(--tx)', borderRadius: '20px', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s' }}
+                >
+                    <Map size={16} style={{display: 'inline', marginRight: '8px', marginBottom: '-3px'}}/> Course Map
+                </button>
+                <button 
+                    className={`pv-tab-btn ${activeTab === 'flashcards' ? 'active' : ''}`} 
+                    onClick={() => { setActiveTab('flashcards'); setActiveLevel(null); }}
+                    style={{ padding: '10px 20px', border: 'none', background: activeTab === 'flashcards' ? 'var(--acc)' : 'transparent', color: activeTab === 'flashcards' ? '#fff' : 'var(--tx)', borderRadius: '20px', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s' }}
+                >
+                    <BrainCircuit size={16} style={{display: 'inline', marginRight: '8px', marginBottom: '-3px'}}/> Flashcards
+                </button>
+            </div>
+
             {/* ===== CONTENT ===== */}
             <div className="pv-content">
+                {activeTab === 'overview' && (
+                    <>
 
                 {/* PHONOLOGY */}
                 {(config.consonants || config.vowels || config.syllablePattern) && (
@@ -397,9 +427,14 @@ export default function PublicViewer() {
                         </div>
                     </section>
                 )}
+                    </>
+                )}
+
+                {activeTab === 'course' && (
+                    <>
 
                 {/* COURSE MAP */}
-                {config.customCourse && config.customCourse.length > 0 && (
+                {!activeLevel && config.customCourse && config.customCourse.length > 0 && (
                     <section className="pv-section" style={{ border: 'none', background: 'transparent' }}>
                         <div className="pv-section-header" style={{ justifyContent: 'center', marginBottom: '2rem', background: 'transparent', borderBottom: 'none' }}>
                             <Map size={28} className="pv-section-icon" />
@@ -447,7 +482,8 @@ export default function PublicViewer() {
                                         <div key={node.id} className={`pv-path-node-wrapper ${isZigZag ? 'left' : 'right'}`}>
                                             <div 
                                                 className="pv-path-node" 
-                                                style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--acc)', boxShadow: `0 8px 0 var(--acc)`, cursor: 'default' }}
+                                                onClick={() => setActiveLevel(node)}
+                                                style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--acc)', boxShadow: `0 8px 0 var(--acc)`, cursor: 'pointer' }}
                                             >
                                                 <div className="pv-path-node-icon"><Zap size={32} color="var(--acc)" fill="none" /></div>
                                             </div>
@@ -461,16 +497,35 @@ export default function PublicViewer() {
                         </div>
                     </section>
                 )}
+                
+                {activeLevel && (
+                    <div style={{ marginTop: '2rem' }}>
+                        <ExercisePlayer 
+                            levelNode={activeLevel} 
+                            onComplete={() => setActiveLevel(null)} 
+                            onExit={() => setActiveLevel(null)} 
+                            customLexicon={dictionary} 
+                            customConfig={config} 
+                        />
+                    </div>
+                )}
 
+                    </>
+                )}
+
+                {activeTab === 'flashcards' && (
+                    <>
                 {/* INTERACTIVE FLASHCARDS */}
                 {dictionary.length > 0 && (
                     <section className="pv-section" style={{ border: 'none', background: 'transparent' }}>
                         <div className="pv-section-header" style={{ justifyContent: 'center', marginBottom: '2rem', background: 'transparent', borderBottom: 'none' }}>
                             <BrainCircuit size={28} className="pv-section-icon" />
-                            <h2 className="pv-section-title" style={{ fontSize: '1.8rem' }}>Learn & Study</h2>
+                            <h2 className="pv-section-title" style={{ fontSize: '1.8rem' }}>Flashcards</h2>
                         </div>
                         <PublicFlashcards lexicon={dictionary} config={config} />
                     </section>
+                )}
+                    </>
                 )}
             </div>
 
