@@ -7,70 +7,18 @@ import Button from '@/components/UI/Buttons/Buttons.jsx';
 import { BrainCircuit, Flame, RotateCcw, Check, X, Play, Map, Zap } from 'lucide-react';
 import Mascot from './Mascot.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
+import ExercisePlayer from './ExercisePlayer.jsx';
+import CourseBuilder from './CourseBuilder.jsx';
 import './studyTab.css';
 
-const PROMPT_WORDS = [
-    // Level 1: Nature Nouns
-    { word: "water", class: "noun", tag: "nature" }, { word: "fire", class: "noun", tag: "nature" }, { word: "earth", class: "noun", tag: "nature" },
-    { word: "sun", class: "noun", tag: "nature" }, { word: "moon", class: "noun", tag: "nature" }, { word: "star", class: "noun", tag: "nature" },
-    { word: "tree", class: "noun", tag: "nature" }, { word: "stone", class: "noun", tag: "nature" }, { word: "mountain", class: "noun", tag: "nature" }, { word: "river", class: "noun", tag: "nature" },
-    
-    // Level 2: Basic Actions
-    { word: "eat", class: "verb", tag: "action" }, { word: "drink", class: "verb", tag: "action" }, { word: "sleep", class: "verb", tag: "action" },
-    { word: "give", class: "verb", tag: "action" }, { word: "take", class: "verb", tag: "action" }, { word: "make", class: "verb", tag: "action" },
-    
-    // Level 3: Animals
-    { word: "dog", class: "noun", tag: "animal" }, { word: "cat", class: "noun", tag: "animal" }, { word: "bird", class: "noun", tag: "animal" },
-    { word: "fish", class: "noun", tag: "animal" }, { word: "horse", class: "noun", tag: "animal" }, { word: "snake", class: "noun", tag: "animal" },
-    
-    // Level 4: Basic Adjectives
-    { word: "good", class: "adjective", tag: "basic" }, { word: "bad", class: "adjective", tag: "basic" }, { word: "big", class: "adjective", tag: "basic" },
-    { word: "small", class: "adjective", tag: "basic" }, { word: "hot", class: "adjective", tag: "basic" }, { word: "cold", class: "adjective", tag: "basic" },
-    
-    // Level 5: Body Parts
-    { word: "person", class: "noun", tag: "body" }, { word: "hand", class: "noun", tag: "body" }, { word: "eye", class: "noun", tag: "body" },
-    { word: "mouth", class: "noun", tag: "body" }, { word: "blood", class: "noun", tag: "body" }, { word: "head", class: "noun", tag: "body" },
-    
-    // Level 6: Movement Verbs
-    { word: "run", class: "verb", tag: "movement" }, { word: "walk", class: "verb", tag: "movement" }, { word: "go", class: "verb", tag: "movement" },
-    { word: "come", class: "verb", tag: "movement" }, { word: "fly", class: "verb", tag: "movement" }, { word: "swim", class: "verb", tag: "movement" },
-    
-    // Level 7: Society & Home
-    { word: "house", class: "noun", tag: "society" }, { word: "road", class: "noun", tag: "society" }, { word: "city", class: "noun", tag: "society" },
-    { word: "friend", class: "noun", tag: "society" }, { word: "enemy", class: "noun", tag: "society" }, { word: "king", class: "noun", tag: "society" },
-    
-    // Level 8: Senses & Mind
-    { word: "see", class: "verb", tag: "sense" }, { word: "hear", class: "verb", tag: "sense" }, { word: "know", class: "verb", tag: "sense" },
-    { word: "think", class: "verb", tag: "sense" }, { word: "feel", class: "verb", tag: "sense" }, { word: "smell", class: "verb", tag: "sense" },
-    
-    // Level 9: Emotions & States
-    { word: "happy", class: "adjective", tag: "emotion" }, { word: "sad", class: "adjective", tag: "emotion" }, { word: "angry", class: "adjective", tag: "emotion" },
-    { word: "new", class: "adjective", tag: "emotion" }, { word: "old", class: "adjective", tag: "emotion" }, { word: "dead", class: "adjective", tag: "emotion" },
-    
-    // Level 10: Advanced
-    { word: "love", class: "verb", tag: "advanced" }, { word: "hate", class: "verb", tag: "advanced" }, { word: "say", class: "verb", tag: "advanced" },
-    { word: "truth", class: "noun", tag: "advanced" }, { word: "lie", class: "noun", tag: "advanced" }, { word: "time", class: "noun", tag: "advanced" }
-];
-
-const PATH_LEVELS = [
-    { id: 1, title: 'Nature Nouns', class: 'noun', tag: 'nature' },
-    { id: 2, title: 'Basic Actions', class: 'verb', tag: 'action' },
-    { id: 3, title: 'Animals', class: 'noun', tag: 'animal' },
-    { id: 4, title: 'Basic Adjectives', class: 'adjective', tag: 'basic' },
-    { id: 5, title: 'Body Parts', class: 'noun', tag: 'body' },
-    { id: 6, title: 'Movement Verbs', class: 'verb', tag: 'movement' },
-    { id: 7, title: 'Society & Home', class: 'noun', tag: 'society' },
-    { id: 8, title: 'Senses & Mind', class: 'verb', tag: 'sense' },
-    { id: 9, title: 'Emotions & States', class: 'adjective', tag: 'emotion' },
-    { id: 10, title: 'Advanced Concepts', class: 'verb', tag: 'advanced' },
-];
+// We no longer use static PATH_LEVELS. We pull them from user config!
 
 export default function StudyTab() {
     // Pull in the lexicon and streak settings from our global state
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
     const addWord = useLexiconStore((state) => state.addWord);
     const checkDuplicate = useLexiconStore((state) => state.checkDuplicate);
-    const { streak, lastStudyDate, conlangName } = useConfigStore();
+    const { streak, lastStudyDate, conlangName, customCourse } = useConfigStore();
     const updateConfig = useConfigStore((state) => state.updateConfig);
     const { transliterate } = useTransliterator();
 
@@ -83,7 +31,7 @@ export default function StudyTab() {
     const [deckStarted, setDeckStarted] = useState(false);
     
     // Gamification state
-    const [studyMode, setStudyMode] = useState('path'); // 'path', 'flashcard', 'quiz'
+    const [studyMode, setStudyMode] = useState('path'); // 'path', 'flashcard', 'quiz', 'course', 'builder'
     const [pathLevel, setPathLevel] = useState(null); 
     const [quizInput, setQuizInput] = useState('');
     const [mascotState, setMascotState] = useState('idle');
@@ -129,32 +77,8 @@ export default function StudyTab() {
     };
 
     const startQuiz = (levelNode) => {
-        // Find existing words of this class, prioritize ones that have the matching tag, or fallback
-        const existingLexicon = lexicon.filter(w => w.wordClass === levelNode.class);
-        
-        // Find prompt words that the user hasn't created yet for this specific tag
-        const unlearnedPrompts = PROMPT_WORDS.filter(p => 
-            p.tag === levelNode.tag && 
-            !lexicon.some(w => w.translation.toLowerCase().includes(p.word))
-        ).map(p => ({ isNewPrompt: true, translation: p.word, wordClass: p.class, tags: [p.tag] }));
-
-        const shuffledExisting = [...existingLexicon].sort(() => Math.random() - 0.5).slice(0, 7);
-        const shuffledPrompts = [...unlearnedPrompts].sort(() => Math.random() - 0.5).slice(0, 3);
-        
-        const finalDeck = [...shuffledExisting, ...shuffledPrompts].sort(() => Math.random() - 0.5);
-
-        if (finalDeck.length === 0) return alert(`You don't have any words for ${levelNode.title} yet!`);
-        
-        setDeck(finalDeck);
-        setCurrentIdx(0);
-        setHasFinished(false);
-        setPathLevel(levelNode.title);
-        setStudyMode('quiz');
-        setQuizInput('');
-        setMascotState('idle');
-        setQuizFeedback('');
-        // Ensure the first question direction is valid (new prompts must be toConlang)
-        setQuizDirection(finalDeck[0].isNewPrompt ? 'toConlang' : (Math.random() > 0.5 ? 'toConlang' : 'toEnglish'));
+        setPathLevel(levelNode);
+        setStudyMode('course');
     };
 
     const handleFlip = () => {
@@ -263,8 +187,16 @@ export default function StudyTab() {
     const currentWord = deck[currentIdx];
     const remainingCards = deck.length - currentIdx;
 
-    // We use the static PATH_LEVELS for the 10-level path
-    const pathNodes = PATH_LEVELS;
+    // We use the customCourse array from global config for our map!
+    const pathNodes = customCourse || [];
+
+    if (studyMode === 'builder') {
+        return (
+            <div className="flashcards-container">
+                <CourseBuilder onExit={() => setStudyMode('path')} />
+            </div>
+        );
+    }
 
     return (
         <div className="flashcards-container">
@@ -273,8 +205,8 @@ export default function StudyTab() {
             <Card className="controls-card">
                 <div className="controls-header">
                     <h2 className="flex sg-title mb-0">
-                        {studyMode === 'path' ? <Map /> : <BrainCircuit />} 
-                        {studyMode === 'path' ? ' Learning Path' : studyMode === 'flashcard' ? ' Flashcard Drill' : ' Mascot Quiz'}
+                        {studyMode === 'path' ? <Map /> : studyMode === 'course' ? <Zap /> : <BrainCircuit />} 
+                        {studyMode === 'path' ? ' Learning Path' : studyMode === 'flashcard' ? ' Flashcard Drill' : studyMode === 'course' ? ` Course: ${pathLevel?.title}` : ' Mascot Quiz'}
                     </h2>
                     
                     <div style={{display: 'flex', gap: '15px', alignItems: 'center'}}>
@@ -283,9 +215,18 @@ export default function StudyTab() {
                         </div>
                         
                         {studyMode === 'path' ? (
-                            <Button variant="default" onClick={() => setStudyMode('flashcard')}>
-                                <div className="btn-content-flex"><BrainCircuit size={16}/> Flashcards</div>
-                            </Button>
+                            <>
+                                {lexicon.length >= 200 ? (
+                                    <Button variant="imp" onClick={() => setStudyMode('builder')}>
+                                        <div className="btn-content-flex">Edit Course</div>
+                                    </Button>
+                                ) : (
+                                    <div style={{fontSize: '0.8rem', color: 'var(--tx2)'}}>Unlock course at 200 words</div>
+                                )}
+                                <Button variant="default" onClick={() => setStudyMode('flashcard')}>
+                                    <div className="btn-content-flex"><BrainCircuit size={16}/> Flashcards</div>
+                                </Button>
+                            </>
                         ) : studyMode === 'flashcard' ? (
                             <Button variant="default" onClick={() => { setStudyMode('path'); setDeckStarted(false); }}>
                                 <div className="btn-content-flex"><Map size={16}/> Learning Path</div>
@@ -320,11 +261,37 @@ export default function StudyTab() {
                 )}
             </Card>
 
+            {/* --- EXERCISE PLAYER (COURSE ENGINE) --- */}
+            {studyMode === 'course' && pathLevel && (
+                <ExercisePlayer 
+                    levelNode={pathLevel}
+                    onComplete={() => {
+                        recordDailyStudy();
+                        setStudyMode('path');
+                    }}
+                    onExit={() => setStudyMode('path')}
+                />
+            )}
+
             {/* --- LEARNING PATH --- */}
             {studyMode === 'path' && (
                 <div className="learning-path-container">
                     {pathNodes.length === 0 ? (
-                        <div className="empty-path">Add some words to your lexicon to unlock the Learning Path!</div>
+                        <div className="empty-path">
+                            <h3>Welcome to the Course Map!</h3>
+                            {lexicon.length >= 200 ? (
+                                <>
+                                    <p>You haven't built your language course yet.</p>
+                                    <Button variant="imp" onClick={() => setStudyMode('builder')} style={{marginTop: '15px'}}>
+                                        Open Course Builder
+                                    </Button>
+                                </>
+                            ) : (
+                                <p style={{color: 'var(--err)', marginTop: '10px'}}>
+                                    You need at least 200 words in your lexicon to build a course. Keep adding words! ({lexicon.length}/200)
+                                </p>
+                            )}
+                        </div>
                     ) : (
                         <div className="path-track" style={{ position: 'relative' }}>
                             <svg 
@@ -377,7 +344,7 @@ export default function StudyTab() {
                                             <div className="path-node-icon"><Zap size={32} color="var(--acc)" fill="none" /></div>
                                         </div>
                                         <div className="path-node-label">
-                                            Level {node.id}: {node.title}
+                                            {node.title}
                                         </div>
                                     </div>
                                 );

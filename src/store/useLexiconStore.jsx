@@ -18,6 +18,7 @@ export const useLexiconStore = create(
                     translation: newWordData.translation,
                     definition: newWordData.definition || '',
                     tags: newWordData.tags || [],
+                    tagSource: newWordData.tagSource || 'manual',
                     ideogram: newWordData.ideogram || '',
                     personCategory: newWordData.personCategory || '',
                     tone: newWordData.tone || '',

@@ -11,6 +11,8 @@ import './grammartab.css';
 export default function GrammarTab(){
     // Grab all our syntax and morphology settings from the global store
     const syntaxOrder = useConfigStore((state) => state.syntaxOrder) || 'SVO';
+    const adjectivePlacement = useConfigStore((state) => state.adjectivePlacement) || 'pre-nominal';
+    const adjectiveAgreement = useConfigStore((state) => state.adjectiveAgreement) || false;
     const writingDirection = useConfigStore((state) => state.writingDirection) || 'ltr';
     const verbMarker = useConfigStore((state) => state.verbMarker) || '';
     const cliticsRules = useConfigStore((state) => state.cliticsRules) || '';
@@ -48,7 +50,10 @@ export default function GrammarTab(){
                 
                 <Infobox title="Syntax & Analyzer Guide">
                     • <b>Verb Base Marker:</b> Define how your verbs typically end (e.g., <i>-ar</i> or <i>-er</i>). The Engine will use this to warn you if you create a verb that does not match this ending, helping you maintain consistency.<br />
-                    • <b>Clitics:</b> List particles that attach to words but function independently in syntax (like English <i>'s</i> or <i>'ll</i>), separated by commas. The Analyzer will detach them behind the scenes to parse the sentence structure correctly.
+                    • <b>Clitics:</b> List particles that attach to words but function independently in syntax (like English <i>'s</i> or <i>'ll</i>), separated by commas. The Analyzer will detach them behind the scenes to parse the sentence structure correctly.<br />
+                    • <b>Adjective Placement:</b> Determines if adjectives come before nouns (Pre-nominal, like English) or after nouns (Post-nominal, like Spanish).<br />
+                    • <b>Adjective Agreement:</b> If enabled, adjectives will copy the affixes applied to the noun they modify.<br />
+                    • <b>Copula (To Be) Behavior:</b> "Normal" forces sentences to use a translation of 'to be' (e.g. <i>I am tall</i>). "Zero-Copula" allows sentences without it (e.g. <i>I tall</i>) or replaces it with a specific marker.
                 </Infobox>
                 
                 <div className="syntax-grid">
@@ -68,6 +73,31 @@ export default function GrammarTab(){
                             <option value="OVA">OVA (Object-Verb-Adverb)</option>
                         </select>
                     </div>
+                    
+                    <div className="input-wrapper">
+                        <label className="input-label">Adjective Placement</label>
+                        <select 
+                            className="fi custom-select"
+                            value={adjectivePlacement}
+                            onChange={(e) => updateConfig({ adjectivePlacement: e.target.value })}
+                        >
+                            <option value="pre-nominal">Pre-nominal (e.g. Big dog)</option>
+                            <option value="post-nominal">Post-nominal (e.g. Dog big)</option>
+                        </select>
+                    </div>
+
+                    <div className="input-wrapper" style={{ display: 'flex', alignItems: 'center', marginTop: '1rem' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>
+                            <input 
+                                type="checkbox" 
+                                checked={adjectiveAgreement} 
+                                onChange={(e) => updateConfig({ adjectiveAgreement: e.target.checked })}
+                                style={{ transform: 'scale(1.2)' }}
+                            />
+                            Adjective Agreement (Adjectives copy noun affixes)
+                        </label>
+                    </div>
+                    
                     
                     <div className="input-wrapper">
                         <label className="input-label">Writing Direction</label>

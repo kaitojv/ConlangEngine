@@ -9,6 +9,7 @@ import IpaReferencePage from './IpaReferencePage.jsx';
 import './orthographyPage.css';
 import '../../UI/AlphabeticManager/alphabeticManager.css';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
+import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import toast from 'react-hot-toast';
 
 // --- SUB-COMPONENTS ---
@@ -258,6 +259,17 @@ const NumbersTab = () => {
     const newIrrValRef = useRef(null);
     const newIrrNameRef = useRef(null);
 
+    // Dynamic power count — start at 6 or however many powers already exist
+    const [powerCount, setPowerCount] = useState(() => {
+        const existingPowers = Object.keys(numberSystem.powers || {}).map(k => {
+            // Find which exponent produces this key: base^p = key
+            const val = Number(k);
+            if (val <= 0 || !numeralBase || numeralBase <= 1) return 0;
+            return Math.round(Math.log(val) / Math.log(numeralBase));
+        }).filter(p => p > 0);
+        return Math.max(6, ...existingPowers);
+    });
+
     const updateSystem = (field, value) => {
         updateConfig({
             numberSystem: { ...numberSystem, [field]: value }
@@ -300,7 +312,35 @@ const NumbersTab = () => {
                 const componentVal = digit * powerVal;
                 
                 if (numberSystem.irregulars?.[componentVal]) {
-                    components.push(numberSystem.irregulars[componentVal]);
+                    // Only use component-level irregulars when the component equals the full original number.
+                    // This prevents overrides like "20 → vingt" from bleeding into 21, 22, etc.
+                    if (componentVal === num) {
+                        components.push(numberSystem.irregulars[componentVal]);
+                    } else if (power === 0) {
+                        const dName = (useStemsForUnits && numberSystem.stems?.[digit])
+                            ? numberSystem.stems[digit]
+                            : (numberSystem.digits?.[digit] || `(${digit})`);
+                        components.push(dName);
+                    } else {
+                        const pName = numberSystem.powers?.[powerVal] || `[Base^${power}]`;
+                        let dName = '';
+                        
+                        if (!(hideOne && digit === 1)) {
+                            dName = (fusion && numberSystem.stems?.[digit]) 
+                                ? numberSystem.stems[digit] 
+                                : (numberSystem.digits?.[digit] || `(${digit})`);
+                        }
+
+                        let word;
+                        if (!dName) {
+                            word = pName;
+                        } else {
+                            word = internalOrder === 'unit-first' 
+                                ? `${pName}${fusion ? '' : separator}${dName}`
+                                : `${dName}${fusion ? '' : separator}${pName}`;
+                        }
+                        components.push(word);
+                    }
                 } else if (power === 0) {
                     const dName = (useStemsForUnits && numberSystem.stems?.[digit])
                         ? numberSystem.stems[digit]
@@ -438,23 +478,45 @@ const NumbersTab = () => {
                             Powers of {numeralBase}
                         </h2>
                         <div className="powers-grid">
-                            {[1, 2, 3, 4, 5, 6].map(p => {
+                            {Array.from({ length: powerCount }, (_, i) => i + 1).map(p => {
                                 const val = Math.pow(numeralBase, p);
                                 // Format large numbers with commas for readability
                                 const labelVal = val.toLocaleString();
                                 return (
                                     <div key={p} className="digit-entry">
                                         <label>{numeralBase}<sup>{p}</sup> ({labelVal})</label>
-                                        <input 
-                                            className="char-name-input"
-                                            value={numberSystem.powers?.[val] || ''}
-                                            onChange={(e) => updateMap('powers', val, e.target.value)}
-                                            placeholder={`Name for ${labelVal}`}
-                                        />
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                            <input 
+                                                className="char-name-input"
+                                                value={numberSystem.powers?.[val] || ''}
+                                                onChange={(e) => updateMap('powers', val, e.target.value)}
+                                                placeholder={`Name for ${labelVal}`}
+                                                style={{ flex: 1, minWidth: 0 }}
+                                            />
+                                            {p === powerCount && p > 6 && (
+                                                <button 
+                                                    className="irr-del" 
+                                                    onClick={() => {
+                                                        updateMap('powers', val, '');
+                                                        setPowerCount(prev => prev - 1);
+                                                    }}
+                                                    title="Remove this power"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 );
                             })}
                         </div>
+                        <button 
+                            className="btn-add" 
+                            style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                            onClick={() => setPowerCount(prev => prev + 1)}
+                        >
+                            <Plus size={14} /> Add Power
+                        </button>
                     </Card>
 
                     <Card>
@@ -607,6 +669,7 @@ const AlphabeticShowcase = () => {
     const otherPhonemes = useConfigStore(state => state.otherPhonemes) || '';
     const alphabetNames = useConfigStore(state => state.alphabetNames) || {};
     const alphabetGlyphs = useConfigStore(state => state.alphabetGlyphs) || {};
+    const { transliterate } = useTransliterator();
 
     const parseChars = (str) => {
         if (!str) return [];
@@ -645,7 +708,7 @@ const AlphabeticShowcase = () => {
                         return (
                             <div key={char} className="char-card glass" style={{ cursor: 'default' }}>
                                 <div className="char-display custom-font-text" style={{ fontSize: customGlyph ? '3rem' : '2rem', marginBottom: customGlyph ? '0' : '0.5rem' }}>
-                                    {customGlyph || char}
+                                    {customGlyph || transliterate(char)}
                                 </div>
                                 {customGlyph && (
                                     <div style={{ fontSize: '0.9rem', color: 'var(--tx2)', marginBottom: '12px' }}>

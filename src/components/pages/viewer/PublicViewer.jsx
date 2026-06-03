@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/utils/supabaseClient.js';
-import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit, FileText } from 'lucide-react';
+import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit, FileText, Map, Zap } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import { usePublicThemeInjector, usePublicFontInjector } from '../../../hooks/usePublicInjectors.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import PublicFlashcards from './PublicFlashcards.jsx';
 import './publicViewer.css';
+import '../study/studyTab.css'; // Required for the course map layout
 
 export default function PublicViewer() {
     const { projectId } = useParams();
@@ -345,7 +346,7 @@ export default function PublicViewer() {
                                     return (
                                         <div key={phoneme} style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: '8px', padding: '1rem', textAlign: 'center' }}>
                                             <div className="custom-font-text notranslate" style={{ fontSize: '2rem', marginBottom: '0.5rem', color: 'var(--acc)' }}>
-                                                {glyph || phoneme}
+                                                {glyph || transliterate(phoneme, dictionary)}
                                             </div>
                                             <div style={{ fontWeight: 600, color: 'var(--tx)' }}>{name}</div>
                                             <div style={{ fontSize: '0.8rem', color: 'var(--tx2)' }}>/{phoneme}/</div>
@@ -397,10 +398,74 @@ export default function PublicViewer() {
                     </section>
                 )}
 
+                {/* COURSE MAP */}
+                {config.customCourse && config.customCourse.length > 0 && (
+                    <section className="pv-section" style={{ border: 'none', background: 'transparent' }}>
+                        <div className="pv-section-header" style={{ justifyContent: 'center', marginBottom: '2rem', background: 'transparent', borderBottom: 'none' }}>
+                            <Map size={28} className="pv-section-icon" />
+                            <h2 className="pv-section-title" style={{ fontSize: '1.8rem' }}>Course Map</h2>
+                        </div>
+                        <div className="pv-learning-path-container" style={{ margin: '0 auto' }}>
+                            <div className="pv-path-track" style={{ position: 'relative' }}>
+                                <svg 
+                                    className="path-svg" 
+                                    style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: '100%', overflow: 'visible', zIndex: 0, pointerEvents: 'none' }}
+                                >
+                                    {config.customCourse.map((node, i) => {
+                                        if (i === config.customCourse.length - 1) return null;
+                                        const isLeft = i % 2 === 0;
+                                        const y1 = 80 + i * 150;
+                                        const y2 = 80 + (i + 1) * 150;
+                                        const midY = (y1 + y2) / 2;
+                                        const x1 = isLeft ? -40 : 40;
+                                        const x2 = isLeft ? 40 : -40;
+                                        
+                                        return (
+                                            <g key={`line-${i}`}>
+                                                <path 
+                                                    d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
+                                                    stroke="var(--bd)"
+                                                    strokeWidth="32"
+                                                    fill="none"
+                                                    strokeLinecap="round"
+                                                />
+                                                <path 
+                                                    d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
+                                                    stroke="var(--s2)"
+                                                    strokeWidth="24"
+                                                    fill="none"
+                                                    strokeLinecap="round"
+                                                />
+                                            </g>
+                                        );
+                                    })}
+                                </svg>
+
+                                {config.customCourse.map((node, i) => {
+                                    const isZigZag = i % 2 === 0;
+                                    return (
+                                        <div key={node.id} className={`pv-path-node-wrapper ${isZigZag ? 'left' : 'right'}`}>
+                                            <div 
+                                                className="pv-path-node" 
+                                                style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--acc)', boxShadow: `0 8px 0 var(--acc)`, cursor: 'default' }}
+                                            >
+                                                <div className="pv-path-node-icon"><Zap size={32} color="var(--acc)" fill="none" /></div>
+                                            </div>
+                                            <div className="pv-path-node-label">
+                                                {node.title}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </section>
+                )}
+
                 {/* INTERACTIVE FLASHCARDS */}
                 {dictionary.length > 0 && (
                     <section className="pv-section" style={{ border: 'none', background: 'transparent' }}>
-                        <div className="pv-section-header" style={{ justifyContent: 'center', marginBottom: '2rem' }}>
+                        <div className="pv-section-header" style={{ justifyContent: 'center', marginBottom: '2rem', background: 'transparent', borderBottom: 'none' }}>
                             <BrainCircuit size={28} className="pv-section-icon" />
                             <h2 className="pv-section-title" style={{ fontSize: '1.8rem' }}>Learn & Study</h2>
                         </div>

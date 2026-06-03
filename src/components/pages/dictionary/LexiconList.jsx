@@ -25,6 +25,7 @@ export default function LexiconList() {
     const rawLexicon = useLexiconStore((state) => state.lexicon);
     const lexicon = Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []);
     const deleteWord = useLexiconStore((state) => state.deleteWord);
+    const addWord = useLexiconStore((state) => state.addWord);
     const phonologyTypes = useConfigStore(state => state.phonologyTypes);
     const consonants = useConfigStore(state => state.consonants) || '';
     const vowels = useConfigStore(state => state.vowels) || '';
@@ -66,6 +67,7 @@ export default function LexiconList() {
     // Track which words are currently selected for our popup modals
     const [selectedWordForMatrix, setSelectedWordForMatrix] = useState(null);
     const [selectedWordForEdit, setSelectedWordForEdit] = useState(null); 
+    const [newSenseBase, setNewSenseBase] = useState(null);
     
     // Manage how many lexicon items are rendered at once for performance
     const [visibleCount, setVisibleCount] = useState(50);
@@ -506,6 +508,9 @@ export default function LexiconList() {
                                     <Button variant="listen" onClick={() => handleListen(baseEntry.ipa || safeWord)} title="Listen" className="btn-icon-only">
                                         <Volume2 size={16} />
                                     </Button>
+                                    <Button variant="edit" onClick={() => setNewSenseBase(baseEntry)} title="Add new definition" className="btn-icon-only">
+                                        <PlusCircle size={16} />
+                                    </Button>
                                     {phonologyTypes !== 'alphabetic' && (
                                         <Button variant="default" onClick={() => exportTextAsSVG(displayWord, `${safeWord}.svg`)} title="Download SVG" className="btn-icon-only">
                                             <Download size={16} />
@@ -585,6 +590,24 @@ export default function LexiconList() {
 
             <Modal isOpen={!!selectedWordForEdit} onClose={() => setSelectedWordForEdit(null)} title="Edit Lexicon Entry">
                 <LexiconEditModal key={selectedWordForEdit?.id} wordObj={selectedWordForEdit} onClose={() => setSelectedWordForEdit(null)} />
+            </Modal>
+
+            <Modal isOpen={!!newSenseBase} onClose={() => setNewSenseBase(null)} title="Add New Definition">
+                {newSenseBase && (
+                    <LexiconEditModal 
+                        key={`sense-${newSenseBase.id}`} 
+                        wordObj={{ 
+                            ...newSenseBase, 
+                            id: null,
+                            translation: '', 
+                            definition: '', 
+                            tags: [],
+                            wordClass: ''
+                        }} 
+                        mode="addSense"
+                        onClose={() => setNewSenseBase(null)} 
+                    />
+                )}
             </Modal>
         </div>
     );

@@ -101,3 +101,45 @@
 .icon-save { color: var(--ok); cursor: pointer; }
 
 .icon-cancel { color: var(--err); cursor: pointer; }
+
+.auto-tagger-banner {
+    background: var(--s4);
+    border: 1px solid var(--acc);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.auto-tagger-info h4 {
+    margin: 0 0 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--acc);
+}
+
+.auto-tagger-info p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--tx2);
+}
+
+.auto-tagger-progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    color: var(--acc);
+}
+
+.spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

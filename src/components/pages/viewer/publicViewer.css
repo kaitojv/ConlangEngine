@@ -544,3 +544,73 @@
         font-size: 0.85rem;
     }
 }
+
+/* GAMIFIED LEARNING PATH (Standalone for Public Viewer) */
+.pv-learning-path-container {
+    width: 100%;
+    max-width: 600px;
+    padding: 60px 20px;
+    margin: 20px auto;
+    background-color: var(--s4);
+    background-image: radial-gradient(var(--bd) 2px, transparent 2px);
+    background-size: 40px 40px;
+    border-radius: 24px;
+    border: 2px solid var(--bd);
+    box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+}
+
+.pv-path-track {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 70px;
+    position: relative;
+    padding: 40px 0;
+}
+
+.pv-path-node-wrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.pv-path-node-wrapper.left {
+    transform: translateX(-40px);
+}
+
+.pv-path-node-wrapper.right {
+    transform: translateX(40px);
+}
+
+.pv-path-node {
+    width: 80px;
+    height: 80px;
+    border: 4px solid rgba(0,0,0,0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+    position: relative;
+    z-index: 2;
+}
+
+.pv-path-node-icon {
+    color: var(--acc);
+}
+
+.pv-path-node-label {
+    position: absolute;
+    bottom: -40px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: var(--tx);
+    background: var(--bg);
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 2px solid var(--bd);
+    white-space: nowrap;
+    z-index: 5;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}

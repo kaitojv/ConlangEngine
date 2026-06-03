@@ -17,9 +17,10 @@ const STANDARD_WORD_CLASSES = [
     'particle', 'conjunction', 'preposition'
 ];
 
-export default function LexiconEditModal({ wordObj, onClose }) {
+export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
     // Grab our global lexicon tools
     const updateWord = useLexiconStore((state) => state.updateWord);
+    const addWord = useLexiconStore((state) => state.addWord);
     const lexicon = useLexiconStore((state) => state.lexicon);
     const addCustomWordClass = useConfigStore((state) => state.addCustomWordClass);
     const addCustomTag = useConfigStore((state) => state.addCustomTag);
@@ -171,6 +172,29 @@ export default function LexiconEditModal({ wordObj, onClose }) {
         onClose();
     };
 
+    const doSaveNew = (sWord, cTrans, pTags) => {
+        addWord({
+            word: sWord,
+            ipa: ipa.trim(),
+            wordClass: wordClass.trim(),
+            translation: cTrans,
+            definition: formData.definition.trim(),
+            tags: pTags,
+            ideogram: ideogram.trim(),
+            personCategory: personCategory.trim(),
+            tone: tone.trim(),
+            stress: stress.trim()
+        });
+
+        if (wordClass && !STANDARD_WORD_CLASSES.includes(wordClass.trim().toLowerCase())) {
+            addCustomWordClass(wordClass);
+        }
+        pTags.forEach(tag => addCustomTag(tag));
+
+        toast.success("New definition added!");
+        onClose();
+    };
+
     // Validate everything before saving changes to the lexicon
     const handleSave = () => {
         const cleanInputWord = word.trim();
@@ -179,6 +203,39 @@ export default function LexiconEditModal({ wordObj, onClose }) {
         if (!cleanInputWord || !cleanInputTrans) return toast.error("Please fill in both the word and the translation.");
 
         const safeWord = normalizeToBase(cleanInputWord);
+        const processedTags = [...formData.tags].sort();
+        const saveFn = mode === 'addSense' ? doSaveNew : doSave;
+
+        // In addSense mode, skip duplicate-word check (we intentionally want the same word)
+        if (mode === 'addSense') {
+            // Only check for duplicate translation
+            const safeLowerTrans = cleanInputTrans.toLowerCase();
+            const isDuplicateTranslation = lexicon.some(entry => 
+                entry.translation.toLowerCase() === safeLowerTrans
+            );
+
+            if (isDuplicateTranslation) {
+                showValidationToast((t) => (
+                    <div className="custom-toast-v">
+                        <strong>⚠️ Duplicate Translation</strong>
+                        <span>This translation already exists in another entry. Save anyway?</span>
+                        <div className="toast-actions-v">
+                            <button onClick={() => {
+                                toast.dismiss(t.id);
+                                proceedToValidation(safeWord, cleanInputTrans, processedTags, () => saveFn(safeWord, cleanInputTrans, processedTags));
+                            }} className="btn-v btn-err-v">Save Anyway</button>
+                            <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                        </div>
+                    </div>
+                ));
+                return;
+            }
+
+            proceedToValidation(safeWord, cleanInputTrans, processedTags, () => saveFn(safeWord, cleanInputTrans, processedTags));
+            return;
+        }
+
+        // Edit mode — full duplicate checking
         const safeLowerWord = safeWord.toLowerCase();
         const safeLowerTrans = cleanInputTrans.toLowerCase();
 
@@ -190,9 +247,6 @@ export default function LexiconEditModal({ wordObj, onClose }) {
             if (dbTrans === safeLowerTrans) acc.isDuplicateTranslation = true;
             return acc;
         }, { isDuplicateWord: false, isDuplicateTranslation: false });
-
-        const processedTags = [...formData.tags].sort();
-        const validation = validateNewWord(safeWord, useConfigStore.getState());
 
         if (isDuplicateWord || isDuplicateTranslation) {
             let warningMsg = "";
@@ -211,7 +265,7 @@ export default function LexiconEditModal({ wordObj, onClose }) {
                     <div className="toast-actions-v">
                         <button onClick={() => {
                             toast.dismiss(t.id);
-                            proceedToValidation(safeWord, cleanInputTrans, processedTags, () => doSave(safeWord, cleanInputTrans, processedTags));
+                            proceedToValidation(safeWord, cleanInputTrans, processedTags, () => saveFn(safeWord, cleanInputTrans, processedTags));
                         }} className="btn-v btn-err-v">Save Anyway</button>
                         <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
                     </div>
@@ -220,7 +274,7 @@ export default function LexiconEditModal({ wordObj, onClose }) {
             return;
         }
 
-        proceedToValidation(safeWord, cleanInputTrans, processedTags, () => doSave(safeWord, cleanInputTrans, processedTags));
+        proceedToValidation(safeWord, cleanInputTrans, processedTags, () => saveFn(safeWord, cleanInputTrans, processedTags));
     };
 
     const proceedToValidation = (safeWord, cleanInputTrans, processedTags, doSave, charIndex = 0) => {

@@ -26,6 +26,8 @@ export const INITIAL_CONFIG = {
     ],
     syllabificationAlgorithm: 'ltr',
     syntaxOrder:'SVO',
+    adjectivePlacement: 'pre-nominal',
+    adjectiveAgreement: false,
     writingDirection: 'ltr',
     consonants:'p, t, k, m, n, s, l, r',
     vowels:'a, e, i, o, u',
@@ -128,6 +130,7 @@ export const INITIAL_CONFIG = {
     // Prosody rules — evaluated at display time to auto-compute stress & tone
     stressRules: [],   // Array of { id, type, value, fallback? }
     toneRules: [],     // Array of { id, condition, value }
+    customCourse: [],  // Array of { id, title, phrases: [{ id, conlang, english }] }
 };
 
 // IndexedDB Helper for handling massive data without breaking local storage quotas

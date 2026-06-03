@@ -5,9 +5,10 @@ import { useShallow } from 'zustand/react/shallow';
 import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
-import { Search, Edit, Trash2, Check, X, Tag, BookOpen } from 'lucide-react';
+import { Search, Edit, Trash2, Check, X, Tag, BookOpen, Sparkles, Loader2 } from 'lucide-react';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import toast from 'react-hot-toast';
+import { getTagsForTranslation } from '../../../utils/semanticTagger.js';
 import './lexiconTab.css';
 
 export default function LexiconTab() {
@@ -24,6 +25,9 @@ export default function LexiconTab() {
     const [searchTerm, setSearchTerm] = useState('');
     const [newPOS, setNewPOS] = useState('');
     const [newTag, setNewTag] = useState('');
+    
+    const [isAutoTagging, setIsAutoTagging] = useState(false);
+    const [autoTagProgress, setAutoTagProgress] = useState(0);
 
     // Extract all unique POS from the lexicon
     const allPOS = useMemo(() => {
@@ -172,6 +176,54 @@ export default function LexiconTab() {
     const filteredPOS = allPOS.filter(p => p.includes(searchTerm.toLowerCase()));
     const filteredTags = allTags.filter(t => t.includes(searchTerm.toLowerCase()));
 
+    const handleAutoCategorize = async () => {
+        if (!window.confirm("This will analyze your entire lexicon and automatically apply semantic tags (like 'Food', 'Animals', 'Verbs') based on English translations. This may take a few minutes. Proceed?")) return;
+        
+        setIsAutoTagging(true);
+        setAutoTagProgress(0);
+        
+        let processedCount = 0;
+        let updatedCount = 0;
+        const total = lexicon.length;
+        
+        for (let i = 0; i < total; i++) {
+            const entry = lexicon[i];
+            
+            // Skip if they already have decent semantic tags
+            const hasSemanticTags = entry.tags && entry.tags.some(t => !['Nouns', 'Verbs', 'Adjectives', 'Misc'].includes(t));
+            
+            if (!hasSemanticTags && entry.translation) {
+                // Use offline NLP and the massive dictionary (Instant)
+                let newTags = await getTagsForTranslation(entry.translation, true);
+
+                const finalTags = [...new Set([...(entry.tags || []), ...newTags])].filter(t => t !== 'Misc');
+                
+                if (finalTags.length > 0 && JSON.stringify(finalTags) !== JSON.stringify(entry.tags)) {
+                    updateWord(entry.id, { tags: finalTags });
+                    updatedCount++;
+                }
+            }
+            
+            processedCount++;
+            if (processedCount % 5 === 0) {
+                setAutoTagProgress(Math.round((processedCount / total) * 100));
+                // Yield to event loop to update UI
+                await new Promise(r => setTimeout(r, 10));
+            }
+        }
+        
+        // Refresh custom tags configuration just in case
+        const tagSet = new Set(customTags);
+        lexicon.forEach(entry => {
+            if (entry.tags) entry.tags.forEach(t => tagSet.add(t.toLowerCase()));
+        });
+        updateConfig({ customTags: [...tagSet].sort() });
+        
+        setIsAutoTagging(false);
+        setAutoTagProgress(0);
+        toast.success(`Auto-categorization complete! Added tags to ${updatedCount} words.`);
+    };
+
     return (
         <Card className="lexicon-settings-tab">
             <h2 className="flex sg-title">
@@ -180,6 +232,23 @@ export default function LexiconTab() {
             <p className="settings-description">
                 Manage your Parts of Speech and Semantic Tags globally. Renaming or deleting here will update all lexicon entries.
             </p>
+
+            <div className="auto-tagger-banner">
+                <div className="auto-tagger-info">
+                    <h4><Sparkles size={16}/> Smart Auto-Categorizer</h4>
+                    <p>Missing tags? Let the engine use NLP and WordNet to automatically categorize your entire <b>{lexicon.length}</b> word lexicon into themes like Food, Animals, and Family.</p>
+                </div>
+                {isAutoTagging ? (
+                    <div className="auto-tagger-progress">
+                        <Loader2 className="spinner" size={20} />
+                        <span>Processing... {autoTagProgress}%</span>
+                    </div>
+                ) : (
+                    <Button variant="primary" onClick={handleAutoCategorize}>
+                        Bulk Auto-Categorize Lexicon
+                    </Button>
+                )}
+            </div>
 
             <Infobox title="Lexicon Management Tips">
                 • <b>Global Rename:</b> Renaming a Part of Speech or Tag here will automatically update every single word in your lexicon.<br />
