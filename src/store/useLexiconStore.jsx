@@ -1,65 +1,74 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, subscribeWithSelector } from 'zustand/middleware';
+import { share } from 'shared-zustand';
 
 export const useLexiconStore = create(
-    persist(
-        (set, get) => ({
+    subscribeWithSelector(
+        persist(
+            (set, get) => ({
 
-            lexicon: [],
+                lexicon: [],
 
-            setLexicon: (newLexicon) => set({ lexicon: newLexicon }),
+                setLexicon: (newLexicon) => set({ lexicon: newLexicon }),
 
-            addWord: (newWordData) => set((state) => {
-                const newEntry = {
-                    id: newWordData.id || (Date.now() + Math.random()),
-                    word: newWordData.word,
-                    ipa: newWordData.ipa || '',
-                    wordClass: newWordData.wordClass,
-                    translation: newWordData.translation,
-                    definition: newWordData.definition || '',
-                    tags: newWordData.tags || [],
-                    tagSource: newWordData.tagSource || 'manual',
-                    ideogram: newWordData.ideogram || '',
-                    personCategory: newWordData.personCategory || '',
-                    tone: newWordData.tone || '',
-                    stress: newWordData.stress || '',
-                    parentRootId: newWordData.parentRootId || null,
-                    derivationRuleId: newWordData.derivationRuleId || null,
-                    inflectionOverrides: {},
-                    createdAt: Date.now()
-                };
-                return { lexicon: [...(state.lexicon || []), newEntry] };
+                addWord: (newWordData) => set((state) => {
+                    const newEntry = {
+                        id: newWordData.id || (Date.now() + Math.random()),
+                        word: newWordData.word,
+                        ipa: newWordData.ipa || '',
+                        wordClass: newWordData.wordClass,
+                        translation: newWordData.translation,
+                        definition: newWordData.definition || '',
+                        tags: newWordData.tags || [],
+                        tagSource: newWordData.tagSource || 'manual',
+                        ideogram: newWordData.ideogram || '',
+                        personCategory: newWordData.personCategory || '',
+                        tone: newWordData.tone || '',
+                        stress: newWordData.stress || '',
+                        parentRootId: newWordData.parentRootId || null,
+                        derivationRuleId: newWordData.derivationRuleId || null,
+                        inflectionOverrides: {},
+                        createdAt: Date.now()
+                    };
+                    return { lexicon: [...(state.lexicon || []), newEntry] };
+                }),
+
+                updateWord: (id, updatedFields) => set((state) => ({
+                    lexicon: (state.lexicon || []).map(word =>
+                        word.id === id ? { ...word, ...updatedFields } : word
+                    )
+                })),
+
+                deleteWord: (id) => set((state) => ({
+                    lexicon: (state.lexicon || []).filter(word => word.id !== id)
+                })),
+
+                checkDuplicate: (word, translation) => {
+                    const state = get();
+                    const currentLexicon = state?.lexicon || [];
+                    const cleanInputWord = word.replace(/\*/g, '').toLowerCase();
+                    const cleanInputTrans = translation.toLowerCase();
+
+                    let isDuplicateWord = false;
+                    let isDuplicateTranslation = false;
+
+                    currentLexicon.forEach(entry => {
+                        const cleanDbWord = entry.word.replace(/\*/g, '').toLowerCase();
+                        const cleanDbTrans = entry.translation.toLowerCase();
+                        if (word && cleanDbWord === cleanInputWord) isDuplicateWord = true;
+                        if (translation && cleanDbTrans === cleanInputTrans) isDuplicateTranslation = true;
+                    });
+
+                    return { isDuplicateWord, isDuplicateTranslation };
+                }
             }),
-
-            updateWord: (id, updatedFields) => set((state) => ({
-                lexicon: (state.lexicon || []).map(word =>
-                    word.id === id ? { ...word, ...updatedFields } : word
-                )
-            })),
-
-            deleteWord: (id) => set((state) => ({
-                lexicon: (state.lexicon || []).filter(word => word.id !== id)
-            })),
-
-            checkDuplicate: (word, translation) => {
-                const state = get();
-                const currentLexicon = state?.lexicon || [];
-                const cleanInputWord = word.replace(/\*/g, '').toLowerCase();
-                const cleanInputTrans = translation.toLowerCase();
-
-                let isDuplicateWord = false;
-                let isDuplicateTranslation = false;
-
-                currentLexicon.forEach(entry => {
-                    const cleanDbWord = entry.word.replace(/\*/g, '').toLowerCase();
-                    const cleanDbTrans = entry.translation.toLowerCase();
-                    if (word && cleanDbWord === cleanInputWord) isDuplicateWord = true;
-                    if (translation && cleanDbTrans === cleanInputTrans) isDuplicateTranslation = true;
-                });
-
-                return { isDuplicateWord, isDuplicateTranslation };
-            }
-        }),
-        { name: 'conlang-lexicon' }
+            { name: 'conlang-lexicon' }
+        )
     )
 );
+
+// Cross-tab sync via BroadcastChannel
+// Shares lexicon changes between browser tabs on same device
+if (typeof BroadcastChannel !== 'undefined') {
+    share('lexicon', useLexiconStore, { ref: 'lexicon' });
+}
