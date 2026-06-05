@@ -88,7 +88,11 @@ function App(){
   const purgeBloatedGlyphs = useConfigStore(state => state.purgeBloatedGlyphs);
   
   React.useEffect(() => {
-      if (projectId) rehydrateBloat();
+      if (!projectId) {
+          useConfigStore.getState().updateConfig({ projectId: `local_${Date.now()}` });
+      } else {
+          rehydrateBloat();
+      }
   }, [projectId, rehydrateBloat]);
 
   React.useEffect(() => {
