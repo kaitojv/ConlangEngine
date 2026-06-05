@@ -64,6 +64,14 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
         return validation.harmonyResult || null;
     }, [word, vowelHarmonySets, normalizeToBase]);
 
+    const isHarmonyOverridden = useMemo(() => {
+        if (!harmonyStatus || harmonyStatus.conforms) return false;
+        const classes = (wordClass || '').split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
+        const overriddenByClass = classes.some(c => vowelHarmonyOverrideWordClasses.includes(c));
+        const overriddenByTag = (tags || []).some(t => vowelHarmonyOverrideTags.includes(t));
+        return overriddenByClass || overriddenByTag;
+    }, [wordClass, tags, vowelHarmonyOverrideWordClasses, vowelHarmonyOverrideTags, harmonyStatus]);
+
     const updateField = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
 
     // Build merged POS list
@@ -444,10 +452,12 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                     />
                     {harmonyStatus && !harmonyStatus.conforms && (
                         <div className="harmony-indicator" style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-                            <span style={{ color: vowelHarmonyMode === 'optional' ? 'var(--acc)' : '#ef4444' }}>●</span>
+                            <span style={{ color: vowelHarmonyMode === 'flexible' ? 'var(--acc)' : '#ef4444' }}>●</span>
                             <span>
-                                {vowelHarmonyMode === 'optional'
-                                    ? `Vowel harmony suggestion: [${harmonyStatus.foundVowels.join(', ')}] mix sets`
+                                {vowelHarmonyMode === 'flexible'
+                                    ? isHarmonyOverridden
+                                        ? `Vowel harmony violation: [${harmonyStatus.foundVowels.join(', ')}] — allowed due to overridden part of speech/tag`
+                                        : `Vowel harmony suggestion: [${harmonyStatus.foundVowels.join(', ')}] mix sets`
                                     : `Vowel harmony violation: [${harmonyStatus.foundVowels.join(', ')}] mix sets`}
                             </span>
                         </div>

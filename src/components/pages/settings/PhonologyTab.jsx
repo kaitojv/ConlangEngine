@@ -457,7 +457,7 @@ export default function PhonologyTab() {
                     )}
                 </div>
 
-                {vowelHarmonyMode === 'flexible' && (
+                {vowelHarmonyMode === 'optional' && (
                     <div className="settings-section-wrapper">
                         <label className="form-label">Override by Word Class</label>
                         <p style={{ color: 'var(--tx2)', fontSize: '0.85rem', marginBottom: '8px' }}>

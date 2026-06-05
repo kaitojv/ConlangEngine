@@ -127,6 +127,15 @@ export default function CreateWordTab() {
         const validation = validateNewWord(normalizeToBase(word.trim()), useConfigStore.getState());
         return validation.harmonyResult || null;
     }, [word, vowelHarmonySets, normalizeToBase]);
+
+    const isHarmonyOverridden = useMemo(() => {
+        if (!harmonyStatus || harmonyStatus.conforms) return false;
+        const classes = (wordClass || '').split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
+        const overriddenByClass = classes.some(c => vowelHarmonyOverrideWordClasses.includes(c));
+        const overriddenByTag = (tags || []).some(t => vowelHarmonyOverrideTags.includes(t));
+        return overriddenByClass || overriddenByTag;
+    }, [wordClass, tags, vowelHarmonyOverrideWordClasses, vowelHarmonyOverrideTags, harmonyStatus]);
+
     const { isDuplicateWord, isDuplicateTranslation } = checkDuplicate(word, translation);
     const isDuplicate = (isDuplicateWord || isDuplicateTranslation) && (word !== '' || translation !== '');
 
@@ -577,7 +586,9 @@ export default function CreateWordTab() {
                                 <span style={{ color: vowelHarmonyMode === 'flexible' ? 'var(--acc)' : '#ef4444' }}>●</span>
                                 <span>
                                     {vowelHarmonyMode === 'flexible'
-                                        ? `Vowel harmony suggestion: [${harmonyStatus.foundVowels.join(', ')}] mix sets`
+                                        ? isHarmonyOverridden
+                                            ? `Vowel harmony violation: [${harmonyStatus.foundVowels.join(', ')}] — allowed due to overridden part of speech/tag`
+                                            : `Vowel harmony suggestion: [${harmonyStatus.foundVowels.join(', ')}] mix sets`
                                         : `Vowel harmony violation: [${harmonyStatus.foundVowels.join(', ')}] mix sets`}
                                 </span>
                             </div>
