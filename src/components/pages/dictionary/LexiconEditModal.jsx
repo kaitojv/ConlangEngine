@@ -245,7 +245,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
             return;
         }
 
-        // Edit mode — full duplicate checking
+        // Edit mode - full duplicate checking
         const safeLowerWord = safeWord.toLowerCase();
         const safeLowerTrans = cleanInputTrans.toLowerCase();
 
@@ -318,7 +318,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                 return;
             }
 
-            if (mode === 'flexible') {
+            if (mode === 'optional') {
                 const wordClasses = (wordClass || '').split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
                 const isOverridden = wordClasses.some(c => vowelHarmonyOverrideWordClasses.includes(c)) ||
                     processedTags.some(tag => vowelHarmonyOverrideTags.includes(tag));
@@ -341,7 +341,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                 }
             }
 
-            if (mode === 'optional') {
+            if (mode === 'flexible') {
                 toast(`Vowel harmony suggestion: [${validation.harmonyResult.foundVowels.join(', ')}] mix sets (${mixedNames}).`, { icon: '💡', id: 'harmony-optional' });
             }
         }
@@ -372,7 +372,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                                 handleAddCharsToInventory([char], 'consonants');
                                 setTimeout(() => proceedToValidation(safeWord, cleanInputTrans, processedTags, doSave, charIndex + 1), 100);
                             }} className="btn-v btn-acc-v">Add to Consonants</button>
-
+                            
                             <button onClick={() => {
                                 toast.dismiss(t.id);
                                 handleAddCharsToInventory([char], 'vowels');
@@ -384,7 +384,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                                 // Skip this character but keep going with the next one
                                 setTimeout(() => proceedToValidation(safeWord, cleanInputTrans, processedTags, doSave, charIndex + 1), 100);
                             }} className="btn-v btn-err-v">Save as Irregular</button>
-
+                            
                             <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
                         </div>
                         <div className="char-violation-progress">
@@ -393,6 +393,11 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                     </div>
                 ));
                 return;
+            }
+
+            // Vowel harmony — already handled in proceedToHarmonyValidation; user agreed.
+            if (validation.type === 'vowel_harmony') {
+                return doSave();
             }
 
             // Pattern validation
@@ -406,7 +411,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                             toast.dismiss(t.id);
                             doSave();
                         }} className="btn-v btn-err-v">Save Anyway</button>
-
+                        
                         {validation.type === 'invalid_pattern' && validation.detectedPattern && (
                             <button onClick={() => {
                                 toast.dismiss(t.id);

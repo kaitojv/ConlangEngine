@@ -145,7 +145,7 @@ export default function FloatingKeyboard() {
                 // Show warning but allow save
                 toast((t) => (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <span>⚠️ Vowel harmony: [${validation.harmonyResult.foundVowels.join(', ')}] mix sets (${mixedNames}). Save anyway?</span>
+                        <span>⚠️ Vowel harmony: [{validation.harmonyResult.foundVowels.join(', ')}] mix sets ({mixedNames}). Save anyway?</span>
                         <div style={{ display: 'flex', gap: '8px' }}>
                             <button onClick={() => {
                                 toast.dismiss(t.id);

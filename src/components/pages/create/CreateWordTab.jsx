@@ -353,7 +353,7 @@ export default function CreateWordTab() {
                 return;
             }
 
-            if (mode === 'flexible') {
+            if (mode === 'optional') {
                 const wordClasses = (wordClass || '').split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
                 const isOverridden = wordClasses.some(c => vowelHarmonyOverrideWordClasses.includes(c)) ||
                     processedTags.some(tag => vowelHarmonyOverrideTags.includes(tag));
@@ -376,7 +376,7 @@ export default function CreateWordTab() {
                 }
             }
 
-            if (mode === 'optional') {
+            if (mode === 'flexible') {
                 toast(`Vowel harmony suggestion: [${validation.harmonyResult.foundVowels.join(', ')}] mix sets.`, { icon: '💡', id: 'harmony-optional' });
             }
         }
@@ -430,6 +430,11 @@ export default function CreateWordTab() {
                     </div>
                 ));
                 return;
+            }
+
+            // Vowel harmony — already handled in proceedToHarmonyValidation; user agreed.
+            if (validation.type === 'vowel_harmony') {
+                return proceedToGrammarValidation(safeWord, cleanTrans, processedTags, keepRoot);
             }
 
             // Pattern validation (runs after characters are cleared or skipped)
