@@ -134,12 +134,21 @@ export default function ConlangsTab() {
         navigate('/');
     };
 
-    const handleDeleteProject = (e, id) => {
+    const handleDeleteProject = async (e, id) => {
         e.stopPropagation(); // Stop the click from accidentally opening the project!
         
         if (!window.confirm("⚠️ Are you sure you want to permanently delete this conlang?")) return;
 
         deleteLocalProject(id);
+
+        if (session) {
+            try {
+                await supabase.from('conlangs').delete().eq('project_id', id);
+                await supabase.from('conlang_snapshots').delete().eq('project_id', id);
+            } catch (err) {
+                console.error('Failed to delete from cloud:', err);
+            }
+        }
         
         // If they deleted the language they were currently viewing, give them a fresh one
         if (config.projectId === id) {
