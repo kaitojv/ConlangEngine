@@ -55,10 +55,33 @@ export default function StressWave({ word, stress, tone, customVowelsStr, width 
     const W = 100 / Math.max(1, syllableCount);
     let path = `M 0 15 `;
     for (let i = 0; i < syllableCount; i++) {
+        const startX = i * W;
         const endX = (i + 1) * W;
         const midX = i * W + W / 2;
+        
         if (i === stressIndex) {
-            path += `Q ${midX} -5, ${endX} 15 `;
+            if (tone) {
+                const t = tone.toLowerCase();
+                if (t === 'high') {
+                    path += `L ${startX} 2 L ${endX} 2 L ${endX} 15 `;
+                } else if (t === 'low') {
+                    path += `L ${startX} 12 L ${endX} 12 L ${endX} 15 `;
+                } else if (t === 'mid') {
+                    path += `L ${startX} 8 L ${endX} 8 L ${endX} 15 `;
+                } else if (t === 'rising') {
+                    path += `L ${endX} 2 L ${endX} 15 `;
+                } else if (t === 'falling') {
+                    path += `L ${startX} 2 L ${endX} 15 `;
+                } else if (t === 'dipping') {
+                    path += `L ${startX} 2 L ${midX} 15 L ${endX} 2 L ${endX} 15 `;
+                } else if (t === 'peaking') {
+                    path += `L ${midX} 2 L ${endX} 15 `;
+                } else {
+                    path += `Q ${midX} -5, ${endX} 15 `;
+                }
+            } else {
+                path += `Q ${midX} -5, ${endX} 15 `;
+            }
         } else {
             path += `L ${endX} 15 `;
         }
