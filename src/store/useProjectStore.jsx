@@ -14,7 +14,16 @@ export const useProjectStore = create(
             const projectId = config.projectId;
             if (!projectId) return state;
 
-            const projectData = { config, dictionary: lexicon };
+            const safeConfig = JSON.parse(JSON.stringify({
+              ...config,
+              customFontBase64: undefined,
+              customFont: undefined,
+              syllabaryMap: undefined,
+              customGlyphs: undefined,
+              isRehydrating: undefined
+            }));
+            const safeLexicon = JSON.parse(JSON.stringify(lexicon));
+            const projectData = { config: safeConfig, dictionary: safeLexicon };
             const existingIdx = state.localProjects.findIndex(
               (p) => p.id === projectId,
             );
