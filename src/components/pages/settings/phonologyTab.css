@@ -252,3 +252,301 @@
     padding-top: 16px;
     border-top: 1px solid var(--bd);
 }
+
+/* ─── VOWEL HARMONY SECTION ─── */
+
+.harmony-mode-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.harmony-mode-row .form-label {
+    padding-right: 8px;
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
+.harmony-mode-select {
+    flex: 1;
+    min-width: 240px;
+    padding: 10px 14px;
+    border-radius: var(--rad-sm);
+    border: 1px solid var(--bd);
+    background-color: var(--s2);
+    color: var(--tx);
+    font-size: 0.9rem;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    cursor: pointer;
+}
+
+.harmony-mode-select:focus {
+    outline: none;
+    border-color: var(--acc);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 15%, transparent);
+}
+
+.harmony-section-desc {
+    color: var(--tx2);
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+/* Vowel Sets - Input Row */
+.harmony-add-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+    align-items: stretch;
+}
+
+.harmony-name-col {
+    flex: 0 0 160px;
+}
+
+.harmony-vowels-col {
+    flex: 1;
+}
+
+.harmony-add-btn {
+    flex: 0 0 auto;
+    align-self: flex-start;
+    margin-top: 0 !important;
+}
+
+/* Vowel Sets - List */
+.harmony-sets-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.harmony-set-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.harmony-set-item:hover {
+    border-color: color-mix(in srgb, var(--acc) 40%, var(--bd));
+    background: var(--s3);
+}
+
+.harmony-set-info {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.88rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--tx);
+    flex-wrap: wrap;
+}
+
+.harmony-set-name {
+    font-weight: 700;
+    color: var(--acc);
+}
+
+.harmony-set-vowels {
+    color: var(--tx2);
+    font-weight: 400;
+    letter-spacing: 0.5px;
+}
+
+.harmony-set-neutral-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: 99px;
+    background: color-mix(in srgb, var(--acc) 15%, transparent);
+    color: var(--acc);
+    font-family: inherit;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.harmony-set-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* Neutral toggle label */
+.harmony-neutral-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.8rem;
+    color: var(--tx2);
+    cursor: pointer;
+    padding: 3px 8px;
+    border-radius: var(--rad-sm);
+    transition: background 0.2s ease;
+}
+
+.harmony-neutral-label:hover {
+    background: color-mix(in srgb, var(--acc) 8%, transparent);
+}
+
+.harmony-neutral-label input[type="checkbox"] {
+    accent-color: var(--acc);
+}
+
+/* Icon buttons in set row */
+.harmony-icon-btn {
+    background: none;
+    border: none;
+    color: var(--tx2);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s ease, background 0.2s ease;
+}
+
+.harmony-icon-btn:hover {
+    color: var(--acc);
+    background: color-mix(in srgb, var(--acc) 10%, transparent);
+}
+
+.harmony-icon-btn.danger:hover {
+    color: var(--err);
+    background: color-mix(in srgb, var(--err) 10%, transparent);
+}
+
+/* Inline edit state */
+.harmony-edit-input {
+    width: 130px;
+    padding: 4px 8px;
+    background: var(--s4);
+    color: inherit;
+    border: 1px solid var(--acc);
+    border-radius: 4px;
+    font-size: 0.88rem;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    transition: box-shadow 0.2s ease;
+}
+
+.harmony-edit-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 20%, transparent);
+}
+
+.harmony-edit-confirm {
+    background: none;
+    border: none;
+    color: #22c55e;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+}
+
+.harmony-edit-confirm:hover {
+    background: color-mix(in srgb, #22c55e 15%, transparent);
+}
+
+.harmony-edit-cancel {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+}
+
+.harmony-edit-cancel:hover {
+    background: color-mix(in srgb, #ef4444 15%, transparent);
+}
+
+/* Empty state */
+.harmony-empty-state {
+    color: var(--tx2);
+    font-style: italic;
+    font-size: 0.85rem;
+    padding: 8px 0;
+}
+
+/* Override chips grid */
+.harmony-override-section {
+    margin-top: 18px;
+}
+
+.harmony-override-section .form-label {
+    margin-bottom: 4px;
+}
+
+.harmony-chips-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.harmony-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 99px;
+    cursor: pointer;
+    font-size: 0.83rem;
+    color: var(--tx);
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.harmony-chip:hover {
+    border-color: color-mix(in srgb, var(--acc) 50%, var(--bd));
+    background: var(--s3);
+}
+
+.harmony-chip input[type="checkbox"] {
+    accent-color: var(--acc);
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+.harmony-chip.checked {
+    border-color: var(--acc);
+    background: color-mix(in srgb, var(--acc) 12%, var(--s2));
+}
+
+.harmony-no-tags {
+    color: var(--tx2);
+    font-size: 0.85rem;
+    font-style: italic;
+    padding: 4px 0;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .harmony-add-row {
+        flex-direction: column;
+    }
+    .harmony-name-col {
+        flex: 1;
+    }
+    .harmony-mode-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

@@ -12,6 +12,7 @@ import Button from '../../UI/Buttons/Buttons.jsx';
 import applySoundChanges from '../../../utils/applysoundchanges.jsx';
 import { VisualRuleBuilder } from './grammarMatrix/VisualRuleBuilder.jsx';
 import ProsodyRulesCard from './ProsodyRulesCard.jsx';
+import MultiSelectDropdown from '../../UI/MultiSelectDropdown/MultiSelectDropdown.jsx';
 import { Info, AudioLines, Headphones, Music, Hourglass, Wand2, BookCheck, Eye, Trash2, SquarePen } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../../UI/Modal/Modal.jsx';
@@ -376,23 +377,25 @@ export default function PhonologyTab() {
                 </Infobox>
 
                 <div className="settings-section-wrapper">
-            <label className="form-label" style={{paddingRight: '8px'}}>Harmony Mode</label>
-                    <select
-                        className="sg-select"
-                        value={vowelHarmonyMode}
-                        onChange={(e) => updateConfig({ vowelHarmonyMode: e.target.value })}
-                    >
-                        {HARMONY_MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                    </select>
+                    <div className="harmony-mode-row">
+                        <label className="form-label">Harmony Mode</label>
+                        <select
+                            className="harmony-mode-select"
+                            value={vowelHarmonyMode}
+                            onChange={(e) => updateConfig({ vowelHarmonyMode: e.target.value })}
+                        >
+                            {HARMONY_MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                        </select>
+                    </div>
                 </div>
 
                 <div className="settings-section-wrapper">
                     <label className="form-label">Vowel Sets</label>
-                    <p style={{ color: 'var(--tx2)', fontSize: '0.85rem', marginBottom: '8px' }}>
+                    <p className="harmony-section-desc">
                         Name each set, enter its vowels, then add it. Repeat for each set.
                     </p>
-                    <div className="phonology-split-group" style={{ marginBottom: '12px', gap: '8px' }}>
-                        <div style={{ flex: '0 0 140px' }}>
+                    <div className="harmony-add-row">
+                        <div className="harmony-name-col">
                             <Input
                                 label=""
                                 placeholder="e.g., High"
@@ -400,7 +403,7 @@ export default function PhonologyTab() {
                                 onChange={(e) => setHarmonySetNameInput(e.target.value)}
                             />
                         </div>
-                        <div style={{ flex: 1 }}>
+                        <div className="harmony-vowels-col">
                             <Input
                                 label=""
                                 placeholder="e.g., a, o, u"
@@ -408,94 +411,78 @@ export default function PhonologyTab() {
                                 onChange={(e) => setHarmonySetsInput(e.target.value)}
                             />
                         </div>
-                        <Button style={{ flex: '0 0 140px', padding: 0, margin: 0, marginBottom: '16px' }} onClick={handleAddHarmonySet} variant="primary">Add Set</Button>
+                        <Button className="harmony-add-btn" onClick={handleAddHarmonySet} variant="primary">Add Set</Button>
                     </div>
                     {normalizedHarmonySets.length > 0 ? (
-                        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                        <ul className="harmony-sets-list">
                             {normalizedHarmonySets.map((set, i) => (
-                                <li key={i} className="flex items-center justify-between" style={{ padding: '6px 10px', background: 'var(--s3)', borderRadius: '6px', marginBottom: '6px' }}>
-                                    <span style={{ fontFamily: 'monospace', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <li key={i} className="harmony-set-item">
+                                    <span className="harmony-set-info">
                                         {editingSetIndex === i ? (
                                             <>
                                                 <input
                                                     type="text"
+                                                    className="harmony-edit-input"
                                                     value={editingSetName}
                                                     onChange={(e) => setEditingSetName(e.target.value)}
-                                                    style={{ width: '120px', padding: '2px 6px', background: 'var(--s4)', color: 'inherit', border: '1px solid var(--acc)', borderRadius: '4px', fontSize: '0.9rem', fontFamily: 'monospace' }}
                                                     autoFocus
                                                     onKeyDown={(e) => { if (e.key === 'Enter') handleSaveEdit(i); if (e.key === 'Escape') handleCancelEdit(); }}
                                                 />
-                                                <button onClick={() => handleSaveEdit(i)} style={{ background: 'none', border: 'none', color: '#22c55e', cursor: 'pointer', fontSize: '0.8rem' }}>✓</button>
-                                                <button onClick={handleCancelEdit} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem' }}>✗</button>
+                                                <button className="harmony-edit-confirm" onClick={() => handleSaveEdit(i)}>✓</button>
+                                                <button className="harmony-edit-cancel" onClick={handleCancelEdit}>✗</button>
                                             </>
                                         ) : (
                                             <>
-                                                <b>{set.neutral ? (set.name.toLowerCase() === 'neutral' ? set.name : `${set.name} (neutral)`) : set.name}:</b>
-                                                [ {set.vowels.join(' | ')} ]
+                                                <span className="harmony-set-name">
+                                                    {set.name}{set.neutral && set.name.toLowerCase() !== 'neutral' ? '' : ''}:
+                                                </span>
+                                                {set.neutral && <span className="harmony-set-neutral-badge">neutral</span>}
+                                                <span className="harmony-set-vowels">[ {set.vowels.join(' | ')} ]</span>
                                             </>
                                         )}
                                     </span>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: 'var(--tx2)', cursor: 'pointer' }}>
+                                    <div className="harmony-set-actions">
+                                        <label className="harmony-neutral-label">
                                             <input
                                                 type="checkbox"
                                                 checked={!!set.neutral}
                                                 onChange={() => handleToggleNeutral(i)}
                                             />
                                             Neutral
-                                  </label>
-                                    {editingSetIndex !== i && (
-                                    <button onClick={() => handleStartEdit(i)} style={{ background: 'none', border: 'none', color: 'var(--tx2)', cursor: 'pointer', fontSize: '0.85rem' }} title="Rename"><SquarePen size={14} /></button>
-                                    )}
-                                        <button onClick={() => handleRemoveHarmonySet(i)} style={{ background: 'none', border: 'none', color: 'var(--tx2)', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                                        </label>
+                                        {editingSetIndex !== i && (
+                                            <button className="harmony-icon-btn" onClick={() => handleStartEdit(i)} title="Rename"><SquarePen size={14} /></button>
+                                        )}
+                                        <button className="harmony-icon-btn danger" onClick={() => handleRemoveHarmonySet(i)} title="Remove"><Trash2 size={14} /></button>
                                     </div>
                                 </li>
                             ))}
                         </ul>
                     ) : (
-                        <p style={{ color: 'var(--tx2)', fontStyle: 'italic', fontSize: '0.85rem' }}>{getHarmonySetsDisplay()}</p>
+                        <p className="harmony-empty-state">{getHarmonySetsDisplay()}</p>
                     )}
                 </div>
 
                 {vowelHarmonyMode === 'flexible' && (
                     <div className="settings-section-wrapper">
-                        <label className="form-label">Override by Word Class</label>
-                        <p style={{ color: 'var(--tx2)', fontSize: '0.85rem', marginBottom: '8px' }}>
-                            Checked classes are allowed to skip harmony rules.
+                        <p className="harmony-section-desc">
+                            Select which word classes or tags are exempt from vowel harmony enforcement.
                         </p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                            {allAvailableWordClasses.map(cls => (
-                                <label key={cls} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'var(--s3)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem' }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={vowelHarmonyOverrideWordClasses.includes(cls)}
-                                        onChange={() => handleToggleOverrideWordClass(cls)}
-                                    />
-                                    {cls}
-                                </label>
-                            ))}
-                        </div>
-
-                        <label className="form-label" style={{ marginTop: '16px' }}>Override by Semantic Tag</label>
-                        <p style={{ color: 'var(--tx2)', fontSize: '0.85rem', marginBottom: '8px' }}>
-                            Checked tags are allowed to skip harmony rules.
-                        </p>
-                        {allAvailableTags.length === 0 ? (
-                            <p style={{ color: 'var(--tx2)', fontSize: '0.85rem', fontStyle: 'italic' }}>No tags in your lexicon yet.</p>
-                        ) : (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                {allAvailableTags.map(tag => (
-                                    <label key={tag} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'var(--s3)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={vowelHarmonyOverrideTags.includes(tag)}
-                                            onChange={() => handleToggleOverrideTag(tag)}
-                                        />
-                                        {tag}
-                                    </label>
-                                ))}
-                            </div>
-                        )}
+                        <MultiSelectDropdown
+                            label="Override by Word Class"
+                            options={allAvailableWordClasses}
+                            selected={vowelHarmonyOverrideWordClasses}
+                            onToggle={handleToggleOverrideWordClass}
+                            placeholder="Select exempt word classes..."
+                        />
+                        <MultiSelectDropdown
+                            label="Override by Semantic Tag"
+                            options={allAvailableTags}
+                            selected={vowelHarmonyOverrideTags}
+                            onToggle={handleToggleOverrideTag}
+                            placeholder="Select exempt tags..."
+                            emptyMessage="No tags in your lexicon yet."
+                        />
                     </div>
                 )}
             </Card>
