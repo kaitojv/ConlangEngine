@@ -148,7 +148,7 @@ const STORE_NAME = 'bloat';
 const saveLargeDataToDB = (projectId, data) => {
     return new Promise((resolve) => {
         if (!projectId) return resolve(false);
-        const req = indexedDB.open(DB_NAME, 2);
+        const req = indexedDB.open(DB_NAME, 3);
         req.onupgradeneeded = (e) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains(STORE_NAME)) {
@@ -176,7 +176,13 @@ const saveLargeDataToDB = (projectId, data) => {
 const loadLargeDataFromDB = (projectId) => {
     return new Promise((resolve) => {
         if (!projectId) return resolve(null);
-        const req = indexedDB.open(DB_NAME, 2);
+        const req = indexedDB.open(DB_NAME, 3);
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME);
+            }
+        };
         req.onsuccess = (e) => {
             try {
                 const db = e.target.result;
