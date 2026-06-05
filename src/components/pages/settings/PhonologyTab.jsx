@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import Card from '../../UI/Card/Card.jsx';
@@ -12,7 +12,7 @@ import Button from '../../UI/Buttons/Buttons.jsx';
 import applySoundChanges from '../../../utils/applysoundchanges.jsx';
 import { VisualRuleBuilder } from './grammarMatrix/VisualRuleBuilder.jsx';
 import ProsodyRulesCard from './ProsodyRulesCard.jsx';
-import { Wand2, Info, AudioLines, Hourglass, Eye, BookCheck, Headphones } from 'lucide-react';
+import { Info, AudioLines, Headphones, Music, Hourglass, Wand2, BookCheck, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../../UI/Modal/Modal.jsx';
 import './phonologyTab.css'
@@ -30,6 +30,10 @@ export default function PhonologyTab() {
     const syllabificationAlgorithm = useConfigStore((state) => state.syllabificationAlgorithm) || 'ltr';
     const azureTtsVoice = useConfigStore((state) => state.azureTtsVoice) || 'en-US-JennyNeural';
     const azureTtsUseIpa = useConfigStore((state) => state.azureTtsUseIpa) ?? true;
+    const vowelHarmonyMode = useConfigStore((state) => state.vowelHarmonyMode) || 'complete';
+    const vowelHarmonySets = useConfigStore((state) => state.vowelHarmonySets) || [];
+    const vowelHarmonyOverrideWordClasses = useConfigStore((state) => state.vowelHarmonyOverrideWordClasses) || [];
+    const vowelHarmonyOverrideTags = useConfigStore((state) => state.vowelHarmonyOverrideTags) || [];
     const updateConfig = useConfigStore((state) => state.updateConfig);
 
     const AZURE_VOICES = [
@@ -70,7 +74,73 @@ export default function PhonologyTab() {
     const [pendingChanges, setPendingChanges] = useState(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
-    // Run the user's test words through the sound change engine
+    const HARMONY_MODES = [
+        { value: 'complete', label: 'Complete — All words must conform to vowel harmony' },
+        { value: 'optional', label: 'Optional — Override allowed per word class or tag' },
+        { value: 'flexible', label: 'Flexible — Suggestions displayed, no enforcement' },
+    ];
+
+    const [harmonySetsInput, setHarmonySetsInput] = useState('');
+    const [harmonySetNameInput, setHarmonySetNameInput] = useState('');
+
+    const normalizedHarmonySets = useMemo(() => {
+        return (vowelHarmonySets || []).map((s, i) => {
+            if (Array.isArray(s)) return { name: `Set ${i + 1}`, vowels: s };
+            if (s && Array.isArray(s.vowels)) return { name: s.name || `Set ${i + 1}`, vowels: s.vowels };
+            return { name: `Set ${i + 1}`, vowels: [] };
+        });
+    }, [vowelHarmonySets]);
+
+    const getHarmonySetsDisplay = () => {
+        if (normalizedHarmonySets.length === 0) return 'No sets defined yet.';
+        return normalizedHarmonySets.map((set) => `${set.name}: [${set.vowels.join(', ')}]`).join(' | ');
+    };
+
+    const handleAddHarmonySet = () => {
+        const parts = harmonySetsInput.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+        if (parts.length === 0) { toast.error('Enter vowels separated by commas.'); return; }
+        if (parts.length < 2) { toast.error('A vowel set needs at least 2 vowels.'); return; }
+        const name = harmonySetNameInput.trim() || `Set ${normalizedHarmonySets.length + 1}`;
+        const newSets = [...vowelHarmonySets, { name, vowels: parts }];
+        updateConfig({ vowelHarmonySets: newSets });
+        setHarmonySetsInput('');
+        setHarmonySetNameInput('');
+        toast.success(`Added vowel set "${name}": [${parts.join(', ')}]`);
+    };
+
+    const handleRemoveHarmonySet = (index) => {
+        const newSets = vowelHarmonySets.filter((_, i) => i !== index);
+        updateConfig({ vowelHarmonySets: newSets });
+    };
+
+    const handleToggleOverrideWordClass = (cls) => {
+        const list = vowelHarmonyOverrideWordClasses.includes(cls)
+            ? vowelHarmonyOverrideWordClasses.filter(c => c !== cls)
+            : [...vowelHarmonyOverrideWordClasses, cls];
+        updateConfig({ vowelHarmonyOverrideWordClasses: list });
+    };
+
+    const handleToggleOverrideTag = (tag) => {
+        const list = vowelHarmonyOverrideTags.includes(tag)
+            ? vowelHarmonyOverrideTags.filter(t => t !== tag)
+            : [...vowelHarmonyOverrideTags, tag];
+        updateConfig({ vowelHarmonyOverrideTags: list });
+    };
+
+    // Build available classes / tags from lexicon + custom store
+    const allAvailableWordClasses = useMemo(() => {
+        const merged = new Set(['noun','verb','adjective','adverb','pronoun','particle','conjunction','preposition']);
+        lexicon.forEach(w => {
+            if (w.wordClass) w.wordClass.split(',').forEach(c => { const cl = c.trim().toLowerCase(); if (cl) merged.add(cl); });
+        });
+        return [...merged].sort();
+    }, [lexicon]);
+
+    const allAvailableTags = useMemo(() => {
+        const merged = new Set();
+        lexicon.forEach(w => { if (w.tags) w.tags.forEach(t => merged.add(t.toLowerCase())); });
+        return [...merged].sort();
+    }, [lexicon]);
     const handlePreview = () => {
         if (!testWords.trim()) {
             setPreviewResults([]);
@@ -241,6 +311,112 @@ export default function PhonologyTab() {
                             <option value="ltr">Left-to-Right Greedy</option>
                             <option value="rtl">Right-to-Left Greedy</option>
                         </select>
+                    </div>
+                )}
+            </Card>
+            
+            {/* ─── VOWEL HARMONY SECTION ─── */}
+            <Card>
+                <h2 className="flex sg-title"><Music /> Vowel Harmony</h2>
+
+                <Infobox title="Vowel Harmony">
+                    Define which vowels group together into harmony sets. The engine validates words based on the selected mode:
+                    <br /><br />
+                    <b>Complete</b> — Every word must use vowels from a single set only.<br />
+                    <b>Optional</b> — Words should conform, but can be overridden for specific word classes or tags.<br />
+                    <b>Flexible</b> — Harmony status is shown inline; suggestions are made but never enforced.
+                </Infobox>
+
+                <div className="settings-section-wrapper">
+                    <label className="form-label">Harmony Mode</label>
+                    <select
+                        className="sg-select"
+                        value={vowelHarmonyMode}
+                        onChange={(e) => updateConfig({ vowelHarmonyMode: e.target.value })}
+                    >
+                        {HARMONY_MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                    </select>
+                </div>
+
+                <div className="settings-section-wrapper">
+                    <label className="form-label">Vowel Sets</label>
+                    <p style={{ color: 'var(--tx2)', fontSize: '0.85rem', marginBottom: '8px' }}>
+                        Name each set, enter its vowels, then add it. Repeat for each set.
+                    </p>
+                    <div className="phonology-split-group" style={{ marginBottom: '12px', gap: '8px' }}>
+                        <div style={{ flex: '0 0 140px' }}>
+                            <Input
+                                label=""
+                                placeholder="e.g., High"
+                                value={harmonySetNameInput}
+                                onChange={(e) => setHarmonySetNameInput(e.target.value)}
+                            />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <Input
+                                label=""
+                                placeholder="e.g., a, o, u"
+                                value={harmonySetsInput}
+                                onChange={(e) => setHarmonySetsInput(e.target.value)}
+                            />
+                        </div>
+                        <Button onClick={handleAddHarmonySet} variant="primary">Add Set</Button>
+                    </div>
+                    {normalizedHarmonySets.length > 0 ? (
+                        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                            {normalizedHarmonySets.map((set, i) => (
+                                <li key={i} className="flex items-center justify-between" style={{ padding: '6px 10px', background: 'var(--s3)', borderRadius: '6px', marginBottom: '6px' }}>
+                                    <span style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                                        <b>{set.name}:</b> [ {set.vowels.join(' | ')} ]
+                                    </span>
+                                    <button onClick={() => handleRemoveHarmonySet(i)} style={{ background: 'none', border: 'none', color: 'var(--tx2)', cursor: 'pointer' }}>🗑</button>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p style={{ color: 'var(--tx2)', fontStyle: 'italic', fontSize: '0.85rem' }}>{getHarmonySetsDisplay()}</p>
+                    )}
+                </div>
+
+                {vowelHarmonyMode === 'optional' && (
+                    <div className="settings-section-wrapper">
+                        <label className="form-label">Override by Word Class</label>
+                        <p style={{ color: 'var(--tx2)', fontSize: '0.85rem', marginBottom: '8px' }}>
+                            Checked classes are allowed to skip harmony rules.
+                        </p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            {allAvailableWordClasses.map(cls => (
+                                <label key={cls} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'var(--s3)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={vowelHarmonyOverrideWordClasses.includes(cls)}
+                                        onChange={() => handleToggleOverrideWordClass(cls)}
+                                    />
+                                    {cls}
+                                </label>
+                            ))}
+                        </div>
+
+                        <label className="form-label" style={{ marginTop: '16px' }}>Override by Semantic Tag</label>
+                        <p style={{ color: 'var(--tx2)', fontSize: '0.85rem', marginBottom: '8px' }}>
+                            Checked tags are allowed to skip harmony rules.
+                        </p>
+                        {allAvailableTags.length === 0 ? (
+                            <p style={{ color: 'var(--tx2)', fontSize: '0.85rem', fontStyle: 'italic' }}>No tags in your lexicon yet.</p>
+                        ) : (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                {allAvailableTags.map(tag => (
+                                    <label key={tag} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'var(--s3)', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={vowelHarmonyOverrideTags.includes(tag)}
+                                            onChange={() => handleToggleOverrideTag(tag)}
+                                        />
+                                        {tag}
+                                    </label>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
             </Card>

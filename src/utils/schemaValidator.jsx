@@ -22,7 +22,8 @@ const VALID_CONFIG_KEYS = new Set([
     'numberMatrix', 'numberDerivedRules', 'timeSystemVocab', 'alphabetGlyphs',
     'semanticMappings', 'wordAssistConfig', 'autoReturnToLexicon',
     'enableToneAndStress', 'functionWords',
-    'stressRules', 'toneRules', 'isPublic', 'conlangIcon'
+    'stressRules', 'toneRules', 'isPublic', 'conlangIcon',
+    'vowelHarmonyMode', 'vowelHarmonySets', 'vowelHarmonyOverrideWordClasses', 'vowelHarmonyOverrideTags'
 ]);
 
 /**

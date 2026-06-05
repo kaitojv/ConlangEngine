@@ -32,6 +32,9 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
     const syllablePattern = useConfigStore(state => state.syllablePattern);
     const customWordClasses = useConfigStore((state) => state.customWordClasses) || [];
     const customTags = useConfigStore((state) => state.customTags) || [];
+    const vowelHarmonyMode = useConfigStore((state) => state.vowelHarmonyMode) || 'complete';
+    const vowelHarmonyOverrideWordClasses = useConfigStore((state) => state.vowelHarmonyOverrideWordClasses) || [];
+    const vowelHarmonyOverrideTags = useConfigStore((state) => state.vowelHarmonyOverrideTags) || [];
     
     const [activeField, setActiveField] = useState('word');
 
@@ -53,6 +56,12 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
     }, [wordObj.derivationRuleId, grammarRules]);
 
     const { transliterate, normalizeToBase } = useTransliterator();
+
+    const harmonyStatus = useMemo(() => {
+        if (!word.trim() || !vowelHarmonySets || vowelHarmonySets.length === 0) return null;
+        const validation = validateNewWord(normalizeToBase(word.trim()), useConfigStore.getState());
+        return validation.harmonyResult || null;
+    }, [word, vowelHarmonySets, normalizeToBase]);
 
     const updateField = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
 
@@ -222,7 +231,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                         <div className="toast-actions-v">
                             <button onClick={() => {
                                 toast.dismiss(t.id);
-                                proceedToValidation(safeWord, cleanInputTrans, processedTags, () => saveFn(safeWord, cleanInputTrans, processedTags));
+                                proceedToHarmonyValidation(safeWord, cleanInputTrans, processedTags, () => saveFn(safeWord, cleanInputTrans, processedTags));
                             }} className="btn-v btn-err-v">Save Anyway</button>
                             <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
                         </div>
@@ -231,7 +240,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                 return;
             }
 
-            proceedToValidation(safeWord, cleanInputTrans, processedTags, () => saveFn(safeWord, cleanInputTrans, processedTags));
+            proceedToHarmonyValidation(safeWord, cleanInputTrans, processedTags, () => saveFn(safeWord, cleanInputTrans, processedTags));
             return;
         }
 
@@ -265,7 +274,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                     <div className="toast-actions-v">
                         <button onClick={() => {
                             toast.dismiss(t.id);
-                            proceedToValidation(safeWord, cleanInputTrans, processedTags, () => saveFn(safeWord, cleanInputTrans, processedTags));
+                            proceedToHarmonyValidation(safeWord, cleanInputTrans, processedTags, () => saveFn(safeWord, cleanInputTrans, processedTags));
                         }} className="btn-v btn-err-v">Save Anyway</button>
                         <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
                     </div>
@@ -274,7 +283,69 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
             return;
         }
 
-        proceedToValidation(safeWord, cleanInputTrans, processedTags, () => saveFn(safeWord, cleanInputTrans, processedTags));
+        proceedToHarmonyValidation(safeWord, cleanInputTrans, processedTags, () => saveFn(safeWord, cleanInputTrans, processedTags));
+    };
+
+    const proceedToHarmonyValidation = (safeWord, cleanInputTrans, processedTags, doSave, charIndex = 0) => {
+        const validation = validateNewWord(safeWord, useConfigStore.getState());
+
+        const getSetName = (idx) => {
+            const set = (vowelHarmonySets || [])[idx];
+            if (set && set.name) return set.name;
+            if (Array.isArray(set)) return `Set ${idx + 1}`;
+            return `Set ${idx + 1}`;
+        };
+
+        if (validation.harmonyResult && !validation.harmonyResult.conforms) {
+            const mode = vowelHarmonyMode || 'complete';
+            const mixedNames = validation.harmonyResult.mixedSets.map(i => getSetName(i)).join(', ');
+
+            if (mode === 'complete') {
+                showValidationToast((t) => (
+                    <div className="custom-toast-v">
+                        <strong>⚠️ Vowel Harmony Violation</strong>
+                        <span>Vowels [{validation.harmonyResult.foundVowels.join(', ')}] mix across harmony sets ({mixedNames}).</span>
+                        <div className="toast-actions-v">
+                            <button onClick={() => {
+                                toast.dismiss(t.id);
+                                proceedToValidation(safeWord, cleanInputTrans, processedTags, doSave, charIndex);
+                            }} className="btn-v btn-err-v">Save Anyway</button>
+                            <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                        </div>
+                    </div>
+                ));
+                return;
+            }
+
+            if (mode === 'optional') {
+                const wordClasses = (wordClass || '').split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
+                const isOverridden = wordClasses.some(c => vowelHarmonyOverrideWordClasses.includes(c)) ||
+                    processedTags.some(tag => vowelHarmonyOverrideTags.includes(tag));
+
+                if (!isOverridden) {
+                    showValidationToast((t) => (
+                        <div className="custom-toast-v">
+                            <strong>⚠️ Vowel Harmony</strong>
+                            <span>Vowels [{validation.harmonyResult.foundVowels.join(', ')}] mix harmony sets ({mixedNames}). Override for this word?</span>
+                            <div className="toast-actions-v">
+                                <button onClick={() => {
+                                    toast.dismiss(t.id);
+                                    proceedToValidation(safeWord, cleanInputTrans, processedTags, doSave, charIndex);
+                                }} className="btn-v btn-err-v">Save Anyway</button>
+                                <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                            </div>
+                        </div>
+                    ));
+                    return;
+                }
+            }
+
+            if (mode === 'flexible') {
+                toast(`Vowel harmony suggestion: [${validation.harmonyResult.foundVowels.join(', ')}] mix sets (${mixedNames}).`, { icon: '💡', id: 'harmony-flexible' });
+            }
+        }
+
+        proceedToValidation(safeWord, cleanInputTrans, processedTags, doSave, charIndex);
     };
 
     const proceedToValidation = (safeWord, cleanInputTrans, processedTags, doSave, charIndex = 0) => {
@@ -365,6 +436,22 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                         onFocus={() => setActiveField('word')}
                         className="custom-font-text notranslate"
                     />
+                    {harmonyStatus && !harmonyStatus.conforms && (
+                        <div className="harmony-indicator" style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ color: vowelHarmonyMode === 'flexible' ? 'var(--acc)' : '#ef4444' }}>●</span>
+                            <span>
+                                {vowelHarmonyMode === 'flexible'
+                                    ? `Vowel harmony suggestion: [${harmonyStatus.foundVowels.join(', ')}] mix sets`
+                                    : `Vowel harmony violation: [${harmonyStatus.foundVowels.join(', ')}] mix sets`}
+                            </span>
+                        </div>
+                    )}
+                    {harmonyStatus && harmonyStatus.conforms && harmonyStatus.matchingSet >= 0 && (
+                        <div className="harmony-indicator" style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ color: '#22c55e' }}>●</span>
+                            <span>Conforms to {harmonyStatus.matchingSetName || `Set ${harmonyStatus.matchingSet + 1}`}</span>
+                        </div>
+                    )}
                 </div>
                 
                 <div>

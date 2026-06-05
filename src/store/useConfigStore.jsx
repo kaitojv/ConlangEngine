@@ -116,6 +116,11 @@ export const INITIAL_CONFIG = {
         month: '',
         year: ''
     },
+    // Vowel harmony configuration
+    vowelHarmonyMode: 'complete', // 'complete' | 'optional' | 'flexible'
+    vowelHarmonySets: [], // Array<{ name: string, vowels: string[] }>
+    vowelHarmonyOverrideWordClasses: [], // word classes exempted in 'optional' mode
+    vowelHarmonyOverrideTags: [], // semantic tags exempted in 'optional' mode
     // { 'a': '\uE001', 'b': '\uE002' }
     alphabetGlyphs: {},
     // { [synsetId]: { word: '...', ipa: '...', meaning: '...' } },
