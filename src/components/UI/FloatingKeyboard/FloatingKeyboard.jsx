@@ -4,6 +4,8 @@ import 'react-simple-keyboard/build/css/index.css';
 import { Keyboard as KeyboardIcon, Plus, X, Book, BookPlus, Languages } from 'lucide-react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
+import { validateNewWord } from '@/utils/validationEngine.jsx';
+import toast from 'react-hot-toast';
 import IpaChart from '../IpaChart/Ipachart.jsx';
 import './floatingKeyboard.css';
 
@@ -11,7 +13,7 @@ const Keyboard = SimpleKeyboard.default || SimpleKeyboard;
 
 export default function FloatingKeyboard() {
     const [isFabOpen, setIsFabOpen] = useState(false);
-    
+
     const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
     const [isLexiconOpen, setIsLexiconOpen] = useState(false);
     const [isAddWordOpen, setIsAddWordOpen] = useState(false);
@@ -25,6 +27,8 @@ export default function FloatingKeyboard() {
     // Stores
     const vowels = useConfigStore(state => state.vowels) || "";
     const consonants = useConfigStore(state => state.consonants) || "";
+    const vowelHarmonyMode = useConfigStore(state => state.vowelHarmonyMode) || 'complete';
+    const vowelHarmonySets = useConfigStore(state => state.vowelHarmonySets) || [];
     const lexicon = useLexiconStore(state => state.lexicon) || [];
     const setLexicon = useLexiconStore(state => state.setLexicon);
 
@@ -42,7 +46,7 @@ export default function FloatingKeyboard() {
                 return parts.length > 1 ? parts[1].trim() : parts[0].trim();
             }).filter(Boolean);
         };
-        
+
         const allLetters = [...extract(vowels), ...extract(consonants)];
 
         // Fallback to QWERTY if no letters are configured
@@ -118,9 +122,41 @@ export default function FloatingKeyboard() {
 
     const handleQuickSaveWord = () => {
         if (!newWord.word) return;
+
+        // Validate word including vowel harmony
+        const config = useConfigStore.getState();
+        const validation = validateNewWord(newWord.word.trim(), config, newWord.wordClass, []);
+
+        // Engine enforces Complete (always) and Flexible (unless overridden).
+        if (!validation.valid && validation.type === 'vowel_harmony') {
+            const mode = vowelHarmonyMode || 'complete';
+            const mixedNames = validation.harmonyResult.mixedSets.map(i => {
+                const set = (vowelHarmonySets || [])[i];
+                if (set && set.name) return set.name;
+                return `Set ${i + 1}`;
+            }).join(', ');
+            const title = mode === 'complete' ? 'Vowel harmony violation' : 'Vowel harmony (not exempted)';
+            toast.error(`${title}: [${validation.harmonyResult.foundVowels.join(', ')}] mix across sets (${mixedNames}). Save blocked.`);
+            return;
+        }
+
+        // Optional mode - show suggestion toast but proceed
+        if (validation.harmonyResult && !validation.harmonyResult.conforms) {
+            const mixedNames = validation.harmonyResult.mixedSets.map(i => {
+                const set = (vowelHarmonySets || [])[i];
+                if (set && set.name) return set.name;
+                return `Set ${i + 1}`;
+            }).join(', ');
+            toast(`Vowel harmony suggestion: [${validation.harmonyResult.foundVowels.join(', ')}] mix sets (${mixedNames}).`, { icon: '💡' });
+        }
+
+        proceedWithSave();
+    };
+
+    const proceedWithSave = () => {
         const newEntry = {
             id: Date.now(),
-            word: newWord.word,
+            word: newWord.word.trim(),
             ipa: '',
             wordClass: newWord.wordClass,
             translation: newWord.translation,
@@ -132,6 +168,7 @@ export default function FloatingKeyboard() {
         if (setLexicon) setLexicon([...lexicon, newEntry]);
         setIsAddWordOpen(false);
         setNewWord({ word: "", wordClass: "", translation: "" });
+        toast.success('Word added!');
     };
 
     const insertTextAtCursor = (insertStr, isBackspace = false) => {
@@ -236,7 +273,7 @@ export default function FloatingKeyboard() {
                     <Keyboard keyboardRef={r => (keyboardRef.current = r)} layoutName={layoutName} layout={customLayout} onKeyPress={onKeyPress} theme={"hg-theme-default my-custom-keyboard-theme"} display={{ "{bksp}": "⌫", "{enter}": "↵", "{shift}": "⇧", "{space}": "␣", "{lock}": "⇪" }} preventMouseDownDefault={true} />
                 </div>
             )}
-            
+
             {isLexiconOpen && (
                 <div className="virtual-keyboard-container">
                     <div className="virtual-keyboard-header">

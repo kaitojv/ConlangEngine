@@ -35,11 +35,11 @@ export default function AnalyzerTab() {
     // Let's check if a word perfectly follows the rules of our syllabary (if the language uses one)
     const isStrictlySyllabic = (word) => {
         if (config.phonologyTypes !== 'syllabic' || !config.syllabaryMap) return true;
-        
+
         const clean = normalizeToBase(word.toLowerCase());
         const syllables = Object.keys(config.syllabaryMap).sort((a, b) => b.length - a.length);
         if (syllables.length === 0) return true;
-        
+
         let i = 0;
         while (i < clean.length) {
             const match = syllables.find(s => clean.startsWith(s, i) && config.syllabaryMap[s]);
@@ -52,7 +52,7 @@ export default function AnalyzerTab() {
     // Time to dig into the word recursively to find its root and any attached affixes
     const findAllParsings = (surface, depth = 0) => {
         if (depth > 3) return []; // Safety net to prevent infinite loops on crazy long words
-        
+
         const parsings = [];
         const safeSurface = normalizeToBase(surface.toLowerCase());
 
@@ -65,22 +65,22 @@ export default function AnalyzerTab() {
             const cleanAffix = rule.affix ? rule.affix.replace(/^-|-$/g, '').toLowerCase() : null;
             const normFree = rule.freeForm ? normalizeToBase(rule.freeForm.toLowerCase()) : null;
             const normAffix = cleanAffix ? normalizeToBase(cleanAffix) : null;
-            
+
             const isFreeMatch = normFree && normFree === safeSurface;
-            
+
             // Flexible match for affixes: allow matching even if apostrophes are "shared" or slightly different
             const isAffixMatch = normAffix && (
-                normAffix === safeSurface || 
+                normAffix === safeSurface ||
                 normAffix.replace(/^['’‘]/, '') === safeSurface ||
                 normAffix === safeSurface.replace(/^['’‘]/, '')
             );
 
             if (isFreeMatch || isAffixMatch) {
                 parsings.push({
-                    root: { 
-                        word: rule.freeForm || cleanAffix, 
-                        wordClass: 'pronoun', 
-                        translation: `Person (${rule.name})` 
+                    root: {
+                        word: rule.freeForm || cleanAffix,
+                        wordClass: 'pronoun',
+                        translation: `Person (${rule.name})`
                     },
                     rules: [],
                 });
@@ -98,13 +98,13 @@ export default function AnalyzerTab() {
 
         // Finally, start stripping off grammar affixes one by one to see what's underneath
         const allRules = [
-            ...(config.grammarRules || []), 
+            ...(config.grammarRules || []),
             ...personRules.filter(p => p.affix).map(p => ({ ...p, appliesTo: p.appliesTo || 'all' }))
         ];
 
         allRules.forEach(rule => {
             if (!rule.affix) return;
-            
+
             const stripped = stripAffix(safeSurface, rule.affix, normalizeToBase);
             if (stripped) {
                 findAllParsings(stripped, depth + 1).forEach(sp => {
@@ -118,7 +118,7 @@ export default function AnalyzerTab() {
                 });
             }
         });
-        
+
         return parsings;
     };
 
@@ -127,15 +127,15 @@ export default function AnalyzerTab() {
         const parsings = findAllParsings(surface);
         const unique = [];
         const signatures = new Set();
-        
+
         parsings.forEach(parse => {
             const signature = `${parse.root.word}|${parse.root.translation}|${parse.rules.map(r => r.name).join('|')}`;
-            if (!signatures.has(signature)) { 
-                signatures.add(signature); 
-                unique.push(parse); 
+            if (!signatures.has(signature)) {
+                signatures.add(signature);
+                unique.push(parse);
             }
         });
-        
+
         return unique;
     };
 
@@ -147,7 +147,7 @@ export default function AnalyzerTab() {
             setIsModalOpen(false);
             return;
         }
-        
+
         // 1. Initial split by whitespace
         const initialTokens = inputText.trim().split(/\s+/);
         const finalTokens = [];
@@ -156,7 +156,7 @@ export default function AnalyzerTab() {
         initialTokens.forEach(token => {
             const cleanToken = token.replace(/[.,!?]/g, '');
             const segments = segmentToken(cleanToken, lexicon, config, normalizeToBase, getUniqueParsings);
-            
+
             segments.forEach(seg => {
                 finalTokens.push({
                     original: seg,
@@ -167,7 +167,7 @@ export default function AnalyzerTab() {
                 });
             });
         });
-        
+
         setAnalyzedWords(finalTokens);
         setTranslation('');
         setIsModalOpen(true);
@@ -194,25 +194,25 @@ export default function AnalyzerTab() {
     // Check if the overall sentence structure matches the user's defined syntax order
     const syntaxStatus = useMemo(() => {
         if (analyzedWords.length === 0) return null;
-        
+
         const pattern = [];
         let sentenceHasHiddenSubject = false;
-        
+
         analyzedWords.forEach(wData => {
             if (wData.parsings.length === 0) return;
             const parse = wData.parsings[wData.selectedIdx];
-            
+
             const transLower = parse.root.translation?.toLowerCase() || '';
             const isObjTrans = ['acc', 'acu', 'obj', 'dat', 'patient'].some(t => transLower.includes(t));
             const isObjRule = parse.rules.some(r => ['acc', 'acu', 'obj', 'dat', 'patient'].some(t => r.name.toLowerCase().includes(t)));
-            
+
             const isObj = isObjTrans || isObjRule;
             const isSubj = (parse.root.wordClass === 'noun' || parse.root.wordClass === 'pronoun') && !isObj;
             const defaultRole = (parse.root.wordClass === 'verb') ? 'V' : (isObj ? 'O' : (isSubj ? 'S' : ''));
-            
+
             const finalRole = wData.manualRole !== null ? wData.manualRole : defaultRole;
             if (finalRole) pattern.push(finalRole);
-            
+
             if (finalRole === 'V') {
                 const isPersonMarked = parse.rules.some(r => {
                     const n = r.name.toUpperCase();
@@ -222,7 +222,7 @@ export default function AnalyzerTab() {
                         return config.personRules.toUpperCase().includes(n);
                     }
                     if (Array.isArray(config.personRules)) {
-                        return config.personRules.some(p => 
+                        return config.personRules.some(p =>
                             (p.name && p.name.toUpperCase().includes(n)) ||
                             (p.person && p.person.toUpperCase().includes(n))
                         );
@@ -232,13 +232,13 @@ export default function AnalyzerTab() {
                 if (isPersonMarked) sentenceHasHiddenSubject = true;
             }
         });
-        
+
         if (pattern.length === 0) return null;
-        
+
         let cleanedPattern = pattern.filter((v, i, a) => v !== a[i - 1]).join('');
         const targetOrder = config.syntaxOrder || 'SVO';
         let isValid = cleanedPattern === targetOrder || cleanedPattern.includes(targetOrder);
-        
+
         if (!isValid && sentenceHasHiddenSubject && !cleanedPattern.includes('S')) {
             const targetWithoutS = targetOrder.replace('S', '');
             if (cleanedPattern === targetWithoutS || cleanedPattern.includes(targetWithoutS)) {
@@ -246,27 +246,27 @@ export default function AnalyzerTab() {
                 cleanedPattern = `${cleanedPattern} (+ Agglutinated S)`;
             }
         }
-        
+
         return { isValid, cleanedPattern, targetOrder };
     }, [analyzedWords, config.syntaxOrder, config.personRules]);
 
     // Spin up a rough English translation based on the found roots and grammar tags
     const handleTranslate = () => {
         if (analyzedWords.length === 0) return;
-        
+
         const subjects = [];
-        const verbs = []; 
-        const objects = []; 
+        const verbs = [];
+        const objects = [];
         const others = [];
-        
+
         analyzedWords.forEach(wData => {
             if (wData.parsings.length === 0) {
                 others.push("???"); return;
             }
-            
+
             const parse = wData.parsings[wData.selectedIdx];
             const transLower = parse.root.translation?.toLowerCase() || '';
-            
+
             let role = wData.manualRole;
             if (!role) {
                 const isObjTrans = ['acc', 'acu', 'obj', 'dat', 'patient'].some(t => transLower.includes(t));
@@ -275,9 +275,9 @@ export default function AnalyzerTab() {
                 const isSubj = (parse.root.wordClass === 'noun' || parse.root.wordClass === 'pronoun') && !isObj;
                 role = (parse.root.wordClass === 'verb') ? 'V' : (isObj ? 'O' : (isSubj ? 'S' : ''));
             }
-            
+
             let baseTrans = parse.root.translation?.split(',')[0].trim() || parse.root.word;
-            
+
             // Map common person codes to English pronouns
             const pronounMap = {
                 '1s': { subj: 'I', obj: 'me' },
@@ -296,17 +296,17 @@ export default function AnalyzerTab() {
 
             const isGhostPerson = baseTrans.startsWith('Person (');
             let personCode = isGhostPerson ? baseTrans.match(/\(([^)]+)\)/)?.[1]?.toLowerCase() : null;
-            
+
             if (role === 'V' && baseTrans.toLowerCase().startsWith('to ')) baseTrans = baseTrans.substring(3);
-            
+
             const remainingTags = [];
             let hiddenPronoun = null;
             let isAccusative = false;
-            
+
             parse.rules.forEach(r => {
                 const n = r.name.toLowerCase();
                 const standardCode = n.match(/[123][sp]/)?.[0];
-                
+
                 if (pronounMap[n]) hiddenPronoun = pronounMap[n].subj;
                 else if (standardCode && pronounMap[standardCode]) hiddenPronoun = pronounMap[standardCode].subj;
                 else if (n.includes('past')) baseTrans = baseTrans.endsWith('e') ? baseTrans + 'd' : baseTrans + 'ed';
@@ -325,18 +325,18 @@ export default function AnalyzerTab() {
             } else if (isGhostPerson && personCode) {
                 baseTrans = personCode.toUpperCase(); // Fallback to code if not in map
             }
-            
+
             if (hiddenPronoun && role === 'V') subjects.push(hiddenPronoun);
-            
+
             let finalWord = baseTrans;
             if (remainingTags.length > 0) finalWord += ` [${remainingTags.join(', ')}]`;
-            
+
             if (role === 'S') subjects.push(finalWord);
             else if (role === 'V') verbs.push(finalWord);
             else if (role === 'O') objects.push(finalWord);
             else others.push(finalWord);
         });
-        
+
         let translatedSentence = [...new Set(subjects), ...verbs, ...objects, ...others].join(' ');
         if (translatedSentence.length > 0) translatedSentence = translatedSentence.charAt(0).toUpperCase() + translatedSentence.slice(1);
         setTranslation(translatedSentence);
@@ -347,7 +347,7 @@ export default function AnalyzerTab() {
             <Card>
                 <h2 className='flex sg-title analyzer-header-title'><FlaskConical /> Syntax & Morphology Analyzer</h2>
                 <p className="analyzer-description">Enter a sentence in your conlang. The engine will recursively strip affixes and identify the roots to analyze your syntax order.</p>
-                
+
                 <Input label="Sentence to Analyze" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="Type your conlang phrase here..." className="custom-font-text notranslate" />
                 <Button onClick={handleAnalyze} variant='edit' className="execute-analysis-btn">
                     <div className="analyzer-btn-content"><Search size={18} /> Execute Analysis</div>
@@ -361,26 +361,26 @@ export default function AnalyzerTab() {
                             <div className={`syntax-status-box ${syntaxStatus.isValid ? 'status-valid' : 'status-invalid'}`}>
                                 {syntaxStatus.isValid ? (
                                     <>
-                                        <CheckCircle2 size={16} className="status-icon"/> 
+                                        <CheckCircle2 size={16} className="status-icon"/>
                                         <b>Valid Syntax!</b> Sentence matches <b>{syntaxStatus.targetOrder}</b> order.
                                     </>
                                 ) : (
                                     <>
-                                        <AlertTriangle size={16} className="status-icon"/> 
+                                        <AlertTriangle size={16} className="status-icon"/>
                                         <b>Warning:</b> Detected <b>{syntaxStatus.cleanedPattern}</b> instead of <b>{syntaxStatus.targetOrder}</b>.
                                     </>
                                 )}
                             </div>
                         )}
-    
+
                     <div className="parsed-words-grid">
                         {analyzedWords.map((wData, i) => {
                             const isAmbig = wData.parsings.length > 1;
                             const isSylError = !isStrictlySyllabic(wData.original);
                                 const parse = wData.parsings.length > 0 ? wData.parsings[wData.selectedIdx] : null;
-                                
-                                const cardStateClass = wData.parsings.length === 0 || isSylError 
-                                    ? 'card-error' 
+
+                                const cardStateClass = wData.parsings.length === 0 || isSylError
+                                    ? 'card-error'
                                     : isAmbig ? 'card-warning' : 'card-default';
 
                             return (
@@ -394,7 +394,7 @@ export default function AnalyzerTab() {
                                             <>
                                                 {isAmbig && <div className="warning-badge ambig"><AlertTriangle size={14} style={{display: 'inline', marginBottom: '-2px', marginRight: '4px'}} />Ambiguous Parse</div>}
                                                 {isSylError && <div className="warning-badge err"><XCircle size={14} style={{display: 'inline', marginBottom: '-2px', marginRight: '4px'}} />Invalid Syllables</div>}
-                                                
+
                                                 {isAmbig && (
                                                     <select className="analyzer-select" value={wData.selectedIdx} onChange={(e) => handleParsingChange(i, e.target.value)}>
                                                         {wData.parsings.map((pOpt, idx) => (
@@ -402,14 +402,14 @@ export default function AnalyzerTab() {
                                                         ))}
                                                     </select>
                                                 )}
-                                                
+
                                                 <select className="analyzer-select mt-4" value={wData.manualRole || ''} onChange={(e) => handleRoleChange(i, e.target.value)}>
                                                     <option value="">- Auto Role -</option>
                                                     <option value="S">S (Subject)</option>
                                                     <option value="V">V (Verb)</option>
                                                     <option value="O">O (Object)</option>
                                                 </select>
-                                                
+
                                                 <div className="notranslate custom-font-text word-original">{transliterate(wData.original)}</div>
                                                 <div className="notranslate word-root-label">Root: {transliterate(parse.root.word)}</div>
                                                 <div className="word-translation">{parse.root.translation}</div>
@@ -431,8 +431,8 @@ export default function AnalyzerTab() {
                                 <div className="translation-result-box" style={{ position: 'relative' }}>
                                     <div className="translation-label">Approximate Translation (SVO)</div>
                                     <div className="translation-text">{translation}.</div>
-                                    <Button 
-                                        variant="ipa" 
+                                    <Button
+                                        variant="ipa"
                                         onClick={() => handleListen(translation)}
                                         style={{ position: 'absolute', top: '10px', right: '10px' }}
                                     >

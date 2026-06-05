@@ -39,6 +39,7 @@ export default function CreateWordTab() {
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
     const { phonologyTypes, grammarRules, vowels, consonants, otherPhonemes, syllablePattern, verbMarker,
             customWordClasses, customTags, addCustomWordClass, addCustomTag,
+            vowelHarmonyMode, vowelHarmonySets, vowelHarmonyOverrideWordClasses, vowelHarmonyOverrideTags,
             updateConfig } = useConfigStore(useShallow(state => ({
         phonologyTypes: state.phonologyTypes,
         grammarRules: state.grammarRules,
@@ -52,9 +53,13 @@ export default function CreateWordTab() {
         addCustomWordClass: state.addCustomWordClass,
         addCustomTag: state.addCustomTag,
         autoReturnToLexicon: state.autoReturnToLexicon,
+        vowelHarmonyMode: state.vowelHarmonyMode || 'complete',
+        vowelHarmonySets: state.vowelHarmonySets || [],
+        vowelHarmonyOverrideWordClasses: state.vowelHarmonyOverrideWordClasses || [],
+        vowelHarmonyOverrideTags: state.vowelHarmonyOverrideTags || [],
         updateConfig: state.updateConfig
     })));
-    
+
     // Let's track all our input fields in one neat object
     const [formData, setFormData] = useState({
         word: '',
@@ -67,7 +72,7 @@ export default function CreateWordTab() {
         tone: '',
         stress: ''
     });
-    
+
     const { word, ipa, wordClass, translation, definition, tags, ideogram, tone, stress } = formData;
     const [isFontStudioOpen, setIsFontStudioOpen] = useState(false);
     const [selectedDerivs, setSelectedDerivs] = useState({});
@@ -117,6 +122,20 @@ export default function CreateWordTab() {
         return () => toast.dismiss();
     }, [location.state]);
 
+    const harmonyStatus = useMemo(() => {
+        if (!word.trim() || !vowelHarmonySets || vowelHarmonySets.length === 0) return null;
+        const validation = validateNewWord(normalizeToBase(word.trim()), useConfigStore.getState());
+        return validation.harmonyResult || null;
+    }, [word, vowelHarmonySets, normalizeToBase]);
+
+    const isHarmonyOverridden = useMemo(() => {
+        if (!harmonyStatus || harmonyStatus.conforms) return false;
+        const classes = (wordClass || '').split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
+        const overriddenByClass = classes.some(c => vowelHarmonyOverrideWordClasses.includes(c));
+        const overriddenByTag = (tags || []).some(t => vowelHarmonyOverrideTags.includes(t));
+        return overriddenByClass || overriddenByTag;
+    }, [wordClass, tags, vowelHarmonyOverrideWordClasses, vowelHarmonyOverrideTags, harmonyStatus]);
+
     const { isDuplicateWord, isDuplicateTranslation } = checkDuplicate(word, translation);
     const isDuplicate = (isDuplicateWord || isDuplicateTranslation) && (word !== '' || translation !== '');
 
@@ -145,7 +164,7 @@ export default function CreateWordTab() {
         }
         updateConfig({ syllablePattern: arr.join(', ') });
         toast.success(`Added "${pattern.toUpperCase()}" to syllable patterns.`);
-        
+
         // After adding the pattern, we should save the word too!
         saveConfirmedWord(safeWord, cleanTrans, processedTags);
     };
@@ -171,7 +190,7 @@ export default function CreateWordTab() {
     const saveConfirmedWord = (safeWord, cleanTrans, processedTags, keepRoot = false) => {
         // eslint-disable-next-line react-hooks/purity
         const rootId = Date.now() + Math.random();
-        
+
         // 1. Save the main root
         addWord({
             id: rootId,
@@ -190,7 +209,7 @@ export default function CreateWordTab() {
         derivedWords.forEach((item, idx) => {
             if (selectedDerivs[idx]) {
                 const rule = grammarRules.find(r => r.name === item.ruleName);
-                
+
                 // Determine the best class for the derivation
                 let targetClass = wordClass; // Fallback
                 if (rule) {
@@ -199,7 +218,7 @@ export default function CreateWordTab() {
                     } else {
                         const ruleClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
                         if (!ruleClasses.includes('all')) {
-                            targetClass = ruleClasses[0]; 
+                            targetClass = ruleClasses[0];
                         } else if (wordClass.includes(',')) {
                             targetClass = wordClass.split(',')[0].trim();
                         }
@@ -232,14 +251,14 @@ export default function CreateWordTab() {
         } else {
             setFormData({ word: '', ipa: '', wordClass: 'noun', translation: '', definition: '', tags: [], ideogram: '', tone: '', stress: '' });
         }
-        
+
         setSelectedDerivs({});
         setCustomTranslations({});
         toast.success((t) => (
             <div className="toast-inner-flex">
                 <span>{keepRoot ? 'Meaning saved! Add another...' : 'Root and derivations saved!'}</span>
                 {!keepRoot && (
-                    <button 
+                    <button
                         onClick={() => {
                             toast.dismiss(t.id);
                             navigate('/lexicon');
@@ -269,7 +288,7 @@ export default function CreateWordTab() {
         if (!cleanWord || !cleanTrans) {
             return toast.error("Please fill in both the word and the translation.");
         }
-        
+
 
 
         // Clean up the word to ensure custom alien letters map correctly to the base orthography
@@ -298,7 +317,7 @@ export default function CreateWordTab() {
                         <button onClick={() => {
                             toast.dismiss(t.id);
                             // Bypass duplicate check and continue to validation
-                            proceedToValidation(safeWord, cleanTrans, processedTags, 0, keepRoot);
+                            proceedToHarmonyValidation(safeWord, cleanTrans, processedTags, 0, keepRoot);
                         }} className="btn-v btn-err-v">Save Anyway</button>
                         <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
                     </div>
@@ -307,18 +326,75 @@ export default function CreateWordTab() {
             return;
         }
 
-        proceedToValidation(safeWord, cleanTrans, processedTags, 0, keepRoot);
+        proceedToHarmonyValidation(safeWord, cleanTrans, processedTags, 0, keepRoot);
+    };
+
+    const proceedToHarmonyValidation = (safeWord, cleanTrans, processedTags, charIndex = 0, keepRoot = false) => {
+        const validation = validateNewWord(safeWord, useConfigStore.getState(), wordClass, processedTags);
+
+        // Helper to resolve set names from raw store data
+        const getSetName = (idx) => {
+            const set = (vowelHarmonySets || [])[idx];
+            if (set && set.name) return set.name;
+            if (Array.isArray(set)) return `Set ${idx + 1}`;
+            return `Set ${idx + 1}`;
+        };
+
+        // Vowel Harmony Check (runs before phonotactic validation)
+        // Engine enforces Complete (always) and Flexible (unless overridden).
+        if (!validation.valid && validation.type === 'vowel_harmony') {
+            const mixedNames = validation.harmonyResult.mixedSets.map(i => getSetName(i)).join(', ');
+            const mode = vowelHarmonyMode || 'complete';
+
+            // Complete mode = strict block, no save bypass
+            if (mode === 'complete') {
+                showValidationToast((t) => (
+                    <div className="custom-toast-v">
+                        <strong>⚠️ Vowel Harmony Violation</strong>
+                        <span>Vowels [{validation.harmonyResult.foundVowels.join(', ')}] mix across harmony sets ({mixedNames}). Complete mode blocks all violations.</span>
+                        <div className="toast-actions-v">
+                            <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                        </div>
+                    </div>
+                ));
+                return;
+            }
+
+            // Flexible mode = blocked unless user explicitly saves anyway
+            showValidationToast((t) => (
+                <div className="custom-toast-v">
+                    <strong>⚠️ Vowel Harmony (Not Exempted)</strong>
+                    <span>Vowels [{validation.harmonyResult.foundVowels.join(', ')}] mix across harmony sets ({mixedNames}). This word class/tag is not in the exempt list.</span>
+                    <div className="toast-actions-v">
+                        <button onClick={() => {
+                            toast.dismiss(t.id);
+                            proceedToValidation(safeWord, cleanTrans, processedTags, charIndex, keepRoot);
+                        }} className="btn-v btn-err-v">Save Anyway</button>
+                        <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                    </div>
+                </div>
+            ));
+            return;
+        }
+
+        // Optional (or Flexible with override): show suggestion toast then proceed
+        if (validation.harmonyResult && !validation.harmonyResult.conforms) {
+            const mixedNames = validation.harmonyResult.mixedSets.map(i => getSetName(i)).join(', ');
+            toast(`Vowel harmony suggestion: [${validation.harmonyResult.foundVowels.join(', ')}] mix sets (${mixedNames}).`, { icon: '💡', id: 'harmony-optional' });
+        }
+
+        proceedToValidation(safeWord, cleanTrans, processedTags, charIndex, keepRoot);
     };
 
     const proceedToValidation = (safeWord, cleanTrans, processedTags, charIndex = 0, keepRoot = false) => {
-        const validation = validateNewWord(safeWord, useConfigStore.getState());
+        const validation = validateNewWord(safeWord, useConfigStore.getState(), wordClass, processedTags);
 
         // 2. PHONOTACTIC VALIDATION
         if (!validation.valid) {
             // Handle multiple invalid characters sequentially
             if (validation.type === 'invalid_chars') {
                 const char = validation.invalidChars[charIndex];
-                
+
                 // If we've processed all individual characters, proceed to the final step (pattern validation)
                 if (!char) {
                     return proceedToGrammarValidation(safeWord, cleanTrans, processedTags, keepRoot);
@@ -335,7 +411,7 @@ export default function CreateWordTab() {
                                 // Delay slightly to let the toast animation complete before showing the next one
                                 setTimeout(() => proceedToValidation(safeWord, cleanTrans, processedTags, charIndex + 1, keepRoot), 100);
                             }} className="btn-v btn-acc-v">Add to Consonants</button>
-                            
+
                             <button onClick={() => {
                                 toast.dismiss(t.id);
                                 handleAddCharsToInventory([char], 'vowels');
@@ -347,7 +423,7 @@ export default function CreateWordTab() {
                                 // Skip this character but keep going with the next one
                                 setTimeout(() => proceedToValidation(safeWord, cleanTrans, processedTags, charIndex + 1, keepRoot), 100);
                             }} className="btn-v btn-err-v">Save as Irregular</button>
-                            
+
                             <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
                         </div>
                         <div className="char-violation-progress">
@@ -356,6 +432,11 @@ export default function CreateWordTab() {
                     </div>
                 ));
                 return;
+            }
+
+            // Vowel harmony — already handled in proceedToHarmonyValidation; user agreed.
+            if (validation.type === 'vowel_harmony') {
+                return proceedToGrammarValidation(safeWord, cleanTrans, processedTags, keepRoot);
             }
 
             // Pattern validation (runs after characters are cleared or skipped)
@@ -369,7 +450,7 @@ export default function CreateWordTab() {
                             toast.dismiss(t.id);
                             proceedToGrammarValidation(safeWord, cleanTrans, processedTags, keepRoot);
                         }} className="btn-v btn-err-v">Save Anyway</button>
-                        
+
                         {validation.type === 'invalid_pattern' && validation.detectedPattern && (
                             <button onClick={() => {
                                 toast.dismiss(t.id);
@@ -448,17 +529,17 @@ export default function CreateWordTab() {
 
         grammarRules.forEach(rule => {
             const ruleClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
-            
+
             if (ruleClasses.includes('all') || currentClasses.some(cc => ruleClasses.includes(cc))) {
                 let base = safeBaseWord;
-                
+
                 // Verb markers are no longer stripped, they only act as a validation warning during creation
 
                 const result = applyRuleToWord(base, rule, grammarRules, vowels, consonants, otherPhonemes);
 
                 if (result) {
                     results.push({
-                        derivedWord: result, 
+                        derivedWord: result,
                         ruleName: rule.name,
                         translationText: `${translation} (${rule.name.toLowerCase()})`
                     });
@@ -485,18 +566,47 @@ export default function CreateWordTab() {
 
                 <div className="input-grid">
                     <div>
-                        <Input 
-                            label="WORD (CONLANG)" 
+                        <Input
+                            label="WORD (CONLANG)"
                             value={word}
                             onChange={(e) => updateField('word', e.target.value)}
                             onFocus={() => setActiveField('word')}
                             placeholder="e.g., makin"
                             className="custom-font-text notranslate"
                         />
+                        {harmonyStatus && !harmonyStatus.conforms && (
+                            <div className="harmony-indicator" style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+                                <span style={{ color: vowelHarmonyMode === 'complete' ? '#ef4444' : (vowelHarmonyMode === 'optional' ? 'var(--acc)' : (isHarmonyOverridden ? '#22c55e' : '#ef4444')) }}>●</span>
+                                <span>
+                                    {vowelHarmonyMode === 'complete'
+                                        ? `Vowel harmony violation: [${harmonyStatus.foundVowels.join(', ')}] mix sets`
+                                        : vowelHarmonyMode === 'optional'
+                                            ? `Vowel harmony suggestion: [${harmonyStatus.foundVowels.join(', ')}] mix sets`
+                                            : isHarmonyOverridden
+                                                ? `Vowel harmony violation: [${harmonyStatus.foundVowels.join(', ')}] — allowed due to overridden part of speech/tag`
+                                                : `Vowel harmony violation: [${harmonyStatus.foundVowels.join(', ')}] mix sets`}
+                                </span>
+                            </div>
+                        )}
+                        {harmonyStatus && harmonyStatus.conforms && harmonyStatus.matchingSet >= 0 && (
+                            <div className="harmony-indicator" style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+                                <span style={{ color: '#22c55e' }}>●</span>
+                                <span>
+                                    Conforms to vowel harmony set: <b>{harmonyStatus.matchingSetName || `Set ${harmonyStatus.matchingSet + 1}`}</b>
+                                    {harmonyStatus.neutralVowels?.length > 0 && ` (with neutral ${harmonyStatus.neutralVowels.join(', ')})`}
+                                </span>
+                            </div>
+                        )}
+                        {harmonyStatus && harmonyStatus.conforms && harmonyStatus.matchingSet < 0 && harmonyStatus.neutralVowels?.length > 0 && (
+                            <div className="harmony-indicator" style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+                                <span style={{ color: '#22c55e' }}>●</span>
+                                <span>All vowels neutral ({harmonyStatus.neutralVowels.join(', ')})</span>
+                            </div>
+                        )}
                     </div>
                     <div>
-                        <Input 
-                            label="IPA (OPTIONAL)" 
+                        <Input
+                            label="IPA (OPTIONAL)"
                             value={ipa}
                             onChange={(e) => updateField('ipa', e.target.value)}
                             onFocus={() => setActiveField('ipa')}
@@ -504,22 +614,22 @@ export default function CreateWordTab() {
                         />
                     </div>
                     <div>
-                        <Input 
+                        <Input
                             label="PART OF SPEECH"
                             value={wordClass}
                             onChange={(e) => updateField('wordClass', e.target.value.toLowerCase())}
                             placeholder="Ex: noun, verb, classifier..."
                             list="word-classes"
                         >
-                            <button 
-                                className="clear-input-btn" 
+                            <button
+                                className="clear-input-btn"
                                 onClick={() => updateField('wordClass', '')}
                                 title="Clear Part of Speech"
                             >
                                 <X size={14} />
                             </button>
                         </Input>
-                        
+
                         {/* Merged datalist: standard + user-defined classes */}
                         <datalist id="word-classes">
                             {allWordClasses.map(cls => (
@@ -540,8 +650,8 @@ export default function CreateWordTab() {
                 {phonologyTypes === 'logographic' && (
                     <div className="ideogram-section">
                         <div className="ideogram-input-wrapper">
-                            <Input 
-                                label="IDEOGRAM / SYMBOL" 
+                            <Input
+                                label="IDEOGRAM / SYMBOL"
                                 value={ideogram}
                                 onChange={(e) => updateField('ideogram', e.target.value)}
                                 placeholder="e.g., 水"
@@ -561,28 +671,28 @@ export default function CreateWordTab() {
                         Tone & Stress Options
                     </summary>
                     <div className="tone-stress-content">
-                        <ToneStressSelector 
-                            word={formData.word} 
-                            tone={formData.tone} 
-                            stress={formData.stress} 
-                            onToneChange={(v) => updateField('tone', v)} 
-                            onStressChange={(v) => updateField('stress', v)} 
+                        <ToneStressSelector
+                            word={formData.word}
+                            tone={formData.tone}
+                            stress={formData.stress}
+                            onToneChange={(v) => updateField('tone', v)}
+                            onStressChange={(v) => updateField('stress', v)}
                         />
                     </div>
                 </details>
 
                 <div className="input-grid trans-def-grid">
                     <div>
-                        <Input 
-                            label="Short Translation" 
+                        <Input
+                            label="Short Translation"
                             value={translation}
                             onChange={(e) => updateField('translation', e.target.value)}
                             placeholder="Primary English word..."
                         />
                     </div>
                     <div>
-                        <Input 
-                            label="Full Definition (Optional)" 
+                        <Input
+                            label="Full Definition (Optional)"
                             value={definition}
                             onChange={(e) => updateField('definition', e.target.value)}
                             placeholder="Extended description..."
@@ -607,7 +717,7 @@ export default function CreateWordTab() {
                             </span>
                         ))}
                         <div className="tag-input-wrap">
-                            <Input 
+                            <Input
                                 placeholder={formData.tags.length === 0 ? "Add tags (nature, emotion...)" : ""}
                                 value={tagInput}
                                 onChange={(e) => setTagInput(e.target.value)}
@@ -627,8 +737,8 @@ export default function CreateWordTab() {
                                 className="tag-input-field"
                             >
                                 {tagInput && (
-                                    <button 
-                                        className="clear-input-btn" 
+                                    <button
+                                        className="clear-input-btn"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             setTagInput('');
@@ -655,12 +765,12 @@ export default function CreateWordTab() {
                         <span className="preview-title">
                             Auto-Derivations Preview
                         </span>
-                        
+
                         {derivedWords.length > 0 ? (
                             <div className="preview-grid">
                                 {derivedWords.map((item, idx) => (
-                                    <div 
-                                        key={idx} 
+                                    <div
+                                        key={idx}
                                         className={`preview-item ${selectedDerivs[idx] ? 'selected' : ''}`}
                                         onClick={() => setSelectedDerivs(prev => ({ ...prev, [idx]: !prev[idx] }))}
                                         title="Click to save alongside root"
@@ -669,7 +779,7 @@ export default function CreateWordTab() {
                                             <span className="preview-word notranslate custom-font-text">
                                                 {transliterate(item.derivedWord)}
                                             </span>
-                                            <input 
+                                            <input
                                                 type="text"
                                                 className="preview-translation-input"
                                                 value={customTranslations[idx] !== undefined ? customTranslations[idx] : item.translationText}
@@ -691,23 +801,23 @@ export default function CreateWordTab() {
                 )}
 
                 <div className="create-actions-wrap" style={{ gap: '10px' }}>
-                        <Button 
-                            variant="save" 
+                        <Button
+                            variant="save"
                             className="create-save-main"
                             onClick={() => handleSave(false)}
                         >
                             <Save size={20} /> Save Root
                         </Button>
-                        <Button 
-                            variant="default" 
+                        <Button
+                            variant="default"
                             className="create-save-main"
                             onClick={() => handleSave(true)}
                         >
                             <Plus size={20} /> Save & Add Another Meaning
                         </Button>
                         <div style={{ flex: 1 }}></div>
-                        <Button 
-                            variant="edit" 
+                        <Button
+                            variant="edit"
                             className="create-view-lexicon"
                             onClick={() => navigate('/lexicon')}
                         >
@@ -717,18 +827,18 @@ export default function CreateWordTab() {
 
             </Card>
 
-            <Modal 
-                isOpen={isFontStudioOpen} 
-                onClose={() => setIsFontStudioOpen(false)} 
+            <Modal
+                isOpen={isFontStudioOpen}
+                onClose={() => setIsFontStudioOpen(false)}
                 title="Draw Custom Ideogram"
             >
-                <FontStudioModal 
-                    targetLabel={word || 'New Root'} 
+                <FontStudioModal
+                    targetLabel={word || 'New Root'}
                     onSave={(newChar) => {
                         updateField('ideogram', ideogram + newChar);
                         setIsFontStudioOpen(false);
-                    }} 
-                    onCancel={() => setIsFontStudioOpen(false)} 
+                    }}
+                    onCancel={() => setIsFontStudioOpen(false)}
                 />
             </Modal>
         </div>
