@@ -296,7 +296,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
     };
 
     const proceedToHarmonyValidation = (safeWord, cleanInputTrans, processedTags, doSave, charIndex = 0) => {
-        const validation = validateNewWord(safeWord, useConfigStore.getState());
+        const validation = validateNewWord(safeWord, useConfigStore.getState(), wordClass, processedTags);
 
         const getSetName = (idx) => {
             const set = (vowelHarmonySets || [])[idx];
@@ -305,20 +305,18 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
             return `Set ${idx + 1}`;
         };
 
-        if (validation.harmonyResult && !validation.harmonyResult.conforms) {
-            const mode = vowelHarmonyMode || 'complete';
+        // Engine enforces Complete (always) and Flexible (unless overridden).
+        if (!validation.valid && validation.type === 'vowel_harmony') {
             const mixedNames = validation.harmonyResult.mixedSets.map(i => getSetName(i)).join(', ');
+            const mode = vowelHarmonyMode || 'complete';
 
+            // Complete mode = strict block, no save bypass
             if (mode === 'complete') {
                 showValidationToast((t) => (
                     <div className="custom-toast-v">
                         <strong>⚠️ Vowel Harmony Violation</strong>
-                        <span>Vowels [{validation.harmonyResult.foundVowels.join(', ')}] mix across harmony sets ({mixedNames}).</span>
+                        <span>Vowels [{validation.harmonyResult.foundVowels.join(', ')}] mix across harmony sets ({mixedNames}). Complete mode blocks all violations.</span>
                         <div className="toast-actions-v">
-                            <button onClick={() => {
-                                toast.dismiss(t.id);
-                                proceedToValidation(safeWord, cleanInputTrans, processedTags, doSave, charIndex);
-                            }} className="btn-v btn-err-v">Save Anyway</button>
                             <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
                         </div>
                     </div>
@@ -326,39 +324,34 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                 return;
             }
 
-            if (mode === 'optional') {
-                const wordClasses = (wordClass || '').split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
-                const isOverridden = wordClasses.some(c => vowelHarmonyOverrideWordClasses.includes(c)) ||
-                    processedTags.some(tag => vowelHarmonyOverrideTags.includes(tag));
+            // Flexible mode = blocked unless user explicitly saves anyway
+            showValidationToast((t) => (
+                <div className="custom-toast-v">
+                    <strong>⚠️ Vowel Harmony (Not Exempted)</strong>
+                    <span>Vowels [{validation.harmonyResult.foundVowels.join(', ')}] mix across harmony sets ({mixedNames}). This word class/tag is not in the exempt list.</span>
+                    <div className="toast-actions-v">
+                        <button onClick={() => {
+                            toast.dismiss(t.id);
+                            proceedToValidation(safeWord, cleanInputTrans, processedTags, doSave, charIndex);
+                        }} className="btn-v btn-err-v">Save Anyway</button>
+                        <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                    </div>
+                </div>
+            ));
+            return;
+        }
 
-                if (!isOverridden) {
-                    showValidationToast((t) => (
-                        <div className="custom-toast-v">
-                            <strong>⚠️ Vowel Harmony</strong>
-                            <span>Vowels [{validation.harmonyResult.foundVowels.join(', ')}] mix harmony sets ({mixedNames}). Override for this word?</span>
-                            <div className="toast-actions-v">
-                                <button onClick={() => {
-                                    toast.dismiss(t.id);
-                                    proceedToValidation(safeWord, cleanInputTrans, processedTags, doSave, charIndex);
-                                }} className="btn-v btn-err-v">Save Anyway</button>
-                                <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
-                            </div>
-                        </div>
-                    ));
-                    return;
-                }
-            }
-
-            if (mode === 'flexible') {
-                toast(`Vowel harmony suggestion: [${validation.harmonyResult.foundVowels.join(', ')}] mix sets (${mixedNames}).`, { icon: '💡', id: 'harmony-optional' });
-            }
+        // Optional (or Flexible with override): show suggestion toast then proceed
+        if (validation.harmonyResult && !validation.harmonyResult.conforms) {
+            const mixedNames = validation.harmonyResult.mixedSets.map(i => getSetName(i)).join(', ');
+            toast(`Vowel harmony suggestion: [${validation.harmonyResult.foundVowels.join(', ')}] mix sets (${mixedNames}).`, { icon: '💡', id: 'harmony-optional' });
         }
 
         proceedToValidation(safeWord, cleanInputTrans, processedTags, doSave, charIndex);
     };
 
     const proceedToValidation = (safeWord, cleanInputTrans, processedTags, doSave, charIndex = 0) => {
-        const validation = validateNewWord(safeWord, useConfigStore.getState());
+        const validation = validateNewWord(safeWord, useConfigStore.getState(), wordClass, processedTags);
 
         if (!validation.valid) {
             // Handle multiple invalid characters sequentially
@@ -452,13 +445,15 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                     />
                     {harmonyStatus && !harmonyStatus.conforms && (
                         <div className="harmony-indicator" style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-                            <span style={{ color: vowelHarmonyMode === 'flexible' ? 'var(--acc)' : '#ef4444' }}>●</span>
+                            <span style={{ color: vowelHarmonyMode === 'complete' ? '#ef4444' : (vowelHarmonyMode === 'optional' ? 'var(--acc)' : (isHarmonyOverridden ? '#22c55e' : '#ef4444')) }}>●</span>
                             <span>
-                                {vowelHarmonyMode === 'flexible'
-                                    ? isHarmonyOverridden
-                                        ? `Vowel harmony violation: [${harmonyStatus.foundVowels.join(', ')}] — allowed due to overridden part of speech/tag`
-                                        : `Vowel harmony suggestion: [${harmonyStatus.foundVowels.join(', ')}] mix sets`
-                                    : `Vowel harmony violation: [${harmonyStatus.foundVowels.join(', ')}] mix sets`}
+                                {vowelHarmonyMode === 'complete'
+                                    ? `Vowel harmony violation: [${harmonyStatus.foundVowels.join(', ')}] mix sets`
+                                    : vowelHarmonyMode === 'optional'
+                                        ? `Vowel harmony suggestion: [${harmonyStatus.foundVowels.join(', ')}] mix sets`
+                                        : isHarmonyOverridden
+                                            ? `Vowel harmony violation: [${harmonyStatus.foundVowels.join(', ')}] — allowed due to overridden part of speech/tag`
+                                            : `Vowel harmony violation: [${harmonyStatus.foundVowels.join(', ')}] mix sets`}
                             </span>
                         </div>
                     )}

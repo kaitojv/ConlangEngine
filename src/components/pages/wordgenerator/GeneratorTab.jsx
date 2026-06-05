@@ -245,9 +245,21 @@ function FillMode({ onExit }) {
         }
 
         const safeWord = normalizeToBase(conlangWord.trim());
-        const validation = validateNewWord(safeWord, configData);
-        
-        if (!validation.valid) {
+        const validation = validateNewWord(safeWord, configData, wordClass, []);
+
+        // Complete mode hard-blocks vowel harmony violations
+        if (!validation.valid && validation.type === 'vowel_harmony') {
+            const mode = configData.vowelHarmonyMode || 'complete';
+            if (mode === 'complete') {
+                alert(`Vowel harmony violation: ${validation.reason}\n\nComplete mode - save blocked.`);
+                return;
+            }
+            // Flexible mode - block with user-facing override
+            const proceed = window.confirm(
+                `⚠️ Vowel Harmony Warning:\n${validation.reason}\n\nThis word class is not in the exempt list. Save anyway?`
+            );
+            if (!proceed) return;
+        } else if (!validation.valid) {
             const proceed = window.confirm(
                 `⚠️ Phono-Syntax Warning:\n${validation.reason}\n\nDo you want to save it as an irregular exception anyway?`
             );

@@ -218,11 +218,13 @@ function checkVowelHarmony(word, vowelHarmonySets, vowelsStr) {
  * Validates vowel harmony for a word based on the configured mode.
  * Returns { valid: boolean, reason?: string, type?: string, harmonyResult: object }
  */
-function validateVowelHarmony(word, configStoreData) {
+function validateVowelHarmony(word, configStoreData, wordClass = '', tags = []) {
     const {
         vowelHarmonyMode,
         vowelHarmonySets,
         vowels,
+        vowelHarmonyOverrideWordClasses,
+        vowelHarmonyOverrideTags,
     } = configStoreData;
 
     // Default: no validation if mode/settings not configured
@@ -236,10 +238,17 @@ function validateVowelHarmony(word, configStoreData) {
     const harmony = checkVowelHarmony(word, vowelHarmonySets, vowels);
     const involvedNames = harmony.mixedSets.map(i => sets[i]?.name || `Set ${i + 1}`).join(', ');
 
+    const classes = String(wordClass || '').split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
+    const tagList = (tags || []).map(t => String(t).toLowerCase());
+    const isOverridden = classes.some(c => (vowelHarmonyOverrideWordClasses || []).includes(c)) ||
+        tagList.some(t => (vowelHarmonyOverrideTags || []).includes(t));
+
+    // Optional — suggestions only, never enforced
     if (mode === 'optional') {
         return { valid: true, harmonyResult: harmony };
     }
 
+    // Complete — strict, no exceptions
     if (mode === 'complete') {
         if (!harmony.conforms) {
             return {
@@ -252,9 +261,22 @@ function validateVowelHarmony(word, configStoreData) {
         return { valid: true, harmonyResult: harmony };
     }
 
+    // Flexible — enforce unless word class or tag is exempted
+    if (mode === 'flexible') {
+        if (!harmony.conforms && !isOverridden) {
+            return {
+                valid: false,
+                reason: `Vowel harmony violation: vowels [${harmony.foundVowels.join(', ')}] mix across harmony sets (${involvedNames}).`,
+                type: 'vowel_harmony',
+                harmonyResult: harmony
+            };
+        }
+        return { valid: true, harmonyResult: harmony };
+    }
+
     return { valid: true, harmonyResult: harmony };
 }
-export function validateNewWord(word, configStoreData) {
+export function validateNewWord(word, configStoreData, wordClass = '', tags = []) {
     if (!word) return { valid: false, reason: "Word is empty." };
 
     const {
@@ -288,7 +310,7 @@ export function validateNewWord(word, configStoreData) {
     if (!result.valid) return result;
 
     // Secondary check: vowel harmony (only for alphabetic/logographic)
-    const harmonyResult = validateVowelHarmony(word, configStoreData);
+    const harmonyResult = validateVowelHarmony(word, configStoreData, wordClass, tags);
     if (!harmonyResult.valid) return harmonyResult;
 
     // Preserve harmony info even when valid (useful for 'optional' mode UI)

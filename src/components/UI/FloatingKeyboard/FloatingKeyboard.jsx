@@ -125,40 +125,28 @@ export default function FloatingKeyboard() {
 
         // Validate word including vowel harmony
         const config = useConfigStore.getState();
-        const validation = validateNewWord(newWord.word.trim(), config);
+        const validation = validateNewWord(newWord.word.trim(), config, newWord.wordClass, []);
 
-        // Check for vowel harmony violations
-        if (validation.harmonyResult && !validation.harmonyResult.conforms) {
+        // Engine enforces Complete (always) and Flexible (unless overridden).
+        if (!validation.valid && validation.type === 'vowel_harmony') {
             const mode = vowelHarmonyMode || 'complete';
             const mixedNames = validation.harmonyResult.mixedSets.map(i => {
                 const set = (vowelHarmonySets || [])[i];
                 if (set && set.name) return set.name;
                 return `Set ${i + 1}`;
             }).join(', ');
+            const title = mode === 'complete' ? 'Vowel harmony violation' : 'Vowel harmony (not exempted)';
+            toast.error(`${title}: [${validation.harmonyResult.foundVowels.join(', ')}] mix across sets (${mixedNames}). Save blocked.`);
+            return;
+        }
 
-            if (mode === 'complete') {
-                toast.error(`Vowel harmony violation: [${validation.harmonyResult.foundVowels.join(', ')}] mix across sets (${mixedNames}). Save blocked in Complete mode.`);
-                return;
-            }
-
-            if (mode === 'flexible') {
-                // Show warning but allow save
-                toast((t) => (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <span>⚠️ Vowel harmony: [{validation.harmonyResult.foundVowels.join(', ')}] mix sets ({mixedNames}). Save anyway?</span>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            <button onClick={() => {
-                                toast.dismiss(t.id);
-                                proceedWithSave();
-                            }} style={{ padding: '4px 12px', background: 'var(--acc)', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>Save</button>
-                            <button onClick={() => toast.dismiss(t.id)} style={{ padding: '4px 12px', background: 'var(--s3)', borderRadius: '4px', border: 'none', cursor: 'pointer' }}>Cancel</button>
-                        </div>
-                    </div>
-                ), { duration: Infinity, id: 'harmony-quick-save' });
-                return;
-            }
-
-            // optional mode - show suggestion toast but proceed
+        // Optional mode - show suggestion toast but proceed
+        if (validation.harmonyResult && !validation.harmonyResult.conforms) {
+            const mixedNames = validation.harmonyResult.mixedSets.map(i => {
+                const set = (vowelHarmonySets || [])[i];
+                if (set && set.name) return set.name;
+                return `Set ${i + 1}`;
+            }).join(', ');
             toast(`Vowel harmony suggestion: [${validation.harmonyResult.foundVowels.join(', ')}] mix sets (${mixedNames}).`, { icon: '💡' });
         }
 
