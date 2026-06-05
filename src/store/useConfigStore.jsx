@@ -1,4 +1,4 @@
-import {create} from 'zustand';
+import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export const INITIAL_CONFIG = {
@@ -13,7 +13,7 @@ export const INITIAL_CONFIG = {
     featuralComponents: {}, // Stores strokes for initials, vowels, finals
     blockSettings: {
         maxChars: 3,
-        layoutTemplate: '2top1bottom', 
+        layoutTemplate: '2top1bottom',
         slotMapping: ['Initial', 'Vowel', 'Final']
     },
     blockTemplates: [
@@ -41,7 +41,7 @@ export const INITIAL_CONFIG = {
     grammarRules: [],
     verbMarker: '-r',
     cliticsRules: 's, ll',
-    personRules: "1S: mau / \'ma, 2S: tau / \'ta, 3S Masc: lou / \'lo",            
+    personRules: "1S: mau / \'ma, 2S: tau / \'ta, 3S Masc: lou / \'lo",
     wikiPages: { phonology: "<h1>Phonology</h1><p>Start documenting your language rules here...</p>" },
     streak: 0,
     unlockedBadges: ['genesis'],
@@ -75,7 +75,8 @@ export const INITIAL_CONFIG = {
     // Per-class word markers used by the generator (separate from the grammar rules engine)
     generatorMarkers: {
         noun: '',
-        verb: '',      // Initially mirrors verbMarker, but can be overridden
+        // Initially mirrors verbMarker, but can be overridden
+        verb: '',
         adjective: '',
         adverb: '',
         pronoun: '',
@@ -95,7 +96,8 @@ export const INITIAL_CONFIG = {
         settings: {
             fusion: false,
             separator: ' ',
-            order: 'digit-first' // or 'unit-first'
+            // or 'unit-first'
+            order: 'digit-first'
         }
     },
     azureTtsUseIpa: true,
@@ -114,8 +116,10 @@ export const INITIAL_CONFIG = {
         month: '',
         year: ''
     },
-    alphabetGlyphs: {}, // { 'a': '\uE001', 'b': '\uE002' }
-    semanticMappings: {}, // { [synsetId]: { word: '...', ipa: '...', meaning: '...' } },
+    // { 'a': '\uE001', 'b': '\uE002' }
+    alphabetGlyphs: {},
+    // { [synsetId]: { word: '...', ipa: '...', meaning: '...' } },
+    semanticMappings: {},
     wordAssistConfig: {
         syntaxOrder: 'QCTLJNORVMSAPG',
         copulaBehavior: 'normal',
@@ -129,9 +133,12 @@ export const INITIAL_CONFIG = {
     },
     functionWords: [],
     // Prosody rules — evaluated at display time to auto-compute stress & tone
-    stressRules: [],   // Array of { id, type, value, fallback? }
-    toneRules: [],     // Array of { id, condition, value }
-    customCourse: [],  // Array of { id, title, phrases: [{ id, conlang, english }] }
+    // Array of { id, type, value, fallback? }
+    stressRules: [],
+    // Array of { id, condition, value }
+    toneRules: [],
+    // Array of { id, title, phrases: [{ id, conlang, english }] }
+    customCourse: [],
 };
 
 // IndexedDB Helper for handling massive data without breaking local storage quotas
@@ -153,14 +160,13 @@ const saveLargeDataToDB = (projectId, data) => {
                 const db = e.target.result;
                 const tx = db.transaction(STORE_NAME, 'readwrite');
                 const store = tx.objectStore(STORE_NAME);
-                
+
                 // Get existing data to merge
                 const getReq = store.get(projectId);
                 getReq.onsuccess = () => {
                     const existing = getReq.result || {};
                     store.put({ ...existing, ...data }, projectId);
                 };
-                
                 tx.oncomplete = () => resolve(true);
             } catch (err) { resolve(false); }
         };
@@ -222,7 +228,7 @@ export const useConfigStore = create(
                 }
                 set(() => ({ ...INITIAL_CONFIG, ...newConfig }));
             },
-            
+
             // Cleanup utility to wipe bloated legacy state
             purgeBloatedGlyphs: () => set((state) => {
                 if (Object.keys(state.customGlyphs || {}).length > 200) {
@@ -280,7 +286,7 @@ export const useConfigStore = create(
             renameCustomTag: (oldName, newName) => set((state) => ({
                 customTags: (state.customTags || []).map(t => t === oldName ? newName.trim().toLowerCase() : t)
             })),
-            
+
             saveWikiPage: (pageId, content) => set((state) => {
                 const existing = state.wikiPages[pageId];
                 if (existing && typeof existing === 'object' && existing.type === 'corpus') {
@@ -288,36 +294,37 @@ export const useConfigStore = create(
                 }
                 return { wikiPages: { ...state.wikiPages, [pageId]: content } };
             }),
+
             addWikiPage: (pageId, title, type = 'wiki') => set((state) => ({
-                wikiPages: { 
-                    ...state.wikiPages, 
-                    [pageId]: type === 'corpus' 
-                        ? { type: 'corpus', title: title, content: '' } 
-                        : `<h1>${title}</h1><p>Start typing...</p>` 
+                wikiPages: {
+                    ...state.wikiPages,
+                    [pageId]: type === 'corpus'
+                        ? { type: 'corpus', title: title, content: '' }
+                        : `<h1>${title}</h1><p>Start typing...</p>`
                 },
                 activity: [{ text: `Created document: ${title}`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15)
             })),
+
             deleteWikiPage: (pageId) => set((state) => {
                 const newPages = { ...state.wikiPages };
                 delete newPages[pageId];
-                return { 
+                return {
                     wikiPages: newPages,
                     activity: [{ text: `Deleted wiki page`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15)
                 };
             }),
+
             reorderWikiPage: (pageId, direction) => set((state) => {
                 const keys = Object.keys(state.wikiPages || {});
                 const idx = keys.indexOf(pageId);
                 if (idx < 0) return {};
-                
+
                 const newIdx = direction === 'up' ? idx - 1 : idx + 1;
                 if (newIdx < 0 || newIdx >= keys.length) return {};
-                
-                // Swap keys
+
                 const newKeys = [...keys];
                 [newKeys[idx], newKeys[newIdx]] = [newKeys[newIdx], newKeys[idx]];
-                
-                // Reconstruct object
+
                 const newPages = {};
                 for (const k of newKeys) {
                     newPages[k] = state.wikiPages[k];
@@ -350,15 +357,15 @@ export const useConfigStore = create(
                 const text = `Updated ${label}`;
                 const now = new Date().toISOString();
                 let newActivity = [...(state.activity || [])].filter(a => !a.text.includes('isProActive'));
-                
+
                 // Prevent spamming the timeline with system updates or rapid identical updates
                 const systemKeys = ['isProActive', 'activity', 'theme', 'autoReturnToLexicon', 'conlangName'];
                 const isSystemOnly = keys.every(k => systemKeys.includes(k));
-                
+
                 if (!isSystemOnly) {
                     newActivity = [{ text, time: now }, ...newActivity].slice(0, 15);
                 }
-                
+
                 if (state.projectId) {
                     const bloat = {};
                     if (newConfig.customFontBase64) {
@@ -386,3 +393,24 @@ export const useConfigStore = create(
         }
     )
 );
+
+// Cross-tab sync via BroadcastChannel
+// Single channel for all config keys (avoids MaxListenersExceededWarning from per-key share() calls)
+if (typeof BroadcastChannel !== 'undefined') {
+    const channel = new BroadcastChannel('conlang-config-sync');
+    let externalUpdate = false;
+
+    useConfigStore.subscribe((state) => {
+        if (externalUpdate) {
+            externalUpdate = false;
+            return;
+        }
+        const { customFontBase64, customFont, syllabaryMap, customGlyphs, isRehydrating, ...rest } = state;
+        channel.postMessage(JSON.stringify(rest));
+    });
+
+    channel.onmessage = (evt) => {
+        externalUpdate = true;
+        useConfigStore.setState(JSON.parse(evt.data));
+    };
+}
