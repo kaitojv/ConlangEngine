@@ -12,7 +12,7 @@ import Button from '../../UI/Buttons/Buttons.jsx';
 import applySoundChanges from '../../../utils/applysoundchanges.jsx';
 import { VisualRuleBuilder } from './grammarMatrix/VisualRuleBuilder.jsx';
 import ProsodyRulesCard from './ProsodyRulesCard.jsx';
-import { Info, AudioLines, Headphones, Music, Hourglass, Wand2, BookCheck, Eye } from 'lucide-react';
+import { Info, AudioLines, Headphones, Music, Hourglass, Wand2, BookCheck, Eye, Trash2, SquarePen } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../../UI/Modal/Modal.jsx';
 import './phonologyTab.css'
@@ -64,30 +64,38 @@ export default function PhonologyTab() {
     const rawLexicon = useLexiconStore((state) => state.lexicon);
     const lexicon = Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []);
     const updateWord = useLexiconStore((state) => state.updateWord);
-    
+
     // Local state to handle the real-time sound evolution preview
     const [testWords, setTestWords] = useState('');
     const [previewResults, setPreviewResults] = useState([]);
     const [isBuilderOpen, setIsBuilderOpen] = useState(false);
-    
+
     // Selective sound changes state
     const [pendingChanges, setPendingChanges] = useState(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
     const HARMONY_MODES = [
         { value: 'complete', label: 'Complete — All words must conform to vowel harmony' },
-        { value: 'optional', label: 'Optional — Override allowed per word class or tag' },
-        { value: 'flexible', label: 'Flexible — Suggestions displayed, no enforcement' },
+        { value: 'flexible', label: 'Flexible — Override allowed per word class or tag' },
+        { value: 'optional', label: 'Optional — Suggestions displayed, no enforcement' },
     ];
 
     const [harmonySetsInput, setHarmonySetsInput] = useState('');
     const [harmonySetNameInput, setHarmonySetNameInput] = useState('');
+    const [editingSetIndex, setEditingSetIndex] = useState(-1);
+    const [editingSetName, setEditingSetName] = useState('');
+
+    const vowelInventory = useMemo(() => {
+        return (vowels || '').split(',')
+            .map(s => s.trim().split('=')[0].toLowerCase())
+            .filter(Boolean);
+    }, [vowels]);
 
     const normalizedHarmonySets = useMemo(() => {
         return (vowelHarmonySets || []).map((s, i) => {
-            if (Array.isArray(s)) return { name: `Set ${i + 1}`, vowels: s };
-            if (s && Array.isArray(s.vowels)) return { name: s.name || `Set ${i + 1}`, vowels: s.vowels };
-            return { name: `Set ${i + 1}`, vowels: [] };
+            if (Array.isArray(s)) return { name: `Set ${i + 1}`, vowels: s, neutral: false };
+            if (s && Array.isArray(s.vowels)) return { name: s.name || `Set ${i + 1}`, vowels: s.vowels, neutral: !!s.neutral };
+            return { name: `Set ${i + 1}`, vowels: [], neutral: false };
         });
     }, [vowelHarmonySets]);
 
@@ -100,8 +108,14 @@ export default function PhonologyTab() {
         const parts = harmonySetsInput.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
         if (parts.length === 0) { toast.error('Enter vowels separated by commas.'); return; }
         if (parts.length < 2) { toast.error('A vowel set needs at least 2 vowels.'); return; }
+        // Validate each vowel against the phonology inventory
+        const invalid = parts.filter(v => !vowelInventory.includes(v) && !vowelInventory.includes(v.split('=')[0]));
+        if (invalid.length > 0) {
+            toast.error(`Vowels not in your phonology: ${invalid.join(', ')}. Add them to the Vowels field first.`);
+            return;
+        }
         const name = harmonySetNameInput.trim() || `Set ${normalizedHarmonySets.length + 1}`;
-        const newSets = [...vowelHarmonySets, { name, vowels: parts }];
+        const newSets = [...vowelHarmonySets, { name, vowels: parts, neutral: false }];
         updateConfig({ vowelHarmonySets: newSets });
         setHarmonySetsInput('');
         setHarmonySetNameInput('');
@@ -110,6 +124,40 @@ export default function PhonologyTab() {
 
     const handleRemoveHarmonySet = (index) => {
         const newSets = vowelHarmonySets.filter((_, i) => i !== index);
+        updateConfig({ vowelHarmonySets: newSets });
+    };
+
+    const handleStartEdit = (index) => {
+        const set = normalizedHarmonySets[index];
+        setEditingSetIndex(index);
+        setEditingSetName(set.name);
+    };
+
+    const handleCancelEdit = () => {
+        setEditingSetIndex(-1);
+        setEditingSetName('');
+    };
+
+    const handleSaveEdit = (index) => {
+        const newName = editingSetName.trim();
+        if (!newName) { toast.error('Name cannot be empty.'); return; }
+        const newSets = vowelHarmonySets.map((s, i) => {
+            if (i !== index) return s;
+            if (Array.isArray(s)) return { name: newName, vowels: s, neutral: false };
+            return { ...s, name: newName };
+        });
+        updateConfig({ vowelHarmonySets: newSets });
+        setEditingSetIndex(-1);
+        setEditingSetName('');
+        toast.success(`Renamed to "${newName}"`);
+    };
+
+    const handleToggleNeutral = (index) => {
+        const newSets = vowelHarmonySets.map((s, i) => {
+            if (i !== index) return s;
+            if (Array.isArray(s)) return { name: `Set ${i + 1}`, vowels: s, neutral: true };
+            return { ...s, neutral: !s.neutral };
+        });
         updateConfig({ vowelHarmonySets: newSets });
     };
 
@@ -190,7 +238,7 @@ export default function PhonologyTab() {
     // Apply the selected changes
     const handleConfirmSelectedChanges = () => {
         if (!pendingChanges) return;
-        
+
         let appliedCount = 0;
         pendingChanges.forEach(change => {
             if (change.selected) {
@@ -198,10 +246,10 @@ export default function PhonologyTab() {
                 appliedCount++;
             }
         });
-        
+
         setIsReviewModalOpen(false);
         setPendingChanges(null);
-        
+
         if (appliedCount > 0) {
             toast.success(`✅ Applied rules to ${appliedCount} word${appliedCount !== 1 ? 's' : ''} in your lexicon.`);
         } else {
@@ -220,52 +268,52 @@ export default function PhonologyTab() {
     const setAllPendingChanges = (value) => {
         setPendingChanges(prev => prev.map(c => ({ ...c, selected: value })));
     };
-   
+
     return (
         <div className="phonology-tab-container">
-            
+
             <Card>
                 <h2 className="flex sg-title"><AudioLines /> Sounds & Orthography</h2>
-                
+
                 <Infobox title="Phonology & Orthography Guide">
                     • <b>Basic Sounds:</b> Type your IPA phonemes separated by commas (e.g., <code>p, t, k, m, ṇ</code>).<br />
                     • <b>Custom Orthography (=):</b> If a sound is written differently in your romanization or native script, map it using the format <code>IPA=Text</code>. <br />
                     <i>Example:</i> If the sound /ʃ/ is written as '<b>თ</b>' and a trill /r/ as '<b>რ</b>', you should type: <code>ʃ=თ, r=რ</code>. This exact mapping is what allows the <b>Interactive Reader</b> and the <b>TTS Audio</b> to correctly pronounce your custom letters!
                 </Infobox>
-                
-                <Input 
-                    label="Consonants" 
+
+                <Input
+                    label="Consonants"
                     placeholder="e.g., p, t, k, m, n..."
                     value={consonants}
-                    onChange={(e) => updateConfig({ consonants: e.target.value })} 
+                    onChange={(e) => updateConfig({ consonants: e.target.value })}
                 />
 
-                <Input 
-                    label="Vowels" 
+                <Input
+                    label="Vowels"
                     placeholder="e.g., a, e, i, o, u..."
                     value={vowels}
                     onChange={(e) => updateConfig({ vowels: e.target.value })}
                 />
 
-                <IpaChart 
-                    consonants={consonants} 
-                    setConsonants={(val) => updateConfig({ consonants: val })} 
-                    vowels={vowels} 
-                    setVowels={(val) => updateConfig({ vowels: val })} 
+                <IpaChart
+                    consonants={consonants}
+                    setConsonants={(val) => updateConfig({ consonants: val })}
+                    vowels={vowels}
+                    setVowels={(val) => updateConfig({ vowels: val })}
                 />
 
                 <div className="sg-input-group phonology-split-group">
                     <div className="phonology-flex-1">
-                        <Input 
-                            label="Other Phonemes (Tones, Clicks, Particles)" 
+                        <Input
+                            label="Other Phonemes (Tones, Clicks, Particles)"
                             placeholder="e.g., ˥, ˦, ʘ, particle..."
                             value={otherPhonemes}
                             onChange={(e) => updateConfig({ otherPhonemes: e.target.value })}
                         />
                     </div>
                     <div className="phonology-fixed-width">
-                        <Input 
-                            label="Mapping Char" 
+                        <Input
+                            label="Mapping Char"
                             placeholder="e.g., X"
                             value={otherPhonemeMapping}
                             onChange={(e) => updateConfig({ otherPhonemeMapping: e.target.value })}
@@ -280,11 +328,11 @@ export default function PhonologyTab() {
                     onChange={(e) => updateConfig({ syllablePattern: e.target.value })}
                     disabled={skipSyllableValidation}
                 />
-                
+
                 {phonologyTypes === 'alphabetic' && (
                     <label className="flex items-center gap-2 phonology-checkbox-label">
-                        <input 
-                            type="checkbox" 
+                        <input
+                            type="checkbox"
                             checked={skipSyllableValidation}
                             onChange={(e) => updateConfig({ skipSyllableValidation: e.target.checked })}
                         />
@@ -303,7 +351,7 @@ export default function PhonologyTab() {
                             <b>Explicit Boundaries:</b><br />
                             If you want to force a split that goes against the algorithm, use a period <code>.</code> in your lexicon entry. For example, typing <code>cr.as</code> guarantees it will be split as <code>cr</code> and <code>as</code>.
                         </Infobox>
-                        <select 
+                        <select
                             className="settings-select-full"
                             value={syllabificationAlgorithm}
                             onChange={(e) => updateConfig({ syllabificationAlgorithm: e.target.value })}
@@ -314,7 +362,7 @@ export default function PhonologyTab() {
                     </div>
                 )}
             </Card>
-            
+
             {/* ─── VOWEL HARMONY SECTION ─── */}
             <Card>
                 <h2 className="flex sg-title"><Music /> Vowel Harmony</h2>
@@ -323,12 +371,12 @@ export default function PhonologyTab() {
                     Define which vowels group together into harmony sets. The engine validates words based on the selected mode:
                     <br /><br />
                     <b>Complete</b> — Every word must use vowels from a single set only.<br />
-                    <b>Optional</b> — Words should conform, but can be overridden for specific word classes or tags.<br />
-                    <b>Flexible</b> — Harmony status is shown inline; suggestions are made but never enforced.
+                    <b>Flexible</b> — Words should conform, but can be overridden for specific word classes or tags.<br />
+                    <b>Optional</b> — Harmony status is shown inline; suggestions are made but never enforced.
                 </Infobox>
 
                 <div className="settings-section-wrapper">
-                    <label className="form-label">Harmony Mode</label>
+            <label className="form-label" style={{paddingRight: '8px'}}>Harmony Mode</label>
                     <select
                         className="sg-select"
                         value={vowelHarmonyMode}
@@ -360,16 +408,47 @@ export default function PhonologyTab() {
                                 onChange={(e) => setHarmonySetsInput(e.target.value)}
                             />
                         </div>
-                        <Button onClick={handleAddHarmonySet} variant="primary">Add Set</Button>
+                        <Button style={{ flex: '0 0 140px', padding: 0, margin: 0, marginBottom: '16px' }} onClick={handleAddHarmonySet} variant="primary">Add Set</Button>
                     </div>
                     {normalizedHarmonySets.length > 0 ? (
                         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                             {normalizedHarmonySets.map((set, i) => (
                                 <li key={i} className="flex items-center justify-between" style={{ padding: '6px 10px', background: 'var(--s3)', borderRadius: '6px', marginBottom: '6px' }}>
-                                    <span style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
-                                        <b>{set.name}:</b> [ {set.vowels.join(' | ')} ]
+                                    <span style={{ fontFamily: 'monospace', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        {editingSetIndex === i ? (
+                                            <>
+                                                <input
+                                                    type="text"
+                                                    value={editingSetName}
+                                                    onChange={(e) => setEditingSetName(e.target.value)}
+                                                    style={{ width: '120px', padding: '2px 6px', background: 'var(--s4)', color: 'inherit', border: '1px solid var(--acc)', borderRadius: '4px', fontSize: '0.9rem', fontFamily: 'monospace' }}
+                                                    autoFocus
+                                                    onKeyDown={(e) => { if (e.key === 'Enter') handleSaveEdit(i); if (e.key === 'Escape') handleCancelEdit(); }}
+                                                />
+                                                <button onClick={() => handleSaveEdit(i)} style={{ background: 'none', border: 'none', color: '#22c55e', cursor: 'pointer', fontSize: '0.8rem' }}>✓</button>
+                                                <button onClick={handleCancelEdit} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem' }}>✗</button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <b>{set.neutral ? (set.name.toLowerCase() === 'neutral' ? set.name : `${set.name} (neutral)`) : set.name}:</b>
+                                                [ {set.vowels.join(' | ')} ]
+                                            </>
+                                        )}
                                     </span>
-                                    <button onClick={() => handleRemoveHarmonySet(i)} style={{ background: 'none', border: 'none', color: 'var(--tx2)', cursor: 'pointer' }}>🗑</button>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: 'var(--tx2)', cursor: 'pointer' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={!!set.neutral}
+                                                onChange={() => handleToggleNeutral(i)}
+                                            />
+                                            Neutral
+                                  </label>
+                                    {editingSetIndex !== i && (
+                                    <button onClick={() => handleStartEdit(i)} style={{ background: 'none', border: 'none', color: 'var(--tx2)', cursor: 'pointer', fontSize: '0.85rem' }} title="Rename"><SquarePen size={14} /></button>
+                                    )}
+                                        <button onClick={() => handleRemoveHarmonySet(i)} style={{ background: 'none', border: 'none', color: 'var(--tx2)', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                                    </div>
                                 </li>
                             ))}
                         </ul>
@@ -378,7 +457,7 @@ export default function PhonologyTab() {
                     )}
                 </div>
 
-                {vowelHarmonyMode === 'optional' && (
+                {vowelHarmonyMode === 'flexible' && (
                     <div className="settings-section-wrapper">
                         <label className="form-label">Override by Word Class</label>
                         <p style={{ color: 'var(--tx2)', fontSize: '0.85rem', marginBottom: '8px' }}>
@@ -446,10 +525,10 @@ export default function PhonologyTab() {
                 <Infobox title="SSML Phonetic Pronunciation">
                     The app uses Microsoft's Neural voices to read the exact <b>IPA</b> of your conlang instead of guessing the pronunciation from its spelling. Select the base accent for your language below.
                 </Infobox>
-                
+
                 <div className="settings-section-wrapper" style={{ marginTop: '15px' }}>
                     <label className="form-label settings-label-block">Base Accent (Voice Model)</label>
-                    <select 
+                    <select
                         className="settings-select-full"
                         value={azureTtsVoice}
                         onChange={(e) => updateConfig({ azureTtsVoice: e.target.value })}
@@ -467,15 +546,15 @@ export default function PhonologyTab() {
                     <p className="settings-description" style={{ margin: 0 }}>
                         Evolve your language natively. Write rules line by line:
                     </p>
-                    <Button 
-                        variant="edit" 
+                    <Button
+                        variant="edit"
                         onClick={() => setIsBuilderOpen(true)}
                         style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', gap: '0.4rem' }}
                     >
                         <Wand2 size={14} /> Rule Builder
                     </Button>
                 </div>
-                
+
                 <Infobox title="View Rule Formatting Guide">
                     <b>Basic Replacement:</b><br />
                     <span>p =&gt; b</span> (Turns all 'p's into 'b's)<br />
@@ -492,16 +571,16 @@ export default function PhonologyTab() {
                     <b>Advanced (Reduplication):</b><br />
                     <span>^(.{2})(.*) =&gt; $1$1$2</span> (Duplicates the first two letters)
                 </Infobox>
-                
-                <textarea 
-                    className="textarea-phonology" 
-                    id="rules" 
+
+                <textarea
+                    className="textarea-phonology"
+                    id="rules"
                     placeholder={"^(.{2})(.*) => $1$1$2\nk(?=[ie]) => tS"}
                     value={historicalRules}
                     onChange={(e) => updateConfig({ historicalRules: e.target.value })}
                 />
 
-                <VisualRuleBuilder 
+                <VisualRuleBuilder
                     isOpen={isBuilderOpen}
                     onClose={() => setIsBuilderOpen(false)}
                     initialMode="mutation"
@@ -523,17 +602,17 @@ export default function PhonologyTab() {
 
                 <div className="preview-container">
                     <label className="preview-label">Test your rules</label>
-                    
+
                     <div className="preview-input-group">
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             className="preview-input"
                             placeholder="Type words to test (e.g., makin, pata)"
                             value={testWords}
                             onChange={(e) => setTestWords(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handlePreview()}
                         />
-                        
+
                         <Button variant="edit" onClick={handlePreview}>
                             <Eye size={18} /> Preview
                         </Button>
@@ -551,7 +630,7 @@ export default function PhonologyTab() {
                     )}
                 </div>
             </Card>
-            
+
             <Modal
                 isOpen={isReviewModalOpen}
                 onClose={() => {
@@ -564,21 +643,21 @@ export default function PhonologyTab() {
                     <p className="historical-review-desc">
                         ⚠️ These changes will rewrite the phoneme spelling of the selected words. This cannot be undone.
                     </p>
-                    
+
                     {pendingChanges && (
                         <>
                             <div className="historical-review-actions">
                                 <Button variant="edit" onClick={() => setAllPendingChanges(true)}>Select All</Button>
                                 <Button variant="edit" onClick={() => setAllPendingChanges(false)}>Deselect All</Button>
                             </div>
-                            
+
                             <div className="historical-review-list">
                                 {pendingChanges.map((change, index) => (
                                     <label key={change.id} className={`historical-review-item ${change.selected ? 'selected' : ''}`}>
-                                        <input 
-                                            type="checkbox" 
-                                            checked={change.selected} 
-                                            onChange={() => togglePendingChange(index)} 
+                                        <input
+                                            type="checkbox"
+                                            checked={change.selected}
+                                            onChange={() => togglePendingChange(index)}
                                         />
                                         <div className="historical-review-item-content">
                                             <div className="historical-review-words">
@@ -599,7 +678,7 @@ export default function PhonologyTab() {
                                     </label>
                                 ))}
                             </div>
-                            
+
                             <div className="historical-review-footer">
                                 <Button variant="error" onClick={handleConfirmSelectedChanges}>
                                     Apply {pendingChanges.filter(c => c.selected).length} Selected Changes

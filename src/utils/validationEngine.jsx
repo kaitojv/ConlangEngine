@@ -18,12 +18,12 @@ const extractInventory = (configString) => {
  */
 const validateSyllabic = (word, syllabaryMap) => {
     if (!syllabaryMap || Object.keys(syllabaryMap).length === 0) return { valid: true };
-    
+
     const validSyllables = Object.keys(syllabaryMap).sort((a, b) => b.length - a.length);
     if (validSyllables.length === 0) return { valid: true };
 
     const regex = new RegExp(`^(${validSyllables.join('|')})+$`, 'i');
-    
+
     if (!regex.test(word)) {
         return { valid: false, reason: "Contains syllables not defined in your Syllabary Grid." };
     }
@@ -37,12 +37,12 @@ const validateAlphabetic = (word, consonants, vowels, syllablePattern, otherPhon
     const cList = extractInventory(consonants);
     const vList = extractInventory(vowels);
     const oList = extractInventory(otherPhonemes);
-    
+
     if (cList.length === 0 && vList.length === 0 && oList.length === 0) return { valid: true }; // No rules set yet
 
     // 1. CHARACTER INVENTORY VALIDATION
     // Remove allowed universal characters (spaces, hyphens, apostrophes)
-    let checkWord = word.replace(/[\s\-\*']/g, ''); 
+    let checkWord = word.replace(/[\s\-\*']/g, '');
     let tempWord = checkWord;
 
     // Remove valid vowels, consonants, and others to see if any alien characters remain
@@ -55,8 +55,8 @@ const validateAlphabetic = (word, consonants, vowels, syllablePattern, otherPhon
     if (tempWord.length > 0) {
         // Extract unique invalid characters for quick-fix actions
         const invalidChars = [...new Set(tempWord.split(''))];
-        return { 
-            valid: false, 
+        return {
+            valid: false,
             reason: `Contains invalid characters: "${tempWord}". Check your Phoneme settings.`,
             type: 'invalid_chars',
             invalidChars
@@ -68,7 +68,7 @@ const validateAlphabetic = (word, consonants, vowels, syllablePattern, otherPhon
 
     let cvString = checkWord;
     const mappingChar = otherPhonemeMapping ? otherPhonemeMapping.toUpperCase().trim() : 'X';
-    
+
     // Create a combined inventory sorted by length to handle digraphs in one pass
     // This prevents placeholders like 'V' from being overwritten by a consonant 'v'
     const allTokens = [
@@ -94,10 +94,10 @@ const validateAlphabetic = (word, consonants, vowels, syllablePattern, otherPhon
     if (patterns.length > 0) {
         const regexStr = `^(${patterns.join('|')})+$`;
         const patternRegex = new RegExp(regexStr, 'i');
-        
+
         if (!patternRegex.test(cvString)) {
-            return { 
-                valid: false, 
+            return {
+                valid: false,
                 reason: `Does not match your Syllable Pattern (${syllablePattern}). Detected structure: [${cvString}]`,
                 type: 'invalid_pattern',
                 detectedPattern: cvString
@@ -110,14 +110,14 @@ const validateAlphabetic = (word, consonants, vowels, syllablePattern, otherPhon
 
 /**
  * Normalize vowel harmony sets for backward compatibility.
- * Old format: string[][]  →  New format: { name, vowels }[]
+ * Old format: string[][]  →  New format: { name, vowels, neutral }[]
  */
 function normalizeHarmonySets(sets) {
     if (!Array.isArray(sets)) return [];
     return sets.map((s, i) => {
-        if (Array.isArray(s)) return { name: `Set ${i + 1}`, vowels: s };
-        if (s && Array.isArray(s.vowels)) return { name: s.name || `Set ${i + 1}`, vowels: s.vowels };
-        return { name: `Set ${i + 1}`, vowels: [] };
+        if (Array.isArray(s)) return { name: `Set ${i + 1}`, vowels: s, neutral: false };
+        if (s && Array.isArray(s.vowels)) return { name: s.name || `Set ${i + 1}`, vowels: s.vowels, neutral: !!s.neutral };
+        return { name: `Set ${i + 1}`, vowels: [], neutral: false };
     });
 }
 /**
@@ -131,7 +131,7 @@ function extractVowelsFromWord(word, vowelsStr) {
         .map(s => s.trim().split('=')[0])
         .filter(Boolean)
         .sort((a, b) => b.length - a.length);
-    
+
     const found = [];
     let i = 0;
     const w = word.toLowerCase();
@@ -153,6 +153,8 @@ function extractVowelsFromWord(word, vowelsStr) {
 
 /**
  * Checks if a word's vowels conform to the vowel harmony sets.
+ * Neutral sets are ignored in constraint checking — their vowels may appear
+ * alongside any non-neutral set, but they don't "count" as establishing a set.
  * Returns { conforms, foundVowels, matchingSet, mixedSets, matchingSetName }
  */
 function checkVowelHarmony(word, vowelHarmonySets, vowelsStr) {
@@ -175,26 +177,40 @@ function checkVowelHarmony(word, vowelHarmonySets, vowelsStr) {
         return indices;
     });
 
-    // Neutral vowels don't belong to any set
-    const nonNeutral = setMemberships.filter(m => m.length > 0);
-    if (nonNeutral.length === 0) {
+    // For constraint checking, filter out neutral sets.
+    // Neutral vowels may appear with any non-neutral set.
+    const nonNeutralMemberships = setMemberships.map(members =>
+        members.filter(idx => !sets[idx].neutral)
+    );
+
+    // Vowels that don't belong to any non-neutral set are fully neutral
+    const constrained = nonNeutralMemberships.filter(m => m.length > 0);
+    if (constrained.length === 0) {
         return { conforms: true, foundVowels: wordVowels, matchingSet: -1, mixedSets: [], matchingSetName: '' };
     }
 
-    let commonSets = [...nonNeutral[0]];
-    for (let i = 1; i < nonNeutral.length; i++) {
-        commonSets = commonSets.filter(s => nonNeutral[i].includes(s));
+    let commonSets = [...constrained[0]];
+    for (let i = 1; i < constrained.length; i++) {
+        commonSets = commonSets.filter(s => constrained[i].includes(s));
     }
 
-    const allInvolved = [...new Set(setMemberships.flat())];
+    const allInvolved = [...new Set(nonNeutralMemberships.flat())];
     const matchIdx = commonSets.length > 0 ? commonSets[0] : -1;
+
+    // Identify which vowels belong to neutral sets (for UI display)
+    const neutralVowels = [];
+    wordVowels.forEach((v, vi) => {
+        const belongsToNeutral = setMemberships[vi].some(idx => sets[idx].neutral);
+        if (belongsToNeutral && !neutralVowels.includes(v)) neutralVowels.push(v);
+    });
 
     return {
         conforms: commonSets.length > 0,
         foundVowels: wordVowels,
         matchingSet: matchIdx,
         mixedSets: allInvolved,
-        matchingSetName: matchIdx >= 0 ? sets[matchIdx].name : ''
+        matchingSetName: matchIdx >= 0 ? sets[matchIdx].name : '',
+        neutralVowels
     };
 }
 
@@ -220,7 +236,7 @@ function validateVowelHarmony(word, configStoreData) {
     const harmony = checkVowelHarmony(word, vowelHarmonySets, vowels);
     const involvedNames = harmony.mixedSets.map(i => sets[i]?.name || `Set ${i + 1}`).join(', ');
 
-    if (mode === 'flexible') {
+    if (mode === 'optional') {
         return { valid: true, harmonyResult: harmony };
     }
 
@@ -241,31 +257,31 @@ function validateVowelHarmony(word, configStoreData) {
 export function validateNewWord(word, configStoreData) {
     if (!word) return { valid: false, reason: "Word is empty." };
 
-    const { 
-        phonologyTypes, 
-        consonants, 
-        vowels, 
-        syllablePattern, 
+    const {
+        phonologyTypes,
+        consonants,
+        vowels,
+        syllablePattern,
         syllabaryMap,
         otherPhonemes,
         otherPhonemeMapping,
         skipSyllableValidation
     } = configStoreData;
 
-    // Logographic languages bypass phonetic structure validation for the ideogram itself, 
+    // Logographic languages bypass phonetic structure validation for the ideogram itself,
     // but the romanization (word) should technically still follow alphabetic rules.
     if (phonologyTypes === 'syllabic') {
         return validateSyllabic(word, syllabaryMap);
-    } 
-    
+    }
+
     // Default to Alphabetic rules for 'alphabetic' and 'logographic' (to validate the romanization)
     const result = validateAlphabetic(
-        word, 
-        consonants, 
-        vowels, 
-        syllablePattern, 
-        otherPhonemes, 
-        otherPhonemeMapping, 
+        word,
+        consonants,
+        vowels,
+        syllablePattern,
+        otherPhonemes,
+        otherPhonemeMapping,
         skipSyllableValidation
     );
 
@@ -275,6 +291,6 @@ export function validateNewWord(word, configStoreData) {
     const harmonyResult = validateVowelHarmony(word, configStoreData);
     if (!harmonyResult.valid) return harmonyResult;
 
-    // Preserve harmony info even when valid (useful for 'flexible' mode UI)
+    // Preserve harmony info even when valid (useful for 'optional' mode UI)
     return { ...result, harmonyResult: harmonyResult.harmonyResult };
 }

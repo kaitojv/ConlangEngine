@@ -32,10 +32,11 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
     const syllablePattern = useConfigStore(state => state.syllablePattern);
     const customWordClasses = useConfigStore((state) => state.customWordClasses) || [];
     const customTags = useConfigStore((state) => state.customTags) || [];
+    const vowelHarmonySets = useConfigStore(state => state.vowelHarmonySets) || [];
     const vowelHarmonyMode = useConfigStore((state) => state.vowelHarmonyMode) || 'complete';
     const vowelHarmonyOverrideWordClasses = useConfigStore((state) => state.vowelHarmonyOverrideWordClasses) || [];
     const vowelHarmonyOverrideTags = useConfigStore((state) => state.vowelHarmonyOverrideTags) || [];
-    
+
     const [activeField, setActiveField] = useState('word');
 
     // Bundle all the form fields into one neat state object
@@ -219,7 +220,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
         if (mode === 'addSense') {
             // Only check for duplicate translation
             const safeLowerTrans = cleanInputTrans.toLowerCase();
-            const isDuplicateTranslation = lexicon.some(entry => 
+            const isDuplicateTranslation = lexicon.some(entry =>
                 entry.translation.toLowerCase() === safeLowerTrans
             );
 
@@ -317,7 +318,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                 return;
             }
 
-            if (mode === 'optional') {
+            if (mode === 'flexible') {
                 const wordClasses = (wordClass || '').split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
                 const isOverridden = wordClasses.some(c => vowelHarmonyOverrideWordClasses.includes(c)) ||
                     processedTags.some(tag => vowelHarmonyOverrideTags.includes(tag));
@@ -340,8 +341,8 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                 }
             }
 
-            if (mode === 'flexible') {
-                toast(`Vowel harmony suggestion: [${validation.harmonyResult.foundVowels.join(', ')}] mix sets (${mixedNames}).`, { icon: '💡', id: 'harmony-flexible' });
+            if (mode === 'optional') {
+                toast(`Vowel harmony suggestion: [${validation.harmonyResult.foundVowels.join(', ')}] mix sets (${mixedNames}).`, { icon: '💡', id: 'harmony-optional' });
             }
         }
 
@@ -355,7 +356,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
             // Handle multiple invalid characters sequentially
             if (validation.type === 'invalid_chars') {
                 const char = validation.invalidChars[charIndex];
-                
+
                 // If we've processed all individual characters, proceed to the final save
                 if (!char) {
                     return doSave();
@@ -371,7 +372,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                                 handleAddCharsToInventory([char], 'consonants');
                                 setTimeout(() => proceedToValidation(safeWord, cleanInputTrans, processedTags, doSave, charIndex + 1), 100);
                             }} className="btn-v btn-acc-v">Add to Consonants</button>
-                            
+
                             <button onClick={() => {
                                 toast.dismiss(t.id);
                                 handleAddCharsToInventory([char], 'vowels');
@@ -383,7 +384,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                                 // Skip this character but keep going with the next one
                                 setTimeout(() => proceedToValidation(safeWord, cleanInputTrans, processedTags, doSave, charIndex + 1), 100);
                             }} className="btn-v btn-err-v">Save as Irregular</button>
-                            
+
                             <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
                         </div>
                         <div className="char-violation-progress">
@@ -405,7 +406,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                             toast.dismiss(t.id);
                             doSave();
                         }} className="btn-v btn-err-v">Save Anyway</button>
-                        
+
                         {validation.type === 'invalid_pattern' && validation.detectedPattern && (
                             <button onClick={() => {
                                 toast.dismiss(t.id);
@@ -426,58 +427,61 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
 
     return (
         <div className="edit-modal-container">
-            
+
             <div className="edit-modal-grid">
                 <div>
-                    <Input 
-                        label="Word (Conlang)" 
+                    <Input
+                        label="Word (Conlang)"
                         value={word}
                         onChange={(e) => updateField('word', e.target.value)}
                         onFocus={() => setActiveField('word')}
                         className="custom-font-text notranslate"
                     />
                     {harmonyStatus && !harmonyStatus.conforms && (
-                        <div className="harmony-indicator" style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ color: vowelHarmonyMode === 'flexible' ? 'var(--acc)' : '#ef4444' }}>●</span>
+                        <div className="harmony-indicator" style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+                            <span style={{ color: vowelHarmonyMode === 'optional' ? 'var(--acc)' : '#ef4444' }}>●</span>
                             <span>
-                                {vowelHarmonyMode === 'flexible'
+                                {vowelHarmonyMode === 'optional'
                                     ? `Vowel harmony suggestion: [${harmonyStatus.foundVowels.join(', ')}] mix sets`
                                     : `Vowel harmony violation: [${harmonyStatus.foundVowels.join(', ')}] mix sets`}
                             </span>
                         </div>
                     )}
                     {harmonyStatus && harmonyStatus.conforms && harmonyStatus.matchingSet >= 0 && (
-                        <div className="harmony-indicator" style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div className="harmony-indicator" style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
                             <span style={{ color: '#22c55e' }}>●</span>
-                            <span>Conforms to {harmonyStatus.matchingSetName || `Set ${harmonyStatus.matchingSet + 1}`}</span>
+                            <span>
+                                Conforms to vowel harmony set: <b>{harmonyStatus.matchingSetName || `Set ${harmonyStatus.matchingSet + 1}`}</b>
+                                {harmonyStatus.neutralVowels?.length > 0 && ` (with neutral ${harmonyStatus.neutralVowels.join(', ')})`}
+                            </span>
+                        </div>
+                    )}
+                    {harmonyStatus && harmonyStatus.conforms && harmonyStatus.matchingSet < 0 && harmonyStatus.neutralVowels?.length > 0 && (
+                        <div className="harmony-indicator" style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+                            <span style={{ color: '#22c55e' }}>●</span>
+                            <span>All vowels neutral ({harmonyStatus.neutralVowels.join(', ')})</span>
                         </div>
                     )}
                 </div>
-                
+
                 <div>
-                    <Input 
-                        label="IPA (Optional)" 
+                    <Input
+                        label="IPA (Optional)"
                         value={ipa}
                         onChange={(e) => updateField('ipa', e.target.value)}
                         onFocus={() => setActiveField('ipa')}
                     />
-                    <div className="ipa-chart-status-wrap">
-                        <p className="ipa-chart-status">
-                            IPA Chart pastes into: <strong className="ipa-active-field">{activeField === 'word' ? 'Word' : 'IPA'}</strong>
-                        </p>
-                        <IpaChart onSelect={handleIpaSelect} />
-                    </div>
                 </div>
 
                 <div>
-                    <Input 
+                    <Input
                         label="Part of Speech"
                         value={wordClass}
                         onChange={(e) => updateField('wordClass', e.target.value.toLowerCase())}
                         list="edit-word-classes"
                     >
-                        <button 
-                            className="clear-input-btn" 
+                        <button
+                            className="clear-input-btn"
                             onClick={() => updateField('wordClass', '')}
                             title="Clear Part of Speech"
                         >
@@ -494,7 +498,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
 
             {phonologyTypes === 'logographic' && (
                 <div>
-                    <Input 
+                    <Input
                         label="Ideogram / Symbol"
                         value={ideogram}
                         onChange={(e) => updateField('ideogram', e.target.value)}
@@ -503,9 +507,16 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                 </div>
             )}
 
+            <div className="ipa-chart-status-wrap">
+                <p className="ipa-chart-status">
+                    IPA Chart pastes into: <strong className="ipa-active-field">{activeField === 'word' ? 'Word' : 'IPA'}</strong>
+                </p>
+                <IpaChart onSelect={handleIpaSelect} />
+            </div>
+
             <div className="edit-modal-grid">
                 <div>
-                    <Input 
+                    <Input
                         label="Person Category (for pronouns)"
                         value={personCategory}
                         onChange={(e) => updateField('personCategory', e.target.value)}
@@ -526,12 +537,12 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                     Tone & Stress Options
                 </summary>
                 <div className="tone-stress-content">
-                    <ToneStressSelector 
-                        word={word} 
-                        tone={tone} 
-                        stress={stress} 
-                        onToneChange={(v) => updateField('tone', v)} 
-                        onStressChange={(v) => updateField('stress', v)} 
+                    <ToneStressSelector
+                        word={word}
+                        tone={tone}
+                        stress={stress}
+                        onToneChange={(v) => updateField('tone', v)}
+                        onStressChange={(v) => updateField('stress', v)}
                     />
                 </div>
             </details>
@@ -539,15 +550,15 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
             <div>
             <div className="edit-modal-grid trans-def-grid">
                 <div>
-                    <Input 
-                        label="Short Translation" 
+                    <Input
+                        label="Short Translation"
                         value={translation}
                         onChange={(e) => updateField('translation', e.target.value)}
                     />
                 </div>
                 <div>
-                    <Input 
-                        label="Full Definition (Optional)" 
+                    <Input
+                        label="Full Definition (Optional)"
                         value={formData.definition}
                         onChange={(e) => updateField('definition', e.target.value)}
                     />
@@ -565,7 +576,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                         </span>
                     ))}
                     <div className="tag-input-wrap">
-                        <Input 
+                        <Input
                             placeholder={formData.tags.length === 0 ? "Add tags..." : ""}
                             value={tagInput}
                             onChange={(e) => setTagInput(e.target.value)}
@@ -585,8 +596,8 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                             className="tag-input-field"
                         >
                             {tagInput && (
-                                <button 
-                                    className="clear-input-btn" 
+                                <button
+                                    className="clear-input-btn"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         setTagInput('');
@@ -618,7 +629,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                                 <div className="etymology-row">
                                     <span className="etymology-label">Derived from:</span>
                                     <div className="etymology-value">
-                                        <span className="custom-font-text notranslate etymology-parent-word">{transliterate(parentWord.word)}</span> 
+                                        <span className="custom-font-text notranslate etymology-parent-word">{transliterate(parentWord.word)}</span>
                                         <span className="etymology-parent-trans">({parentWord.translation})</span>
                                     </div>
                                 </div>
@@ -636,8 +647,8 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                 )}
             </div>
 
-            <Button 
-                variant="save" 
+            <Button
+                variant="save"
                 className="edit-modal-save-btn"
                 onClick={handleSave}
             >

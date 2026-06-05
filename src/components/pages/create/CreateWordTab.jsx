@@ -353,7 +353,7 @@ export default function CreateWordTab() {
                 return;
             }
 
-            if (mode === 'optional') {
+            if (mode === 'flexible') {
                 const wordClasses = (wordClass || '').split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
                 const isOverridden = wordClasses.some(c => vowelHarmonyOverrideWordClasses.includes(c)) ||
                     processedTags.some(tag => vowelHarmonyOverrideTags.includes(tag));
@@ -376,8 +376,8 @@ export default function CreateWordTab() {
                 }
             }
 
-            if (mode === 'flexible') {
-                toast(`Vowel harmony suggestion: [${validation.harmonyResult.foundVowels.join(', ')}] mix sets.`, { icon: '💡', id: 'harmony-flexible' });
+            if (mode === 'optional') {
+                toast(`Vowel harmony suggestion: [${validation.harmonyResult.foundVowels.join(', ')}] mix sets.`, { icon: '💡', id: 'harmony-optional' });
             }
         }
 
@@ -568,7 +568,7 @@ export default function CreateWordTab() {
                             className="custom-font-text notranslate"
                         />
                         {harmonyStatus && !harmonyStatus.conforms && (
-                            <div className="harmony-indicator" style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div className="harmony-indicator" style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
                                 <span style={{ color: vowelHarmonyMode === 'flexible' ? 'var(--acc)' : '#ef4444' }}>●</span>
                                 <span>
                                     {vowelHarmonyMode === 'flexible'
@@ -578,9 +578,18 @@ export default function CreateWordTab() {
                             </div>
                         )}
                         {harmonyStatus && harmonyStatus.conforms && harmonyStatus.matchingSet >= 0 && (
-                            <div className="harmony-indicator" style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div className="harmony-indicator" style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
                                 <span style={{ color: '#22c55e' }}>●</span>
-                                <span>Conforms to {harmonyStatus.matchingSetName || `Set ${harmonyStatus.matchingSet + 1}`}</span>
+                                <span>
+                                    Conforms to vowel harmony set: <b>{harmonyStatus.matchingSetName || `Set ${harmonyStatus.matchingSet + 1}`}</b>
+                                    {harmonyStatus.neutralVowels?.length > 0 && ` (with neutral ${harmonyStatus.neutralVowels.join(', ')})`}
+                                </span>
+                            </div>
+                        )}
+                        {harmonyStatus && harmonyStatus.conforms && harmonyStatus.matchingSet < 0 && harmonyStatus.neutralVowels?.length > 0 && (
+                            <div className="harmony-indicator" style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+                                <span style={{ color: '#22c55e' }}>●</span>
+                                <span>All vowels neutral ({harmonyStatus.neutralVowels.join(', ')})</span>
                             </div>
                         )}
                     </div>

@@ -117,10 +117,10 @@ export const INITIAL_CONFIG = {
         year: ''
     },
     // Vowel harmony configuration
-    vowelHarmonyMode: 'complete', // 'complete' | 'optional' | 'flexible'
+    vowelHarmonyMode: 'flexible', // 'complete' | 'flexible' | 'optional'
     vowelHarmonySets: [], // Array<{ name: string, vowels: string[] }>
-    vowelHarmonyOverrideWordClasses: [], // word classes exempted in 'optional' mode
-    vowelHarmonyOverrideTags: [], // semantic tags exempted in 'optional' mode
+    vowelHarmonyOverrideWordClasses: [], // word classes exempted in 'flexible' mode
+    vowelHarmonyOverrideTags: [], // semantic tags exempted in 'flexible' mode
     // { 'a': '\uE001', 'b': '\uE002' }
     alphabetGlyphs: {},
     // { [synsetId]: { word: '...', ipa: '...', meaning: '...' } },
