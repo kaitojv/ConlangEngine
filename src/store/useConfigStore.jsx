@@ -86,6 +86,8 @@ export const INITIAL_CONFIG = {
     customWordClasses: [],
     customTags: [],
     autoReturnToLexicon: false,
+    // Per-pattern weight for the word generator (e.g. { 'CV': 60, 'CVC': 30, 'V': 10 })
+    syllablePatternWeights: {},
     alphabetNames: {},
     numberSystem: {
         zero: '',
@@ -115,6 +117,12 @@ export const INITIAL_CONFIG = {
         week: '',
         month: '',
         year: ''
+    },
+    calendarSystem: {
+        daysOfWeek: ['', '', '', '', '', '', ''],
+        months: ['', '', '', '', '', '', '', '', '', '', '', ''],
+        dateFormat: 'DD/MM/YYYY',
+        yearOffset: 0
     },
     // Vowel harmony configuration
     vowelHarmonyMode: 'flexible', // 'complete' | 'flexible' | 'optional'

@@ -10,7 +10,7 @@ import { applyRuleToWord } from '@/utils/morphologyEngine.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
 import { commonWords } from '@/components/pages/wordgenerator/commonWords.jsx';
-import { Wand2, Send, Dna, BookCopy, SkipForward, Check, Settings2, Download } from 'lucide-react';
+import { Wand2, Send, Dna, BookCopy, SkipForward, Check, Settings2, Download, SlidersHorizontal } from 'lucide-react';
 import './generatorTab.css';
 
 
@@ -28,11 +28,41 @@ export default function GeneratorTab() {
     const verbMarker = useConfigStore((state) => state.verbMarker);
     const cliticsRules = useConfigStore((state) => state.cliticsRules);
     const generatorMarkers = useConfigStore((state) => state.generatorMarkers) || {};
+    const syllablePattern = useConfigStore((state) => state.syllablePattern) || '';
+    const syllablePatternWeights = useConfigStore((state) => state.syllablePatternWeights) || {};
     const updateConfig = useConfigStore((state) => state.updateConfig);
     
     const [showMarkerConfig, setShowMarkerConfig] = useState(false);
+    const [showWeightConfig, setShowWeightConfig] = useState(false);
     
-    // UI State for different modes
+    // Parse the syllable patterns from the config for the weight UI
+    const parsedPatterns = useMemo(() => {
+        return (syllablePattern || '')
+            .toUpperCase()
+            .split(/[\s,]+/)
+            .filter(Boolean);
+    }, [syllablePattern]);
+
+    // Compute effective percentages for display
+    const patternPercentages = useMemo(() => {
+        if (parsedPatterns.length === 0) return {};
+        const weights = parsedPatterns.map(p => {
+            const w = syllablePatternWeights[p] ?? syllablePatternWeights[p.toLowerCase()];
+            return (w !== undefined && w >= 0) ? w : 1;
+        });
+        const total = weights.reduce((s, w) => s + w, 0);
+        const result = {};
+        parsedPatterns.forEach((p, i) => {
+            result[p] = total > 0 ? Math.round((weights[i] / total) * 100) : 0;
+        });
+        return result;
+    }, [parsedPatterns, syllablePatternWeights]);
+    
+    const handleWeightChange = (pattern, value) => {
+        const numVal = Math.max(0, Number(value) || 0);
+        updateConfig({ syllablePatternWeights: { ...syllablePatternWeights, [pattern]: numVal } });
+    };
+
     const [isFillMode, setIsFillMode] = useState(false);
     const [isBatchMode, setIsBatchMode] = useState(false);
 
@@ -178,6 +208,53 @@ export default function GeneratorTab() {
                                     </div>
                                 ))}
                             </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Syllable Pattern Weights ── */}
+                <div className="marker-config-section">
+                    <button
+                        className="marker-config-toggle"
+                        onClick={() => setShowWeightConfig(v => !v)}
+                    >
+                        <SlidersHorizontal size={15} />
+                        Pattern Weights
+                        <span className="marker-config-arrow">{showWeightConfig ? '▲' : '▼'}</span>
+                    </button>
+
+                    {showWeightConfig && (
+                        <div className="marker-config-panel">
+                            <p className="marker-config-desc">
+                                Assign probability weights to each syllable pattern. Higher weight = more likely to be picked. Default is 1 for all patterns.
+                            </p>
+                            {parsedPatterns.length === 0 ? (
+                                <p className="weight-empty">No syllable patterns defined. Set them in Settings → Phonology.</p>
+                            ) : (
+                                <div className="weight-grid">
+                                    {parsedPatterns.map(pattern => {
+                                        const weight = syllablePatternWeights[pattern] ?? syllablePatternWeights[pattern.toLowerCase()] ?? 1;
+                                        const pct = patternPercentages[pattern] || 0;
+                                        return (
+                                            <div key={pattern} className="weight-row">
+                                                <span className="weight-pattern-label">{pattern}</span>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="1"
+                                                    className="generator-input weight-input"
+                                                    value={weight}
+                                                    onChange={(e) => handleWeightChange(pattern, e.target.value)}
+                                                />
+                                                <div className="weight-bar-container">
+                                                    <div className="weight-bar-fill" style={{ width: `${pct}%` }} />
+                                                </div>
+                                                <span className="weight-pct">{pct}%</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

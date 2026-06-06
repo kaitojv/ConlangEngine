@@ -1,10 +1,23 @@
-import React from 'react';
-import { Trash2, Link, Wand2 } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Trash2, Link, Wand2, Play } from 'lucide-react';
 import { VisualRuleBuilder } from './VisualRuleBuilder.jsx';
+import { useConfigStore } from '../../../../store/useConfigStore.jsx';
+import { applyRuleToWord } from '../../../../utils/morphologyEngine.jsx';
 import './ruleRow.css';
 
 export const RuleRow = ({ rule, onUpdate, onDelete, allWordClasses }) => {
-  const [isBuilderOpen, setIsBuilderOpen] = React.useState(false);
+  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
+  const [previewWord, setPreviewWord] = useState('test');
+  
+  const grammarRules = useConfigStore(state => state.grammarRules) || [];
+  const vowels = useConfigStore(state => state.vowels) || '';
+  const consonants = useConfigStore(state => state.consonants) || '';
+  const otherPhonemes = useConfigStore(state => state.otherPhonemes) || '';
+
+  const previewResult = useMemo(() => {
+      if (!previewWord) return '';
+      return applyRuleToWord(previewWord, rule, grammarRules, vowels, consonants, otherPhonemes) || previewWord;
+  }, [previewWord, rule, grammarRules, vowels, consonants, otherPhonemes]);
   
   // A single handler to catch changes across all inputs and checkboxes in this row
   const handleChange = (e) => {
@@ -97,6 +110,13 @@ export const RuleRow = ({ rule, onUpdate, onDelete, allWordClasses }) => {
             <Link size={14} className="dependency-icon" />
             <span className="nl-sub-text">Depends on:</span>
             <input type="text" name="dependency" className="nl-input fi" value={rule.dependency} onChange={handleChange} placeholder="Rule Name" style={{ width: '120px' }} />
+          </div>
+
+          <div className="preview-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--s2)', padding: '4px 10px', borderRadius: '6px', border: '1px dashed var(--bd)', marginLeft: 'auto' }}>
+            <Play size={12} color="var(--acc)" fill="var(--acc)" />
+            <input type="text" className="nl-input fi custom-font-text notranslate" value={previewWord} onChange={(e) => setPreviewWord(e.target.value)} placeholder="word" style={{ width: '70px', padding: '2px 6px', background: 'var(--s1)', fontSize: '0.8rem' }} />
+            <span className="nl-sub-text" style={{ margin: '0 2px' }}>→</span>
+            <span className="custom-font-text notranslate" style={{ fontWeight: 'bold', color: 'var(--tx)', minWidth: '50px', fontSize: '0.9rem' }}>{previewResult}</span>
           </div>
 
           <div className="standalone-group">

@@ -8,6 +8,7 @@ export function useWordGenerator() {
     const consonants = useConfigStore((state) => state.consonants);
     const vowels = useConfigStore((state) => state.vowels);
     const syllablePattern = useConfigStore((state) => state.syllablePattern);
+    const syllablePatternWeights = useConfigStore((state) => state.syllablePatternWeights) || {};
     const verbMarker = useConfigStore((state) => state.verbMarker);
     const generatorMarkers = useConfigStore((state) => state.generatorMarkers) || {};
 
@@ -15,6 +16,18 @@ export function useWordGenerator() {
     const [generatedWord, setGeneratedWord] = useState('');
     const [generatedIpa, setGeneratedIpa] = useState('');
     const [generatedClass, setGeneratedClass] = useState('');
+
+    // Weighted random pick: selects from items proportionally to their weight
+    const weightedPick = useCallback((items, weights) => {
+        const total = weights.reduce((sum, w) => sum + w, 0);
+        if (total <= 0) return items[Math.floor(Math.random() * items.length)];
+        let r = Math.random() * total;
+        for (let i = 0; i < items.length; i++) {
+            r -= weights[i];
+            if (r <= 0) return items[i];
+        }
+        return items[items.length - 1];
+    }, []);
 
     // 3. The main generation function
     const generateWord = useCallback((numSyllables = 2, targetClass = 'random') => {
@@ -42,7 +55,6 @@ export function useWordGenerator() {
         // ALPHABETIC MODE
         else {
             const parseP = (str) => str.split(',').map(s => s.trim()).filter(Boolean).map(item => item.includes('=') ? { ipa: item.split('=')[0].trim(), orth: item.split('=')[1].trim() } : { ipa: item, orth: item });
-            const sortear = (arr) => arr[Math.floor(Math.random() * arr.length)];
             
             const consList = parseP(consonants || '');
             const vogsList = parseP(vowels || '');
@@ -57,13 +69,19 @@ export function useWordGenerator() {
                  alert("⚠️ Missing consonants, vowels, or syllable patterns in Settings!");
                  return null;
             }
+
+            // Build weight array for each pattern (default = 1 if not configured)
+            const patternWeights = pads.map(p => {
+                const w = syllablePatternWeights[p] ?? syllablePatternWeights[p.toLowerCase()];
+                return (w !== undefined && w >= 0) ? w : 1;
+            });
             
             let currentVCount = 0;
             let safetyCount = 0;
             
             while (currentVCount < numSyllables && safetyCount < 100) {
                 safetyCount++;
-                const padraoStr = sortear(pads); 
+                const padraoStr = weightedPick(pads, patternWeights); 
                 
                 // Dynamically resolve optional characters like (C) or (V)
                 let resolvedPattern = '';
@@ -88,11 +106,11 @@ export function useWordGenerator() {
                     }
                     
                     if (resolvedPattern[j] === 'C') { 
-                        const c = sortear(consList); 
+                        const c = consList[Math.floor(Math.random() * consList.length)]; 
                         orthResult += c.orth; 
                         ipaResult += c.ipa; 
                     } else if (resolvedPattern[j] === 'V') { 
-                        const v = sortear(vogsList); 
+                        const v = vogsList[Math.floor(Math.random() * vogsList.length)]; 
                         orthResult += v.orth; 
                         ipaResult += v.ipa; 
                         currentVCount++;
@@ -123,7 +141,7 @@ export function useWordGenerator() {
 
         // Return the object in case the caller wants to use it immediately
         return { word: orthResult, ipa: ipaResult, wordClass: classFinal };
-    }, [phonologyTypes, syllabaryMap, consonants, vowels, syllablePattern, verbMarker, generatorMarkers]);
+    }, [phonologyTypes, syllabaryMap, consonants, vowels, syllablePattern, syllablePatternWeights, verbMarker, generatorMarkers, weightedPick]);
 
     return { generatedWord, generatedIpa, generatedClass, generateWord };
 }

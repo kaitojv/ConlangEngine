@@ -20,8 +20,8 @@ const VALID_CONFIG_KEYS = new Set([
     'syllabificationAlgorithm', 'blockTemplates',
     'alphabetNames', 'numberSystem',
     'numberMatrix', 'numberDerivedRules', 'timeSystemVocab', 'alphabetGlyphs',
-    'semanticMappings', 'wordAssistConfig', 'autoReturnToLexicon',
-    'enableToneAndStress', 'functionWords',
+    'semanticMappings', 'wordAssistConfig', 'autoReturnToLexicon', 'syllablePatternWeights',
+    'enableToneAndStress', 'functionWords', 'calendarSystem',
     'stressRules', 'toneRules', 'isPublic', 'conlangIcon',
     'vowelHarmonyMode', 'vowelHarmonySets', 'vowelHarmonyOverrideWordClasses', 'vowelHarmonyOverrideTags'
 ]);

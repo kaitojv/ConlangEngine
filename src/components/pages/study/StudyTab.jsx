@@ -9,6 +9,7 @@ import Mascot from './Mascot.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import ExercisePlayer from './ExercisePlayer.jsx';
 import CourseBuilder from './CourseBuilder.jsx';
+import EmptyState from '@/components/UI/EmptyState/EmptyState.jsx';
 import { playAzureTTS } from '../../../utils/azureTTS.js';
 import toast from 'react-hot-toast';
 import './studyTab.css';
@@ -31,6 +32,8 @@ export default function StudyTab() {
     const [selectedTag, setSelectedTag] = useState('all');
     const [hasFinished, setHasFinished] = useState(false);
     const [deckStarted, setDeckStarted] = useState(false);
+    const [flashcardDirection, setFlashcardDirection] = useState('toEnglish');
+    const updateWordSRS = useLexiconStore((state) => state.updateWordSRS);
     
     // Gamification state
     const [studyMode, setStudyMode] = useState('path'); // 'path', 'flashcard', 'quiz', 'course', 'builder'
@@ -69,13 +72,37 @@ export default function StudyTab() {
             return alert("No words found for the selected tag.");
         }
 
-        const shuffled = [...filteredLexicon].sort(() => Math.random() - 0.5);
-        setDeck(shuffled);
+        const now = Date.now();
+        // 1. Due cards: have SRS data and nextReviewDate <= now
+        const dueCards = filteredLexicon.filter(w => w.srs && w.srs.nextReviewDate <= now);
+        // 2. New cards: no SRS data yet
+        const newCards = filteredLexicon.filter(w => !w.srs || !w.srs.nextReviewDate);
+        
+        // Shuffle both sets
+        dueCards.sort(() => Math.random() - 0.5);
+        newCards.sort(() => Math.random() - 0.5);
+
+        // Combine up to 20 cards: prioritize due cards, fill rest with new cards
+        let selectedDeck = [...dueCards.slice(0, 20)];
+        if (selectedDeck.length < 20) {
+            selectedDeck = [...selectedDeck, ...newCards.slice(0, 20 - selectedDeck.length)];
+        }
+
+        // Final shuffle of the selected deck
+        selectedDeck.sort(() => Math.random() - 0.5);
+
+        if (selectedDeck.length === 0) {
+            setDeckStarted(false);
+            return alert("No words due for review right now! Take a break or add new words.");
+        }
+
+        setDeck(selectedDeck);
         setCurrentIdx(0);
         setIsFlipped(false);
         setHasFinished(false);
         setDeckStarted(true);
         setStudyMode('flashcard');
+        setFlashcardDirection(Math.random() > 0.5 ? 'toEnglish' : 'toConlang');
     };
 
     const startQuiz = (levelNode) => {
@@ -113,14 +140,22 @@ export default function StudyTab() {
         window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
     };
 
-    // Move to the next card, and maybe toss this one back in the pile if they need to review it
-    const handleNext = (needsReview) => {
+    // Handle SRS grading (0-Fail, 3-Hard, 4-Good, 5-Easy)
+    const handleSRSGrade = (grade) => {
+        const currentWordObj = deck[currentIdx];
+        
+        // Update the word in the global store with the new SM-2 calculated values
+        if (currentWordObj && currentWordObj.id) {
+            updateWordSRS(currentWordObj.id, grade);
+        }
+
         setIsFlipped(false);
         
         // Wait for the card to physically flip over before changing its text!
         setTimeout(() => {
             const updatedDeck = [...deck];
-            if (needsReview) {
+            // If they failed completely (grade 1) or found it hard (grade 3), we push it to the end of the current session
+            if (grade <= 3) {
                 updatedDeck.push(deck[currentIdx]);
                 setDeck(updatedDeck);
             }
@@ -131,6 +166,7 @@ export default function StudyTab() {
                 recordDailyStudy();
             } else {
                 setCurrentIdx(nextIdx);
+                setFlashcardDirection(Math.random() > 0.5 ? 'toEnglish' : 'toConlang');
             }
         }, 300); // Matches the CSS transition time
     };
@@ -305,21 +341,18 @@ export default function StudyTab() {
             {studyMode === 'path' && (
                 <div className="learning-path-container">
                     {pathNodes.length === 0 ? (
-                        <div className="empty-path">
-                            <h3>Welcome to the Course Map!</h3>
-                            {lexicon.length >= 200 ? (
-                                <>
-                                    <p>You haven't built your language course yet.</p>
-                                    <Button variant="imp" onClick={() => setStudyMode('builder')} style={{marginTop: '15px'}}>
-                                        Open Course Builder
-                                    </Button>
-                                </>
-                            ) : (
-                                <p style={{color: 'var(--err)', marginTop: '10px'}}>
-                                    You need at least 200 words in your lexicon to build a course. Keep adding words! ({lexicon.length}/200)
-                                </p>
-                            )}
-                        </div>
+                        <EmptyState
+                            icon={Map}
+                            title="Welcome to the Course Map!"
+                            description={lexicon.length >= 200 
+                                ? "You haven't built your language course yet. Build your skill tree and path to mastery." 
+                                : `You need at least 200 words in your lexicon to build a course. Keep adding words! (${lexicon.length}/200)`}
+                            actionButton={lexicon.length >= 200 ? (
+                                <Button variant="imp" onClick={() => setStudyMode('builder')}>
+                                    Open Course Builder
+                                </Button>
+                            ) : null}
+                        />
                     ) : (
                         <div className="path-track" style={{ position: 'relative' }}>
                             <svg 
@@ -458,11 +491,19 @@ export default function StudyTab() {
                                     </>
                                 ) : currentWord ? (
                                     <>
-                                        <div className="fc-word custom-font-text notranslate">
-                                            {transliterate(currentWord.word)}
-                                        </div>
-                                        {currentWord.ipa && (
-                                            <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>
+                                        {flashcardDirection === 'toEnglish' ? (
+                                            <>
+                                                <div className="fc-word custom-font-text notranslate">
+                                                    {transliterate(currentWord.word)}
+                                                </div>
+                                                {currentWord.ipa && (
+                                                    <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <div className="fc-word-english">
+                                                {currentWord.translation}
+                                            </div>
                                         )}
                                         <div style={{ marginTop: '15px' }}>
                                             <Button variant="default" onClick={(e) => handleListen(e, currentWord)} style={{ padding: '6px 12px' }}>
@@ -477,8 +518,21 @@ export default function StudyTab() {
                             <div className="fc-face fc-back">
                                 {currentWord && !hasFinished && (
                                     <>
-                                        <div className="fc-trans">{currentWord.translation}</div>
-                                        <div className="fc-class">{currentWord.wordClass}</div>
+                                        {flashcardDirection === 'toEnglish' ? (
+                                            <>
+                                                <div className="fc-trans">{currentWord.translation}</div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="fc-word custom-font-text notranslate" style={{fontSize: '2rem', marginBottom: '10px'}}>
+                                                    {transliterate(currentWord.word)}
+                                                </div>
+                                                {currentWord.ipa && (
+                                                    <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>
+                                                )}
+                                            </>
+                                        )}
+                                        <div className="fc-class" style={{marginTop: '15px'}}>{currentWord.wordClass}</div>
                                         {currentWord.tags && currentWord.tags.length > 0 && (
                                             <div className="fc-tags-container">
                                                 {currentWord.tags.map(tag => (
@@ -493,21 +547,40 @@ export default function StudyTab() {
                     </div>
 
                     {/* Action buttons (Only visible when viewing the back of the card) */}
-                    <div className={`fc-actions ${isFlipped && !hasFinished ? 'visible' : ''}`}>
+                    <div className={`fc-actions srs-actions ${isFlipped && !hasFinished ? 'visible' : ''}`}>
                         <Button 
                             variant="error" 
-                            className="fc-action-btn" 
-                            onClick={(e) => { e.stopPropagation(); handleNext(true); }}
+                            className="srs-btn srs-fail" 
+                            onClick={(e) => { e.stopPropagation(); handleSRSGrade(1); }}
                         >
-                            <div className="btn-content-flex"><X size={20} /> Needs Review</div>
+                            <span className="srs-label">Fail</span>
+                            <span className="srs-hint">&lt;1d</span>
                         </Button>
-                        
                         <Button 
-                            variant="default" 
-                            className="fc-action-btn btn-got-it" 
-                            onClick={(e) => { e.stopPropagation(); handleNext(false); }}
+                            variant="warning" 
+                            className="srs-btn srs-hard" 
+                            onClick={(e) => { e.stopPropagation(); handleSRSGrade(3); }}
+                            style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)' }}
                         >
-                            <div className="btn-content-flex"><Check size={20} /> Got It</div>
+                            <span className="srs-label">Hard</span>
+                            <span className="srs-hint">Days</span>
+                        </Button>
+                        <Button 
+                            variant="save" 
+                            className="srs-btn srs-good" 
+                            onClick={(e) => { e.stopPropagation(); handleSRSGrade(4); }}
+                        >
+                            <span className="srs-label">Good</span>
+                            <span className="srs-hint">Weeks</span>
+                        </Button>
+                        <Button 
+                            variant="imp" 
+                            className="srs-btn srs-easy" 
+                            onClick={(e) => { e.stopPropagation(); handleSRSGrade(5); }}
+                            style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)' }}
+                        >
+                            <span className="srs-label">Easy</span>
+                            <span className="srs-hint">Months</span>
                         </Button>
                     </div>
 

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, subscribeWithSelector } from 'zustand/middleware';
 import { share } from 'shared-zustand';
+import { calculateSM2 } from '../utils/sm2.js';
 
 export const useLexiconStore = create(
     subscribeWithSelector(
@@ -37,6 +38,15 @@ export const useLexiconStore = create(
                     lexicon: (state.lexicon || []).map(word =>
                         word.id === id ? { ...word, ...updatedFields } : word
                     )
+                })),
+
+                updateWordSRS: (id, grade) => set((state) => ({
+                    lexicon: (state.lexicon || []).map(word => {
+                        if (word.id !== id) return word;
+                        const currentSrs = word.srs || {};
+                        const newSrs = calculateSM2(grade, currentSrs);
+                        return { ...word, srs: newSrs };
+                    })
                 })),
 
                 deleteWord: (id) => set((state) => ({

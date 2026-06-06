@@ -4,12 +4,18 @@ import Card from '@/components/UI/Card/Card.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Infobox from '@/components/UI/Infobox/Infobox.jsx';
-import { Hash, Calculator, ArrowRight, Lightbulb, RefreshCw } from 'lucide-react';
+import { Hash, Calculator, ArrowRight, Lightbulb, RefreshCw, CalendarDays } from 'lucide-react';
 import './numeralTab.css';
 
 export default function NumeralTab() {
     const updateConfig = useConfigStore(s => s.updateConfig);
     const numeralBase = useConfigStore(s => s.numeralBase) || 10;
+    const calendarSystem = useConfigStore(s => s.calendarSystem) || {
+        daysOfWeek: ['', '', '', '', '', '', ''],
+        months: ['', '', '', '', '', '', '', '', '', '', '', ''],
+        dateFormat: 'DD/MM/YYYY',
+        yearOffset: 0
+    };
 
     const [customBaseInput, setCustomBaseInput] = React.useState(numeralBase.toString());
     
@@ -90,6 +96,44 @@ export default function NumeralTab() {
 
         return { value: resultStr, decimal: result };
     }, [calcVal1, calcVal2, calcOp, numeralBase]);
+
+    // --- CALENDAR GENERATOR ---
+    const [realDateStr, setRealDateStr] = useState(new Date().toISOString().split('T')[0]);
+
+    const generatedDate = useMemo(() => {
+        if (!realDateStr) return null;
+        const parts = realDateStr.split('-');
+        if (parts.length !== 3) return null;
+        
+        let year = parseInt(parts[0], 10);
+        let month = parseInt(parts[1], 10);
+        let day = parseInt(parts[2], 10);
+        
+        // Calculate weekday (0 = Sun, 1 = Mon ... 6 = Sat)
+        const dateObj = new Date(year, month - 1, day);
+        let weekdayIndex = dateObj.getDay(); 
+        // Shift to Monday=0, Sunday=6 for better UX if they think of Monday as day 1
+        weekdayIndex = weekdayIndex === 0 ? 6 : weekdayIndex - 1;
+        
+        const conlangYear = year + (parseInt(calendarSystem.yearOffset) || 0);
+        
+        // Convert numbers to conlang base
+        const dStr = day.toString(numeralBase).toUpperCase();
+        const yStr = conlangYear.toString(numeralBase).toUpperCase();
+        
+        // Get month and weekday names
+        const mName = calendarSystem.months[month - 1] || `[Month ${month}]`;
+        const wName = calendarSystem.daysOfWeek[weekdayIndex] || `[Weekday ${weekdayIndex + 1}]`;
+        
+        // Format
+        let result = calendarSystem.dateFormat;
+        result = result.replace('DD', dStr);
+        result = result.replace('MM', mName);
+        result = result.replace('YYYY', yStr);
+        result = result.replace('WW', wName);
+        
+        return result;
+    }, [realDateStr, calendarSystem, numeralBase]);
 
     // --- REFERENCE TABLE ---
     const referenceNumbers = useMemo(() => {
@@ -241,6 +285,110 @@ export default function NumeralTab() {
                             <span className="ref-converted">{converted}</span>
                         </div>
                     ))}
+                </div>
+            </Card>
+
+            {/* Calendar & Date System */}
+            <Card>
+                <h2 className="flex sg-title"><CalendarDays /> Calendar & Date System</h2>
+                <Infobox title="Date Translator">
+                    Translate real-world Gregorian dates into your conlang. Days and years are automatically converted into your <strong>Base-{numeralBase}</strong> number system.
+                </Infobox>
+
+                <div className="calendar-config-grid">
+                    <div className="cal-section">
+                        <h3>Days of the Week</h3>
+                        <p className="cal-desc">Start from Monday.</p>
+                        <div className="cal-inputs">
+                            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((dayName, idx) => (
+                                <div key={`day-${idx}`} className="cal-input-row">
+                                    <span className="cal-label">{dayName.slice(0, 3)}</span>
+                                    <input 
+                                        type="text" 
+                                        className="fi custom-font-text notranslate" 
+                                        placeholder={`Conlang word`}
+                                        value={calendarSystem.daysOfWeek[idx] || ''}
+                                        onChange={(e) => {
+                                            const newDays = [...calendarSystem.daysOfWeek];
+                                            newDays[idx] = e.target.value;
+                                            updateConfig({ calendarSystem: { ...calendarSystem, daysOfWeek: newDays }});
+                                        }}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="cal-section">
+                        <h3>Months</h3>
+                        <p className="cal-desc">January to December.</p>
+                        <div className="cal-inputs months-grid">
+                            {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((monthName, idx) => (
+                                <div key={`month-${idx}`} className="cal-input-row">
+                                    <span className="cal-label">{monthName}</span>
+                                    <input 
+                                        type="text" 
+                                        className="fi custom-font-text notranslate" 
+                                        placeholder={`Conlang word`}
+                                        value={calendarSystem.months[idx] || ''}
+                                        onChange={(e) => {
+                                            const newMonths = [...calendarSystem.months];
+                                            newMonths[idx] = e.target.value;
+                                            updateConfig({ calendarSystem: { ...calendarSystem, months: newMonths }});
+                                        }}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="cal-format-section">
+                    <div className="cal-format-inputs">
+                        <div className="cal-input-group">
+                            <label className="form-label">Date Format</label>
+                            <select 
+                                className="fi"
+                                value={calendarSystem.dateFormat}
+                                onChange={(e) => updateConfig({ calendarSystem: { ...calendarSystem, dateFormat: e.target.value }})}
+                            >
+                                <option value="WW, DD MM YYYY">WW, DD MM YYYY (Mon, 25 Dec 2023)</option>
+                                <option value="DD MM YYYY">DD MM YYYY (25 Dec 2023)</option>
+                                <option value="MM DD, YYYY">MM DD, YYYY (Dec 25, 2023)</option>
+                                <option value="YYYY MM DD">YYYY MM DD (2023 Dec 25)</option>
+                                <option value="The DD of MM, YYYY">The DD of MM, YYYY</option>
+                                <option value="WW - DD/MM/YYYY">WW - DD/MM/YYYY</option>
+                            </select>
+                        </div>
+                        <div className="cal-input-group">
+                            <label className="form-label">Epoch Offset (Years)</label>
+                            <input 
+                                type="number" 
+                                className="fi"
+                                value={calendarSystem.yearOffset}
+                                onChange={(e) => updateConfig({ calendarSystem: { ...calendarSystem, yearOffset: parseInt(e.target.value) || 0 }})}
+                                placeholder="e.g. -1000 or 500"
+                            />
+                            <p className="cal-sub-label">Add/subtract years from Gregorian date.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="cal-preview-section">
+                    <div className="cal-preview-header">
+                        <h3>Live Date Translator</h3>
+                        <input 
+                            type="date" 
+                            className="fi date-picker"
+                            value={realDateStr}
+                            onChange={(e) => setRealDateStr(e.target.value)}
+                        />
+                    </div>
+                    <div className="cal-preview-box">
+                        <span className="cal-preview-text custom-font-text notranslate">
+                            {generatedDate}
+                        </span>
+                    </div>
                 </div>
             </Card>
         </div>

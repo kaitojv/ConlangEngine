@@ -279,4 +279,73 @@
     margin: 0;
     padding: 8px 10px;
     font-size: 0.9rem;
+}
+
+/* ── Pattern Weight Config ── */
+.weight-empty {
+    color: var(--tx2);
+    font-style: italic;
+    font-size: 0.85rem;
+    margin: 8px 0 0;
+}
+
+.weight-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.weight-row {
+    display: grid;
+    grid-template-columns: 70px 70px 1fr 45px;
+    gap: 10px;
+    align-items: center;
+}
+
+.weight-pattern-label {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--acc);
+    letter-spacing: 1px;
+}
+
+.weight-input {
+    margin: 0 !important;
+    padding: 6px 8px !important;
+    font-size: 0.85rem !important;
+    text-align: center;
+    width: 100% !important;
+}
+
+.weight-bar-container {
+    height: 8px;
+    background: var(--s2);
+    border-radius: 99px;
+    overflow: hidden;
+    border: 1px solid var(--bd);
+}
+
+.weight-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--acc), var(--acc2, var(--acc)));
+    border-radius: 99px;
+    transition: width 0.3s ease;
+    min-width: 0;
+}
+
+.weight-pct {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--tx2);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 500px) {
+    .weight-row {
+        grid-template-columns: 60px 60px 1fr 40px;
+        gap: 6px;
+    }
 }

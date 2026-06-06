@@ -5,7 +5,9 @@ import { applyRuleToWord } from '@/utils/morphologyEngine.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import Card from '@/components/UI/Card/Card.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
-import { Network, AlertTriangle } from 'lucide-react';
+import Button from '@/components/UI/Buttons/Buttons.jsx';
+import EmptyState from '@/components/UI/EmptyState/EmptyState.jsx';
+import { Network, AlertTriangle, Search, BookOpen } from 'lucide-react';
 import './etymologyTab.css';
 
 export default function EtymologyTab() {
@@ -99,6 +101,14 @@ export default function EtymologyTab() {
                     </div>
                 )}
             </Card>
+
+            {!searchInput.trim() && !targetWord && (
+                <EmptyState
+                    icon={Network}
+                    title="Etymology Map"
+                    description="Visualize how words in your conlang are derived. Search for a root word to see its entire grammatical family tree, automatically generated from your grammar rules."
+                />
+            )}
 
             {targetWord && (
                 <div className="etymology-tree-container">
