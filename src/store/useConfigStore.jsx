@@ -166,7 +166,7 @@ export const INITIAL_CONFIG = {
         customTypographyModes: [],
         activeDisplayMode: 'Base'
     },
-    // REST API backup system — per-project configuration (see API.md)
+    // REST API backup system — per-project configuration (see https://github.com/niruhsa/ConlangEngine-Obsidian-Backup/blob/master/README.md)
     backupSettings: {
         enabled: false,
         // Base URL incl. transport + host + port, e.g. http://localhost:3000
