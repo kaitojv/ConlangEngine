@@ -10,6 +10,7 @@ import { Routes, Route, NavLink, useLocation } from 'react-router-dom';
 import { useThemeInjector } from './hooks/useThemeInjector.jsx';
 import { useFontInjector } from './utils/useFontInjector.jsx';
 import { useGlobalHotkeys } from './hooks/useGlobalHotkeys.jsx';
+import { useBackupManager } from './hooks/useBackupManager.jsx';
 import Footer from './components/Layout/Footer/Footer.jsx';
 import FloatingKeyboard from './components/UI/FloatingKeyboard/FloatingKeyboard.jsx';
 import PWAInstallPrompt from './components/UI/PWAInstallPrompt/PWAInstallPrompt.jsx';
@@ -102,6 +103,7 @@ function App(){
   useThemeInjector();
   useFontInjector();
   useGlobalHotkeys();
+  const { backupNow } = useBackupManager();
 
   return (
     <>
@@ -157,7 +159,7 @@ function App(){
       )}
 
     <div className="App">
-      <Header openMenu={() => setOpenMenu(true)} />
+      <Header openMenu={() => setOpenMenu(true)} onBackupNow={backupNow} />
       <NavBar isMenuOpen={openMenu} closeMenu={() => setOpenMenu(false)} />
 
       <main className="content">

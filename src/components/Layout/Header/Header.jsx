@@ -18,10 +18,11 @@ import { generateDocxExport } from '../../../utils/docxExporter.jsx';
 import { exportMinecraftResourcePack } from '../../../utils/minecraftExporter.jsx';
 import { ExportModal } from './ExportModal.jsx';
 import { CsvImportModal } from './CsvImportModal.jsx';
+import BackupStatus from '../BackupStatus/BackupStatus.jsx';
 import { sanitizeBackup } from '../../../utils/schemaValidator.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 
-export default function Header({ openMenu }) {
+export default function Header({ openMenu, onBackupNow }) {
     const navigate = useNavigate();
     const fileInputRef = useRef(null);
     const fileInputSingleRef = useRef(null);
@@ -241,6 +242,7 @@ export default function Header({ openMenu }) {
                         ) : (
                             <span className="hdr-badge">Local</span>
                         )}
+                        <BackupStatus onBackupNow={onBackupNow} />
                     </div>
                 </div>
 
