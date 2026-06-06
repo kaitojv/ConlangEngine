@@ -14,7 +14,7 @@ import { sanitizeBackup } from './schemaValidator.jsx';
 // Returns the restored projectId (from the payload config), or null.
 // `lastBackupTime` (optional ISO string) records the device's sync point so we
 // don't re-fetch the same backup on the next startup.
-export function restoreBackupPayload(payload, { lastBackupTime } = {}) {
+export function restoreBackupPayload(payload, { lastBackupTime, lastBackupVersion } = {}) {
     const data = sanitizeBackup(payload);
 
     // Pause change detection across the synchronous setState batch (+ buffer).
@@ -27,8 +27,11 @@ export function restoreBackupPayload(payload, { lastBackupTime } = {}) {
     }
 
     const projectId = data.config?.projectId || null;
-    if (projectId && lastBackupTime) {
-        useBackupStore.getState().setMeta(projectId, { lastBackupTime });
+    if (projectId && (lastBackupTime || lastBackupVersion)) {
+        const patch = {};
+        if (lastBackupTime) patch.lastBackupTime = lastBackupTime;
+        if (lastBackupVersion) patch.lastBackupVersion = lastBackupVersion;
+        useBackupStore.getState().setMeta(projectId, patch);
     }
     return projectId;
 }

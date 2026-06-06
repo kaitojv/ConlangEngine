@@ -6,6 +6,7 @@ import React from 'react';
 import { CloudOff, CloudUpload, Cloud, CloudCog, AlertTriangle, Loader } from 'lucide-react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useBackupStore, BACKUP_STATUS } from '../../../store/useBackupStore.jsx';
+import { useIsDesktop } from '../../../utils/device.js';
 import './backupstatus.css';
 
 const STATUS_META = {
@@ -21,9 +22,11 @@ export default function BackupStatus({ onBackupNow }) {
     const enabled = useConfigStore((s) => s.backupSettings?.enabled);
     const status = useBackupStore((s) => s.status);
     const lastError = useBackupStore((s) => s.lastError);
+    // Backup is desktop-only (Obsidian plugin) — never show on mobile.
+    const isDesktop = useIsDesktop();
 
-    // Only render when the user has turned backup on for this project.
-    if (!enabled) return null;
+    // Only render on desktop and when backup is enabled for this project.
+    if (!isDesktop || !enabled) return null;
 
     const meta = STATUS_META[status] || STATUS_META[BACKUP_STATUS.DISABLED];
     const { Icon, label, cls } = meta;

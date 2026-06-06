@@ -20,6 +20,8 @@ import { useProjectStore } from '../store/useProjectStore.jsx';
 import { useBackupStore, BACKUP_STATUS } from '../store/useBackupStore.jsx';
 import { sanitizeConfig } from '../utils/schemaValidator.jsx';
 import { restoreBackupPayload } from '../utils/backupRestore.js';
+import { isDesktopDevice } from '../utils/device.js';
+import toast from 'react-hot-toast';
 import {
     checkHealth,
     createBackup,
@@ -37,6 +39,42 @@ function buildPayload() {
     const project = { localProjects: useProjectStore.getState().localProjects || [] };
     const lexicon = { lexicon: useLexiconStore.getState().lexicon || [] };
     return { config, project, lexicon };
+}
+
+// Max random pre-flight delay (ms). Spreads out backups when several tabs are
+// open so they don't all push at the same instant — the later tab then sees
+// the version the first tab created and can skip a duplicate.
+const JITTER_MAX_MS = 1500;
+const jitter = () => new Promise((r) => setTimeout(r, Math.floor(Math.random() * JITTER_MAX_MS)));
+
+// Deterministic JSON (keys sorted) so payload comparison is order-independent.
+function stableStringify(value) {
+    const seen = new WeakSet();
+    const norm = (v) => {
+        if (v && typeof v === 'object') {
+            if (seen.has(v)) return null;
+            seen.add(v);
+            if (Array.isArray(v)) return v.map(norm);
+            return Object.keys(v).sort().reduce((acc, k) => {
+                acc[k] = norm(v[k]);
+                return acc;
+            }, {});
+        }
+        return v;
+    };
+    try {
+        return JSON.stringify(norm(value));
+    } catch {
+        return null;
+    }
+}
+
+// True when two backup payloads represent identical state.
+function payloadsEqual(a, b) {
+    if (!a || !b) return false;
+    const sa = stableStringify(a);
+    const sb = stableStringify(b);
+    return sa !== null && sa === sb;
 }
 
 export function useBackupManager() {
@@ -65,6 +103,8 @@ export function useBackupManager() {
     const performBackup = async (forceNew = false) => {
         const cfg = settingsRef.current;
         const pid = projectIdRef.current;
+        // Desktop-only (Obsidian plugin) — never run on mobile/tablet.
+        if (!isDesktopDevice()) return;
         if (!cfg?.enabled || !pid || !normalizeEndpoint(cfg.endpoint)) return;
 
         if (inFlightRef.current) {
@@ -76,9 +116,46 @@ export function useBackupManager() {
         inFlightRef.current = true;
         store.getState().setStatus(BACKUP_STATUS.SAVING);
 
+        // Random pre-flight delay so multiple tabs de-sync (see JITTER_MAX_MS).
+        await jitter();
+
+        // Settings/project may have changed during the delay — re-validate.
+        if (!isDesktopDevice() || !settingsRef.current?.enabled || projectIdRef.current !== pid) {
+            inFlightRef.current = false;
+            return;
+        }
+
         const endpoint = cfg.endpoint;
+        // Build AFTER the delay so we capture the latest local state.
         const payload = buildPayload();
         const meta = store.getState().getMeta(pid);
+
+        // Dedupe across tabs: if the server's latest backup is identical to what
+        // we're about to push, skip creating/overwriting and just sync our meta.
+        try {
+            const remoteMeta = await getProjectMeta(endpoint, pid);
+            if (remoteMeta) {
+                const latestRemote = await getLatestBackup(endpoint, pid);
+                if (latestRemote && payloadsEqual(latestRemote, payload)) {
+                    store.getState().setMeta(pid, {
+                        lastBackupTime: remoteMeta.lastBackupTime,
+                        lastBackupVersion: remoteMeta.latestVersion,
+                    });
+                    store.getState().setOnline(true);
+                    dirtyRef.current = false;
+                    store.getState().setStatus(BACKUP_STATUS.SAVED);
+                    inFlightRef.current = false;
+                    if (pendingRef.current) {
+                        pendingRef.current = false;
+                        performBackup(false);
+                    }
+                    return;
+                }
+            }
+        } catch {
+            // Dedupe check failed (offline/etc.) — fall through to a normal push,
+            // which has its own offline handling below.
+        }
 
         // Decide whether to overwrite the active reuse version or create new.
         let reuseTarget = null;
@@ -91,14 +168,17 @@ export function useBackupManager() {
 
         try {
             let timestamp = new Date().toISOString();
+            let savedVersion = reuseTarget || null;
             if (reuseTarget) {
                 try {
                     const res = await updateBackup(endpoint, pid, reuseTarget, payload);
                     timestamp = res?.timestamp || timestamp;
+                    savedVersion = res?.version || reuseTarget;
                 } catch (err) {
                     // Version may have been deleted server-side — fall back to a new one.
                     const res = await createBackup(endpoint, pid, payload);
                     timestamp = res?.timestamp || timestamp;
+                    savedVersion = res?.version || savedVersion;
                     if (cfg.reuseEnabled && res?.version) {
                         store.getState().startReuseWindow(pid, res.version);
                     }
@@ -106,6 +186,7 @@ export function useBackupManager() {
             } else {
                 const res = await createBackup(endpoint, pid, payload);
                 timestamp = res?.timestamp || timestamp;
+                savedVersion = res?.version || savedVersion;
                 // Open a fresh reuse window for subsequent change-backups.
                 if (cfg.reuseEnabled && !forceNew && res?.version) {
                     store.getState().startReuseWindow(pid, res.version);
@@ -118,7 +199,9 @@ export function useBackupManager() {
                 }
             }
 
-            store.getState().setMeta(pid, { lastBackupTime: timestamp });
+            // Record both time and version so startup sync can detect a newer
+            // remote backup on the next load (or on another device).
+            store.getState().setMeta(pid, { lastBackupTime: timestamp, lastBackupVersion: savedVersion });
             store.getState().setOnline(true);
             dirtyRef.current = false;
             store.getState().setStatus(BACKUP_STATUS.SAVED);
@@ -153,6 +236,7 @@ export function useBackupManager() {
     // Mark local state dirty and (optionally) schedule a push.
     const onLocalChange = () => {
         if (store.getState().isSuppressed()) return;
+        if (!isDesktopDevice()) return;
         const cfg = settingsRef.current;
         if (!cfg?.enabled) return;
         dirtyRef.current = true;
@@ -185,7 +269,7 @@ export function useBackupManager() {
         if (autosaveTimer.current) { clearInterval(autosaveTimer.current); autosaveTimer.current = null; }
         if (healthTimer.current) { clearInterval(healthTimer.current); healthTimer.current = null; }
 
-        if (!cfg?.enabled || !pid || !normalizeEndpoint(cfg.endpoint)) {
+        if (!isDesktopDevice() || !cfg?.enabled || !pid || !normalizeEndpoint(cfg.endpoint)) {
             store.getState().setStatus(BACKUP_STATUS.DISABLED);
             store.getState().setOnline(false);
             return;
@@ -207,16 +291,27 @@ export function useBackupManager() {
                 const remoteMeta = await getProjectMeta(cfg.endpoint, pid);
                 if (cancelled) return;
                 const localMeta = store.getState().getMeta(pid);
+
+                const versionNum = (v) => parseInt(String(v || '').replace(/^v/i, ''), 10) || 0;
                 const remoteTime = remoteMeta?.lastBackupTime ? new Date(remoteMeta.lastBackupTime).getTime() : 0;
                 const localTime = localMeta?.lastBackupTime ? new Date(localMeta.lastBackupTime).getTime() : 0;
+                const remoteVer = versionNum(remoteMeta?.latestVersion);
+                const localVer = versionNum(localMeta?.lastBackupVersion);
 
-                // Load remote when this device has never synced it, or remote is newer.
-                if (remoteTime && remoteTime > localTime) {
+                // Remote wins when it has a higher version number, or (same/unknown
+                // version) a newer timestamp than this device last synced.
+                const remoteIsNewer = remoteMeta && (remoteVer > localVer || (remoteTime && remoteTime > localTime));
+
+                if (remoteIsNewer) {
                     const payload = await getLatestBackup(cfg.endpoint, pid);
                     if (cancelled || !payload) return;
-                    restoreBackupPayload(payload, { lastBackupTime: remoteMeta.lastBackupTime });
+                    restoreBackupPayload(payload, {
+                        lastBackupTime: remoteMeta.lastBackupTime,
+                        lastBackupVersion: remoteMeta.latestVersion,
+                    });
                     dirtyRef.current = false;
                     store.getState().setStatus(BACKUP_STATUS.SAVED);
+                    toast.success(`Loaded newer backup ${remoteMeta.latestVersion || ''} from server`.trim());
                 } else {
                     store.getState().setStatus(dirtyRef.current ? BACKUP_STATUS.UNSAVED : BACKUP_STATUS.SAVED);
                 }

@@ -85,7 +85,10 @@ export default function BackupBrowser({ isOpen, onClose, endpoint }) {
 
             // restoreBackupPayload sets projectId in state via setFullConfig.
             const meta = projects.find((p) => p.projectId === projectId);
-            const restoredId = restoreBackupPayload(payload, { lastBackupTime: meta?.lastBackupTime });
+            const restoredId = restoreBackupPayload(payload, {
+                lastBackupTime: meta?.lastBackupTime,
+                lastBackupVersion: isLatest ? meta?.latestVersion : version,
+            });
             toast.success(`Loaded project "${restoredId || projectId}"`);
             onClose();
         } catch (err) {
