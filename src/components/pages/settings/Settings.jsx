@@ -11,9 +11,12 @@ import SystemTab from './SystemTab.jsx';
 import FunctionWordsTab from './FunctionWordsTab.jsx';
 import GraphismTab from './GraphismTab.jsx';
 import BackupTab from './BackupTab.jsx';
+import { useIsDesktop } from '../../../utils/device.js';
 
 export default function Settings() {
     const [activeTab, setActiveTab] = useState('general');
+    // Backup talks to the desktop-only Obsidian plugin — hide the tab on mobile.
+    const isDesktop = useIsDesktop();
 
     const configTabs = [
         { id: 'general', label: 'General', icon: Cog },
@@ -23,7 +26,7 @@ export default function Settings() {
         { id: 'numerals', label: 'Numerals', icon: Hash },
         { id: 'functionWords', label: 'Pronouns', icon: Bookmark },
         { id: 'graphism', label: 'Graphism', icon: Type },
-        { id: 'backup', label: 'Backup', icon: Cloud },
+        ...(isDesktop ? [{ id: 'backup', label: 'Backup', icon: Cloud }] : []),
         { id: 'system', label: 'System and Theme', icon: Palette}
     ];
     return (
@@ -68,7 +71,7 @@ export default function Settings() {
                 {activeTab === 'graphism' && (
                     <GraphismTab />
                 )}
-                {activeTab === 'backup' && (
+                {activeTab === 'backup' && isDesktop && (
                     <BackupTab />
                 )}
                 {activeTab === 'system' && (
