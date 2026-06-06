@@ -6,12 +6,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import Modal from '../../UI/Modal/Modal.jsx';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
-import { listProjects, getLatestBackup, getBackupVersion } from '../../../utils/backupClient.js';
+import { listProjects, getLatestBackup, getBackupVersion, deleteBackup, purgeOldBackups, deleteProject } from '../../../utils/backupClient.js';
 import { restoreBackupPayload } from '../../../utils/backupRestore.js';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import {
     RefreshCw, Loader, ChevronDown, ChevronRight,
-    Clock, Layers, HardDrive, User, Check, AlertTriangle,
+    Clock, Layers, HardDrive, User, Check, AlertTriangle, Trash2, Scissors, FolderX,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './backupbrowser.css';
@@ -39,6 +39,12 @@ export default function BackupBrowser({ isOpen, onClose, endpoint }) {
     const [error, setError] = useState(null);
     const [expanded, setExpanded] = useState(null);   // projectId whose versions are open
     const [restoringKey, setRestoringKey] = useState(null); // `${projectId}:${version|latest}`
+    const [deletingKey, setDeletingKey] = useState(null);   // `${projectId}:${version}`
+    const [purgingId, setPurgingId] = useState(null);       // projectId being purged
+    const [deletingProjectId, setDeletingProjectId] = useState(null); // whole project being deleted
+    // Per-project "keep newest N" input value, defaults to 5.
+    const [keepCounts, setKeepCounts] = useState({});
+    const keepFor = (projectId) => keepCounts[projectId] ?? 5;
 
     const refresh = useCallback(async () => {
         setLoading(true);
@@ -86,6 +92,80 @@ export default function BackupBrowser({ isOpen, onClose, endpoint }) {
             toast.error(err?.message || 'Failed to load backup.');
         } finally {
             setRestoringKey(null);
+        }
+    };
+
+    // Delete a single backup version from the server.
+    const removeVersion = async (projectId, version) => {
+        if (!window.confirm(`Delete backup ${version} of "${projectId}"?\n\nThis permanently removes it from the server and cannot be undone.`)) return;
+        const key = `${projectId}:${version}`;
+        setDeletingKey(key);
+        try {
+            await deleteBackup(endpoint, projectId, version);
+            toast.success(`Deleted ${version}`);
+            await refresh();
+        } catch (err) {
+            toast.error(err?.message || 'Failed to delete backup.');
+        } finally {
+            setDeletingKey(null);
+        }
+    };
+
+    // Delete an ENTIRE project and every one of its backups. Double-confirmed.
+    const removeProject = async (projectId, name, total) => {
+        // First confirmation — clarify this is NOT a single-version delete.
+        const first = window.confirm(
+            `Delete the ENTIRE project "${name || projectId}"?\n\n` +
+            `⚠️ This is permanent.\n\n` +
+            `Note: this is NOT the same as deleting one backup version. ` +
+            `If you only meant to remove a single backup, cancel and use the “Versions” list instead.`
+        );
+        if (!first) return;
+
+        // Second confirmation — enforce that this wipes the whole project + all backups.
+        const second = window.confirm(
+            `FINAL CONFIRMATION\n\n` +
+            `This will permanently delete the ENTIRE project "${name || projectId}" ` +
+            `including ALL ${total || 0} of its backups.\n\n` +
+            `This action CANNOT be undone. Are you absolutely sure?`
+        );
+        if (!second) return;
+
+        setDeletingProjectId(projectId);
+        try {
+            await deleteProject(endpoint, projectId);
+            toast.success(`Deleted project "${name || projectId}"`);
+            await refresh();
+        } catch (err) {
+            toast.error(err?.message || 'Failed to delete project.');
+        } finally {
+            setDeletingProjectId(null);
+        }
+    };
+
+    // Purge all but the newest N backups for a project.
+    const purgeProject = async (projectId, total) => {
+        const keep = Math.max(0, parseInt(keepFor(projectId), 10) || 0);
+        const removeCount = Math.max(0, total - keep);
+        if (removeCount === 0) {
+            toast(`Nothing to purge — ${total} backup(s), keeping ${keep}.`);
+            return;
+        }
+        if (!window.confirm(`Purge "${projectId}"?\n\nThis permanently deletes ${removeCount} older backup(s) and keeps only the newest ${keep}. This cannot be undone.`)) return;
+        setPurgingId(projectId);
+        try {
+            const proj = projects.find((p) => p.projectId === projectId);
+            const { deleted, failed } = await purgeOldBackups(endpoint, projectId, proj?.backups || [], keep);
+            if (failed.length) {
+                toast.error(`Deleted ${deleted.length}, ${failed.length} failed.`);
+            } else {
+                toast.success(`Purged ${deleted.length} old backup(s).`);
+            }
+            await refresh();
+        } catch (err) {
+            toast.error(err?.message || 'Failed to purge backups.');
+        } finally {
+            setPurgingId(null);
         }
     };
 
@@ -165,11 +245,43 @@ export default function BackupBrowser({ isOpen, onClose, endpoint }) {
                                             Versions
                                         </button>
                                     )}
+                                    <button
+                                        className="bb-delete-project-btn"
+                                        onClick={() => removeProject(p.projectId, p.conlangName, p.totalBackups)}
+                                        disabled={deletingProjectId === p.projectId}
+                                        title="Delete entire project and all its backups"
+                                    >
+                                        {deletingProjectId === p.projectId
+                                            ? <Loader size={14} className="bb-spin" />
+                                            : <FolderX size={14} />}
+                                        Delete project
+                                    </button>
                                 </div>
                             </div>
 
                             {isOpenRow && Array.isArray(p.backups) && (
                                 <div className="bb-versions">
+                                    <div className="bb-purge-row">
+                                        <span className="bb-purge-label"><Scissors size={13} /> Keep newest</span>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            className="bb-purge-input"
+                                            value={keepFor(p.projectId)}
+                                            onChange={(e) => setKeepCounts((s) => ({ ...s, [p.projectId]: e.target.value }))}
+                                            disabled={purgingId === p.projectId}
+                                        />
+                                        <button
+                                            className="bb-purge-btn"
+                                            onClick={() => purgeProject(p.projectId, p.backups.length)}
+                                            disabled={purgingId === p.projectId}
+                                        >
+                                            {purgingId === p.projectId
+                                                ? <Loader size={12} className="bb-spin" />
+                                                : <Trash2 size={12} />}
+                                            Purge older
+                                        </button>
+                                    </div>
                                     {p.backups.map((b) => (
                                         <div key={b.version} className="bb-version-row">
                                             <span className="bb-version-name">{b.version}</span>
@@ -183,6 +295,16 @@ export default function BackupBrowser({ isOpen, onClose, endpoint }) {
                                                 {restoringKey === `${p.projectId}:${b.version}`
                                                     ? <Loader size={12} className="bb-spin" />
                                                     : 'Load'}
+                                            </button>
+                                            <button
+                                                className="bb-version-delete"
+                                                title={`Delete ${b.version}`}
+                                                onClick={() => removeVersion(p.projectId, b.version)}
+                                                disabled={deletingKey === `${p.projectId}:${b.version}`}
+                                            >
+                                                {deletingKey === `${p.projectId}:${b.version}`
+                                                    ? <Loader size={12} className="bb-spin" />
+                                                    : <Trash2 size={12} />}
                                             </button>
                                         </div>
                                     ))}

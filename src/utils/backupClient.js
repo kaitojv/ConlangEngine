@@ -1,5 +1,5 @@
 // src/utils/backupClient.js
-// Thin REST client for the Conlang Engine Backup API (see API.md).
+// Thin REST client for the Conlang Engine Backup API (see https://github.com/niruhsa/ConlangEngine-Obsidian-Backup/blob/master/README.md).
 // All functions take an `endpoint` base URL (e.g. "http://localhost:3000").
 // They throw on network/HTTP errors so callers can distinguish offline vs. failure.
 
@@ -88,6 +88,56 @@ export async function getLatestBackup(endpoint, projectId) {
         throw new Error(data?.error || `Fetch latest failed (HTTP ${res.status})`);
     }
     return data;
+}
+
+// DELETE /api/backups/:projectId/:version — delete a single backup version.
+// Returns { deleted } on success. Treats 404 as already-gone (resolves).
+export async function deleteBackup(endpoint, projectId, version) {
+    const base = normalizeEndpoint(endpoint);
+    const res = await request(`${base}/api/backups/${encodeURIComponent(projectId)}/${encodeURIComponent(version)}`, {
+        method: 'DELETE',
+    });
+    if (res.status === 404) return { deleted: version, alreadyGone: true };
+    const data = await parseJson(res);
+    if (!res.ok) {
+        throw new Error(data?.error || `Delete failed (HTTP ${res.status})`);
+    }
+    return data;
+}
+
+// DELETE /api/projects/:projectId — delete an entire project and ALL its backups.
+// Returns the server response. Treats 404 as already-gone (resolves).
+export async function deleteProject(endpoint, projectId) {
+    const base = normalizeEndpoint(endpoint);
+    const res = await request(`${base}/api/projects/${encodeURIComponent(projectId)}`, {
+        method: 'DELETE',
+    });
+    if (res.status === 404) return { deleted: projectId, alreadyGone: true };
+    const data = await parseJson(res);
+    if (!res.ok) {
+        throw new Error(data?.error || `Delete project failed (HTTP ${res.status})`);
+    }
+    return data;
+}
+
+// Delete every backup for a project except the newest `keep` versions.
+// `backups` is the project's version list (any order); each item has a `version`
+// like "v3". Returns { deleted: string[], failed: {version,error}[] }.
+export async function purgeOldBackups(endpoint, projectId, backups, keep) {
+    const versionNum = (v) => parseInt(String(v).replace(/^v/i, ''), 10) || 0;
+    const sorted = [...(backups || [])].sort((a, b) => versionNum(b.version) - versionNum(a.version));
+    const toDelete = sorted.slice(Math.max(0, keep));
+    const deleted = [];
+    const failed = [];
+    for (const b of toDelete) {
+        try {
+            await deleteBackup(endpoint, projectId, b.version);
+            deleted.push(b.version);
+        } catch (err) {
+            failed.push({ version: b.version, error: err?.message || 'delete failed' });
+        }
+    }
+    return { deleted, failed };
 }
 
 // GET /api/projects — list every project that has at least one backup.

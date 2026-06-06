@@ -1,5 +1,5 @@
 // src/components/pages/settings/BackupTab.jsx
-// Per-project configuration for the REST API backup system (see API.md).
+// Per-project configuration for the REST API backup system (see https://github.com/niruhsa/ConlangEngine-Obsidian-Backup/blob/master/README.md).
 // Works independently of cloud sync and manual save/export.
 
 import { useState, useEffect } from 'react';
@@ -83,7 +83,7 @@ export default function BackupTab() {
             <Infobox>
                 These settings target a backup server implementing the Conlang Engine
                 Backup API. Each backup stores your full config, lexicon, and project
-                archive. See <code>API.md</code> for the server specification.
+                archive.
             </Infobox>
 
             {/* Master enable */}
