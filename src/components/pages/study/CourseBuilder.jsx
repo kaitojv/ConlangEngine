@@ -6,8 +6,64 @@ import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { generateCourseExercise } from '@/utils/courseGenerator.js';
 import ExercisePlayer from './ExercisePlayer.jsx';
-import { Plus, Trash2, Save, ArrowLeft, GripVertical, Wand2, X, Play } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowLeft, GripVertical, Wand2, X, Play, ChevronUp, ChevronDown, Bold, Italic, Underline, Smile } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import './courseBuilder.css';
+
+const COMMON_ICONS = ['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'Heart', 'Star', 'Check', 'X', 'AlertCircle', 'Info', 'Book', 'Brain', 'Volume2', 'Ear', 'Eye', 'Pencil', 'Flame', 'Sparkles', 'ThumbsUp', 'Coffee', 'Globe', 'Music', 'MessageCircle', 'Lightbulb', 'Zap', 'Shield', 'Smile'];
+
+const TextcardEditor = ({ value, onChange }) => {
+    const textareaRef = React.useRef(null);
+    const [showIcons, setShowIcons] = React.useState(false);
+
+    const insertText = (before, after = '') => {
+        const el = textareaRef.current;
+        if (!el) {
+            onChange(value + before + after);
+            return;
+        }
+        const start = el.selectionStart;
+        const end = el.selectionEnd;
+        const newText = value.substring(0, start) + before + value.substring(start, end) + after + value.substring(end);
+        onChange(newText);
+        setTimeout(() => {
+            el.focus();
+            el.setSelectionRange(start + before.length, end + before.length);
+        }, 0);
+    };
+
+    return (
+        <div style={{ border: '1px solid var(--bd)', borderRadius: '8px', background: 'var(--bg)', overflow: 'visible' }}>
+            <div style={{ display: 'flex', gap: '5px', padding: '5px', borderBottom: '1px solid var(--bd)', background: 'var(--s1)', position: 'relative' }}>
+                <Button variant="default" style={{ padding: '5px', height: 'auto' }} onClick={() => insertText('**', '**')} title="Bold"><Bold size={16} /></Button>
+                <Button variant="default" style={{ padding: '5px', height: 'auto' }} onClick={() => insertText('*', '*')} title="Italic"><Italic size={16} /></Button>
+                <Button variant="default" style={{ padding: '5px', height: 'auto' }} onClick={() => insertText('__', '__')} title="Underline"><Underline size={16} /></Button>
+                <Button variant="default" style={{ padding: '5px', height: 'auto' }} onClick={() => insertText('→')} title="Arrow"><LucideIcons.ArrowRight size={16} /></Button>
+                <Button variant="default" style={{ padding: '5px', height: 'auto' }} onClick={() => setShowIcons(!showIcons)} title="Insert Icon"><Smile size={16} /></Button>
+                
+                {showIcons && (
+                    <div style={{ position: 'absolute', top: '100%', left: '0', background: 'var(--bg)', border: '1px solid var(--bd)', borderRadius: '8px', padding: '10px', display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '5px', zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.2)', marginTop: '5px' }}>
+                        {COMMON_ICONS.map(icon => {
+                            const IconCmp = LucideIcons[icon];
+                            return (
+                                <button key={icon} onClick={() => { insertText(`[icon:${icon}]`); setShowIcons(false); }} style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--tx)' }} title={icon}>
+                                    {IconCmp && <IconCmp size={18} />}
+                                </button>
+                            )
+                        })}
+                    </div>
+                )}
+            </div>
+            <textarea 
+                ref={textareaRef}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder="e.g. In this lesson, we will learn about... (Line breaks supported)"
+                style={{ width: '100%', height: '100px', padding: '10px', border: 'none', background: 'transparent', color: 'var(--tx)', fontFamily: 'inherit', resize: 'vertical', outline: 'none' }}
+            />
+        </div>
+    );
+};
 
 export default function CourseBuilder({ onExit }) {
     const config = useConfigStore();
@@ -159,6 +215,21 @@ export default function CourseBuilder({ onExit }) {
         }));
     };
 
+    const movePhrase = (levelId, pIdx, direction) => {
+        setCourseData(courseData.map(l => {
+            if (l.id === levelId) {
+                const newPhrases = [...l.phrases];
+                if (direction === 'up' && pIdx > 0) {
+                    [newPhrases[pIdx - 1], newPhrases[pIdx]] = [newPhrases[pIdx], newPhrases[pIdx - 1]];
+                } else if (direction === 'down' && pIdx < newPhrases.length - 1) {
+                    [newPhrases[pIdx + 1], newPhrases[pIdx]] = [newPhrases[pIdx], newPhrases[pIdx + 1]];
+                }
+                return { ...l, phrases: newPhrases };
+            }
+            return l;
+        }));
+    };
+
     const updatePhrase = (levelId, phraseId, field, value) => {
         setCourseData(courseData.map(l => {
             if (l.id === levelId) {
@@ -236,20 +307,26 @@ export default function CourseBuilder({ onExit }) {
                                                 <option value="teach">Teaching Card (Info)</option>
                                             </select>
                                         </div>
-                                        <button className="cb-delete-phrase" onClick={() => deletePhrase(level.id, phrase.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '5px' }}>
-                                            <Trash2 size={18} />
-                                        </button>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                            <button className="cb-move-phrase" onClick={() => movePhrase(level.id, pIdx, 'up')} disabled={pIdx === 0} style={{ background: 'none', border: 'none', color: pIdx === 0 ? 'var(--bd)' : 'var(--tx2)', cursor: pIdx === 0 ? 'default' : 'pointer', padding: '5px', display: 'flex' }} title="Move Up">
+                                                <ChevronUp size={18} />
+                                            </button>
+                                            <button className="cb-move-phrase" onClick={() => movePhrase(level.id, pIdx, 'down')} disabled={pIdx === level.phrases.length - 1} style={{ background: 'none', border: 'none', color: pIdx === level.phrases.length - 1 ? 'var(--bd)' : 'var(--tx2)', cursor: pIdx === level.phrases.length - 1 ? 'default' : 'pointer', padding: '5px', display: 'flex' }} title="Move Down">
+                                                <ChevronDown size={18} />
+                                            </button>
+                                            <button className="cb-delete-phrase" onClick={() => deletePhrase(level.id, phrase.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '5px', display: 'flex' }} title="Delete Phrase">
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
                                     </div>
                                     
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                                         {phrase.type === 'teach' && (
                                             <div>
                                                 <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>Teaching Content</label>
-                                                <textarea 
+                                                <TextcardEditor 
                                                     value={phrase.english || ''}
-                                                    onChange={(e) => updatePhrase(level.id, phrase.id, 'english', e.target.value)}
-                                                    placeholder="e.g. In this lesson, we will learn about... (Line breaks supported)"
-                                                    style={{ width: '100%', height: '100px', padding: '10px', borderRadius: '8px', border: '1px solid var(--bd)', background: 'var(--s1)', color: 'var(--tx)', fontFamily: 'inherit', resize: 'vertical' }}
+                                                    onChange={(newVal) => updatePhrase(level.id, phrase.id, 'english', newVal)}
                                                 />
                                             </div>
                                         )}

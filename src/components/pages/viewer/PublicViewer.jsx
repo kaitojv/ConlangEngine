@@ -125,8 +125,22 @@ export default function PublicViewer() {
     }
 
     // --- MAIN VIEW ---
+    const writingDirection = config.writingDirection || 'ltr';
+
     return (
         <div className="pv-page">
+            <style>
+                {`
+                    .custom-font-text {
+                        writing-mode: ${writingDirection.startsWith('vertical') ? writingDirection : 'horizontal-tb'};
+                        direction: ${writingDirection === 'rtl' ? 'rtl' : 'ltr'};
+                    }
+                    input.custom-font-text, 
+                    textarea.custom-font-text {
+                        writing-mode: horizontal-tb !important;
+                    }
+                `}
+            </style>
 
             {/* ===== HERO HEADER ===== */}
             <header className="pv-hero">

@@ -7,7 +7,33 @@ import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import Mascot from './Mascot.jsx';
 import { X } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import './exercisePlayer.css';
+
+const renderRichText = (text) => {
+    if (!text) return null;
+    
+    // Split by **bold**, *italic*, __underline__, and [icon:Name]
+    const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|__.*?__|\[icon:[a-zA-Z0-9]+\])/g);
+    
+    return parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+            return <strong key={i}>{part.slice(2, -2)}</strong>;
+        }
+        if (part.startsWith('__') && part.endsWith('__')) {
+            return <u key={i}>{part.slice(2, -2)}</u>;
+        }
+        if (part.startsWith('*') && part.endsWith('*')) {
+            return <em key={i}>{part.slice(1, -1)}</em>;
+        }
+        if (part.startsWith('[icon:') && part.endsWith(']')) {
+            const iconName = part.slice(6, -1);
+            const IconComponent = LucideIcons[iconName];
+            return IconComponent ? <IconComponent key={i} size={18} style={{ verticalAlign: 'middle', margin: '0 4px', display: 'inline-block' }} /> : part;
+        }
+        return <span key={i}>{part}</span>;
+    });
+};
 
 const EXERCISE_COUNT = 5;
 
@@ -309,7 +335,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                     </div>
                 ) : currentEx.type === 'teach' ? (
                     <div className="ep-teach" style={{ padding: '20px', background: 'var(--s1)', borderRadius: '8px', border: '1px solid var(--bd)', whiteSpace: 'pre-wrap', lineHeight: '1.6', fontSize: '1.1rem', marginTop: '10px' }}>
-                        {currentEx.englishSentence}
+                        {renderRichText(currentEx.englishSentence)}
                     </div>
                 ) : null}
             </div>

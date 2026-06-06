@@ -106,19 +106,21 @@ function App(){
   return (
     <>
 
-    {/* Automatically updates writing direction for all conlang text */}
-    <style>
-        {`
-            .custom-font-text {
-                writing-mode: ${writingDirection.startsWith('vertical') ? writingDirection : 'horizontal-tb'};
-                direction: ${writingDirection === 'rtl' ? 'rtl' : 'ltr'};
-            }
-            input.custom-font-text, 
-            textarea.custom-font-text {
-                writing-mode: horizontal-tb !important;
-            }
-        `}
-    </style>
+    {/* Automatically updates writing direction for all conlang text, except in public viewer */}
+    {!isPublicView && (
+      <style>
+          {`
+              .custom-font-text {
+                  writing-mode: ${writingDirection.startsWith('vertical') ? writingDirection : 'horizontal-tb'};
+                  direction: ${writingDirection === 'rtl' ? 'rtl' : 'ltr'};
+              }
+              input.custom-font-text, 
+              textarea.custom-font-text {
+                  writing-mode: horizontal-tb !important;
+              }
+          `}
+      </style>
+    )}
       
     
 
