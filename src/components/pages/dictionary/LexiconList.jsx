@@ -26,15 +26,11 @@ export default function LexiconList() {
     const rawLexicon = useLexiconStore((state) => state.lexicon);
     const lexicon = Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []);
     const deleteWord = useLexiconStore((state) => state.deleteWord);
-    const addWord = useLexiconStore((state) => state.addWord);
     const phonologyTypes = useConfigStore(state => state.phonologyTypes);
     const consonants = useConfigStore(state => state.consonants) || '';
     const vowels = useConfigStore(state => state.vowels) || '';
     const otherPhonemes = useConfigStore(state => state.otherPhonemes) || '';
-    const enableToneAndStress = useConfigStore(state => state.enableToneAndStress) ?? true;
-    const syllabificationAlgorithm = useConfigStore(state => state.syllabificationAlgorithm) || 'ltr';
-    const updateConfig = useConfigStore(state => state.updateConfig);
-    const conlangName = useConfigStore((state) => state.conlangName);
+    const grammarRules = useConfigStore(state => state.grammarRules) || [];
     const stressRules = useConfigStore(state => state.stressRules) || [];
     const toneRules = useConfigStore(state => state.toneRules) || [];
     const navigate = useNavigate();
@@ -199,7 +195,7 @@ export default function LexiconList() {
 
         if (filters.letter !== 'all') {
             result = result.filter(e => {
-                const cleanWord = e.word.replace(/[\*\-]/g, '');
+                const cleanWord = e.word.replace(/[*-]/g, '');
                 const displayWord = transliterate(cleanWord, lexicon).toUpperCase();
                 return displayWord.startsWith(filters.letter.toUpperCase());
             });
@@ -213,7 +209,7 @@ export default function LexiconList() {
         else if (filters.sort === 'za') result.sort((a, b) => b.word.replace(/\*/g, '').localeCompare(a.word.replace(/\*/g, '')));
 
         return result;
-    }, [lexicon, filters, transliterate]);
+    }, [lexicon, filters, transliterate, showBoundMorphemes, grammarRules, normalizeToBase]);
 
     // Group identical conlang words visually so the user can see multiple senses under 1 dictionary entry
     const groupedLexicon = useMemo(() => {

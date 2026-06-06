@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
@@ -38,7 +38,7 @@ export default function CreateWordTab() {
     const checkDuplicate = useLexiconStore((state) => state.checkDuplicate);
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
     const { phonologyTypes, grammarRules, vowels, consonants, otherPhonemes, syllablePattern, verbMarker,
-            customWordClasses, customTags, addCustomWordClass, addCustomTag,
+            customWordClasses, customTags, addCustomWordClass, addCustomTag, autoReturnToLexicon,
             vowelHarmonyMode, vowelHarmonySets, vowelHarmonyOverrideWordClasses, vowelHarmonyOverrideTags,
             updateConfig } = useConfigStore(useShallow(state => ({
         phonologyTypes: state.phonologyTypes,
@@ -178,17 +178,11 @@ export default function CreateWordTab() {
         setTagInput('');
     };
 
-    const handleClearTags = () => {
-        updateField('tags', []);
-        setTagInput('');
-    };
-
     const removeTag = (tagToRemove) => {
         updateField('tags', formData.tags.filter(t => t !== tagToRemove));
     };
 
     const saveConfirmedWord = (safeWord, cleanTrans, processedTags, keepRoot = false) => {
-        // eslint-disable-next-line react-hooks/purity
         const rootId = Date.now() + Math.random();
 
         // 1. Save the main root
@@ -293,7 +287,7 @@ export default function CreateWordTab() {
 
         // Clean up the word to ensure custom alien letters map correctly to the base orthography
         const safeWord = normalizeToBase(cleanWord);
-        const validation = validateNewWord(safeWord, useConfigStore.getState());
+        validateNewWord(safeWord, useConfigStore.getState());
         const processedTags = [...formData.tags].sort();
 
         // 1. DUPLICATE CHECK (Warnings, not blocks)
@@ -523,7 +517,6 @@ export default function CreateWordTab() {
 
         const results = [];
         const safeBaseWord = normalizeToBase(word.trim());
-        const processedTags = [...formData.tags].sort();
 
         const currentClasses = wordClass ? wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
 
@@ -548,7 +541,7 @@ export default function CreateWordTab() {
         });
 
         return results;
-    }, [word, translation, wordClass, grammarRules, verbMarker, vowels, normalizeToBase]);
+    }, [word, translation, wordClass, grammarRules, vowels, consonants, otherPhonemes, normalizeToBase]);
 
     return (
         <div className="create-word-container">

@@ -4,6 +4,10 @@ import { supabase } from '../../../utils/supabaseClient.js';
 import { Globe, BookA, User, Loader2, Heart } from 'lucide-react';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import toast from 'react-hot-toast';
+import { useConfigStore } from '../../../store/useConfigStore.jsx';
+import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
+import { sanitizeConfig } from '../../../utils/schemaValidator.jsx';
+import Button from '../../UI/Buttons/Buttons.jsx';
 import './explorePage.css';
 
 export default function ExplorePage() {
@@ -15,8 +19,10 @@ export default function ExplorePage() {
     const [userLikes, setUserLikes] = useState(new Set()); // Set of projectIds liked by user
     const [sessionUser, setSessionUser] = useState(null);
 
-    useEffect(() => {
-        async function fetchPublicConlangs() {
+    const isPublic = useConfigStore((state) => state.isPublic);
+    const updateConfig = useConfigStore((state) => state.updateConfig);
+
+    const fetchPublicConlangs = React.useCallback(async () => {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) {
@@ -72,10 +78,74 @@ export default function ExplorePage() {
             } finally {
                 setLoading(false);
             }
+    }, [navigate]);
+
+    useEffect(() => {
+        fetchPublicConlangs();
+    }, [fetchPublicConlangs]);
+
+    const handleTogglePublish = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            toast.error("You're not logged in");
+            return;
         }
 
-        fetchPublicConlangs();
-    }, []);
+        const newIsPublic = !isPublic;
+        const toastId = toast.loading(newIsPublic ? "Publishing conlang..." : "Making conlang private...");
+        
+        const currentStore = useConfigStore.getState();
+        const currentProjectId = currentStore.projectId;
+        if (!currentProjectId) {
+            toast.error("Project ID missing", { id: toastId });
+            return;
+        }
+
+        updateConfig({ isPublic: newIsPublic });
+        
+        const configData = sanitizeConfig({ ...currentStore, isPublic: newIsPublic });
+        const payload = {
+            dictionary: useLexiconStore.getState().lexicon || [],
+            config: configData,
+            wiki: configData.wikiPages || {}
+        };
+
+        try {
+            if (session?.user?.id && currentProjectId) {
+                const { data: existingSnapshot } = await supabase
+                    .from('conlang_snapshots')
+                    .select('user_id')
+                    .eq('project_id', currentProjectId)
+                    .single();
+
+                if (existingSnapshot && existingSnapshot.user_id && existingSnapshot.user_id !== session.user.id) {
+                    toast.error("You cannot update a public project owned by another account.", { id: toastId });
+                    updateConfig({ isPublic: !newIsPublic }); // revert
+                    return;
+                }
+            }
+
+            await supabase.from('conlang_snapshots').upsert({
+                user_id: session.user.id,
+                project_id: currentProjectId,
+                project_data: payload
+            }, { onConflict: 'project_id' });
+            
+            await supabase.from('conlangs').upsert({
+                user_id: session.user.id,
+                project_id: currentProjectId,
+                project_data: payload
+            }, { onConflict: 'project_id' });
+
+            toast.success(newIsPublic ? "Conlang published!" : "Conlang is now private", { id: toastId });
+            
+            fetchPublicConlangs(); // Refresh list
+        } catch (err) {
+            console.error("Update failed", err);
+            toast.error("Failed to update public conlang", { id: toastId });
+            updateConfig({ isPublic: !newIsPublic }); // revert
+        }
+    };
 
     const handleCardClick = (projectId) => {
         // Open the public viewer in the same tab
@@ -148,9 +218,17 @@ export default function ExplorePage() {
 
     return (
         <div className="explore-container fade-in">
-            <div className="explore-header">
-                <h1>Explore</h1>
-                <p>Discover public conlangs created by the community.</p>
+            <div className="explore-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                    <h1>Explore</h1>
+                    <p>Discover public conlangs created by the community.</p>
+                </div>
+                <Button 
+                    variant={isPublic ? 'error' : 'primary'} 
+                    onClick={handleTogglePublish}
+                >
+                    <Globe size={16} /> {isPublic ? 'Make Active Conlang Private' : 'Publish Active Conlang'}
+                </Button>
             </div>
 
             {conlangs.length === 0 ? (

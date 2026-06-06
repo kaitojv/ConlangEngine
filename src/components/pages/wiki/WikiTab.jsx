@@ -8,7 +8,6 @@ import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import Modal from '@/components/UI/Modal/Modal.jsx';
 import { Book, Plus, Trash2, Bold, Italic, Underline, Link, Save, Type, Languages, FileText, Settings, ChevronDown, ChevronUp, Info, Wand2, Quote } from 'lucide-react';
-import { applyRuleToWord } from '@/utils/morphologyEngine.jsx';
 import { createGrammarAnalyzer } from '@/utils/grammarAnalyzer.js';
 import './wikiTab.css';
 
@@ -303,85 +302,6 @@ const COPULA_VERBS = new Set([
     "look", "feel", "sound", "smell", "taste", "remain", "stay", "turn"
 ]);
 
-function getAnimacyLevel(token, lexEntry, pronounInfo) {
-    if (pronounInfo) {
-        return (pronounInfo.person === "1st" || pronounInfo.person === "2nd") ? "pronoun_1_2" : "pronoun";
-    }
-    const wc = (lexEntry?.wordClass || "").toLowerCase();
-    const tags = (lexEntry?.tags || []).map(t => t.toLowerCase());
-    const q = (token.original || "").toLowerCase();
-
-    if (wc.includes("proper") || wc.includes("name") || tags.some(t => ["person","human","name","proper","character"].includes(t))) return "human";
-    if (wc.includes("person") || wc.includes("human") || HUMAN_WORDS_EN.has(q)) return "human";
-    if (wc.includes("animal") || wc.includes("creature") || tags.some(t => ["animal","creature","beast"].includes(t)) || ANIMAL_WORDS_EN.has(q)) return "animate";
-    if (tags.some(t => ["abstract","concept"].includes(t))) return "abstract";
-    
-    // Proper name heuristic: Uppercase not at start of sentence
-    if (/^[A-Z]/.test(token.original || "") && token.sentencePosition > 0) return "human";
-
-    return "concrete";
-}
-
-function getDefiniteness(tokenIdx, allTokens) {
-    const q = (allTokens[tokenIdx]?.original || "").toLowerCase();
-    const isPronoun = ["i","me","you","he","him","she","her","it","we","us","they","them"].includes(q);
-    
-    const prev = allTokens.slice(Math.max(0, tokenIdx - 2), tokenIdx).map(t => (t.original || "").toLowerCase());
-    const isDefinite = isPronoun || prev.some(p => p === "the" || ["this","that","these","those"].includes(p) || ["my","your","his","her","its","our","their"].includes(p));
-    const isIndefinite = !isPronoun && prev.some(p => p === "a" || p === "an") && !isDefinite;
-    const isSpecific = isDefinite || /^[A-Z]/.test(allTokens[tokenIdx]?.original || "");
-    
-    return { isDefinite, isIndefinite, isSpecific };
-}
-
-function applyCaseToObject(token, trigger, lexEntry, pronounInfo, context) {
-    if (!token || !trigger || trigger.type !== "trigger") return false;
-    if (token.role !== trigger.trigger) return false;
-    if (CASE_NEVER_WORDS.has((token.original || "").toLowerCase())) return false;
-
-    const dom = trigger.domConditions || {};
-    const scope = dom.animacyMin || trigger.scope || "all";
-    
-    // 1. Animacy Check
-    const animacyLevel = getAnimacyLevel(token, lexEntry, pronounInfo);
-    if (scope !== "all") {
-        const tester = ANIMACY_SCOPES[scope];
-        if (tester && !tester.test(lexEntry, pronounInfo)) {
-            // Level-based fallback if tester fails
-            const hierarchy = ["pronoun_1_2", "pronoun", "human", "animate", "concrete", "abstract", "all"];
-            if (hierarchy.indexOf(animacyLevel) > hierarchy.indexOf(scope)) return false;
-        }
-    }
-
-    // 2. DOM Conditions
-    if (dom.requiresDefinite && !context.isDefinite) return false;
-    if (dom.requiresIndefinite && !context.isIndefinite) return false;
-    if (dom.requiresSpecific && !context.isSpecific) return false;
-    
-    if (dom.numberRestriction && token.number !== dom.numberRestriction) return false;
-    
-    if (dom.personRestriction) {
-        const allowed = Array.isArray(dom.personRestriction) ? dom.personRestriction : [dom.personRestriction];
-        if (!allowed.includes(pronounInfo?.person)) return false;
-    }
-    
-    if (dom.genderRestriction) {
-        const g = pronounInfo?.gender || lexEntry?.gender;
-        if (g !== dom.genderRestriction) return false;
-    }
-
-    if (dom.requiredTags?.length > 0) {
-        const tags = (lexEntry?.tags || []).map(t => t.toLowerCase());
-        if (!dom.requiredTags.every(rt => tags.includes(rt.toLowerCase()))) return false;
-    }
-
-    if (dom.excludedTags?.length > 0) {
-        const tags = (lexEntry?.tags || []).map(t => t.toLowerCase());
-        if (dom.excludedTags.some(et => tags.includes(et.toLowerCase()))) return false;
-    }
-
-    return true;
-}
 
 function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
     const wa = config.wordAssistConfig || { triggers: [] };
@@ -919,7 +839,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         adjectiveAgreement: useConfigStore.getState().adjectiveAgreement
     }), [lexicon, grammarRules, syntaxOrder, waConfig, personRulesArray, transliterate]);
 
-    const { computePhraseSuggestion } = analyzer;
+    const { computePhraseSuggestion, lemmatize, matchesTranslation, reorderBreakdown } = analyzer;
 
 
     // Auto-save and content sync
@@ -962,7 +882,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
             const root = e.word.replace(/\*/g,'').toLowerCase();
             if (root.length >= 3 && clean.startsWith(root)) {
                 const suffix = clean.slice(root.length);
-                const personData = personMap[suffix] || personMap[suffix.replace(/^['\"-]/, '')] || { label: suffix, translation: '' };
+                const personData = personMap[suffix] || personMap[suffix.replace(/^['"-]/, '')] || { label: suffix, translation: '' };
                 return { entry: e, isExact: false, personData };
             }
         }
@@ -1051,7 +971,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         // ── Lexicon & Inflections — only if query is long enough ──────────────────
         if (query.length >= 2) {
             setWordRange({ start, end });
-            const { lemma, wordCase, isAgentive, isPlural, isParticiple, tense: wordTense } = lemmatize(query);
+            const { lemma, wordCase, isAgentive, tense: wordTense } = lemmatize(query);
 
             const directBucket    = [];
             const pronounBucket   = [];
@@ -1221,7 +1141,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         const breakdown = [...(sugg.wordBreakdown || sugg.reordered)];
         const breakdownItem = breakdown.find((w, i) => w && (i === chipIdx || w === itemToUpdate)) || itemToUpdate;
         
-        const base = breakdownItem.entry?.word || (breakdownItem.conlang || '').replace(/[\[\]]/g, '');
+        const base = breakdownItem.entry?.word || (breakdownItem.conlang || '').replace(/[[\]]/g, '');
         const wc = (breakdownItem.entry?.wordClass || '').toLowerCase();
         
         const matches = lexicon.filter(e => {
@@ -1249,7 +1169,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         const totalOptions = matches.length + matchingRules.length;
         const cycleIdx = itemToUpdate.caseCycleIdx !== undefined ? itemToUpdate.caseCycleIdx + 1 : 0;
         const skipIdx  = totalOptions;
-        const resetIdx = totalOptions + 1;
+
 
         if (cycleIdx < matches.length) {
             // Cycle through Lexicon Matches (Synonyms)

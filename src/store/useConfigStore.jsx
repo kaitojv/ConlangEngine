@@ -41,7 +41,7 @@ export const INITIAL_CONFIG = {
     grammarRules: [],
     verbMarker: '-r',
     cliticsRules: 's, ll',
-    personRules: "1S: mau / \'ma, 2S: tau / \'ta, 3S Masc: lou / \'lo",
+    personRules: "1S: mau / 'ma, 2S: tau / 'ta, 3S Masc: lou / 'lo",
     wikiPages: { phonology: "<h1>Phonology</h1><p>Start documenting your language rules here...</p>" },
     streak: 0,
     unlockedBadges: ['genesis'],
@@ -181,7 +181,7 @@ const saveLargeDataToDB = (projectId, data) => {
                     store.put({ ...existing, ...data }, projectId);
                 };
                 tx.oncomplete = () => resolve(true);
-            } catch (err) { resolve(false); }
+            } catch { resolve(false); }
         };
     });
 };
@@ -204,7 +204,7 @@ const loadLargeDataFromDB = (projectId) => {
                 const getReq = tx.objectStore(STORE_NAME).get(projectId);
                 getReq.onsuccess = () => resolve(getReq.result);
                 getReq.onerror = () => resolve(null);
-            } catch (err) { resolve(null); }
+            } catch { resolve(null); }
         };
         req.onerror = () => resolve(null);
     });
@@ -355,7 +355,7 @@ export const useConfigStore = create(
                 activity: [{ text, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15)
             })),
 
-            unlockBadge: (badgeId, badgeName) => set((state) => {
+            unlockBadge: (badgeId) => set((state) => {
                 const badges = state.unlockedBadges || [];
                 if (!badges.includes(badgeId)) {
                     return { unlockedBadges: [...badges, badgeId] };
@@ -406,7 +406,7 @@ export const useConfigStore = create(
             name: 'conlang-config',
             partialize: (state) => {
                 // Exclude large fields from localStorage (quota limit)
-                const { customFontBase64, customFont, syllabaryMap, customGlyphs, ...rest } = state;
+                const { customFontBase64: _customFontBase64, customFont: _customFont, syllabaryMap: _syllabaryMap, customGlyphs: _customGlyphs, ...rest } = state;
                 return rest;
             }
         }
@@ -424,7 +424,7 @@ if (typeof BroadcastChannel !== 'undefined') {
             externalUpdate = false;
             return;
         }
-        const { customFontBase64, customFont, syllabaryMap, customGlyphs, isRehydrating, ...rest } = state;
+        const { customFontBase64: _customFontBase64, customFont: _customFont, syllabaryMap: _syllabaryMap, customGlyphs: _customGlyphs, isRehydrating: _isRehydrating, ...rest } = state;
         channel.postMessage(JSON.stringify(rest));
     });
 

@@ -16,6 +16,7 @@ export default function PWAInstallPrompt() {
         if (isIosDevice && !isStandalone) {
             // Only show iOS prompt once per session to avoid annoying users
             if (!sessionStorage.getItem('iosPwaPromptDismissed')) {
+                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setIsIOS(true);
                 setShowPrompt(true);
             }
@@ -52,6 +53,7 @@ export default function PWAInstallPrompt() {
         } else {
             console.log('User dismissed the A2HS prompt');
         }
+        sessionStorage.setItem('pwaPromptDismissed', 'true');
         setDeferredPrompt(null);
     };
 

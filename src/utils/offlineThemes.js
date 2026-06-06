@@ -17,7 +17,7 @@ export const MASSIVE_THEMES = {
 
     // Food
     'apple': 'Food', 'banana': 'Food', 'orange': 'Food', 'grape': 'Food', 'berry': 'Food',
-    'bread': 'Food', 'meat': 'Food', 'fish': 'Food', 'chicken': 'Food', 'beef': 'Food',
+    'bread': 'Food', 'meat': 'Food', 'beef': 'Food',
     'pork': 'Food', 'egg': 'Food', 'milk': 'Food', 'cheese': 'Food', 'butter': 'Food',
     'rice': 'Food', 'pasta': 'Food', 'noodle': 'Food', 'potato': 'Food', 'carrot': 'Food',
     'onion': 'Food', 'garlic': 'Food', 'tomato': 'Food', 'soup': 'Food', 'salad': 'Food',
@@ -56,24 +56,24 @@ export const MASSIVE_THEMES = {
     'museum': 'Places', 'theater': 'Places', 'cinema': 'Places', 'stadium': 'Places', 'arena': 'Places',
     'airport': 'Places', 'station': 'Places', 'port': 'Places', 'harbor': 'Places', 'bridge': 'Places',
     'box': 'Places', 'bag': 'Places', 'basket': 'Places', 'bottle': 'Places', 'cup': 'Places',
-    'glass': 'Places', 'bowl': 'Places', 'plate': 'Places', 'fork': 'Places', 'knife': 'Places', 'spoon': 'Places',
+    'glass': 'Places', 'bowl': 'Places', 'fork': 'Places', 'knife': 'Places', 'spoon': 'Places',
 
     // Nature
     'tree': 'Nature', 'flower': 'Nature', 'grass': 'Nature', 'leaf': 'Nature', 'plant': 'Nature',
     'bush': 'Nature', 'wood': 'Nature', 'rock': 'Nature', 'stone': 'Nature', 'sand': 'Nature',
-    'dirt': 'Nature', 'earth': 'Nature', 'soil': 'Nature', 'mountain': 'Nature', 'hill': 'Nature',
-    'valley': 'Nature', 'river': 'Nature', 'lake': 'Nature', 'ocean': 'Nature', 'sea': 'Nature',
-    'water': 'Nature', 'sky': 'Nature', 'sun': 'Nature', 'moon': 'Nature', 'star': 'Nature',
+    'dirt': 'Nature', 'earth': 'Nature', 'soil': 'Nature', 'hill': 'Nature',
+    'valley': 'Nature', 'lake': 'Nature', 'ocean': 'Nature', 'sea': 'Nature',
+    'sky': 'Nature', 'sun': 'Nature', 'moon': 'Nature', 'star': 'Nature',
     'cloud': 'Nature', 'rain': 'Nature', 'snow': 'Nature', 'wind': 'Nature', 'storm': 'Nature',
     'fire': 'Nature', 'ice': 'Nature', 'foliage': 'Nature', 'branch': 'Nature', 'root': 'Nature',
-    'forest': 'Nature', 'jungle': 'Nature', 'desert': 'Nature', 'beach': 'Nature', 'island': 'Nature',
+    'jungle': 'Nature', 'desert': 'Nature',
     'cave': 'Nature', 'cliff': 'Nature', 'canyon': 'Nature', 'volcano': 'Nature', 'earthquake': 'Nature',
     'weather': 'Nature', 'climate': 'Nature', 'season': 'Nature', 'spring': 'Nature', 'summer': 'Nature',
     'autumn': 'Nature', 'winter': 'Nature', 'air': 'Nature', 'light': 'Nature', 'shadow': 'Nature',
     
     // Tools & Weapons
     'tool': 'Tools', 'hammer': 'Tools', 'nail': 'Tools', 'saw': 'Tools', 'axe': 'Tools',
-    'weapon': 'Tools', 'sword': 'Tools', 'knife': 'Tools', 'shield': 'Tools', 'bow': 'Tools',
+    'weapon': 'Tools', 'sword': 'Tools', 'shield': 'Tools', 'bow': 'Tools',
     'arrow': 'Tools', 'spear': 'Tools', 'gun': 'Tools', 'bomb': 'Tools', 'blade': 'Tools',
     'wrench': 'Tools', 'screwdriver': 'Tools', 'drill': 'Tools', 'pliers': 'Tools', 'scissors': 'Tools',
     'needle': 'Tools', 'thread': 'Tools', 'rope': 'Tools', 'string': 'Tools', 'wire': 'Tools',
@@ -100,7 +100,7 @@ export const MASSIVE_THEMES = {
     'evening': 'Time', 'week': 'Time', 'month': 'Time', 'year': 'Time', 'today': 'Time',
     'tomorrow': 'Time', 'yesterday': 'Time', 'now': 'Time', 'then': 'Time', 'always': 'Time',
     'never': 'Time', 'sometimes': 'Time', 'often': 'Time', 'early': 'Time', 'late': 'Time',
-    'spring': 'Time', 'summer': 'Time', 'autumn': 'Time', 'fall': 'Time', 'winter': 'Time',
+    'fall': 'Time',
     'minute': 'Time', 'second': 'Time', 'hour': 'Time', 'century': 'Time', 'decade': 'Time',
     'past': 'Time', 'present': 'Time', 'future': 'Time',
 
@@ -109,12 +109,12 @@ export const MASSIVE_THEMES = {
     'six': 'Numbers', 'seven': 'Numbers', 'eight': 'Numbers', 'nine': 'Numbers', 'ten': 'Numbers',
     'eleven': 'Numbers', 'twelve': 'Numbers', 'twenty': 'Numbers', 'thirty': 'Numbers', 'forty': 'Numbers',
     'fifty': 'Numbers', 'hundred': 'Numbers', 'thousand': 'Numbers', 'million': 'Numbers', 'billion': 'Numbers',
-    'first': 'Numbers', 'second': 'Numbers', 'third': 'Numbers', 'last': 'Numbers', 'many': 'Numbers',
+    'first': 'Numbers', 'third': 'Numbers', 'last': 'Numbers', 'many': 'Numbers',
     'few': 'Numbers', 'some': 'Numbers', 'all': 'Numbers', 'none': 'Numbers', 'number': 'Numbers',
 
     // Colors
     'color': 'Colors', 'red': 'Colors', 'blue': 'Colors', 'green': 'Colors', 'yellow': 'Colors',
-    'black': 'Colors', 'white': 'Colors', 'gray': 'Colors', 'brown': 'Colors', 'orange': 'Colors',
+    'black': 'Colors', 'white': 'Colors', 'gray': 'Colors', 'brown': 'Colors',
     'pink': 'Colors', 'purple': 'Colors', 'gold': 'Colors', 'silver': 'Colors',
 
     // Feelings & Abstract Nouns
@@ -128,7 +128,7 @@ export const MASSIVE_THEMES = {
     'big': 'Size', 'large': 'Size', 'huge': 'Size', 'small': 'Size', 'tiny': 'Size',
     'long': 'Size', 'short': 'Size', 'tall': 'Size', 'high': 'Size', 'low': 'Size',
     'wide': 'Size', 'narrow': 'Size', 'thick': 'Size', 'thin': 'Size', 'heavy': 'Size',
-    'light': 'Size', 'deep': 'Size', 'shallow': 'Size', 'far': 'Size', 'near': 'Size',
+    'deep': 'Size', 'shallow': 'Size', 'far': 'Size', 'near': 'Size',
     
     'good': 'Adjectives', 'bad': 'Adjectives', 'great': 'Adjectives', 'beautiful': 'Adjectives', 'ugly': 'Adjectives',
     'clean': 'Adjectives', 'dirty': 'Adjectives', 'fast': 'Adjectives', 'slow': 'Adjectives', 'hot': 'Adjectives',
@@ -142,7 +142,7 @@ export const MASSIVE_THEMES = {
     'give': 'Action', 'get': 'Action', 'put': 'Action', 'keep': 'Action', 'let': 'Action',
     'begin': 'Action', 'start': 'Action', 'end': 'Action', 'finish': 'Action', 'stop': 'Action',
     'run': 'Action', 'walk': 'Action', 'jump': 'Action', 'fly': 'Action', 'swim': 'Action',
-    'stand': 'Action', 'sit': 'Action', 'lie': 'Action', 'fall': 'Action', 'climb': 'Action',
+    'stand': 'Action', 'sit': 'Action', 'lie': 'Action', 'climb': 'Action',
     'throw': 'Action', 'catch': 'Action', 'push': 'Action', 'pull': 'Action', 'hit': 'Action',
     'cut': 'Action', 'break': 'Action', 'build': 'Action', 'create': 'Action', 'destroy': 'Action',
     'kill': 'Action', 'die': 'Action', 'live': 'Action', 'grow': 'Action', 'change': 'Action',
@@ -150,10 +150,10 @@ export const MASSIVE_THEMES = {
     'write': 'Action', 'speak': 'Action', 'talk': 'Action', 'say': 'Action', 'tell': 'Action',
     'ask': 'Action', 'answer': 'Action', 'think': 'Action', 'know': 'Action', 'learn': 'Action',
     'teach': 'Action', 'study': 'Action', 'understand': 'Action', 'remember': 'Action', 'forget': 'Action',
-    'want': 'Action', 'need': 'Action', 'like': 'Action', 'love': 'Action', 'hate': 'Action',
+    'want': 'Action', 'need': 'Action', 'like': 'Action',
     'help': 'Action', 'use': 'Action', 'find': 'Action', 'lose': 'Action', 'win': 'Action',
     'buy': 'Action', 'sell': 'Action', 'pay': 'Action', 'cost': 'Action', 'spend': 'Action',
-    'open': 'Action', 'close': 'Action', 'lock': 'Action', 'unlock': 'Action', 'turn': 'Action',
+    'open': 'Action', 'close': 'Action', 'unlock': 'Action', 'turn': 'Action',
     'wait': 'Action', 'leave': 'Action', 'arrive': 'Action', 'return': 'Action', 'stay': 'Action',
 
     // Senses
