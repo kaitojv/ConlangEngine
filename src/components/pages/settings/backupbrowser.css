@@ -1,0 +1,218 @@
+/* src/components/pages/settings/backupbrowser.css */
+
+.bb-toolbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.bb-subtitle {
+    font-size: 0.85rem;
+    color: var(--tx2);
+    margin: 0;
+}
+
+.bb-subtitle code,
+.bb-pid {
+    background: var(--s3);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 0.75rem;
+}
+
+.bb-refresh {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: 9px;
+    border: 1px solid var(--bd);
+    background: var(--s2);
+    color: var(--tx);
+    font-weight: 700;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.bb-refresh:hover:not(:disabled) { background: var(--acc); color: #fff; border-color: var(--acc); }
+.bb-refresh:disabled { opacity: 0.6; cursor: progress; }
+
+.bb-state {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 24px;
+    justify-content: center;
+    color: var(--tx2);
+    font-size: 0.9rem;
+}
+
+.bb-state.bb-error { color: #f87171; }
+
+.bb-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.bb-card {
+    border: 1px solid var(--bd);
+    border-radius: 12px;
+    background: var(--s2);
+    overflow: hidden;
+}
+
+.bb-card.active {
+    border-color: var(--acc);
+    box-shadow: 0 0 0 1px var(--acc) inset;
+}
+
+.bb-card-main {
+    display: flex;
+    gap: 12px;
+    padding: 14px;
+    align-items: flex-start;
+}
+
+.bb-icon {
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: var(--s3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--acc2);
+}
+
+.bb-info { flex: 1; min-width: 0; }
+
+.bb-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bb-name {
+    font-weight: 800;
+    color: var(--tx);
+    font-size: 1rem;
+}
+
+.bb-badge-active {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--acc2);
+    border: 1px solid color-mix(in srgb, var(--acc2) 40%, transparent);
+    border-radius: 999px;
+    padding: 1px 8px;
+}
+
+.bb-desc {
+    margin: 4px 0 8px;
+    font-size: 0.82rem;
+    color: var(--tx2);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.bb-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    font-size: 0.76rem;
+    color: var(--tx);
+    margin-bottom: 4px;
+}
+
+.bb-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.bb-meta-dim { color: var(--tx2); }
+
+.bb-tag {
+    background: var(--s3);
+    border-radius: 6px;
+    padding: 1px 8px;
+    text-transform: capitalize;
+    font-weight: 600;
+}
+
+.bb-pid { display: inline-block; margin-top: 6px; color: var(--tx2); }
+
+.bb-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.bb-use-btn,
+.bb-versions-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 11px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid var(--bd);
+    white-space: nowrap;
+}
+
+.bb-use-btn { background: var(--acc); color: #fff; border-color: var(--acc); }
+.bb-use-btn:hover:not(:disabled) { filter: brightness(1.1); }
+.bb-use-btn:disabled { opacity: 0.6; cursor: progress; }
+
+.bb-versions-toggle { background: var(--s3); color: var(--tx); }
+.bb-versions-toggle:hover { background: var(--s4); }
+
+.bb-versions {
+    border-top: 1px solid var(--bd);
+    padding: 6px 14px 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+.bb-version-row {
+    display: grid;
+    grid-template-columns: 60px 1fr auto auto;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    font-size: 0.78rem;
+    color: var(--tx2);
+    border-bottom: 1px solid color-mix(in srgb, var(--bd) 60%, transparent);
+}
+
+.bb-version-row:last-child { border-bottom: none; }
+.bb-version-name { font-weight: 700; color: var(--tx); }
+
+.bb-version-use {
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--bd);
+    background: var(--s3);
+    color: var(--tx);
+    font-weight: 700;
+    font-size: 0.72rem;
+    cursor: pointer;
+}
+
+.bb-version-use:hover:not(:disabled) { background: var(--acc); color: #fff; border-color: var(--acc); }
+.bb-version-use:disabled { opacity: 0.6; cursor: progress; }
+
+.bb-spin { animation: bb-spin 1s linear infinite; }
+@keyframes bb-spin { to { transform: rotate(360deg); } }

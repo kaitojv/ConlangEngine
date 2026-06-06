@@ -1,0 +1,124 @@
+/* src/components/pages/settings/backuptab.css */
+
+.bk-section {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--bd);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.bk-checkbox {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    accent-color: var(--acc);
+    cursor: pointer;
+}
+
+.bk-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    cursor: pointer;
+}
+
+.bk-toggle-title {
+    display: block;
+    font-weight: 700;
+    color: var(--tx);
+    font-size: 0.95rem;
+}
+
+.bk-toggle-sub {
+    display: block;
+    color: var(--tx2);
+    font-size: 0.8rem;
+    margin-top: 2px;
+    max-width: 540px;
+    line-height: 1.4;
+}
+
+.bk-hint {
+    font-size: 0.8rem;
+    color: var(--tx2);
+}
+
+.bk-hint code,
+.settings-description code {
+    background: var(--s3);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 0.78rem;
+}
+
+.bk-btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.bk-test-btn {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--bd);
+    background: var(--s2);
+    color: var(--tx);
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.bk-test-btn:hover:not(:disabled) {
+    background: var(--acc);
+    color: #fff;
+    border-color: var(--acc);
+}
+
+.bk-test-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.bk-offline-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #f87171;
+}
+
+.bk-status-pill {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    border: 1px solid var(--bd);
+    background: var(--s2);
+    color: var(--tx2);
+}
+
+.bk-status-pill.bk-saved   { color: #34d399; border-color: color-mix(in srgb, #34d399 40%, transparent); }
+.bk-status-pill.bk-unsaved { color: #fbbf24; border-color: color-mix(in srgb, #fbbf24 40%, transparent); }
+.bk-status-pill.bk-saving  { color: var(--acc2); border-color: color-mix(in srgb, var(--acc2) 40%, transparent); }
+.bk-status-pill.bk-offline { color: #94a3b8; border-color: color-mix(in srgb, #94a3b8 35%, transparent); }
+.bk-status-pill.bk-error   { color: #f87171; border-color: color-mix(in srgb, #f87171 45%, transparent); }
+
+.bk-disabled-note {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 18px;
+    color: var(--tx2);
+    font-size: 0.85rem;
+}

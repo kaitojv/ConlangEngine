@@ -23,7 +23,8 @@ const VALID_CONFIG_KEYS = new Set([
     'semanticMappings', 'wordAssistConfig', 'autoReturnToLexicon', 'syllablePatternWeights',
     'enableToneAndStress', 'functionWords', 'calendarSystem',
     'stressRules', 'toneRules', 'isPublic', 'conlangIcon', 'parentId',
-    'vowelHarmonyMode', 'vowelHarmonySets', 'vowelHarmonyOverrideWordClasses', 'vowelHarmonyOverrideTags'
+    'vowelHarmonyMode', 'vowelHarmonySets', 'vowelHarmonyOverrideWordClasses', 'vowelHarmonyOverrideTags',
+    'backupSettings'
 ]);
 
 /**
