@@ -7,7 +7,7 @@ import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Modal from '@/components/UI/Modal/Modal.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
-import { Languages, Plus, Trash2, CheckCircle2, Lock, Copy, GitMerge, Network, LayoutGrid, Map as MapIcon, Upload, MapPin, ZoomIn, ZoomOut, Crosshair, X } from 'lucide-react';
+import { Languages, Plus, Trash2, CheckCircle2, Lock, Copy, GitMerge, Network, LayoutGrid, Map as MapIcon, Upload, MapPin, ZoomIn, ZoomOut, Crosshair, X, ArrowUpFromLine } from 'lucide-react';
 import { supabase } from '@/utils/supabaseClient.js';
 import { sanitizeConfig, sanitizeLexicon } from '@/utils/schemaValidator.jsx';
 import { getConlangIcon } from '@/utils/iconMap.jsx';
@@ -50,6 +50,11 @@ export default function ConlangsTab() {
     const [deriveParent, setDeriveParent] = useState(null);
     const [daughterName, setDaughterName] = useState('');
     const [soundChanges, setSoundChanges] = useState('');
+
+    // Set Parent Modal State
+    const [parentModalOpen, setParentModalOpen] = useState(false);
+    const [parentTargetProject, setParentTargetProject] = useState(null);
+    const [selectedParentId, setSelectedParentId] = useState('');
 
     // Check if the user has an active Pro subscription
     useEffect(() => {
@@ -265,6 +270,30 @@ export default function ConlangsTab() {
         setDeriveModalOpen(false);
     };
 
+    const handleOpenParentModal = (e, project) => {
+        e.stopPropagation();
+        setParentTargetProject(project);
+        setSelectedParentId(project.project_data?.config?.parentId || '');
+        setParentModalOpen(true);
+    };
+
+    const handleSetParent = () => {
+        if (!parentTargetProject) return;
+
+        const newProjectData = JSON.parse(JSON.stringify(parentTargetProject.project_data || {}));
+        if (!newProjectData.config) newProjectData.config = { ...INITIAL_CONFIG };
+        
+        newProjectData.config.parentId = selectedParentId === '' ? null : selectedParentId;
+
+        // If this is the active project, update it in the store too
+        if (config.projectId === parentTargetProject.id) {
+            setFullConfig(newProjectData.config);
+        }
+
+        saveProjectToArchive(newProjectData.config, newProjectData.dictionary || []);
+        setParentModalOpen(false);
+    };
+
     // State for Map Pin Selection
     const [pinSelectModalOpen, setPinSelectModalOpen] = useState(false);
 
@@ -463,8 +492,11 @@ export default function ConlangsTab() {
                 <div key={project.id} className="tree-node-wrapper">
                     <div className={`project-card tree-card ${isCurrent ? 'active-workspace' : ''}`} onClick={() => handleOpenProject(project.id)}>
                         <div className="project-card-actions">
+                            <button className="project-action-btn" onClick={(e) => handleOpenParentModal(e, project)} title="Set Mother Language">
+                                <ArrowUpFromLine size={16} />
+                            </button>
                             <button className="project-action-btn" onClick={(e) => handleOpenDeriveModal(e, project)} title="Derive Daughter Language">
-                                <GitMerge size={14} />
+                                <GitMerge size={16} />
                             </button>
                             <button className="project-action-btn" onClick={(e) => handleDuplicateProject(e, project)} title="Duplicate Project">
                                 <Copy size={14} />
@@ -546,6 +578,9 @@ export default function ConlangsTab() {
                                         <button className="project-action-btn" onClick={(e) => { e.stopPropagation(); setTargetingMode(project.id); setViewMode('map'); }} title="Place on Map">
                                             <MapPin size={16} />
                                         </button>
+                                        <button className="project-action-btn" onClick={(e) => handleOpenParentModal(e, project)} title="Set Mother Language">
+                                            <ArrowUpFromLine size={16} />
+                                        </button>
                                         <button className="project-action-btn" onClick={(e) => handleOpenDeriveModal(e, project)} title="Derive Daughter Language">
                                             <GitMerge size={16} />
                                         </button>
@@ -624,6 +659,43 @@ export default function ConlangsTab() {
                         <Button variant="default" onClick={() => setDeriveModalOpen(false)}>Cancel</Button>
                         <Button variant="imp" onClick={handleDeriveLanguage}>
                             <div className="btn-content-flex"><GitMerge size={16} /> Breed Daughter Language</div>
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal isOpen={parentModalOpen} onClose={() => setParentModalOpen(false)} title="Set Mother Language">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <p style={{ color: 'var(--tx2)', lineHeight: '1.5' }}>
+                        Select an existing workspace to act as the parent (Mother Language) for <strong>{parentTargetProject?.project_data?.config?.conlangName || 'this language'}</strong>. This will link them in the Family Tree view.
+                    </p>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ color: 'var(--tx)', fontWeight: 'bold' }}>Mother Language</label>
+                        <select 
+                            style={{ 
+                                width: '100%', padding: '10px', background: 'var(--s1)', 
+                                border: '1px solid var(--bd)', borderRadius: 'var(--rad-sm)', 
+                                color: 'var(--tx)' 
+                            }}
+                            value={selectedParentId}
+                            onChange={(e) => setSelectedParentId(e.target.value)}
+                        >
+                            <option value="">None (Independent Language)</option>
+                            {localProjects
+                                .filter(p => p.id !== parentTargetProject?.id)
+                                .map(p => (
+                                <option key={p.id} value={p.id}>
+                                    {p.project_data?.config?.conlangName || "Untitled Project"}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                        <Button variant="default" onClick={() => setParentModalOpen(false)}>Cancel</Button>
+                        <Button variant="imp" onClick={handleSetParent}>
+                            <div className="btn-content-flex"><ArrowUpFromLine size={16} /> Set Parent</div>
                         </Button>
                     </div>
                 </div>
