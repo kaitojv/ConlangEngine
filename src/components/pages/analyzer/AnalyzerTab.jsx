@@ -197,8 +197,10 @@ export default function AnalyzerTab() {
 
         const pattern = [];
         let sentenceHasHiddenSubject = false;
+        let adjPlacementValid = true;
+        let adjErrorMsg = '';
 
-        analyzedWords.forEach(wData => {
+        analyzedWords.forEach((wData, idx) => {
             if (wData.parsings.length === 0) return;
             const parse = wData.parsings[wData.selectedIdx];
 
@@ -231,13 +233,59 @@ export default function AnalyzerTab() {
                 });
                 if (isPersonMarked) sentenceHasHiddenSubject = true;
             }
+
+            // Validate Adjective Placement
+            if (parse.root.wordClass === 'adjective') {
+                const adjPlacement = config.adjectivePlacement || 'pre-nominal';
+                if (adjPlacement === 'post-nominal') {
+                    let foundNoun = false;
+                    for (let j = idx - 1; j >= 0; j--) {
+                        const pClass = analyzedWords[j]?.parsings[analyzedWords[j]?.selectedIdx]?.root?.wordClass;
+                        if (pClass === 'noun' || pClass === 'pronoun') { foundNoun = true; break; }
+                        if (pClass === 'verb') break;
+                    }
+                    if (!foundNoun && idx > 0) {
+                        let foundNounAfter = false;
+                        for (let j = idx + 1; j < analyzedWords.length; j++) {
+                            const nClass = analyzedWords[j]?.parsings[analyzedWords[j]?.selectedIdx]?.root?.wordClass;
+                            if (nClass === 'noun' || nClass === 'pronoun') { foundNounAfter = true; break; }
+                            if (nClass === 'verb') break;
+                        }
+                        if (foundNounAfter) {
+                            adjPlacementValid = false;
+                            adjErrorMsg = "Adjective placed before noun, expected Post-Nominal.";
+                        }
+                    }
+                } else {
+                    let foundNoun = false;
+                    for (let j = idx + 1; j < analyzedWords.length; j++) {
+                        const nClass = analyzedWords[j]?.parsings[analyzedWords[j]?.selectedIdx]?.root?.wordClass;
+                        if (nClass === 'noun' || nClass === 'pronoun') { foundNoun = true; break; }
+                        if (nClass === 'verb') break;
+                    }
+                    if (!foundNoun && idx < analyzedWords.length - 1) {
+                        let foundNounBefore = false;
+                        for (let j = idx - 1; j >= 0; j--) {
+                            const pClass = analyzedWords[j]?.parsings[analyzedWords[j]?.selectedIdx]?.root?.wordClass;
+                            if (pClass === 'noun' || pClass === 'pronoun') { foundNounBefore = true; break; }
+                            if (pClass === 'verb') break;
+                        }
+                        if (foundNounBefore) {
+                            adjPlacementValid = false;
+                            adjErrorMsg = "Adjective placed after noun, expected Pre-Nominal.";
+                        }
+                    }
+                }
+            }
         });
 
-        if (pattern.length === 0) return null;
+        if (pattern.length === 0 && adjPlacementValid) return null;
 
         let cleanedPattern = pattern.filter((v, i, a) => v !== a[i - 1]).join('');
         const targetOrder = config.syntaxOrder || 'SVO';
         let isValid = cleanedPattern === targetOrder || cleanedPattern.includes(targetOrder);
+        
+        if (pattern.length === 0) isValid = true;
 
         if (!isValid && sentenceHasHiddenSubject && !cleanedPattern.includes('S')) {
             const targetWithoutS = targetOrder.replace('S', '');
@@ -247,22 +295,15 @@ export default function AnalyzerTab() {
             }
         }
 
-        return { isValid, cleanedPattern, targetOrder };
-    }, [analyzedWords, config.syntaxOrder, config.personRules]);
+        return { isValid, cleanedPattern, targetOrder, adjPlacementValid, adjErrorMsg };
+    }, [analyzedWords, config.syntaxOrder, config.personRules, config.adjectivePlacement]);
 
     // Spin up a rough English translation based on the found roots and grammar tags
     const handleTranslate = () => {
         if (analyzedWords.length === 0) return;
 
-        const subjects = [];
-        const verbs = [];
-        const objects = [];
-        const others = [];
-
-        analyzedWords.forEach(wData => {
-            if (wData.parsings.length === 0) {
-                others.push("???"); return;
-            }
+        let tokenData = analyzedWords.map((wData, i) => {
+            if (wData.parsings.length === 0) return { role: '?', wordClass: '?', text: "???" };
 
             const parse = wData.parsings[wData.selectedIdx];
             const transLower = parse.root.translation?.toLowerCase() || '';
@@ -319,22 +360,65 @@ export default function AnalyzerTab() {
                 else remainingTags.push(r.name);
             });
 
-            // If it's a standalone pronoun (the root is a person marker), use the mapped pronoun
             if (isGhostPerson && personCode && pronounMap[personCode]) {
                 baseTrans = isAccusative ? pronounMap[personCode].obj : pronounMap[personCode].subj;
             } else if (isGhostPerson && personCode) {
-                baseTrans = personCode.toUpperCase(); // Fallback to code if not in map
+                baseTrans = personCode.toUpperCase();
             }
-
-            if (hiddenPronoun && role === 'V') subjects.push(hiddenPronoun);
 
             let finalWord = baseTrans;
             if (remainingTags.length > 0) finalWord += ` [${remainingTags.join(', ')}]`;
 
-            if (role === 'S') subjects.push(finalWord);
-            else if (role === 'V') verbs.push(finalWord);
-            else if (role === 'O') objects.push(finalWord);
-            else others.push(finalWord);
+            return {
+                originalIndex: i,
+                role,
+                wordClass: parse.root.wordClass,
+                text: finalWord,
+                hiddenPronoun,
+                consumed: false
+            };
+        });
+
+        const adjPlacement = config.adjectivePlacement || 'pre-nominal';
+        tokenData.forEach((td, i) => {
+            if (td.wordClass === 'adjective' && !td.consumed) {
+                if (adjPlacement === 'post-nominal') {
+                    for (let j = i - 1; j >= 0; j--) {
+                        if ((tokenData[j].wordClass === 'noun' || tokenData[j].wordClass === 'pronoun') && !tokenData[j].consumed) {
+                            tokenData[j].text = td.text + ' ' + tokenData[j].text;
+                            td.consumed = true;
+                            break;
+                        } else if (tokenData[j].wordClass === 'verb') {
+                            break;
+                        }
+                    }
+                } else {
+                    for (let j = i + 1; j < tokenData.length; j++) {
+                        if ((tokenData[j].wordClass === 'noun' || tokenData[j].wordClass === 'pronoun') && !tokenData[j].consumed) {
+                            tokenData[j].text = td.text + ' ' + tokenData[j].text;
+                            td.consumed = true;
+                            break;
+                        } else if (tokenData[j].wordClass === 'verb') {
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+
+        const subjects = [];
+        const verbs = [];
+        const objects = [];
+        const others = [];
+
+        tokenData.forEach(td => {
+            if (td.consumed) return;
+            if (td.hiddenPronoun && td.role === 'V') subjects.push(td.hiddenPronoun);
+            
+            if (td.role === 'S') subjects.push(td.text);
+            else if (td.role === 'V') verbs.push(td.text);
+            else if (td.role === 'O') objects.push(td.text);
+            else others.push(td.text);
         });
 
         let translatedSentence = [...new Set(subjects), ...verbs, ...objects, ...others].join(' ');
@@ -358,8 +442,8 @@ export default function AnalyzerTab() {
                 {analyzedWords.length > 0 && (
                     <div className="analyzer-modal-content">
                         {syntaxStatus && (
-                            <div className={`syntax-status-box ${syntaxStatus.isValid ? 'status-valid' : 'status-invalid'}`}>
-                                {syntaxStatus.isValid ? (
+                            <div className={`syntax-status-box ${(syntaxStatus.isValid && syntaxStatus.adjPlacementValid) ? 'status-valid' : 'status-invalid'}`}>
+                                {(syntaxStatus.isValid && syntaxStatus.adjPlacementValid) ? (
                                     <>
                                         <CheckCircle2 size={16} className="status-icon"/>
                                         <b>Valid Syntax!</b> Sentence matches <b>{syntaxStatus.targetOrder}</b> order.
@@ -367,7 +451,9 @@ export default function AnalyzerTab() {
                                 ) : (
                                     <>
                                         <AlertTriangle size={16} className="status-icon"/>
-                                        <b>Warning:</b> Detected <b>{syntaxStatus.cleanedPattern}</b> instead of <b>{syntaxStatus.targetOrder}</b>.
+                                        <b>Warning:</b> 
+                                        {!syntaxStatus.isValid && <span> Detected <b>{syntaxStatus.cleanedPattern || 'no pattern'}</b> instead of <b>{syntaxStatus.targetOrder}</b>. </span>}
+                                        {!syntaxStatus.adjPlacementValid && <span> {syntaxStatus.adjErrorMsg} </span>}
                                     </>
                                 )}
                             </div>
