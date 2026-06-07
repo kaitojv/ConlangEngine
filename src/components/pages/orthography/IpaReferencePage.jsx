@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
+import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { generateIpaFromWord } from '../../../utils/ipaGenerator.js';
 import {
     IPA_COLUMNS, IPA_PULMONIC, IPA_VOWELS,
@@ -194,6 +195,8 @@ export default function IpaReferencePage() {
     const lexicon      = useLexiconStore(s => s.lexicon);
     const updateWord   = useLexiconStore(s => s.updateWord);
 
+    const { transliterate } = useTransliterator();
+
     const [selected, setSelected] = useState(null); // { phoneme, rect }
     const [overwriteIpa, setOverwriteIpa] = useState(false);
 
@@ -274,13 +277,15 @@ export default function IpaReferencePage() {
         lexicon.forEach(wordObj => {
             // Update if overwrite is true, or if it doesn't have an IPA
             if (overwriteIpa || !wordObj.ipa || wordObj.ipa.trim() === '') {
-                const cleanWord = wordObj.word.replace(/[*\\-]/g, '');
-                const generatedIpa = generateIpaFromWord(cleanWord, ipaMappingRules);
+                // We want to generate IPA from the visible orthography, not the underlying phonemes
+                const displayWord = transliterate(wordObj.word);
+                const cleanWord = displayWord.replace(/[*\\-]/g, '');
                 
-                // Ensure we actually produced something different than the raw word, 
-                // and it's different from the existing IPA
-                if (generatedIpa && generatedIpa !== cleanWord.toLowerCase() && generatedIpa !== wordObj.ipa) {
-                    updateWord(wordObj.id, { ipa: generatedIpa });
+                const result = generateIpaFromWord(cleanWord, ipaMappingRules);
+                
+                // Ensure a rule actually matched, and it's different from the existing IPA
+                if (result.matched && result.ipa !== wordObj.ipa) {
+                    updateWord(wordObj.id, { ipa: result.ipa });
                     updateCount++;
                 }
             }

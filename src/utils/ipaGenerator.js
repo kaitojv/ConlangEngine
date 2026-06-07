@@ -4,18 +4,24 @@
  */
 
 export const generateIpaFromWord = (word, mappingString) => {
-    if (!mappingString || !word) return '';
+    if (!mappingString || !word) return { ipa: '', matched: false };
+
+    // Normalize unicode and force lowercase to ensure consistent matching
+    const normalizedWord = word.normalize('NFC').toLowerCase();
 
     // Parse the mapping string into an array of rules
     const rules = mappingString.split(',').map(s => {
         const parts = s.split('=');
         if (parts.length === 2) {
-            return { from: parts[0].trim(), to: parts[1].trim() };
+            return { 
+                from: parts[0].trim().normalize('NFC').toLowerCase(), 
+                to: parts[1].trim().normalize('NFC') 
+            };
         }
         return null;
     }).filter(rule => rule && rule.from && rule.to);
 
-    if (rules.length === 0) return word.toLowerCase();
+    if (rules.length === 0) return { ipa: normalizedWord, matched: false };
 
     // Sort rules by length of 'from' string descending so longer matches happen first
     rules.sort((a, b) => b.from.length - a.from.length);
@@ -30,7 +36,12 @@ export const generateIpaFromWord = (word, mappingString) => {
     // Create a fast lookup map for the replacements
     const ruleMap = Object.fromEntries(rules.map(r => [r.from, r.to]));
 
+    let matched = false;
     // Perform a single-pass replacement to avoid rule chaining issues
-    // Example: if a=b and b=c, 'a' should become 'b', not 'c'.
-    return word.toLowerCase().replace(regex, match => ruleMap[match]);
+    const result = normalizedWord.replace(regex, match => {
+        matched = true;
+        return ruleMap[match];
+    });
+
+    return { ipa: result, matched };
 };

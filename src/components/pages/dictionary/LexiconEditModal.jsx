@@ -39,6 +39,8 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
     const vowelHarmonyOverrideTags = useConfigStore((state) => state.vowelHarmonyOverrideTags) || [];
     const ipaMappingRules = useConfigStore((state) => state.ipaMappingRules) || '';
 
+    const { transliterate } = useTransliterator();
+
     const [activeField, setActiveField] = useState('word');
 
     // Bundle all the form fields into one neat state object
@@ -484,10 +486,13 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                             style={{ position: 'absolute', top: 0, right: 0, display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', zIndex: 10, padding: '2px' }}
                             onClick={() => {
                                 if (word) {
-                                    const cleanWord = word.replace(/[*\\-]/g, '');
-                                    const generated = generateIpaFromWord(cleanWord, ipaMappingRules);
-                                    if (generated !== cleanWord.toLowerCase()) {
-                                        updateField('ipa', generated);
+                                    // Generate IPA based on the display text, not the raw phonemic input
+                                    const displayWord = transliterate(word);
+                                    const cleanWord = displayWord.replace(/[*\\-]/g, '');
+                                    
+                                    const result = generateIpaFromWord(cleanWord, ipaMappingRules);
+                                    if (result.matched) {
+                                        updateField('ipa', result.ipa);
                                         toast.success("Generated IPA");
                                     } else {
                                         toast.error("No rules matched this word.");
