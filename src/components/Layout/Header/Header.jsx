@@ -24,6 +24,7 @@ import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 export default function Header({ openMenu }) {
     const navigate = useNavigate();
     const fileInputRef = useRef(null);
+    const fileInputSingleRef = useRef(null);
     const { transliterate } = useTransliterator();
     
     const [session, setSession] = useState(null);
@@ -80,11 +81,16 @@ export default function Header({ openMenu }) {
         return () => subscription.unsubscribe();
     }, []);
 
-    // Bundle up all the current conlang data and trigger a JSON file download
-    const handleSave = () => {
+    // Bundle up the conlang data and trigger a JSON file download
+    const handleSave = (exportAll = true) => {
         const config = useConfigStore.getState();
-        const project = useProjectStore.getState();
+        const projectStoreState = useProjectStore.getState();
         const lexicon = useLexiconStore.getState();
+
+        const project = { ...projectStoreState };
+        if (!exportAll) {
+            project.localProjects = [];
+        }
 
         const saveData = { config, project, lexicon };
         const blob = new Blob([JSON.stringify(saveData, null, 2)], { type: 'application/json' });
@@ -92,7 +98,8 @@ export default function Header({ openMenu }) {
         
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${config.conlangName || 'MyConlang'}_Backup.json`;
+        const suffix = exportAll ? 'All_Workspaces' : 'Workspace';
+        a.download = `${config.conlangName || 'MyConlang'}_${suffix}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -100,7 +107,7 @@ export default function Header({ openMenu }) {
     };
 
     // Read a JSON backup file, validate it, and safely inject into our global stores
-    const handleLoad = (event) => {
+    const handleLoad = (event, loadAll = true) => {
         const file = event.target.files[0];
         if (!file) return;
 
@@ -119,6 +126,25 @@ export default function Header({ openMenu }) {
                 if (data.lexicon) {
                     useLexiconStore.getState().setLexicon(data.lexicon);
                 }
+                
+                if (loadAll && data.project && Array.isArray(data.project.localProjects)) {
+                    const projectStore = useProjectStore.getState();
+                    let importedCount = 0;
+                    data.project.localProjects.forEach(proj => {
+                        if (proj.id && proj.project_data) {
+                            projectStore.saveProjectToArchive(
+                                proj.project_data.config,
+                                proj.project_data.dictionary || []
+                            );
+                            importedCount++;
+                        }
+                    });
+                    if (importedCount > 0) {
+                        alert(`Project loaded! ${importedCount} workspaces restored to archive.`);
+                        return;
+                    }
+                }
+
                 alert("Project loaded successfully!");
             } catch (err) {
                 console.error("Failed to parse save file:", err);
@@ -132,7 +158,50 @@ export default function Header({ openMenu }) {
 
     const handleExport = (template, options) => {
         const config = useConfigStore.getState();
-        const lexicon = useLexiconStore.getState().lexicon || [];
+        const rawLexicon = useLexiconStore.getState().lexicon || [];
+        
+        // Group lexicon entries that share the same base word
+        const groupedMap = new Map();
+        rawLexicon.forEach(w => {
+            const baseWord = w.word.replace(/\*/g, '').toLowerCase().trim();
+            if (!groupedMap.has(baseWord)) {
+                groupedMap.set(baseWord, { ...w, entries: [] });
+            }
+            groupedMap.get(baseWord).entries.push(w);
+        });
+
+        const lexicon = Array.from(groupedMap.values()).map(group => {
+            const classes = new Set(group.entries.map(e => e.wordClass).filter(Boolean));
+            const mergedWordClass = Array.from(classes).join(', ');
+
+            const meanings = group.entries.map(e => {
+                let str = '';
+                if (classes.size > 1 && e.wordClass) {
+                    str += `(${e.wordClass}) `;
+                }
+                if (e.translation) str += e.translation;
+                if (e.definition) {
+                    str += str ? `: ${e.definition}` : e.definition;
+                }
+                return str;
+            }).filter(Boolean);
+
+            let mergedTranslation = '';
+            if (meanings.length === 1) {
+                mergedTranslation = meanings[0];
+            } else if (meanings.length > 1) {
+                mergedTranslation = meanings.map((m, i) => `${i + 1}. ${m}`).join(' | ');
+            } else {
+                mergedTranslation = group.translation || '';
+            }
+
+            return {
+                ...group,
+                wordClass: mergedWordClass,
+                translation: mergedTranslation
+            };
+        });
+
         const transliteratedLexicon = lexicon.map(w => ({
             ...w,
             displayWord: transliterate(w.word.replace(/\*/g, ''), lexicon)
@@ -205,9 +274,19 @@ export default function Header({ openMenu }) {
                                 </button>
                             </div>
                         </div>
-                        <Button className="hdr-btn" onClick={handleSave}>
-                            <Save /> <span>Save</span>
-                        </Button>
+                        <div className="export-menu-wrapper">
+                            <Button className="hdr-btn export-trigger">
+                                <Save /> <span>Save</span>
+                            </Button>
+                            <div className="export-dropdown">
+                                <button className="export-opt" onClick={() => handleSave(false)}>
+                                    <Save size={14} /> Current Workspace
+                                </button>
+                                <button className="export-opt" onClick={() => handleSave(true)}>
+                                    <Database size={14} /> All Workspaces
+                                </button>
+                            </div>
+                        </div>
                         <div className="export-menu-wrapper">
                             <Button className="hdr-btn export-trigger">
                                 <FolderUp /> <span>Load</span>
@@ -216,12 +295,22 @@ export default function Header({ openMenu }) {
                                 <input 
                                     type="file" 
                                     accept=".json" 
-                                    ref={fileInputRef} 
-                                    onChange={handleLoad} 
+                                    ref={fileInputSingleRef} 
+                                    onChange={(e) => handleLoad(e, false)} 
                                     className="hidden-file-input"
                                 />
+                                <input 
+                                    type="file" 
+                                    accept=".json" 
+                                    ref={fileInputRef} 
+                                    onChange={(e) => handleLoad(e, true)} 
+                                    className="hidden-file-input"
+                                />
+                                <button className="export-opt" onClick={() => fileInputSingleRef.current.click()}>
+                                    <FolderUp size={14} /> Current Workspace
+                                </button>
                                 <button className="export-opt" onClick={() => fileInputRef.current.click()}>
-                                    <FolderUp size={14} /> JSON Backup
+                                    <Database size={14} /> All Workspaces
                                 </button>
                                 <button className="export-opt" onClick={() => setIsCsvModalOpen(true)}>
                                     <Table size={14} /> Import CSV
