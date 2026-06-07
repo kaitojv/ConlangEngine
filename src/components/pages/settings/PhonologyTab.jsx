@@ -38,7 +38,9 @@ export default function PhonologyTab() {
     const updateConfig = useConfigStore((state) => state.updateConfig);
 
     const AZURE_VOICES = [
-        { value: 'ipa-default', label: 'IPA Reading (Strict Pronunciation)' },
+        { value: 'ipa-default', label: 'IPA Reading (US Base - Fluid)' },
+        { value: 'ipa-uk', label: 'IPA Reading (UK Base - Crisp Consonants)' },
+        { value: 'ipa-fr', label: 'IPA Reading (French Base - Soft Rs)' },
         { value: 'en-US-JennyNeural', label: 'US English (Jenny)' },
         { value: 'en-US-GuyNeural', label: 'US English (Guy)' },
         { value: 'en-GB-SoniaNeural', label: 'UK English (Sonia)' },

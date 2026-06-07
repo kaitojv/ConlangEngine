@@ -9,9 +9,15 @@ export const playAzureTTS = async ({ text, ipa, voice, useIpa = false }) => {
     let actualVoice = voice;
     let actualUseIpa = useIpa;
 
-    // If they picked the "IPA Reading" option, force useIpa to true and use a default neural voice
+    // If they picked an "IPA Reading" option, force useIpa to true and use a specific voice
     if (voice === 'ipa-default') {
         actualVoice = 'en-US-JennyMultilingualNeural';
+        actualUseIpa = true;
+    } else if (voice === 'ipa-uk') {
+        actualVoice = 'en-GB-RyanNeural';
+        actualUseIpa = true;
+    } else if (voice === 'ipa-fr') {
+        actualVoice = 'fr-FR-DeniseNeural';
         actualUseIpa = true;
     }
 
@@ -66,7 +72,7 @@ export const playAzureTTS = async ({ text, ipa, voice, useIpa = false }) => {
             // We should automatically fall back to reading just the text!
             if (response.status === 400 && ipa && actualUseIpa) {
                 console.warn('Azure TTS rejected the IPA string (400). Falling back to normal text reading...');
-                if (voice === 'ipa-default') {
+                if (['ipa-default', 'ipa-uk', 'ipa-fr'].includes(voice)) {
                     // Try to read the IPA characters directly rather than falling back to English orthography
                     return playAzureTTS({ text: ipa.replace(/[\/\[\]]/g, '').trim(), ipa: null, voice, useIpa: false });
                 }
