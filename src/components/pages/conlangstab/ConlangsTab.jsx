@@ -193,28 +193,7 @@ export default function ConlangsTab() {
         );
     };
 
-    if (loading) {
-        return (
-            <div className="conlangs-container">
-                <Card><p>Checking access...</p></Card>
-            </div>
-        );
-    }
-
-    if (!isLive) {
-        return (
-            <div className="conlangs-container">
-                <Card className="locked-feature-card">
-                    <Lock size={48} className="locked-icon" />
-                    <h2>Workspaces are a LIVE Feature</h2>
-                    <p>Upgrade to Conlang Engine LIVE to create and manage multiple conlang projects in the cloud.</p>
-                    <Button variant="imp" onClick={() => navigate('/profile')}>
-                        Go to Profile to Upgrade
-                    </Button>
-                </Card>
-            </div>
-        );
-    }
+    // The page is now fully accessible to all users! No need to block on isLive anymore.
 
     return (
         <div className="conlangs-container">

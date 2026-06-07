@@ -208,7 +208,7 @@ export default function Home() {
                     <h3>
                         <Heart size={24} /> Support the Project
                     </h3>
-                    <p>Help keep Conlang Engine alive and unlock <b>Cloud Sync</b> + <b>Unlimited Workspaces</b>.</p>
+                    <p>Help keep Conlang Engine alive and unlock <b>Cloud Sync</b> + <b>Multi-device backups</b>.</p>
                     <div className="support-card-actions">
                         <button onClick={() => window.open('https://ko-fi.com/kaitosz', '_blank')} className="support-link-btn">
                             <Coffee size={14} /> Ko-fi

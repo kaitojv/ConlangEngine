@@ -542,7 +542,7 @@ export default function ProfileTab() {
                         <div className="free-tier-content">
                             <h3 className="free-tier-title">Conlang Engine LIVE</h3>
                             <p className="free-tier-desc">
-                                Support the project to unlock <b>Cloud Sync</b> and <b>Unlimited Workspaces</b>. Starting at <b>$5 USD/month</b>.
+                                Support the project to unlock <b>Cloud Sync</b> and <b>Multi-device backups</b>. Starting at <b>$5 USD/month</b>.
                             </p>
                             <div className="free-tier-actions">
                                 <div className="paypal-integration-area">
