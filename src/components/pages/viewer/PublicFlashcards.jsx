@@ -60,7 +60,8 @@ export default function PublicFlashcards({ lexicon = [], config = {} }) {
                 await playAzureTTS({
                     text: cleanText,
                     ipa: cleanIpa,
-                    voice: config.azureTtsVoice
+                    voice: config.azureTtsVoice,
+                    useIpa: config.azureTtsUseIpa
                 });
                 toast.dismiss(toastId);
             } catch (err) {

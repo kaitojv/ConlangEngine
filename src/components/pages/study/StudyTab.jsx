@@ -129,7 +129,8 @@ export default function StudyTab() {
                 await playAzureTTS({
                     text: cleanText,
                     ipa: cleanIpa,
-                    voice: globalConfig.azureTtsVoice
+                    voice: globalConfig.azureTtsVoice,
+                    useIpa: globalConfig.azureTtsUseIpa
                 });
                 toast.dismiss(toastId);
             } catch (err) {

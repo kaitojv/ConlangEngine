@@ -80,7 +80,10 @@ export const playAzureTTS = async ({ text, ipa, voice, useIpa = false }) => {
                 URL.revokeObjectURL(url);
                 reject(err);
             };
-            audio.play();
+            audio.play().catch(err => {
+                URL.revokeObjectURL(url);
+                reject(err);
+            });
         });
 
     } catch (error) {

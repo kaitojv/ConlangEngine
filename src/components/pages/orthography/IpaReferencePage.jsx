@@ -4,12 +4,12 @@ import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { generateIpaFromWord } from '../../../utils/ipaGenerator.js';
 import {
     IPA_COLUMNS, IPA_PULMONIC, IPA_VOWELS,
-import {
     IPA_NON_PULMONIC, IPA_OTHER_CONSONANTS,
     IPA_SUPRASEGMENTALS, IPA_DIACRITICS, IPA_INFO
 } from '../../../utils/ipaData.js';
 import { Volume2, VolumeX, Plus, Minus, BookOpen, Wand2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Button from '../../UI/Buttons/Buttons.jsx';
 import './ipaReferencePage.css';
 import './anatomyOverlay.css';
 
@@ -195,6 +195,7 @@ export default function IpaReferencePage() {
     const updateWord   = useLexiconStore(s => s.updateWord);
 
     const [selected, setSelected] = useState(null); // { phoneme, rect }
+    const [overwriteIpa, setOverwriteIpa] = useState(false);
 
     // Parse inventory into Sets for O(1) lookup
     const consSet = new Set(
@@ -271,15 +272,14 @@ export default function IpaReferencePage() {
         let updateCount = 0;
         
         lexicon.forEach(wordObj => {
-            // Only update words that don't have IPA defined yet
-            if (!wordObj.ipa || wordObj.ipa.trim() === '') {
-                // Strip asterisks/hyphens just like the generator does internally, or feed it straight?
-                // Actually the word might have asterisks. The generator might leave them or not based on rules.
-                // Let's remove them for IPA generation to be safe
+            // Update if overwrite is true, or if it doesn't have an IPA
+            if (overwriteIpa || !wordObj.ipa || wordObj.ipa.trim() === '') {
                 const cleanWord = wordObj.word.replace(/[*\\-]/g, '');
                 const generatedIpa = generateIpaFromWord(cleanWord, ipaMappingRules);
                 
-                if (generatedIpa && generatedIpa !== cleanWord.toLowerCase()) {
+                // Ensure we actually produced something different than the raw word, 
+                // and it's different from the existing IPA
+                if (generatedIpa && generatedIpa !== cleanWord.toLowerCase() && generatedIpa !== wordObj.ipa) {
                     updateWord(wordObj.id, { ipa: generatedIpa });
                     updateCount++;
                 }
@@ -317,17 +317,24 @@ export default function IpaReferencePage() {
                                 placeholder="oo=oʊ, c=k, sh=ʃ"
                             />
                         </div>
-                        <div style={{ paddingTop: '1.5rem' }}>
-                            <button 
-                                className="btn btn-primary" 
+                        <div style={{ paddingTop: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                            <Button 
+                                variant="save"
                                 onClick={handleBulkApplyIpa}
-                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', padding: '0.5rem 1rem' }}
                             >
                                 <Wand2 size={16} /> Bulk Apply to Lexicon
-                            </button>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--tx2)', marginTop: '0.5rem', textAlign: 'center' }}>
-                                (Only affects words without IPA)
-                            </div>
+                            </Button>
+                            
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--tx2)', cursor: 'pointer' }}>
+                                <input 
+                                    type="checkbox" 
+                                    checked={overwriteIpa}
+                                    onChange={(e) => setOverwriteIpa(e.target.checked)}
+                                    style={{ accentColor: 'var(--acc)' }}
+                                />
+                                Overwrite existing IPA
+                            </label>
                         </div>
                     </div>
                 </div>

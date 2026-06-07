@@ -261,7 +261,8 @@ export default function LexiconList() {
                 await playAzureTTS({
                     text: cleanText,
                     ipa: cleanIpa, // This might be undefined, but Azure TTS utility handles it
-                    voice: config.azureTtsVoice
+                    voice: config.azureTtsVoice,
+                    useIpa: config.azureTtsUseIpa
                 });
                 toast.dismiss(toastId);
             } catch (err) {
