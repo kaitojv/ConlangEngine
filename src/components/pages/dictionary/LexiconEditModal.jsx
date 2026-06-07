@@ -39,8 +39,6 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
     const vowelHarmonyOverrideTags = useConfigStore((state) => state.vowelHarmonyOverrideTags) || [];
     const ipaMappingRules = useConfigStore((state) => state.ipaMappingRules) || '';
 
-    const { transliterate } = useTransliterator();
-
     const [activeField, setActiveField] = useState('word');
 
     // Bundle all the form fields into one neat state object
