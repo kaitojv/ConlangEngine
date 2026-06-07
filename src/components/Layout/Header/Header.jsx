@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
-import { Menu, Home, Printer, Save, FolderUp, User, Cloud, FileText, Table, FileEdit, Download, Gamepad, Globe } from 'lucide-react';
+import { Menu, Home, Printer, Save, FolderUp, User, Cloud, FileText, Table, FileEdit, Download, Gamepad, Globe, Database } from 'lucide-react';
 
 // Bring in our UI components and styling
 import Button from '../../UI/Buttons/Buttons.jsx';
