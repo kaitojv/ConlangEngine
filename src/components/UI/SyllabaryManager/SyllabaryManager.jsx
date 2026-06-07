@@ -62,7 +62,8 @@ export default function SyllabaryManager() {
         <Infobox title="How to use the Syllabary">
             • <b>Grid View:</b> Quickly map CV (Consonant-Vowel) combinations. Empty cells default to the syllable text itself.<br />
             • <b>List View:</b> Add complex syllables (like CVC or CCC) that don't fit in the standard grid.<br />
-            • <b>Custom Fonts:</b> Click the <b>Draw</b> button in List View to create your own unique character shapes!
+            • <b>Custom Fonts:</b> Click the <b>Draw</b> button in List View to create your own unique character shapes!<br />
+            • <b>Typography Forms:</b> If Capitalization or Contextual Forms are enabled in Orthography, you can map variants in List View using suffixes (e.g. <code>ki_uppercase</code>, <code>ki_initial</code>).
         </Infobox>
 
         <div className="sm-toggle-group">

@@ -135,3 +135,79 @@
     color: var(--tx2);
     gap: 1rem;
 }
+
+/* Glyph Variants Support */
+.glyph-variants-container {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.glyph-variant-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    padding: 6px;
+    min-width: 65px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.glyph-variant-box:hover {
+    border-color: var(--acc);
+    background: var(--s3);
+}
+
+.glyph-variant-box.has-glyph {
+    border-color: rgba(124, 58, 237, 0.3);
+}
+
+.glyph-variant-box .variant-label {
+    font-size: 0.65rem;
+    color: var(--tx2);
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.variant-glyph-display {
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.variant-trash-btn {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: var(--err);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.glyph-variant-box:hover .variant-trash-btn {
+    opacity: 1;
+}
+
+.brush-icon {
+    opacity: 0.2;
+}
+
+.glyph-variant-box:hover .brush-icon {
+    opacity: 0.8;
+    color: var(--acc);
+}

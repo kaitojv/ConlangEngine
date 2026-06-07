@@ -903,7 +903,7 @@ const LogographicShowcase = () => {
     );
 };
 
-// ─── BLOCK SHOWCASE ───────────────────────────────────────────────────────────
+// ─── HELPER COMPONENTS ───────────────────────────────────────────────────────────
 
 const BlockShowcase = () => {
     const syllabaryMap       = useConfigStore(state => state.syllabaryMap) || {};
@@ -1103,19 +1103,19 @@ export default function OrthographyPage() {
 
                 <nav className="tabs tabs-boxed page-subnav">
                     <button 
-                        className={`tab ${activeTab === 'script' ? 'tab-active' : ''}`}
+                        className={`tab-btn ${activeTab === 'script' ? 'active' : ''}`}
                         onClick={() => setActiveTab('script')}
                     >
                         <BookA size={18} /> Script Register
                     </button>
                     <button 
-                        className={`tab ${activeTab === 'numbers' ? 'tab-active' : ''}`}
+                        className={`tab-btn ${activeTab === 'numbers' ? 'active' : ''}`}
                         onClick={() => setActiveTab('numbers')}
                     >
                         <Hash size={18} /> Numeric System
                     </button>
                     <button 
-                        className={`tab ${activeTab === 'ipa' ? 'tab-active' : ''}`}
+                        className={`tab-btn ${activeTab === 'ipa' ? 'active' : ''}`}
                         onClick={() => setActiveTab('ipa')}
                     >
                         <Mic2 size={18} /> IPA Reference

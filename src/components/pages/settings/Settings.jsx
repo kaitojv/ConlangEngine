@@ -3,12 +3,13 @@ import { useState } from 'react';
 import SettingsGeneral from './SettingsGeneral.jsx';
 import PhonologyTab from './PhonologyTab.jsx';
 import './settings.css';
-import { Cog, Languages, Palette, Hash, BookOpen, FileText, Bookmark } from 'lucide-react'
+import { Cog, Languages, Palette, Hash, BookOpen, FileText, Bookmark, Type } from 'lucide-react'
 import LexiconTab from './LexiconTab.jsx';
 import GrammarTab from './GrammarTab.jsx';
 import NumeralTab from './NumeralTab.jsx';
 import SystemTab from './SystemTab.jsx';
 import FunctionWordsTab from './FunctionWordsTab.jsx';
+import GraphismTab from './GraphismTab.jsx';
 
 export default function Settings() {
     const [activeTab, setActiveTab] = useState('general');
@@ -20,7 +21,8 @@ export default function Settings() {
         { id: 'grammar', label: 'Grammar', icon: FileText },
         { id: 'numerals', label: 'Numerals', icon: Hash },
         { id: 'functionWords', label: 'Pronouns', icon: Bookmark },
-        { id:'system', label: 'System and Theme', icon: Palette}
+        { id: 'graphism', label: 'Graphism', icon: Type },
+        { id: 'system', label: 'System and Theme', icon: Palette}
     ];
     return (
         <div>
@@ -60,6 +62,9 @@ export default function Settings() {
                 )}
                 {activeTab === 'functionWords' && (
                     <FunctionWordsTab />
+                )}
+                {activeTab === 'graphism' && (
+                    <GraphismTab />
                 )}
                 {activeTab === 'system' && (
                     <SystemTab />

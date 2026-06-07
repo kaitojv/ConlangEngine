@@ -13,7 +13,6 @@ export default function GrammarTab(){
     const syntaxOrder = useConfigStore((state) => state.syntaxOrder) || 'SVO';
     const adjectivePlacement = useConfigStore((state) => state.adjectivePlacement) || 'pre-nominal';
     const adjectiveAgreement = useConfigStore((state) => state.adjectiveAgreement) || false;
-    const writingDirection = useConfigStore((state) => state.writingDirection) || 'ltr';
     const verbMarker = useConfigStore((state) => state.verbMarker) || '';
     const cliticsRules = useConfigStore((state) => state.cliticsRules) || '';
     const waConfig = useConfigStore((state) => state.wordAssistConfig) || {};
@@ -99,20 +98,7 @@ export default function GrammarTab(){
                     </div>
                     
                     
-                    <div className="input-wrapper">
-                        <label className="input-label">Writing Direction</label>
-                        <select 
-                            className="fi custom-select"
-                            value={writingDirection}
-                            onChange={(e) => updateConfig({ writingDirection: e.target.value })}
-                        >
-                            <option value="ltr">Horizontal (Left to Right)</option>
-                            <option value="rtl">Horizontal (Right to Left)</option>
-                            <option value="vertical-rl">Vertical (Top to Bottom, R-L)</option>
-                            <option value="vertical-lr">Vertical (Top to Bottom, L-R)</option>
-                        </select>
-                    </div>
-                    
+
                     <Input 
                         label="Verb Base Marker(s)"
                         value={verbMarker}

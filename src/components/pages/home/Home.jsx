@@ -23,7 +23,11 @@ export default function Home() {
     });
 
     React.useEffect(() => {
-        const hour = new Date().getHours();
+        const now = new Date();
+        const hour = now.getHours();
+        const dayOfWeek = now.getDay();
+        const month = now.getMonth();
+        const date = now.getDate();
         
         const greetings = {
             morning: {
@@ -69,7 +73,50 @@ export default function Home() {
         else if (hour >= 12 && hour < 18) timeOfDay = 'afternoon';
         else if (hour >= 18 && hour < 22) timeOfDay = 'evening';
 
-        const selected = greetings[timeOfDay];
+        const selected = { ...greetings[timeOfDay] };
+        selected.phrases = [...selected.phrases];
+
+        // Day of week special phrases
+        if (dayOfWeek === 1) { // Monday
+            selected.phrases.push("Happy Monday! Let's conquer this week's grammar.");
+            selected.phrases.push("Start the week strong with some fresh verbs.");
+        } else if (dayOfWeek === 3) { // Wednesday
+            selected.phrases.push("Happy Hump Day! You're halfway through the week's linguistic journey.");
+        } else if (dayOfWeek === 5) { // Friday
+            selected.phrases.push("Happy Friday! Perfect day to polish those phonemes.");
+            selected.phrases.push("The weekend is near! Time for some relaxed dictionary building.");
+        } else if (dayOfWeek === 0 || dayOfWeek === 6) { // Weekend
+            selected.phrases.push("Weekend worldbuilding time!");
+            selected.phrases.push("Grab a beverage, it's a great day to expand the lexicon.");
+        }
+
+        // Holidays (Overrides base greeting and limits phrases to festive ones)
+        if (month === 0 && date === 1) { // Jan 1
+            selected.base = "Happy New Year";
+            selected.phrases = ["A whole new year for worldbuilding!", "365 new days to expand your lexicon.", "New year, new phonemes!"];
+            selected.Icon = Sparkles;
+        } else if (month === 1 && date === 14) { // Feb 14
+            selected.base = "Happy Valentine's Day";
+            selected.phrases = ["A language of love.", "Time to invent 50 words for 'snow', and 100 for 'love'.", "Expressing affection in your own words."];
+            selected.Icon = Heart;
+        } else if (month === 4 && date === 4) { // May 4
+            selected.base = "May the 4th be with you";
+            selected.phrases = ["Ready to build the next Huttese?", "Time to craft some sci-fi jargon.", "A great day to work on your galactic lingua franca."];
+            selected.Icon = Sparkles;
+        } else if (month === 9 && date === 31) { // Oct 31
+            selected.base = "Happy Halloween";
+            selected.phrases = ["Spooky words are brewing in the cauldron.", "Time for some terrifying tongue-twisters.", "Crafting languages in the dark..."];
+            selected.Icon = Flame;
+        } else if (month === 11 && date === 25) { // Dec 25
+            selected.base = "Merry Christmas";
+            selected.phrases = ["Unwrap a new grammar rule!", "Spreading linguistic joy this season.", "A festive day for worldbuilding."];
+            selected.Icon = Sparkles;
+        } else if (month === 11 && date === 31) { // Dec 31
+            selected.base = "Happy New Year's Eve";
+            selected.phrases = ["Ready to count down in your conlang?", "Finishing the year strong with one last lexicon entry."];
+            selected.Icon = Sparkles;
+        }
+
         const randomPhrase = selected.phrases[Math.floor(Math.random() * selected.phrases.length)];
 
         setGreeting({

@@ -48,35 +48,11 @@ export default function AlphabeticManager() {
         });
     };
 
-    const updateGlyph = (char, newCharUnicode) => {
-        updateConfig({
-            alphabetGlyphs: {
-                ...alphabetGlyphs,
-                [char]: newCharUnicode
-            }
-        });
-        setDrawingChar(null);
-    };
-
     return (
         <div className="tab-pane-container">
-            {drawingChar && (
-                <Modal 
-                    isOpen={!!drawingChar} 
-                    onClose={() => setDrawingChar(null)}
-                    title={`Draw Custom Symbol`}
-                >
-                    <FontStudioModal
-                        targetLabel={`Letter: ${drawingChar}`}
-                        onSave={(newCharUnicode) => updateGlyph(drawingChar, newCharUnicode)}
-                        onCancel={() => setDrawingChar(null)}
-                    />
-                </Modal>
-            )}
-
-            <Infobox title="Naming & Drawing your Alphabet">
-                This section allows you to define how each character in your writing system is named (e.g., 'A' is called 'Ah'). 
-                You can also <b>Draw</b> your custom alphabetic characters using the Font Studio! These custom characters will automatically replace the default letters across your entire lexicon, regardless of your chosen base script.
+            <Infobox title="Naming your Alphabet">
+                This section allows you to define how each character in your writing system is named (e.g., 'A' is called 'Ah').
+                To draw your custom characters, please head over to the <b>Graphism Studio</b> tab in the Settings!
             </Infobox>
 
             <div className="alphabet-table-container">
@@ -87,8 +63,6 @@ export default function AlphabeticManager() {
                             <tr>
                                 <th>IPA</th>
                                 <th>Character Name</th>
-                                <th>Custom Glyph</th>
-                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -125,43 +99,6 @@ export default function AlphabeticManager() {
                                                     <Edit2 size={12} className="edit-icon" />
                                                 </div>
                                             )}
-                                        </td>
-                                        
-                                        <td className="glyph-cell">
-                                            {customGlyph ? (
-                                                <span className="custom-font-text drawn-glyph">{customGlyph}</span>
-                                            ) : (
-                                                <span style={{ color: 'var(--tx3)', fontStyle: 'italic' }}>None</span>
-                                            )}
-                                        </td>
-                                        
-                                        <td className="actions-cell">
-                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                <button 
-                                                    className="btn-v btn-sec-v" 
-                                                    style={{ display: 'flex', gap: '6px', alignItems: 'center' }}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setDrawingChar(char);
-                                                    }}
-                                                >
-                                                    <Brush size={14} /> {customGlyph ? 'Redraw' : 'Draw'}
-                                                </button>
-                                                {customGlyph && (
-                                                    <button 
-                                                        className="btn-v" 
-                                                        style={{ display: 'flex', gap: '6px', alignItems: 'center', background: 'transparent', border: '1px solid var(--err)', color: 'var(--err)' }}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            const newGlyphs = { ...alphabetGlyphs };
-                                                            delete newGlyphs[char];
-                                                            updateConfig({ alphabetGlyphs: newGlyphs });
-                                                        }}
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                )}
-                                            </div>
                                         </td>
                                     </tr>
                                 );
