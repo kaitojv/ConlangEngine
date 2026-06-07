@@ -143,8 +143,18 @@ export default function ConlangsTab() {
 
         if (session) {
             try {
-                await supabase.from('conlangs').delete().eq('project_id', id);
-                await supabase.from('conlang_snapshots').delete().eq('project_id', id);
+                // Try to delete it properly, returning the deleted rows to verify
+                const { data: d1, error: e1 } = await supabase.from('conlangs').delete().eq('project_id', id).select();
+                const { data: d2, error: e2 } = await supabase.from('conlang_snapshots').delete().eq('project_id', id).select();
+                
+                // If the deletion silently failed (e.g., missing DELETE RLS policy on Supabase), 
+                // the rows won't be returned. We fallback to an UPDATE which we know is permitted.
+                if (!d1 || d1.length === 0) {
+                    await supabase.from('conlangs').update({ project_data: { deleted: true } }).eq('project_id', id);
+                }
+                if (!d2 || d2.length === 0) {
+                    await supabase.from('conlang_snapshots').update({ project_data: { deleted: true } }).eq('project_id', id);
+                }
             } catch (err) {
                 console.error('Failed to delete from cloud:', err);
             }

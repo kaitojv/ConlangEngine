@@ -376,7 +376,8 @@ export default function ProfileTab() {
             // Save ALL cloud projects to the local archive so they appear in the Workspaces tab
             const saveProjectToArchive = useProjectStore.getState().saveProjectToArchive;
             for (const project of projects) {
-                if (project.project_data) {
+                // Ignore projects that were soft-deleted
+                if (project.project_data && !project.project_data.deleted) {
                     const safeConfig = sanitizeConfig(project.project_data.config || {});
                     const safeLexicon = sanitizeLexicon(project.project_data.dictionary || []);
                     saveProjectToArchive(
@@ -386,13 +387,22 @@ export default function ProfileTab() {
                 }
             }
 
-            if (projects.length === 1) {
+            // Filter the final list shown in the selector
+            const activeProjects = projects.filter(p => p.project_data && !p.project_data.deleted);
+
+            if (activeProjects.length === 0) {
+                setSyncStatus('ℹ️ No active projects found in the cloud for your account.');
+                setTimeout(() => setSyncStatus(''), 3000);
+                return;
+            }
+
+            if (activeProjects.length === 1) {
                 // If only one project, load it directly as the active workspace
-                handleSelectProject(projects[0]);
+                handleSelectProject(activeProjects[0]);
             } else {
-                setCloudProjects(projects);
+                setCloudProjects(activeProjects);
                 setProjectSelectorOpen(true);
-                setSyncStatus(`✅ Pulled ${projects.length} projects from cloud.`); 
+                setSyncStatus(`✅ Pulled ${activeProjects.length} projects from cloud.`); 
                 setTimeout(() => setSyncStatus(''), 3000);
             }
         } catch (err) {
