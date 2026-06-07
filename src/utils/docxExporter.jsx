@@ -21,7 +21,7 @@ export const generateDocxExport = (config, lexicon, template = 'academic', optio
 
     const { includeInflections = true, inflectionMode = 'compact' } = options;
 
-    const styles = {
+    const stylesMap = {
         academic: { 
             font: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", 
             accent: '#000000', 
@@ -36,8 +36,26 @@ export const generateDocxExport = (config, lexicon, template = 'academic', optio
             font: "'Courier New', Courier, monospace", 
             accent: '#433422', 
             bg: '#fcf8ed' 
+        },
+        fantasy: {
+            font: "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
+            headerFont: "Georgia, serif",
+            accent: '#2c1e16', // Dark earthy brown
+            headerAccent: '#6b1111', // Deep crimson
+            bg: '#e8dcc4' // Strong aged parchment
+        },
+        cyberpunk: {
+            font: "'Courier New', Courier, monospace",
+            accent: '#10b981', // Neon green
+            bg: '#0f172a' // Dark slate
+        },
+        minimalist: {
+            font: "Helvetica, Arial, sans-serif",
+            accent: '#000000',
+            bg: '#ffffff'
         }
-    }[template];
+    };
+    const styles = stylesMap[template] || stylesMap.academic;
 
     let html = `
         <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
@@ -52,7 +70,8 @@ export const generateDocxExport = (config, lexicon, template = 'academic', optio
                     padding: 50pt;
                 }
                 h1 { 
-                    color: ${styles.accent}; 
+                    color: ${styles.headerAccent || styles.accent}; 
+                    font-family: ${styles.headerFont || styles.font};
                     font-size: 36pt; 
                     text-align: center; 
                     margin-bottom: 5pt;
@@ -63,12 +82,13 @@ export const generateDocxExport = (config, lexicon, template = 'academic', optio
                     font-style: italic;
                     font-size: 14pt;
                     color: #666;
-                    border-bottom: 2pt solid ${styles.accent};
+                    border-bottom: 2pt solid ${styles.headerAccent || styles.accent};
                     padding-bottom: 10pt;
                     margin-bottom: 30pt;
                 }
                 h2 { 
-                    color: ${styles.accent}; 
+                    color: ${styles.headerAccent || styles.accent}; 
+                    font-family: ${styles.headerFont || styles.font};
                     border-bottom: 1px solid #ccc; 
                     font-size: 22pt; 
                     margin-top: 40pt; 
@@ -76,10 +96,11 @@ export const generateDocxExport = (config, lexicon, template = 'academic', optio
                     letter-spacing: 1pt;
                 }
                 h3 { 
-                    color: ${styles.accent}; 
+                    color: ${styles.headerAccent || styles.accent}; 
+                    font-family: ${styles.headerFont || styles.font};
                     font-size: 16pt; 
                     margin-top: 20pt;
-                    border-left: 5pt solid ${styles.accent};
+                    border-left: 5pt solid ${styles.headerAccent || styles.accent};
                     padding-left: 10pt;
                 }
                 table { 

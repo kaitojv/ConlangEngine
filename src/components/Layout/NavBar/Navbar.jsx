@@ -57,6 +57,7 @@ const NAV_GROUPS = [
 export default function NavBar({ isMenuOpen, closeMenu }) {
     const isProActive = useConfigStore(state => state.isProActive);
     const theme = useConfigStore(state => state.theme);
+    const customLabels = useConfigStore(state => state.customLabels) || {};
     const updateConfig = useConfigStore(state => state.updateConfig);
     const [session, setSession] = useState(null);
     
@@ -106,15 +107,17 @@ export default function NavBar({ isMenuOpen, closeMenu }) {
                 <div className="navbar">
                     {NAV_GROUPS.map((group) => (
                         <section key={group.title} className="nav-group">
-                            <h4 className="nav-group-label">{group.title}</h4>
+                            <h4 className="nav-group-label">{customLabels[group.title] || group.title}</h4>
                             
                             {group.items.map(({ id, label, Icon, requiresLive }) => {
                                 // If this tab requires a LIVE subscription and the user doesn't have it, show a locked version
+                                const displayLabel = customLabels[label] || label;
+                                
                                 if (requiresLive && !isLive) {
                                     return (
                                         <div key={id} className="nb locked" title="Upgrade to LIVE to unlock multiple workspaces.">
                                             <Lock className="nav-icon" size={18} />
-                                            <span className="nav-label">{label}</span>
+                                            <span className="nav-label">{displayLabel}</span>
                                         </div>
                                     );
                                 }
@@ -127,7 +130,7 @@ export default function NavBar({ isMenuOpen, closeMenu }) {
                                         onClick={closeMenu} 
                                     >
                                         <Icon className="nav-icon" size={18} />
-                                        <span className="nav-label">{label}</span>
+                                        <span className="nav-label">{displayLabel}</span>
                                     </NavLink>
                                 );
                             })}

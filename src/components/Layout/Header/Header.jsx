@@ -153,6 +153,8 @@ export default function Header({ openMenu }) {
         setExportType(null);
     };
 
+    const customLabels = useConfigStore(state => state.customLabels) || {};
+
     return (
         <>
         <header className="hdr">
@@ -162,7 +164,7 @@ export default function Header({ openMenu }) {
                         <Menu size={20} />
                     </button>
                     <div className="hdr-brand">
-                        <h1 className="app-dinamic-title">ConlangEngine</h1>
+                        <h1 className="app-dinamic-title">{customLabels.appTitle || "ConlangEngine"}</h1>
                         {isLive ? (
                             <span className="hdr-badge badge-live">
                                 <Cloud size={14} /> LIVE

@@ -24,16 +24,21 @@ export async function compileFont(customGlyphs) {
             let path = new opentype.Path();
             let r_base = 30;
 
-            // Detect calligraphy flag
+            // Detect calligraphy or brush pen flag
             const hasCalligraphy = strokeArray.length > 0 && 
                                   strokeArray[0].length === 1 && 
                                   strokeArray[0][0].x === -999;
+            const hasBrushPen = strokeArray.length > 0 && 
+                                  strokeArray[0].length === 1 && 
+                                  strokeArray[0][0].x === -998;
             
-            const actualStrokes = hasCalligraphy ? strokeArray.slice(1) : strokeArray;
+            const isSpecialBrush = hasCalligraphy || hasBrushPen;
+            const actualStrokes = isSpecialBrush ? strokeArray.slice(1) : strokeArray;
 
             actualStrokes.forEach(strokeData => {
                 const points = Array.isArray(strokeData) ? strokeData : (strokeData.points || []);
                 const isFilled = strokeData.isFilled || false;
+                const lineCap = strokeData.lineCap || 'round';
 
                 if (points.length === 0) return;
 
@@ -67,10 +72,15 @@ export async function compileFont(customGlyphs) {
                         if (hasCalligraphy) {
                             const taper = Math.sin((i / (simplified.length - 1 || 1)) * Math.PI);
                             r = r_base * (0.3 + 0.7 * taper);
+                        } else if (hasBrushPen) {
+                            const progress = i / (simplified.length - 1 || 1);
+                            const widthMult = progress < 0.8 ? 1.0 : (1.0 - (progress - 0.8) * 5); // 1.0 down to 0.0
+                            const startMult = progress < 0.1 ? (0.5 + progress * 5) : 1.0; 
+                            r = r_base * Math.max(0.1, widthMult * startMult);
                         }
 
-                        // Only draw joint circles
-                        if (i === 0 || i === simplified.length - 1) {
+                        // Only draw joint circles for round caps
+                        if ((i === 0 || i === simplified.length - 1) && lineCap === 'round') {
                             const kappa = r * 0.55228;
                             path.moveTo(cx1, cy1 - r);
                             path.curveTo(cx1 + kappa, cy1 - r, cx1 + r, cy1 - kappa, cx1 + r, cy1);
@@ -89,6 +99,11 @@ export async function compileFont(customGlyphs) {
                             if (hasCalligraphy) {
                                 const next_taper = Math.sin(((i + 1) / (simplified.length - 1 || 1)) * Math.PI);
                                 next_r = r_base * (0.3 + 0.7 * next_taper);
+                            } else if (hasBrushPen) {
+                                const next_progress = (i + 1) / (simplified.length - 1 || 1);
+                                const next_widthMult = next_progress < 0.8 ? 1.0 : (1.0 - (next_progress - 0.8) * 5); 
+                                const next_startMult = next_progress < 0.1 ? (0.5 + next_progress * 5) : 1.0; 
+                                next_r = r_base * Math.max(0.1, next_widthMult * next_startMult);
                             }
 
                             let dx = cx2 - cx1;

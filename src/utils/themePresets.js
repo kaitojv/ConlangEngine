@@ -100,6 +100,66 @@ export const DARK_THEMES = [
             blur: "40px",
             glow: "rgba(10, 132, 255, 0.25)"
         }
+    },
+    {
+        name: "Crimson Night",
+        preview: "linear-gradient(135deg, #1f0707, #3d0c0c)",
+        colors: {
+            bg: "#120505",
+            s1: "#1f0909",
+            s2: "#2d1010",
+            s3: "#3b1616",
+            s4: "#0a0202",
+            header: "#0a0202",
+            font: "#ffe4e6",
+            font2: "#fb7185",
+            accent: "#e11d48",
+            accent2: "#f43f5e",
+            accent3: "#9f1239",
+            border: "rgba(225, 29, 72, 0.15)",
+            blur: "0px",
+            glow: "rgba(225, 29, 72, 0.25)"
+        }
+    },
+    {
+        name: "Ocean Depths",
+        preview: "linear-gradient(135deg, #021a24, #04384d)",
+        colors: {
+            bg: "#02131a",
+            s1: "#042433",
+            s2: "#06364d",
+            s3: "#0a4766",
+            s4: "#010c11",
+            header: "#010c11",
+            font: "#e0f2fe",
+            font2: "#38bdf8",
+            accent: "#0284c7",
+            accent2: "#0ea5e9",
+            accent3: "#0369a1",
+            border: "rgba(2, 132, 199, 0.2)",
+            blur: "0px",
+            glow: "rgba(2, 132, 199, 0.25)"
+        }
+    },
+    {
+        name: "Forest Shadow",
+        preview: "linear-gradient(135deg, #081a10, #133a23)",
+        colors: {
+            bg: "#05110a",
+            s1: "#0b2214",
+            s2: "#11331e",
+            s3: "#184529",
+            s4: "#020805",
+            header: "#020805",
+            font: "#dcfce7",
+            font2: "#4ade80",
+            accent: "#16a34a",
+            accent2: "#22c55e",
+            accent3: "#15803d",
+            border: "rgba(22, 163, 74, 0.2)",
+            blur: "0px",
+            glow: "rgba(22, 163, 74, 0.25)"
+        }
     }
 ];
 
@@ -202,6 +262,66 @@ export const LIGHT_THEMES = [
             border: "rgba(255, 255, 255, 0.8)",
             blur: "40px",
             glow: "rgba(175, 82, 222, 0.2)"
+        }
+    },
+    {
+        name: "Soft Lavender",
+        preview: "#f5f3ff",
+        colors: {
+            bg: "#f5f3ff",
+            s1: "#faf9ff",
+            s2: "#ede9fe",
+            s3: "#ddd6fe",
+            s4: "#ffffff",
+            header: "#ffffff",
+            font: "#2e1065",
+            font2: "#6d28d9",
+            accent: "#7c3aed",
+            accent2: "#8b5cf6",
+            accent3: "#5b21b6",
+            border: "#ddd6fe",
+            blur: "0px",
+            glow: "rgba(124, 58, 237, 0.15)"
+        }
+    },
+    {
+        name: "Mint Breeze",
+        preview: "#f0fdf4",
+        colors: {
+            bg: "#f0fdf4",
+            s1: "#f8fafc",
+            s2: "#dcfce7",
+            s3: "#bbf7d0",
+            s4: "#ffffff",
+            header: "#ffffff",
+            font: "#064e3b",
+            font2: "#059669",
+            accent: "#10b981",
+            accent2: "#34d399",
+            accent3: "#047857",
+            border: "#bbf7d0",
+            blur: "0px",
+            glow: "rgba(16, 185, 129, 0.15)"
+        }
+    },
+    {
+        name: "Sunrise Gold",
+        preview: "#fffbeb",
+        colors: {
+            bg: "#fffbeb",
+            s1: "#fefcfa",
+            s2: "#fef3c7",
+            s3: "#fde68a",
+            s4: "#ffffff",
+            header: "#ffffff",
+            font: "#78350f",
+            font2: "#d97706",
+            accent: "#f59e0b",
+            accent2: "#fbbf24",
+            accent3: "#b45309",
+            border: "#fde68a",
+            blur: "0px",
+            glow: "rgba(245, 158, 11, 0.15)"
         }
     }
 ];

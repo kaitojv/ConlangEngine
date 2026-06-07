@@ -38,7 +38,7 @@
     align-items: center;
     padding: 20px 24px;
     border-bottom: 1px solid var(--bd);
-    background: var(--s2);
+    background: var(--header);
 }
 
 .vrb-header-title-group {

@@ -350,7 +350,7 @@ export default function CourseBuilder({ onExit }) {
                                                     <Input 
                                                         value={phrase.english || ''}
                                                         onChange={(e) => updatePhrase(level.id, phrase.id, 'english', e.target.value)}
-                                                        placeholder="e.g. The garlic pays"
+                                                        placeholder={phrase.type === 'multiple_choice' ? "e.g. The garlic pays" : "e.g. Hi, Hello (comma separated)"}
                                                         style={{ width: '100%' }}
                                                     />
                                                 </div>

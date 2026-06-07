@@ -152,6 +152,7 @@ export const INITIAL_CONFIG = {
     toneRules: [],
     // Array of { id, title, phrases: [{ id, conlang, english }] }
     customCourse: [],
+    customLabels: {}, // Customizable terminology (e.g. app title, navbar labels)
 };
 
 // IndexedDB Helper for handling massive data without breaking local storage quotas

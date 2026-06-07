@@ -29,7 +29,7 @@ export const generateConlangPDF = (config, lexicon, template = 'academic', optio
 
     const { includeInflections = true, inflectionMode = 'compact' } = options;
 
-    const styles = {
+    const stylesMap = {
         academic: {
             font: "'Lora', Georgia, serif",
             accent: '#1a1a1a',
@@ -50,8 +50,33 @@ export const generateConlangPDF = (config, lexicon, template = 'academic', optio
             bg: '#f4ecd8',
             tableHeader: '#e9dec3',
             border: '1px solid #433422'
+        },
+        fantasy: {
+            font: "'Palatino Linotype', 'Book Antiqua', Palatino, serif",
+            headerFont: "'Cinzel', serif",
+            accent: '#2c1e16', // Very dark earthy brown
+            headerAccent: '#6b1111', // Deep crimson
+            bg: '#e8dcc4', // Strong aged parchment
+            tableHeader: '#d4c4a1',
+            border: '2px solid #5c4033'
+        },
+        cyberpunk: {
+            font: "'Fira Code', 'Courier New', monospace",
+            accent: '#10b981', // Neon green
+            bg: '#0f172a', // Dark slate
+            tableHeader: '#1e293b',
+            border: '1px solid #10b981'
+        },
+        minimalist: {
+            font: "Helvetica, Arial, sans-serif",
+            accent: '#000000',
+            bg: '#ffffff',
+            tableHeader: '#ffffff',
+            border: '1px solid #000000'
         }
-    }[template];
+    };
+    
+    const styles = stylesMap[template] || stylesMap.academic;
 
     const html = `
         <!DOCTYPE html>
@@ -59,7 +84,7 @@ export const generateConlangPDF = (config, lexicon, template = 'academic', optio
         <head>
             <title>${conlangName} - Reference Document</title>
             <style>
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Lora:ital,wght@0,400;0,700;1,400&family=Special+Elite&display=swap');
+                @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;700&family=Lora:ital,wght@0,400;0,700;1,400&family=Special+Elite&display=swap');
                 
                 ${(customFont || customFontBase64) ? `
                 @font-face {
@@ -76,6 +101,13 @@ export const generateConlangPDF = (config, lexicon, template = 'academic', optio
                     padding: 50px; 
                     background: ${styles.bg};
                     text-align: justify;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                }
+
+                h1, h2, h3 {
+                    font-family: ${styles.headerFont || 'inherit'};
+                    color: ${styles.headerAccent || styles.accent};
                 }
 
                 h1 { 
@@ -198,7 +230,7 @@ export const generateConlangPDF = (config, lexicon, template = 'academic', optio
                 .page-break { page-break-before: always; }
                 
                 @media print {
-                    body { padding: 0; background: white; }
+                    body { padding: 0; background: ${styles.bg}; }
                 }
             </style>
         </head>

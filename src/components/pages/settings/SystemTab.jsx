@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import Card from '../../UI/Card/Card.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import './systemtab.css';
-import { Palette, CaseLower, Database, ToggleLeft, Globe } from 'lucide-react';
+import { Palette, CaseLower, Database, ToggleLeft, Globe, Type } from 'lucide-react';
 import { useConfigStore, INITIAL_CONFIG } from '../../../store/useConfigStore.jsx';
 import { useProjectStore } from '../../../store/useProjectStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { CONLANG_ICONS, getConlangIcon } from '../../../utils/iconMap.jsx';
 import opentype from 'opentype.js';
 import { DARK_THEMES, LIGHT_THEMES } from '../../../utils/themePresets.js';
-import { Info, User, Type } from 'lucide-react';
+import { Info, User } from 'lucide-react';
 import { supabase } from '../../../utils/supabaseClient.js';
 import { sanitizeConfig } from '../../../utils/schemaValidator.jsx';
 import toast from 'react-hot-toast';
@@ -429,23 +429,70 @@ export default function SystemTab() {
                 </div>
                 <br />
                 <h2>Custom Theme</h2>
-                <div className='pick-colors'>
-                    <label className='selector-name'>Background</label>
-                    <input type='color' className='color-selector' value={getSafeColor(colors.bg, '#0b0f19')} onChange={(e) => updateConfig({ colors: { ...colors, bg: e.target.value } })} />
-
-                    <label className='selector-name'>Surface 1 (Cards)</label>
-                    <input type='color' className='color-selector' value={getSafeColor(colors.s1, '#151a28')} onChange={(e) => updateConfig({ colors: { ...colors, s1: e.target.value } })} />
-
-                    <label className='selector-name'>Surface 4 (Input)</label>
-                    <input type='color' className='color-selector' value={getSafeColor(colors.s4, '#12121c')} onChange={(e) => updateConfig({ colors: { ...colors, s4: e.target.value } })} />
-
-                    <label className='selector-name'>Text Primary</label>
-                    <input type='color' className='color-selector' value={getSafeColor(colors.font, '#ffffff')} onChange={(e) => updateConfig({ colors: { ...colors, font: e.target.value } })} />
-
-                    <label className='selector-name'>Accent Glow</label>
-                    <input type='color' className='color-selector' value={getSafeColor(colors.glow, '#1a1638')} onChange={(e) => updateConfig({ colors: { ...colors, glow: e.target.value } })} />
+                <div className='pick-colors' style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                    {[
+                        { key: 'bg', label: 'Background', fallback: '#0b0f19' },
+                        { key: 'header', label: 'Navbar / Header', fallback: '#080812' },
+                        { key: 's1', label: 'Surface 1 (Cards)', fallback: '#151a28' },
+                        { key: 's2', label: 'Surface 2 (Sidebar)', fallback: '#1a2033' },
+                        { key: 's3', label: 'Surface 3 (Hover)', fallback: '#1f283d' },
+                        { key: 's4', label: 'Surface 4 (Input)', fallback: '#12121c' },
+                        { key: 'font', label: 'Text Primary', fallback: '#f8fafc' },
+                        { key: 'font2', label: 'Text Secondary', fallback: '#94a3b8' },
+                        { key: 'accent', label: 'Accent Primary', fallback: '#7c3aed' },
+                        { key: 'accent2', label: 'Accent Hover', fallback: '#8b5cf6' },
+                        { key: 'accent3', label: 'Accent Dark', fallback: '#4c1d95' },
+                        { key: 'border', label: 'Border', fallback: '#334155' },
+                        { key: 'glow', label: 'Accent Glow', fallback: '#1a1638' },
+                    ].map(({ key, label, fallback }) => (
+                        <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <label className='selector-name'>{label}</label>
+                            <input 
+                                type='color' 
+                                className='color-selector' 
+                                style={{ width: '100%' }}
+                                value={getSafeColor(colors[key], fallback)} 
+                                onChange={(e) => updateConfig({ colors: { ...colors, [key]: e.target.value } })} 
+                            />
+                        </div>
+                    ))}
                 </div>
             </Card>
+
+            <Card>
+                <h2 className='flex sg-title'><Type /> Terminology & Labels</h2>
+                <p>Customize the terminology used throughout the app to match your worldbuilding project. Leave a field blank to use the default name.</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>App Title</label>
+                        <input 
+                            className="input" 
+                            placeholder="ConlangEngine" 
+                            value={useConfigStore(state => state.customLabels?.appTitle) || ''}
+                            onChange={(e) => updateConfig({ customLabels: { ...(useConfigStore.getState().customLabels || {}), appTitle: e.target.value } })}
+                        />
+                    </div>
+
+                    {[
+                        "Workspace", "Lexicon", "Linguistics", "Resources", "Help",
+                        "Home", "Conlangs", "Settings", "Create Word", "Semantic Explorer",
+                        "Generator", "Orthography & Numbers", "Analyzer", "Root Map", 
+                        "Sentence Mapper", "Reader", "Library & Writing", "Study & Flashcards", "Help & Info"
+                    ].map(label => (
+                        <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>{label}</label>
+                            <input 
+                                className="input" 
+                                placeholder={label} 
+                                value={useConfigStore(state => state.customLabels?.[label]) || ''}
+                                onChange={(e) => updateConfig({ customLabels: { ...(useConfigStore.getState().customLabels || {}), [label]: e.target.value } })}
+                            />
+                        </div>
+                    ))}
+                </div>
+            </Card>
+
             <Card>
                 <h2 className='flex sg-title'><ToggleLeft /> Workflow Preferences</h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

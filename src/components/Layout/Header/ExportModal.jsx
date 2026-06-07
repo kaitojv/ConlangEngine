@@ -3,7 +3,8 @@ import ReactDOM from 'react-dom';
 import { 
     X, Book, Sparkles, FileText, Download, AlertTriangle, 
     Loader2, Table2, FileSpreadsheet, FileCode, Gamepad, 
-    Package, Languages, Globe, Layers, CheckCircle2 
+    Package, Languages, Globe, Layers, CheckCircle2,
+    BookOpen, Terminal, Maximize
 } from 'lucide-react';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
@@ -82,6 +83,27 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
             desc: 'Typewriter fonts and off-white backgrounds for a classic worldbuilding vibe.',
             icon: FileText,
             color: '#f59e0b'
+        },
+        {
+            id: 'fantasy',
+            name: 'Fantasy Grimoire',
+            desc: 'Elegant serif fonts with rich gold and crimson accents. Perfect for high-fantasy conlangs.',
+            icon: BookOpen,
+            color: '#b45309'
+        },
+        {
+            id: 'cyberpunk',
+            name: 'Cyberpunk Datafile',
+            desc: 'Dark background, neon accents, and monospace terminal fonts for sci-fi worldbuilding.',
+            icon: Terminal,
+            color: '#10b981'
+        },
+        {
+            id: 'minimalist',
+            name: 'Clean Minimalist',
+            desc: 'High contrast, sans-serif typography with generous whitespace. Focuses purely on content.',
+            icon: Maximize,
+            color: '#0f172a'
         }
     ];
 

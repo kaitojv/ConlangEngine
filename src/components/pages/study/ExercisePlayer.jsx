@@ -148,13 +148,13 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
         let isCorrect = false;
         
         if (currentEx.type === 'translate_to_english') {
-            const expected = currentEx.englishSentence.toLowerCase().replace(/[.,!?]/g, '');
+            const expectedOptions = currentEx.englishSentence.toLowerCase().split(',').map(s => s.replace(/[.,!?]/g, '').trim());
             const actual = currentAnswer.toLowerCase().replace(/[.,!?]/g, '').trim();
-            isCorrect = (expected === actual);
+            isCorrect = expectedOptions.includes(actual);
         } else if (currentEx.type === 'translate_to_conlang') {
-            const expected = currentEx.conlangSentence.toLowerCase().replace(/[.,!?]/g, '');
+            const expectedOptions = currentEx.conlangSentence.toLowerCase().split(',').map(s => s.replace(/[.,!?]/g, '').trim());
             const actual = currentAnswer.toLowerCase().replace(/[.,!?]/g, '').trim();
-            isCorrect = (expected === actual);
+            isCorrect = expectedOptions.includes(actual);
         } else if (currentEx.type === 'word_bank') {
             const expected = currentEx.conlangSentence.toLowerCase();
             const actual = wordBankSelected.join(' ').toLowerCase();
