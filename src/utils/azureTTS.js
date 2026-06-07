@@ -11,7 +11,7 @@ export const playAzureTTS = async ({ text, ipa, voice, useIpa = false }) => {
 
     // If they picked the "IPA Reading" option, force useIpa to true and use a default neural voice
     if (voice === 'ipa-default') {
-        actualVoice = 'en-US-JennyNeural';
+        actualVoice = 'en-US-JennyMultilingualNeural';
         actualUseIpa = true;
     }
 
