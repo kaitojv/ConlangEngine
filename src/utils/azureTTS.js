@@ -33,7 +33,12 @@ export const playAzureTTS = async ({ text, ipa, voice, useIpa = false }) => {
         <voice name="${actualVoice}">`;
         
     if (ipa && actualUseIpa) {
-        ssml += `<phoneme alphabet="ipa" ph="${escapeXml(ipa)}">${escapeXml(text)}</phoneme>`;
+        const rawIpa = ipa.replace(/[\/\[\]]/g, '').trim();
+        if (rawIpa) {
+            ssml += `<phoneme alphabet="ipa" ph="${escapeXml(rawIpa)}">${escapeXml(text)}</phoneme>`;
+        } else {
+            ssml += escapeXml(text);
+        }
     } else {
         ssml += escapeXml(text);
     }
@@ -61,6 +66,10 @@ export const playAzureTTS = async ({ text, ipa, voice, useIpa = false }) => {
             // We should automatically fall back to reading just the text!
             if (response.status === 400 && ipa && actualUseIpa) {
                 console.warn('Azure TTS rejected the IPA string (400). Falling back to normal text reading...');
+                if (voice === 'ipa-default') {
+                    // Try to read the IPA characters directly rather than falling back to English orthography
+                    return playAzureTTS({ text: ipa.replace(/[\/\[\]]/g, '').trim(), ipa: null, voice, useIpa: false });
+                }
                 return playAzureTTS({ text, ipa: null, voice, useIpa: false });
             }
             
