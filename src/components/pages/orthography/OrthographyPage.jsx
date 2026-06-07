@@ -1103,19 +1103,19 @@ export default function OrthographyPage() {
 
                 <nav className="tabs tabs-boxed page-subnav">
                     <button 
-                        className={`tab-btn ${activeTab === 'script' ? 'active' : ''}`}
+                        className={`tab ${activeTab === 'script' ? 'tab-active' : ''}`}
                         onClick={() => setActiveTab('script')}
                     >
                         <BookA size={18} /> Script Register
                     </button>
                     <button 
-                        className={`tab-btn ${activeTab === 'numbers' ? 'active' : ''}`}
+                        className={`tab ${activeTab === 'numbers' ? 'tab-active' : ''}`}
                         onClick={() => setActiveTab('numbers')}
                     >
                         <Hash size={18} /> Numeric System
                     </button>
                     <button 
-                        className={`tab-btn ${activeTab === 'ipa' ? 'active' : ''}`}
+                        className={`tab ${activeTab === 'ipa' ? 'tab-active' : ''}`}
                         onClick={() => setActiveTab('ipa')}
                     >
                         <Mic2 size={18} /> IPA Reference
