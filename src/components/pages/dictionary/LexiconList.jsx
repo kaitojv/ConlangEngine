@@ -251,13 +251,16 @@ export default function LexiconList() {
             return toast.error("This word is empty and cannot be pronounced.");
         }
 
+        const cleanText = text.replace(/[.\-*]/g, '');
+        const cleanIpa = wordObj.ipa ? wordObj.ipa.replace(/[.\-*]/g, '') : undefined;
+
         const config = useConfigStore.getState();
         if (config.azureTtsVoice) {
             const toastId = toast.loading("Generating audio...");
             try {
                 await playAzureTTS({
-                    text: text,
-                    ipa: wordObj.ipa, // This might be undefined, but Azure TTS utility handles it
+                    text: cleanText,
+                    ipa: cleanIpa, // This might be undefined, but Azure TTS utility handles it
                     voice: config.azureTtsVoice
                 });
                 toast.dismiss(toastId);
@@ -275,7 +278,7 @@ export default function LexiconList() {
 
         // Interrupt any ongoing speech so it doesn't queue up a dozen words if the user spams the button
         window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(cleanText));
     };
 
     return (

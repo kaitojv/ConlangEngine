@@ -51,12 +51,15 @@ export default function PublicFlashcards({ lexicon = [], config = {} }) {
         const text = wordObj.word;
         if (!text) return;
 
+        const cleanText = text.replace(/[.\-*]/g, '');
+        const cleanIpa = wordObj.ipa ? wordObj.ipa.replace(/[.\-*]/g, '') : undefined;
+
         if (config.azureTtsVoice) {
             const toastId = toast.loading("Generating audio...");
             try {
                 await playAzureTTS({
-                    text: text,
-                    ipa: wordObj.ipa,
+                    text: cleanText,
+                    ipa: cleanIpa,
                     voice: config.azureTtsVoice
                 });
                 toast.dismiss(toastId);
@@ -68,7 +71,7 @@ export default function PublicFlashcards({ lexicon = [], config = {} }) {
 
         if (!('speechSynthesis' in window)) return;
         window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(cleanText));
     };
 
     // Move to the next card, and maybe toss this one back in the pile if they need to review it

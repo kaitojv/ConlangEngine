@@ -119,13 +119,16 @@ export default function StudyTab() {
         const text = wordObj.word;
         if (!text) return;
 
+        const cleanText = text.replace(/[.\-*]/g, '');
+        const cleanIpa = wordObj.ipa ? wordObj.ipa.replace(/[.\-*]/g, '') : undefined;
+
         const globalConfig = useConfigStore.getState();
         if (globalConfig.azureTtsVoice) {
             const toastId = toast.loading("Generating audio...");
             try {
                 await playAzureTTS({
-                    text: text,
-                    ipa: wordObj.ipa,
+                    text: cleanText,
+                    ipa: cleanIpa,
                     voice: globalConfig.azureTtsVoice
                 });
                 toast.dismiss(toastId);
@@ -137,7 +140,7 @@ export default function StudyTab() {
 
         if (!('speechSynthesis' in window)) return;
         window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(cleanText));
     };
 
     // Handle SRS grading (0-Fail, 3-Hard, 4-Good, 5-Easy)

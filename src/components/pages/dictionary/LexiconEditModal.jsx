@@ -3,10 +3,11 @@ import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
+import { generateIpaFromWord } from '../../../utils/ipaGenerator.js';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
-import { Search, Volume2, Save, Trash2, X, Link as LinkIcon, GitBranch, Plus } from 'lucide-react';
+import { Search, Volume2, Save, Trash2, X, Link as LinkIcon, GitBranch, Plus, Wand2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ToneStressSelector from './ToneStressSelector.jsx';
 import './lexiconEditModal.css';
@@ -36,6 +37,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
     const vowelHarmonyMode = useConfigStore((state) => state.vowelHarmonyMode) || 'complete';
     const vowelHarmonyOverrideWordClasses = useConfigStore((state) => state.vowelHarmonyOverrideWordClasses) || [];
     const vowelHarmonyOverrideTags = useConfigStore((state) => state.vowelHarmonyOverrideTags) || [];
+    const ipaMappingRules = useConfigStore((state) => state.ipaMappingRules) || '';
 
     const [activeField, setActiveField] = useState('word');
 
@@ -474,7 +476,30 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                     )}
                 </div>
 
-                <div>
+                <div style={{ position: 'relative' }}>
+                    {ipaMappingRules && (
+                        <button 
+                            className="btn-link"
+                            title="Auto-generate IPA from word using your mapping rules"
+                            style={{ position: 'absolute', top: 0, right: 0, display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', zIndex: 10, padding: '2px' }}
+                            onClick={() => {
+                                if (word) {
+                                    const cleanWord = word.replace(/[*\\-]/g, '');
+                                    const generated = generateIpaFromWord(cleanWord, ipaMappingRules);
+                                    if (generated !== cleanWord.toLowerCase()) {
+                                        updateField('ipa', generated);
+                                        toast.success("Generated IPA");
+                                    } else {
+                                        toast.error("No rules matched this word.");
+                                    }
+                                } else {
+                                    toast.error("Please enter a word first.");
+                                }
+                            }}
+                        >
+                            <Wand2 size={12} /> Auto
+                        </button>
+                    )}
                     <Input
                         label="IPA (Optional)"
                         value={ipa}

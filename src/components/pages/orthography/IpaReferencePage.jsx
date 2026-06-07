@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
+import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
+import { generateIpaFromWord } from '../../../utils/ipaGenerator.js';
 import {
     IPA_COLUMNS, IPA_PULMONIC, IPA_VOWELS,
+import {
     IPA_NON_PULMONIC, IPA_OTHER_CONSONANTS,
     IPA_SUPRASEGMENTALS, IPA_DIACRITICS, IPA_INFO
 } from '../../../utils/ipaData.js';
-import { Volume2, VolumeX, Plus, Minus, BookOpen } from 'lucide-react';
+import { Volume2, VolumeX, Plus, Minus, BookOpen, Wand2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import './ipaReferencePage.css';
 import './anatomyOverlay.css';
 
@@ -184,7 +188,11 @@ function PhonemePopover({ phoneme, anchorRect, onClose, isInCons, isInVows, onTo
 export default function IpaReferencePage() {
     const consonants   = useConfigStore(s => s.consonants) || '';
     const vowels       = useConfigStore(s => s.vowels)     || '';
+    const ipaMappingRules = useConfigStore(s => s.ipaMappingRules) || '';
     const updateConfig = useConfigStore(s => s.updateConfig);
+    
+    const lexicon      = useLexiconStore(s => s.lexicon);
+    const updateWord   = useLexiconStore(s => s.updateWord);
 
     const [selected, setSelected] = useState(null); // { phoneme, rect }
 
@@ -255,8 +263,75 @@ export default function IpaReferencePage() {
         { top: 96,  frontLeft: 50, centralLeft: 80, backLeft: 90 },  // Open
     ];
 
+    const handleBulkApplyIpa = () => {
+        if (!ipaMappingRules.trim()) {
+            return toast.error("Please define some IPA mapping rules first.");
+        }
+        
+        let updateCount = 0;
+        
+        lexicon.forEach(wordObj => {
+            // Only update words that don't have IPA defined yet
+            if (!wordObj.ipa || wordObj.ipa.trim() === '') {
+                // Strip asterisks/hyphens just like the generator does internally, or feed it straight?
+                // Actually the word might have asterisks. The generator might leave them or not based on rules.
+                // Let's remove them for IPA generation to be safe
+                const cleanWord = wordObj.word.replace(/[*\\-]/g, '');
+                const generatedIpa = generateIpaFromWord(cleanWord, ipaMappingRules);
+                
+                if (generatedIpa && generatedIpa !== cleanWord.toLowerCase()) {
+                    updateWord(wordObj.id, { ipa: generatedIpa });
+                    updateCount++;
+                }
+            }
+        });
+        
+        if (updateCount > 0) {
+            toast.success(`Generated IPA for ${updateCount} words.`);
+        } else {
+            toast('No words needed IPA generation.', { icon: 'ℹ️' });
+        }
+    };
+
     return (
         <div className="ipa-ref-container">
+
+            {/* ── IPA AUTO-GENERATION ── */}
+            <div className="ipa-ref-section" style={{ backgroundColor: 'var(--s1)', borderRadius: '14px', border: '1px solid var(--border)' }}>
+                <div className="ipa-ref-section-header" style={{ borderBottom: '1px solid var(--border)', background: 'var(--s2)', borderRadius: '14px 14px 0 0' }}>
+                    IPA Auto-Generation
+                </div>
+                <div className="ipa-ref-section-body" style={{ padding: '1rem' }}>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--tx2)', marginBottom: '1rem', lineHeight: '1.4' }}>
+                        Define rules to automatically generate IPA from your orthography (e.g., <span className="custom-font-text" style={{background: 'var(--s2)', padding: '2px 6px', borderRadius: '4px'}}>oo=oʊ, c=k, sh=ʃ</span>). 
+                        The generator will use these rules when you click the magic wand icon in the dictionary editor.
+                    </p>
+                    
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1 }}>
+                            <label className="form-label" style={{ fontSize: '0.85rem' }}>Mapping Rules (Comma Separated)</label>
+                            <input 
+                                className="fi w-full"
+                                value={ipaMappingRules}
+                                onChange={(e) => updateConfig({ ipaMappingRules: e.target.value })}
+                                placeholder="oo=oʊ, c=k, sh=ʃ"
+                            />
+                        </div>
+                        <div style={{ paddingTop: '1.5rem' }}>
+                            <button 
+                                className="btn btn-primary" 
+                                onClick={handleBulkApplyIpa}
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}
+                            >
+                                <Wand2 size={16} /> Bulk Apply to Lexicon
+                            </button>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--tx2)', marginTop: '0.5rem', textAlign: 'center' }}>
+                                (Only affects words without IPA)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             {/* ── PULMONIC CONSONANTS ── */}
             <div className="ipa-ref-section">

@@ -161,6 +161,7 @@ export const INITIAL_CONFIG = {
     // Array of { id, title, phrases: [{ id, conlang, english }] }
     customCourse: [],
     customLabels: {}, // Customizable terminology (e.g. app title, navbar labels)
+    ipaMappingRules: '', // Rules for autogenerating IPA from orthography (e.g., "oo=oʊ, uu=uː")
 };
 
 // IndexedDB Helper for handling massive data without breaking local storage quotas
