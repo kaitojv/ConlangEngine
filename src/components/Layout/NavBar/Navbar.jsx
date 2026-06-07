@@ -16,7 +16,7 @@ const NAV_GROUPS = [
         title: 'Workspace',
         items: [
             { id: '/', label: 'Home', Icon: Home },
-            { id: '/conlangs', label: 'Conlangs', Icon: Languages, requiresLive: true },
+            { id: '/conlangs', label: 'Conlangs', Icon: Languages },
             { id: '/settings', label: 'Settings', Icon: Settings },
         ]
     },

@@ -12,7 +12,7 @@ export const CONLANG_ICONS = {
     Music, Wind, Anchor, Castle, Compass, Hexagon
 };
 
-export const getConlangIcon = (iconName, size = 24) => {
+export const getConlangIcon = (iconName, size = 24, props = {}) => {
     const IconComponent = CONLANG_ICONS[iconName] || Globe;
-    return <IconComponent size={size} />;
+    return <IconComponent size={size} {...props} />;
 };

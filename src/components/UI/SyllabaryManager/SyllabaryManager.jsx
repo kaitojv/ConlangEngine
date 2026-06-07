@@ -124,7 +124,7 @@ export default function SyllabaryManager() {
                 <div className="sm-mt-20">
                     <h4 className="sm-subtitle"><Info size={14}/> Other Phonemes (Standalone)</h4>
                     <div className="sm-table-wrapper">
-                        <table className="sm-table">
+                    <table className="sm-table">
                             <tbody>
                                 <tr className="sm-tr">
                                     {otherList.map(p => (

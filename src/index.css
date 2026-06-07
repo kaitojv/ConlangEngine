@@ -222,6 +222,12 @@ select option {
 }
 
 /* Mobile Responsiveness */
+.responsive-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 @media (max-width: 768px) {
   .content {
     padding: 15px 12px 100px 12px; /* Extra bottom padding for floating buttons */

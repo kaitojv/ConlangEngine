@@ -9,6 +9,7 @@ import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Modal from '@/components/UI/Modal/Modal.jsx';
 import { BookOpen, List, Wand2, Copy, Check } from 'lucide-react';
 import * as HoverCard from '@radix-ui/react-hover-card';
+import SyntaxTreeRenderer from './SyntaxTreeRenderer.jsx';
 import './glosserTab.css';
 
 export default function GlosserTab() {
@@ -313,15 +314,16 @@ export default function GlosserTab() {
                     <div className="glosser-mode-toggles">
                         <Button variant={readerMode === 'read' ? 'imp' : 'default'} onClick={() => setReaderMode('read')}><div className="btn-content-flex"><BookOpen size={16} /> Reading Mode</div></Button>
                         <Button variant={readerMode === 'gloss' ? 'imp' : 'default'} onClick={() => setReaderMode('gloss')}><div className="btn-content-flex"><List size={16} /> IGT Gloss Mode</div></Button>
+                        <Button variant={readerMode === 'tree' ? 'imp' : 'default'} onClick={() => setReaderMode('tree')}><div className="btn-content-flex"><Wand2 size={16} /> Syntax Tree</div></Button>
                     </div>
                     <Button onClick={handleProcess} className="glosser-process-btn"><div className="btn-content-flex"><Wand2 size={18} /> Process Text</div></Button>
                 </div>
             </Card>
 
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={readerMode === 'read' ? 'Interactive Reader' : 'IGT Glossing Breakdown'}>
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={readerMode === 'read' ? 'Interactive Reader' : readerMode === 'gloss' ? 'IGT Glossing Breakdown' : 'Visual Syntax Tree'}>
                 {processedWords.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        {readerMode === 'read' ? renderReadingMode() : renderGlossingMode()}
+                        {readerMode === 'read' ? renderReadingMode() : readerMode === 'gloss' ? renderGlossingMode() : <SyntaxTreeRenderer processedWords={processedWords} />}
                     </div>
                 )}
             </Modal>

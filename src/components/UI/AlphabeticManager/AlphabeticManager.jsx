@@ -81,6 +81,7 @@ export default function AlphabeticManager() {
 
             <div className="alphabet-table-container">
                 {allChars.length > 0 ? (
+                <div className="responsive-table-wrapper">
                     <table className="alphabet-table">
                         <thead>
                             <tr>
@@ -167,6 +168,7 @@ export default function AlphabeticManager() {
                             })}
                         </tbody>
                     </table>
+                </div>
                 ) : (
                     <div className="empty-state glass">
                         <Type size={48} className="text-tx2 opacity-20" />

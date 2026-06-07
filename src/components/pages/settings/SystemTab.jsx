@@ -323,40 +323,43 @@ export default function SystemTab() {
                     </label>
                 </div>
                 
+                <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontWeight: 600, fontSize: '0.85rem' }}>Conlang Icon</label>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--tx2)', marginBottom: '0.5rem' }}>Pick an icon to represent your conlang in your workspaces.</p>
+                    
+                    <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(40px, 1fr))', 
+                        gap: '0.5rem',
+                        maxWidth: '100%'
+                    }}>
+                        {Object.keys(CONLANG_ICONS).map(iconName => (
+                            <button
+                                key={iconName}
+                                onClick={() => handleIconChange(iconName)}
+                                title={iconName}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '0.5rem',
+                                    background: conlangIcon === iconName ? 'var(--acc)' : 'var(--s1)',
+                                    color: conlangIcon === iconName ? '#fff' : 'var(--tx)',
+                                    border: `1px solid ${conlangIcon === iconName ? 'var(--acc)' : 'var(--bd)'}`,
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
+                                {getConlangIcon(iconName, 18)}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 {isPublic && (
                     <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <label style={{ fontWeight: 600, fontSize: '0.85rem' }}>Conlang Icon</label>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--tx2)', marginBottom: '0.5rem' }}>Pick an icon to represent your conlang in the Explore tab.</p>
-                        
-                        <div style={{ 
-                            display: 'grid', 
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(40px, 1fr))', 
-                            gap: '0.5rem',
-                            maxWidth: '100%'
-                        }}>
-                            {Object.keys(CONLANG_ICONS).map(iconName => (
-                                <button
-                                    key={iconName}
-                                    onClick={() => handleIconChange(iconName)}
-                                    title={iconName}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        padding: '0.5rem',
-                                        background: conlangIcon === iconName ? 'var(--acc)' : 'var(--s1)',
-                                        color: conlangIcon === iconName ? '#fff' : 'var(--tx)',
-                                        border: `1px solid ${conlangIcon === iconName ? 'var(--acc)' : 'var(--bd)'}`,
-                                        borderRadius: '8px',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s ease'
-                                    }}
-                                >
-                                    {getConlangIcon(iconName, 18)}
-                                </button>
-                            ))}
-                        </div>
-                        <div style={{ marginTop: '1rem' }}>
+                        <div style={{ marginTop: '0.5rem' }}>
                             <Button variant="primary" onClick={handleManualUpdatePublic} style={{ width: '100%' }}>
                                 <Globe size={16} /> Update Public Conlang
                             </Button>

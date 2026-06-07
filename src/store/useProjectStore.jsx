@@ -7,6 +7,9 @@ export const useProjectStore = create(
     persist(
       (set) => ({
         localProjects: [],
+        globalWorldMap: { image: '/classic_map.svg' },
+
+        setGlobalWorldMap: (mapObj) => set({ globalWorldMap: mapObj }),
 
         // Backs up the active workspace data into the archive box
         saveProjectToArchive: (config, lexicon) =>

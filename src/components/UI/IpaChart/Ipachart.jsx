@@ -134,6 +134,7 @@ export default function IpaChart({ consonants = '', setConsonants, vowels = '', 
                         
                         {!collapsed.pulmonic && (
                             <div className="ipa-wrapper">
+                            <div className="responsive-table-wrapper">
                                 <table className="ipa-chart-table">
                                     <thead>
                                         <tr>
@@ -159,6 +160,7 @@ export default function IpaChart({ consonants = '', setConsonants, vowels = '', 
                                         ))}
                                     </tbody>
                                 </table>
+                            </div>
                             </div>
                         )}
                     </div>

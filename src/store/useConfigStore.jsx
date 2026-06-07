@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 
 export const INITIAL_CONFIG = {
     projectId: null,
+    parentId: null,
     conlangName: 'My New Conlang',
     authorName: 'Author Name',
     description: 'A brief description of your conlang.',
@@ -39,6 +40,9 @@ export const INITIAL_CONFIG = {
     historicalRules:'^(.{2})(.*)',
     syllabaryMap: {},
     grammarRules: [],
+    evolutionEpochs: [
+        { id: 'epoch_1', name: 'Proto-Language', rules: '' }
+    ],
     verbMarker: '-r',
     cliticsRules: 's, ll',
     personRules: "1S: mau / 'ma, 2S: tau / 'ta, 3S Masc: lou / 'lo",
@@ -143,6 +147,10 @@ export const INITIAL_CONFIG = {
             { id: 'comp-1', name: 'Comparative', trigger: 'more, -er', marker: '', type: 'word', position: 'before', priority: 2 },
             { id: 'pl-1', name: 'Plural', trigger: '-s', marker: '', type: 'suffix', position: 'suffix', priority: 3 }
         ]
+    },
+    worldMap: {
+        x: null,
+        y: null
     },
     functionWords: [],
     // Prosody rules — evaluated at display time to auto-compute stress & tone
