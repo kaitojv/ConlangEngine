@@ -1717,7 +1717,20 @@ function LegacyWikiEditor({ content, onSave }) {
         'Star', 'Heart', 'Sun', 'Moon', 'Cloud', 'Flame', 'Zap', 'Droplet', 'Wind', 'TreePine',
         'Leaf', 'Mountain', 'Gem', 'Crown', 'Sword', 'Shield', 'Skull', 'Ghost', 'Castle', 'Tent',
         'Map', 'Compass', 'Anchor', 'Flag', 'BookOpen', 'Scroll', 'Feather', 'PenTool', 'Key', 'Lock',
-        'Music', 'Eye', 'Hand', 'Footprints', 'Smile', 'Frown', 'Meh', 'Angry', 'Coffee', 'Utensils'
+        'Music', 'Eye', 'Hand', 'Footprints', 'Smile', 'Frown', 'Meh', 'Angry', 'Coffee', 'Utensils',
+        'MessageCircle', 'Mail', 'Send', 'Share2', 'Camera', 'Video', 'Mic', 'Headphones', 'Volume2', 'Play',
+        'Gift', 'Box', 'Briefcase', 'ShoppingCart', 'Umbrella', 'Clock', 'Bell', 'Snowflake', 'Thermometer', 'Sunset',
+        'Sunrise', 'Tornado', 'Dices', 'Spade', 'Club', 'Trophy', 'Medal', 'Gamepad2', 'Puzzle', 'Car',
+        'Train', 'Plane', 'Ship', 'Bike', 'Bus', 'Rocket', 'User', 'Users', 'Laugh', 'Bird',
+        'Cat', 'Dog', 'Rabbit', 'Snail', 'Bug', 'Fish', 'Apple', 'Banana', 'Cherry', 'Carrot',
+        'Beef', 'Beer', 'Wine', 'Cigarette', 'TreeDeciduous', 'Palmtree', 'Sparkles', 'Wand2', 'Atom', 'Brain',
+        'Microscope', 'Telescope', 'Stethoscope', 'Syringe', 'Pill', 'Bone', 'HeartPulse', 'Ear', 'EyeOff', 'Palette',
+        'Brush', 'Scissors', 'Hammer', 'Wrench', 'Axe', 'Pickaxe', 'Shovel', 'Magnet', 'ZapOff', 'Battery',
+        'BatteryFull', 'Radio', 'Tv', 'Monitor', 'Smartphone', 'Laptop', 'Tablet', 'Watch', 'Printer', 'Keyboard',
+        'Mouse', 'Gamepad', 'Ticket', 'Clapperboard', 'Film', 'Image', 'Book', 'Library', 'Newspaper', 'FileText',
+        'Clipboard', 'Folder', 'FolderOpen', 'Archive', 'Trash2', 'Settings', 'Globe', 'Globe2', 'Earth', 'CloudSun',
+        'CloudRain', 'CloudLightning', 'CloudSnow', 'Rainbow', 'ThermometerSun', 'ThermometerSnowflake', 'Asterisk', 'Hash', 'Percent', 'DollarSign',
+        'Euro', 'PoundSterling', 'Bitcoin', 'Infinity', 'Plus', 'Minus', 'X', 'Check', 'Circle', 'Square', 'Triangle', 'Hexagon', 'Octagon'
     ];
 
     useEffect(() => {
