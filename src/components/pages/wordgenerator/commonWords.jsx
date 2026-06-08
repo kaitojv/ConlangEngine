@@ -2909,7 +2909,7 @@ export const commonWords = [
     { word: 'poetry', class: 'noun' },
     { word: 'lights', class: 'verb' },
     { word: 'tracking', class: 'verb' },
-    { word: 'angel', class: 'noun' }
+    { word: 'angel', class: 'noun' },
     { word: 'of', class: 'particle' },
     { word: 'and', class: 'particle' },
     { word: 'to', class: 'particle' },
