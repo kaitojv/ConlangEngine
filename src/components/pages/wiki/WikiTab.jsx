@@ -7,10 +7,30 @@ import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import Modal from '@/components/UI/Modal/Modal.jsx';
-import { Book, Plus, Trash2, Bold, Italic, Underline, Link, Save, Type, Languages, FileText, Settings, ChevronDown, ChevronUp, Info, Wand2, Quote, Heading1, Heading2, Heading3, Table, Smile, icons } from 'lucide-react';
+import { Book, Plus, Trash2, Bold, Italic, Underline, Link, Save, Type, Languages, FileText, Settings, ChevronDown, ChevronUp, Info, Wand2, Quote, Heading1, Heading2, Heading3, Table, Smile, icons, Folder, FolderOpen, Edit2 } from 'lucide-react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createGrammarAnalyzer } from '@/utils/grammarAnalyzer.js';
 import './wikiTab.css';
+
+const PREDEFINED_ICONS = [
+    'Star', 'Heart', 'Sun', 'Moon', 'Cloud', 'Flame', 'Zap', 'Droplet', 'Wind', 'TreePine',
+    'Leaf', 'Mountain', 'Gem', 'Crown', 'Sword', 'Shield', 'Skull', 'Ghost', 'Castle', 'Tent',
+    'Map', 'Compass', 'Anchor', 'Flag', 'BookOpen', 'Scroll', 'Feather', 'PenTool', 'Key', 'Lock',
+    'Music', 'Eye', 'Hand', 'Footprints', 'Smile', 'Frown', 'Meh', 'Angry', 'Coffee', 'Utensils',
+    'MessageCircle', 'Mail', 'Send', 'Share2', 'Camera', 'Video', 'Mic', 'Headphones', 'Volume2', 'Play',
+    'Gift', 'Box', 'Briefcase', 'ShoppingCart', 'Umbrella', 'Clock', 'Bell', 'Snowflake', 'Thermometer', 'Sunset',
+    'Sunrise', 'Tornado', 'Dices', 'Spade', 'Club', 'Trophy', 'Medal', 'Gamepad2', 'Puzzle', 'Car',
+    'Train', 'Plane', 'Ship', 'Bike', 'Bus', 'Rocket', 'User', 'Users', 'Laugh', 'Bird',
+    'Cat', 'Dog', 'Rabbit', 'Snail', 'Bug', 'Fish', 'Apple', 'Banana', 'Cherry', 'Carrot',
+    'Beef', 'Beer', 'Wine', 'Cigarette', 'TreeDeciduous', 'Palmtree', 'Sparkles', 'Wand2', 'Atom', 'Brain',
+    'Microscope', 'Telescope', 'Stethoscope', 'Syringe', 'Pill', 'Bone', 'HeartPulse', 'Ear', 'EyeOff', 'Palette',
+    'Brush', 'Scissors', 'Hammer', 'Wrench', 'Axe', 'Pickaxe', 'Shovel', 'Magnet', 'ZapOff', 'Battery',
+    'BatteryFull', 'Radio', 'Tv', 'Monitor', 'Smartphone', 'Laptop', 'Tablet', 'Watch', 'Printer', 'Keyboard',
+    'Mouse', 'Gamepad', 'Ticket', 'Clapperboard', 'Film', 'Image', 'Book', 'Library', 'Newspaper', 'FileText',
+    'Clipboard', 'Folder', 'FolderOpen', 'Archive', 'Trash2', 'Settings', 'Globe', 'Globe2', 'Earth', 'CloudSun',
+    'CloudRain', 'CloudLightning', 'CloudSnow', 'Rainbow', 'ThermometerSun', 'ThermometerSnowflake', 'Asterisk', 'Hash', 'Percent', 'DollarSign',
+    'Euro', 'PoundSterling', 'Bitcoin', 'Infinity', 'Plus', 'Minus', 'X', 'Check', 'Circle', 'Square', 'Triangle', 'Hexagon', 'Octagon'
+];
 
 const MODAL_VERBS = new Set([
     'can', 'could', 'will', 'would', 'shall', 'should', 'may', 'might', 'must', 'ought to', 'used to', 'dare', 'need', 'have to', 'has to', 'had to'
@@ -1713,26 +1733,6 @@ function LegacyWikiEditor({ content, onSave }) {
     const [linkUrl, setLinkUrl] = useState('');
     const [iconPickerOpen, setIconPickerOpen] = useState(false);
 
-    const PREDEFINED_ICONS = [
-        'Star', 'Heart', 'Sun', 'Moon', 'Cloud', 'Flame', 'Zap', 'Droplet', 'Wind', 'TreePine',
-        'Leaf', 'Mountain', 'Gem', 'Crown', 'Sword', 'Shield', 'Skull', 'Ghost', 'Castle', 'Tent',
-        'Map', 'Compass', 'Anchor', 'Flag', 'BookOpen', 'Scroll', 'Feather', 'PenTool', 'Key', 'Lock',
-        'Music', 'Eye', 'Hand', 'Footprints', 'Smile', 'Frown', 'Meh', 'Angry', 'Coffee', 'Utensils',
-        'MessageCircle', 'Mail', 'Send', 'Share2', 'Camera', 'Video', 'Mic', 'Headphones', 'Volume2', 'Play',
-        'Gift', 'Box', 'Briefcase', 'ShoppingCart', 'Umbrella', 'Clock', 'Bell', 'Snowflake', 'Thermometer', 'Sunset',
-        'Sunrise', 'Tornado', 'Dices', 'Spade', 'Club', 'Trophy', 'Medal', 'Gamepad2', 'Puzzle', 'Car',
-        'Train', 'Plane', 'Ship', 'Bike', 'Bus', 'Rocket', 'User', 'Users', 'Laugh', 'Bird',
-        'Cat', 'Dog', 'Rabbit', 'Snail', 'Bug', 'Fish', 'Apple', 'Banana', 'Cherry', 'Carrot',
-        'Beef', 'Beer', 'Wine', 'Cigarette', 'TreeDeciduous', 'Palmtree', 'Sparkles', 'Wand2', 'Atom', 'Brain',
-        'Microscope', 'Telescope', 'Stethoscope', 'Syringe', 'Pill', 'Bone', 'HeartPulse', 'Ear', 'EyeOff', 'Palette',
-        'Brush', 'Scissors', 'Hammer', 'Wrench', 'Axe', 'Pickaxe', 'Shovel', 'Magnet', 'ZapOff', 'Battery',
-        'BatteryFull', 'Radio', 'Tv', 'Monitor', 'Smartphone', 'Laptop', 'Tablet', 'Watch', 'Printer', 'Keyboard',
-        'Mouse', 'Gamepad', 'Ticket', 'Clapperboard', 'Film', 'Image', 'Book', 'Library', 'Newspaper', 'FileText',
-        'Clipboard', 'Folder', 'FolderOpen', 'Archive', 'Trash2', 'Settings', 'Globe', 'Globe2', 'Earth', 'CloudSun',
-        'CloudRain', 'CloudLightning', 'CloudSnow', 'Rainbow', 'ThermometerSun', 'ThermometerSnowflake', 'Asterisk', 'Hash', 'Percent', 'DollarSign',
-        'Euro', 'PoundSterling', 'Bitcoin', 'Infinity', 'Plus', 'Minus', 'X', 'Check', 'Circle', 'Square', 'Triangle', 'Hexagon', 'Octagon'
-    ];
-
     useEffect(() => {
         if (editorRef.current && content !== editorRef.current.innerHTML) {
             // SEC-1: Sanitize HTML to prevent XSS via shared/cloud projects
@@ -1857,12 +1857,58 @@ export default function WikiTab() {
     const addWikiPage = useConfigStore((state) => state.addWikiPage);
     const deleteWikiPage = useConfigStore((state) => state.deleteWikiPage);
     const reorderWikiPage = useConfigStore((state) => state.reorderWikiPage);
+    const moveWikiPage = useConfigStore((state) => state.moveWikiPage);
+    const updateWikiPageMetadata = useConfigStore((state) => state.updateWikiPageMetadata);
     const writingDirection = useConfigStore(state => state.writingDirection);
 
-    const [currentPageId, setCurrentPageId] = useState(() => Object.keys(wikiPages)[0] || null);
+    const [currentPageId, setCurrentPageId] = useState(() => {
+        const keys = Object.keys(wikiPages);
+        const firstDoc = keys.find(k => typeof wikiPages[k] !== 'object' || wikiPages[k].type !== 'notebook');
+        return firstDoc || null;
+    });
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [newPageTitle, setNewPageTitle] = useState('');
-    const [newPageType, setNewPageType] = useState('wiki'); // 'wiki' or 'corpus'
+    const [newPageType, setNewPageType] = useState('wiki'); // 'wiki', 'corpus', or 'notebook'
+    const [newPageParentId, setNewPageParentId] = useState('root');
+    const [expandedNotebooks, setExpandedNotebooks] = useState(() => {
+        const state = {};
+        Object.keys(wikiPages).forEach(k => {
+            if (wikiPages[k] && wikiPages[k].type === 'notebook' && wikiPages[k].expanded) {
+                state[k] = true;
+            }
+        });
+        return state;
+    });
+
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingPageId, setEditingPageId] = useState(null);
+    const [editTitle, setEditTitle] = useState('');
+    const [editIcon, setEditIcon] = useState('');
+    const [editParentId, setEditParentId] = useState('root');
+
+    const notebooks = Object.keys(wikiPages).filter(k => {
+        const p = wikiPages[k];
+        return p && typeof p === 'object' && p.type === 'notebook';
+    });
+
+    const rootPages = Object.keys(wikiPages).filter(k => {
+        const p = wikiPages[k];
+        if (p && typeof p === 'object' && p.type === 'notebook') return false;
+        if (p && typeof p === 'object' && p.parentId) return false;
+        return true;
+    });
+
+    const getChildren = (notebookId) => {
+        return Object.keys(wikiPages).filter(k => {
+            const p = wikiPages[k];
+            return p && typeof p === 'object' && p.parentId === notebookId;
+        });
+    };
+
+    const toggleNotebook = (notebookId, e) => {
+        e.stopPropagation();
+        setExpandedNotebooks(prev => ({ ...prev, [notebookId]: !prev[notebookId] }));
+    };
 
     const handleCreatePage = () => {
         try {
@@ -1871,9 +1917,21 @@ export default function WikiTab() {
                 return;
             }
             const pageId = newPageTitle.trim().toLowerCase().replace(/\s+/g, '-');
-            addWikiPage(pageId, newPageTitle.trim(), newPageType);
-            setCurrentPageId(pageId);
+            const parent = newPageParentId === 'root' ? null : newPageParentId;
+            addWikiPage(pageId, newPageTitle.trim(), newPageType, parent);
+            
+            if (newPageType !== 'notebook') {
+                setCurrentPageId(pageId);
+                if (parent) {
+                    setExpandedNotebooks(prev => ({ ...prev, [parent]: true }));
+                }
+            } else {
+                setExpandedNotebooks(prev => ({ ...prev, [pageId]: true }));
+            }
+            
             setNewPageTitle('');
+            setNewPageType('wiki');
+            setNewPageParentId('root');
             setIsCreateModalOpen(false);
         } catch (err) {
             alert("Error creating page: " + err.message);
@@ -1882,13 +1940,85 @@ export default function WikiTab() {
 
     const handleDeletePage = (pageId, e) => {
         e.stopPropagation();
-        if (!window.confirm("Are you sure you want to delete this document?")) return;
+        const p = wikiPages[pageId];
+        const isNotebook = p && typeof p === 'object' && p.type === 'notebook';
+        const msg = isNotebook 
+            ? "Are you sure you want to delete this notebook and ALL chapters inside it?" 
+            : "Are you sure you want to delete this document?";
+            
+        if (!window.confirm(msg)) return;
         
         deleteWikiPage(pageId);
-        if (currentPageId === pageId) {
-            const remainingPages = Object.keys(wikiPages).filter(id => id !== pageId);
-            setCurrentPageId(remainingPages.length > 0 ? remainingPages[0] : null);
+        
+        // If the current page is deleted (or is a child of the deleted notebook), reset it
+        if (currentPageId === pageId || (wikiPages[currentPageId] && wikiPages[currentPageId].parentId === pageId)) {
+            const remainingPages = Object.keys(wikiPages).filter(id => id !== pageId && (!wikiPages[id].parentId || wikiPages[id].parentId !== pageId));
+            const firstDoc = remainingPages.find(k => typeof wikiPages[k] !== 'object' || wikiPages[k].type !== 'notebook');
+            setCurrentPageId(firstDoc || null);
         }
+    };
+
+    const handleOpenEdit = (pageId, e) => {
+        e.stopPropagation();
+        const p = wikiPages[pageId];
+        setEditingPageId(pageId);
+        setEditTitle(p && typeof p === 'object' ? p.title : pageId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
+        setEditIcon(p && typeof p === 'object' && p.icon ? p.icon : '');
+        setEditParentId(p && typeof p === 'object' && p.parentId ? p.parentId : 'root');
+        setIsEditModalOpen(true);
+    };
+
+    const handleSaveEdit = () => {
+        if (!editTitle.trim()) {
+            alert("Title cannot be empty!");
+            return;
+        }
+        updateWikiPageMetadata(editingPageId, editTitle.trim(), editIcon);
+        
+        const p = wikiPages[editingPageId];
+        if (p && (!p.type || p.type !== 'notebook')) {
+            const currentParent = p.parentId || 'root';
+            if (editParentId !== currentParent) {
+                moveWikiPage(editingPageId, editParentId);
+                if (editParentId !== 'root') {
+                    setExpandedNotebooks(prev => ({ ...prev, [editParentId]: true }));
+                }
+            }
+        }
+        
+        setIsEditModalOpen(false);
+    };
+
+    const renderPageItem = (pageId, indent = false) => {
+        const p = wikiPages[pageId];
+        const isCorp = p && typeof p === 'object' && p.type === 'corpus';
+        const pTitle = p && typeof p === 'object' ? p.title : pageId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        const Icon = p && typeof p === 'object' && p.icon && icons[p.icon] 
+            ? icons[p.icon] 
+            : (isCorp ? Languages : FileText);
+        const iconColor = p && typeof p === 'object' && p.icon ? "var(--tx)" : (isCorp ? "var(--acc)" : "var(--tx2)");
+
+        return (
+            <div 
+                key={pageId} 
+                className={`wiki-page-item ${currentPageId === pageId ? 'active' : ''} ${indent ? 'nested' : ''}`}
+                onClick={() => setCurrentPageId(pageId)}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                    <div style={{ flexShrink: 0, display: 'flex' }}>
+                        <Icon size={14} color={iconColor} />
+                    </div>
+                    <span style={{ fontWeight: 'bold', color: 'var(--tx)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pTitle}</span>
+                </div>
+                <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }} className="wiki-item-controls">
+                    <button className="wiki-del-btn" title="Move Up" onClick={(e) => { e.stopPropagation(); reorderWikiPage(pageId, 'up'); }}><ChevronUp size={14} /></button>
+                    <button className="wiki-del-btn" title="Move Down" onClick={(e) => { e.stopPropagation(); reorderWikiPage(pageId, 'down'); }}><ChevronDown size={14} /></button>
+                    
+                    <button className="wiki-del-btn" title="Edit Details" onClick={(e) => handleOpenEdit(pageId, e)}><Edit2 size={14} /></button>
+                    <button className="wiki-del-btn" title="Delete" onClick={(e) => handleDeletePage(pageId, e)}><Trash2 size={14} /></button>
+                </div>
+            </div>
+        );
     };
 
     const currentPage = currentPageId ? wikiPages[currentPageId] : null;
@@ -1909,31 +2039,41 @@ export default function WikiTab() {
                     {Object.keys(wikiPages).length === 0 ? (
                         <p style={{ textAlign: 'center', color: 'var(--tx3)', fontStyle: 'italic', marginTop: '20px' }}>No documents created yet.</p>
                     ) : (
-                        Object.keys(wikiPages).map(pageId => {
-                            const p = wikiPages[pageId];
-                            const isCorp = p && typeof p === 'object' && p.type === 'corpus';
-                            const pTitle = isCorp ? p.title : pageId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-
-                            return (
-                                <div 
-                                    key={pageId} 
-                                    className={`wiki-page-item ${currentPageId === pageId ? 'active' : ''}`}
-                                    onClick={() => setCurrentPageId(pageId)}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
-                                        <div style={{ flexShrink: 0, display: 'flex' }}>
-                                            {isCorp ? <Languages size={14} color="var(--acc)" /> : <FileText size={14} color="var(--tx2)" />}
+                        <>
+                            {notebooks.map(nbId => {
+                                const nb = wikiPages[nbId];
+                                const isExpanded = expandedNotebooks[nbId];
+                                const children = getChildren(nbId);
+                                const NbIcon = nb.icon && icons[nb.icon] ? icons[nb.icon] : (isExpanded ? FolderOpen : Folder);
+                                
+                                return (
+                                    <div key={nbId} className="wiki-notebook-container">
+                                        <div className="wiki-notebook-header" onClick={(e) => toggleNotebook(nbId, e)}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                                                <div style={{ flexShrink: 0, display: 'flex', color: 'var(--acc)' }}>
+                                                    <NbIcon size={16} />
+                                                </div>
+                                                <span style={{ fontWeight: 'bold', color: 'var(--tx)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nb.title}</span>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }} className="wiki-item-controls">
+                                                <button className="wiki-del-btn" title="Move Up" onClick={(e) => { e.stopPropagation(); reorderWikiPage(nbId, 'up'); }}><ChevronUp size={14} /></button>
+                                                <button className="wiki-del-btn" title="Move Down" onClick={(e) => { e.stopPropagation(); reorderWikiPage(nbId, 'down'); }}><ChevronDown size={14} /></button>
+                                                <button className="wiki-del-btn" title="Edit Notebook" onClick={(e) => handleOpenEdit(nbId, e)}><Edit2 size={14} /></button>
+                                                <button className="wiki-del-btn" title="Delete" onClick={(e) => handleDeletePage(nbId, e)}><Trash2 size={14} /></button>
+                                            </div>
                                         </div>
-                                        <span style={{ fontWeight: 'bold', color: 'var(--tx)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pTitle}</span>
+                                        {isExpanded && (
+                                            <div className="wiki-notebook-children">
+                                                {children.length === 0 && <div style={{ padding: '8px 20px', fontSize: '0.8rem', color: 'var(--tx3)', fontStyle: 'italic', borderLeft: '2px solid var(--bd)', marginLeft: '12px' }}>Empty notebook</div>}
+                                                {children.map(childId => renderPageItem(childId, true))}
+                                            </div>
+                                        )}
                                     </div>
-                                    <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
-                                        <button className="wiki-del-btn" title="Move Up" onClick={(e) => { e.stopPropagation(); reorderWikiPage(pageId, 'up'); }}><ChevronUp size={14} /></button>
-                                        <button className="wiki-del-btn" title="Move Down" onClick={(e) => { e.stopPropagation(); reorderWikiPage(pageId, 'down'); }}><ChevronDown size={14} /></button>
-                                        <button className="wiki-del-btn" title="Delete" onClick={(e) => handleDeletePage(pageId, e)}><Trash2 size={14} /></button>
-                                    </div>
-                                </div>
-                            );
-                        })
+                                );
+                            })}
+                            
+                            {rootPages.map(pageId => renderPageItem(pageId, false))}
+                        </>
                     )}
                 </div>
             </Card>
@@ -1973,12 +2113,91 @@ export default function WikiTab() {
                         onChange={(e) => setNewPageType(e.target.value)}
                         style={{ width: '100%', padding: '10px', background: 'var(--s1)', color: 'var(--tx)', border: '1px solid var(--bd)', borderRadius: '6px' }}
                     >
-                        <option value="wiki">Wiki Article (Rich Text Formatting)</option>
-                        <option value="corpus">Corpus Text (Interlinear Glossing & Live Translation)</option>
+                        <option value="wiki">Wiki Chapter (Rich Text)</option>
+                        <option value="corpus">Corpus Text (Interlinear Glossing)</option>
+                        <option value="notebook">Notebook (Folder to group chapters)</option>
                     </select>
                 </div>
 
+                {newPageType !== 'notebook' && notebooks.length > 0 && (
+                    <div style={{ marginTop: '20px' }}>
+                        <label className="form-label">Location</label>
+                        <select 
+                            className="fi" 
+                            value={newPageParentId}
+                            onChange={(e) => setNewPageParentId(e.target.value)}
+                            style={{ width: '100%', padding: '10px', background: 'var(--s1)', color: 'var(--tx)', border: '1px solid var(--bd)', borderRadius: '6px' }}
+                        >
+                            <option value="root">Root Library (No Notebook)</option>
+                            {notebooks.map(nb => (
+                                <option key={nb} value={nb}>{wikiPages[nb].title}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}><Button variant="imp" onClick={handleCreatePage}>Create</Button></div>
+            </Modal>
+
+            <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Details">
+                <Input label="Title" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="e.g. Genesis Translation..." autoFocus />
+                
+                <div style={{ marginTop: '20px' }}>
+                    <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Choose Icon</span>
+                        {editIcon && (
+                            <span 
+                                style={{ color: 'var(--acc)', cursor: 'pointer', fontSize: '0.8rem' }} 
+                                onClick={() => setEditIcon('')}
+                            >
+                                Clear Icon
+                            </span>
+                        )}
+                    </label>
+                    <div className="icon-picker-grid" style={{ background: 'var(--s1)', borderRadius: 'var(--rad-sm)', border: '1px solid var(--bd)' }}>
+                        {PREDEFINED_ICONS.map(iconName => {
+                            const Icon = icons[iconName];
+                            if (!Icon) return null;
+                            const isActive = editIcon === iconName;
+                            return (
+                                <button 
+                                    key={iconName} 
+                                    className="icon-picker-btn" 
+                                    title={iconName}
+                                    style={{ 
+                                        background: isActive ? 'var(--acc)' : 'transparent',
+                                        color: isActive ? 'var(--bg)' : 'var(--tx)',
+                                        borderColor: isActive ? 'var(--acc)' : 'transparent'
+                                    }}
+                                    onClick={() => setEditIcon(iconName)}
+                                >
+                                    <Icon size={24} />
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {editingPageId && wikiPages[editingPageId] && wikiPages[editingPageId].type !== 'notebook' && notebooks.length > 0 && (
+                    <div style={{ marginTop: '20px' }}>
+                        <label className="form-label">Location</label>
+                        <select 
+                            className="fi" 
+                            value={editParentId}
+                            onChange={(e) => setEditParentId(e.target.value)}
+                            style={{ width: '100%', padding: '10px', background: 'var(--s1)', color: 'var(--tx)', border: '1px solid var(--bd)', borderRadius: '6px' }}
+                        >
+                            <option value="root">Root Library (No Notebook)</option>
+                            {notebooks.map(nb => (
+                                <option key={nb} value={nb}>{wikiPages[nb].title}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+                    <Button variant="imp" onClick={handleSaveEdit}>Save Changes</Button>
+                </div>
             </Modal>
         </div>
     );

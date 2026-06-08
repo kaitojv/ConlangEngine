@@ -322,45 +322,108 @@ export const useConfigStore = create(
 
             saveWikiPage: (pageId, content) => set((state) => {
                 const existing = state.wikiPages[pageId];
-                if (existing && typeof existing === 'object' && existing.type === 'corpus') {
+                if (existing && typeof existing === 'object') {
                     return { wikiPages: { ...state.wikiPages, [pageId]: { ...existing, content } } };
                 }
                 return { wikiPages: { ...state.wikiPages, [pageId]: content } };
             }),
 
-            addWikiPage: (pageId, title, type = 'wiki') => set((state) => ({
-                wikiPages: {
-                    ...state.wikiPages,
-                    [pageId]: type === 'corpus'
-                        ? { type: 'corpus', title: title, content: '' }
-                        : `<h1>${title}</h1><p>Start typing...</p>`
-                },
-                activity: [{ text: `Created document: ${title}`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15)
-            })),
+            addWikiPage: (pageId, title, type = 'wiki', parentId = null) => set((state) => {
+                const newPage = type === 'notebook' 
+                    ? { type: 'notebook', title: title, expanded: true }
+                    : type === 'corpus'
+                        ? { type: 'corpus', title: title, content: '', parentId }
+                        : { type: 'wiki', title: title, content: `<h1>${title}</h1><p>Start typing...</p>`, parentId };
+
+                return {
+                    wikiPages: {
+                        ...state.wikiPages,
+                        [pageId]: newPage
+                    },
+                    activity: [{ text: `Created document: ${title}`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15)
+                };
+            }),
 
             deleteWikiPage: (pageId) => set((state) => {
                 const newPages = { ...state.wikiPages };
                 delete newPages[pageId];
+                
+                // Delete children if this is a notebook
+                for (const k in newPages) {
+                    if (newPages[k] && typeof newPages[k] === 'object' && newPages[k].parentId === pageId) {
+                        delete newPages[k];
+                    }
+                }
+                
                 return {
                     wikiPages: newPages,
-                    activity: [{ text: `Deleted wiki page`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15)
+                    activity: [{ text: `Deleted document`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15)
+                };
+            }),
+
+            updateWikiPageMetadata: (pageId, newTitle, newIcon) => set((state) => {
+                const existing = state.wikiPages[pageId];
+                if (!existing) return {};
+                const pageObj = typeof existing === 'string' 
+                    ? { type: 'wiki', title: newTitle, icon: newIcon, content: existing }
+                    : { ...existing, title: newTitle, icon: newIcon };
+                return {
+                    wikiPages: { ...state.wikiPages, [pageId]: pageObj }
+                };
+            }),
+
+            moveWikiPage: (pageId, newParentId) => set((state) => {
+                const existing = state.wikiPages[pageId];
+                if (!existing) return {};
+                
+                const pageObj = typeof existing === 'string' 
+                    ? { type: 'wiki', title: pageId.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), content: existing }
+                    : { ...existing };
+                
+                if (newParentId === 'root') delete pageObj.parentId;
+                else pageObj.parentId = newParentId;
+
+                return {
+                    wikiPages: { ...state.wikiPages, [pageId]: pageObj }
                 };
             }),
 
             reorderWikiPage: (pageId, direction) => set((state) => {
-                const keys = Object.keys(state.wikiPages || {});
-                const idx = keys.indexOf(pageId);
+                const pages = state.wikiPages || {};
+                const targetPage = pages[pageId];
+                if (!targetPage) return {};
+                
+                const parentId = typeof targetPage === 'object' ? targetPage.parentId : null;
+                
+                const keys = Object.keys(pages);
+                const siblings = keys.filter(k => {
+                    const p = pages[k];
+                    const pId = typeof p === 'object' ? p.parentId : null;
+                    return pId === parentId;
+                });
+                
+                const idx = siblings.indexOf(pageId);
                 if (idx < 0) return {};
 
                 const newIdx = direction === 'up' ? idx - 1 : idx + 1;
-                if (newIdx < 0 || newIdx >= keys.length) return {};
+                if (newIdx < 0 || newIdx >= siblings.length) return {};
 
-                const newKeys = [...keys];
-                [newKeys[idx], newKeys[newIdx]] = [newKeys[newIdx], newKeys[idx]];
+                [siblings[idx], siblings[newIdx]] = [siblings[newIdx], siblings[idx]];
+
+                const newKeys = [];
+                let siblingCounter = 0;
+                for (const k of keys) {
+                    if (siblings.includes(k)) {
+                        newKeys.push(siblings[siblingCounter]);
+                        siblingCounter++;
+                    } else {
+                        newKeys.push(k);
+                    }
+                }
 
                 const newPages = {};
                 for (const k of newKeys) {
-                    newPages[k] = state.wikiPages[k];
+                    newPages[k] = pages[k];
                 }
                 return { wikiPages: newPages };
             }),

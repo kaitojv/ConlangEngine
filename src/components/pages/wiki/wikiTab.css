@@ -297,3 +297,63 @@
     border-color: var(--acc);
 }
 
+/* Notebook Hierarchy Styles */
+.wiki-notebook-container {
+    margin-bottom: 4px;
+}
+
+.wiki-notebook-header {
+    padding: 10px 15px;
+    background: var(--s2);
+    border-radius: var(--rad-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: 0.2s;
+    user-select: none;
+    border-left: 3px solid var(--acc);
+}
+.wiki-notebook-header:hover {
+    background: var(--s3);
+}
+
+.wiki-notebook-children {
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.wiki-page-item.nested {
+    margin-left: 12px;
+    border-left: 2px solid var(--bd);
+    border-radius: 0 var(--rad-sm) var(--rad-sm) 0;
+    padding-left: 12px;
+    margin-bottom: 2px;
+}
+
+.wiki-item-controls {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+}
+
+.wiki-move-select {
+    background: transparent;
+    color: var(--tx2);
+    border: 1px solid transparent;
+    border-radius: var(--rad-sm);
+    font-size: 0.75rem;
+    padding: 2px;
+    cursor: pointer;
+    outline: none;
+}
+.wiki-move-select:hover {
+    background: var(--s3);
+    border-color: var(--bd);
+    color: var(--tx);
+}
+.wiki-move-select option {
+    background: var(--bg);
+    color: var(--tx);
+}
+
