@@ -27,7 +27,8 @@ export function useSharing(session) {
         const payload = { 
             dictionary: lexicon, 
             config: configData, 
-            wiki: config.wikiPages || {} 
+            wiki: config.wikiPages || {},
+            last_updated: new Date().toISOString()
         };
         
         try {
