@@ -303,9 +303,18 @@ function FillMode({ onExit }) {
     const { normalizeToBase } = useTransliterator();
 
     const availableWords = useMemo(() => {
-        return commonWords.filter(cw => 
-            !lexicon.some(lw => lw.translation?.toLowerCase() === cw.word.toLowerCase())
-        );
+        return commonWords.filter(cw => {
+            const target = cw.word.toLowerCase();
+            return !lexicon.some(lw => {
+                let trans = (lw.translation || '').toLowerCase().trim();
+                // Exact match or exact match with "to " prefix
+                if (trans === target || trans === `to ${target}`) return true;
+                
+                // Match within comma/slash separated lists (e.g. "sun, day", "to run / to jog")
+                const parts = trans.split(/[,\/;|]+/).map(p => p.trim());
+                return parts.some(p => p === target || p === `to ${target}`);
+            });
+        });
     }, [lexicon]);
 
     const safeIndex = currentIndex >= availableWords.length ? 0 : currentIndex;
