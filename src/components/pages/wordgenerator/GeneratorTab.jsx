@@ -335,7 +335,8 @@ function FillMode({ onExit }) {
             alert("Please enter a translation.");
             return;
         }
-        if (checkDuplicate(conlangWord, translation)) {
+        const { isDuplicateWord, isDuplicateTranslation } = checkDuplicate(conlangWord, translation);
+        if (isDuplicateWord || isDuplicateTranslation) {
             alert("This word or translation already exists in your lexicon!");
             return;
         }

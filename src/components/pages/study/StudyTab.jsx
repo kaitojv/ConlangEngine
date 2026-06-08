@@ -187,7 +187,8 @@ export default function StudyTab() {
 
         if (currentWord.isNewPrompt) {
             // It's a new word prompt! Check if the word they typed already exists.
-            if (checkDuplicate(userAnswer, '')) {
+            const { isDuplicateWord } = checkDuplicate(userAnswer, '');
+            if (isDuplicateWord) {
                 setMascotState('incorrect');
                 setQuizFeedback(`The word "${userAnswer}" already exists in your lexicon! Try a different one.`);
                 return; // Wait for them to try again
