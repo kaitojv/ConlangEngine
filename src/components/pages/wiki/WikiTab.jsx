@@ -7,7 +7,8 @@ import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import Modal from '@/components/UI/Modal/Modal.jsx';
-import { Book, Plus, Trash2, Bold, Italic, Underline, Link, Save, Type, Languages, FileText, Settings, ChevronDown, ChevronUp, Info, Wand2, Quote } from 'lucide-react';
+import { Book, Plus, Trash2, Bold, Italic, Underline, Link, Save, Type, Languages, FileText, Settings, ChevronDown, ChevronUp, Info, Wand2, Quote, Heading1, Heading2, Heading3, Table, Smile, icons } from 'lucide-react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { createGrammarAnalyzer } from '@/utils/grammarAnalyzer.js';
 import './wikiTab.css';
 
@@ -1710,13 +1711,27 @@ function LegacyWikiEditor({ content, onSave }) {
     const editorRef = useRef(null);
     const [linkModalOpen, setLinkModalOpen] = useState(false);
     const [linkUrl, setLinkUrl] = useState('');
+    const [iconPickerOpen, setIconPickerOpen] = useState(false);
+
+    const PREDEFINED_ICONS = [
+        'Star', 'Heart', 'Sun', 'Moon', 'Cloud', 'Flame', 'Zap', 'Droplet', 'Wind', 'TreePine',
+        'Leaf', 'Mountain', 'Gem', 'Crown', 'Sword', 'Shield', 'Skull', 'Ghost', 'Castle', 'Tent',
+        'Map', 'Compass', 'Anchor', 'Flag', 'BookOpen', 'Scroll', 'Feather', 'PenTool', 'Key', 'Lock',
+        'Music', 'Eye', 'Hand', 'Footprints', 'Smile', 'Frown', 'Meh', 'Angry', 'Coffee', 'Utensils'
+    ];
 
     useEffect(() => {
         if (editorRef.current && content !== editorRef.current.innerHTML) {
             // SEC-1: Sanitize HTML to prevent XSS via shared/cloud projects
             editorRef.current.innerHTML = DOMPurify.sanitize(content || '', {
-                ALLOWED_TAGS: ['b', 'i', 'u', 'a', 'span', 'p', 'br', 'div', 'h1', 'h2', 'h3', 'h4', 'strong', 'em', 'ul', 'ol', 'li'],
-                ALLOWED_ATTR: ['href', 'class', 'style', 'target']
+                ALLOWED_TAGS: [
+                    'b', 'i', 'u', 'a', 'span', 'p', 'br', 'div', 'h1', 'h2', 'h3', 'h4', 'strong', 'em', 'ul', 'ol', 'li',
+                    'table', 'tbody', 'thead', 'tr', 'td', 'th', 'svg', 'path', 'circle', 'rect', 'line', 'polyline', 'polygon'
+                ],
+                ALLOWED_ATTR: [
+                    'href', 'class', 'style', 'target',
+                    'xmlns', 'viewBox', 'width', 'height', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin'
+                ]
             });
         }
     }, [content]);
@@ -1743,14 +1758,46 @@ function LegacyWikiEditor({ content, onSave }) {
         }
     };
 
+    const insertTable = () => {
+        const tableHtml = `
+            <table class="wiki-table" style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                <thead>
+                    <tr><th style="border: 1px solid var(--bd); padding: 8px; background: var(--s2);">Header 1</th><th style="border: 1px solid var(--bd); padding: 8px; background: var(--s2);">Header 2</th><th style="border: 1px solid var(--bd); padding: 8px; background: var(--s2);">Header 3</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td style="border: 1px solid var(--bd); padding: 8px;">Data</td><td style="border: 1px solid var(--bd); padding: 8px;">Data</td><td style="border: 1px solid var(--bd); padding: 8px;">Data</td></tr>
+                    <tr><td style="border: 1px solid var(--bd); padding: 8px;">Data</td><td style="border: 1px solid var(--bd); padding: 8px;">Data</td><td style="border: 1px solid var(--bd); padding: 8px;">Data</td></tr>
+                </tbody>
+            </table><p><br></p>
+        `;
+        formatText('insertHTML', tableHtml);
+    };
+
+    const insertIcon = (iconName) => {
+        const IconComponent = icons[iconName];
+        if (IconComponent) {
+            const svgString = renderToStaticMarkup(<IconComponent size={20} color="currentColor" style={{ verticalAlign: 'middle', margin: '0 4px', display: 'inline-block' }} />);
+            // Ensure proper wrapping so it doesn't break text flow
+            const html = `<span class="wiki-inline-icon" contenteditable="false">${svgString}</span>&#8203;`;
+            formatText('insertHTML', html);
+        }
+        setIconPickerOpen(false);
+    };
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div className="wiki-toolbar">
+                <button className="wiki-tool-btn" title="Heading 1" onClick={() => formatText('formatBlock', 'H1')}><Heading1 size={16} /></button>
+                <button className="wiki-tool-btn" title="Heading 2" onClick={() => formatText('formatBlock', 'H2')}><Heading2 size={16} /></button>
+                <button className="wiki-tool-btn" title="Heading 3" onClick={() => formatText('formatBlock', 'H3')}><Heading3 size={16} /></button>
+                <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px' }}></div>
                 <button className="wiki-tool-btn" title="Bold" onClick={() => formatText('bold')}><Bold size={16} /></button>
                 <button className="wiki-tool-btn" title="Italic" onClick={() => formatText('italic')}><Italic size={16} /></button>
                 <button className="wiki-tool-btn" title="Underline" onClick={() => formatText('underline')}><Underline size={16} /></button>
                 <button className="wiki-tool-btn" title="Quote / Callout" onClick={() => formatText('formatBlock', 'blockquote')}><Quote size={16} /></button>
                 <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px' }}></div>
+                <button className="wiki-tool-btn" title="Insert Table" onClick={insertTable}><Table size={16} /></button>
+                <button className="wiki-tool-btn" title="Insert Icon" onClick={() => setIconPickerOpen(true)}><Smile size={16} /></button>
                 <button className="wiki-tool-btn" title="Insert Link" onClick={() => setLinkModalOpen(true)}><Link size={16} /></button>
                 <button className="wiki-tool-btn" title="Format as Conlang Font" onClick={applyConlangFont}><Type size={16} /> <span style={{fontSize: '0.7rem', marginLeft: '4px', fontWeight: 'bold'}}>CONLANG</span></button>
                 <div style={{ flex: 1 }}></div>
@@ -1767,6 +1814,25 @@ function LegacyWikiEditor({ content, onSave }) {
             <Modal isOpen={linkModalOpen} onClose={() => setLinkModalOpen(false)} title="Insert Link">
                 <Input label="Target URL" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." autoFocus />
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}><Button variant="imp" onClick={() => { if(linkUrl) formatText('createLink', linkUrl); setLinkUrl(''); setLinkModalOpen(false); }}>Insert</Button></div>
+            </Modal>
+
+            <Modal isOpen={iconPickerOpen} onClose={() => setIconPickerOpen(false)} title="Insert Icon">
+                <div className="icon-picker-grid">
+                    {PREDEFINED_ICONS.map(iconName => {
+                        const Icon = icons[iconName];
+                        if (!Icon) return null;
+                        return (
+                            <button 
+                                key={iconName} 
+                                className="icon-picker-btn" 
+                                title={iconName}
+                                onClick={() => insertIcon(iconName)}
+                            >
+                                <Icon size={24} />
+                            </button>
+                        );
+                    })}
+                </div>
             </Modal>
         </div>
     );

@@ -249,3 +249,51 @@
 .wiki-editor blockquote blockquote:hover {
     background: var(--s3);
 }
+
+/* Tables */
+.wiki-editor table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 15px;
+}
+.wiki-editor th, .wiki-editor td {
+    border: 1px solid var(--bd);
+    padding: 8px;
+}
+.wiki-editor th {
+    background: var(--s2);
+    font-weight: bold;
+}
+
+/* Icons */
+.wiki-inline-icon {
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0 4px;
+}
+.icon-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    gap: 10px;
+    padding: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+.icon-picker-btn {
+    background: var(--s1);
+    border: 1px solid var(--bd);
+    color: var(--tx);
+    border-radius: var(--rad-sm);
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.icon-picker-btn:hover {
+    background: var(--acc);
+    color: var(--bg);
+    border-color: var(--acc);
+}
+
