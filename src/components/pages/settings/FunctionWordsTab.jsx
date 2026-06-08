@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Card from '../../UI/Card/Card.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
@@ -145,6 +145,7 @@ export default function FunctionWordsTab() {
     const setLexicon = useLexiconStore((state) => state.setLexicon);
 
     const [rules, setRules] = useState([]);
+    const hasAutoChecked = useRef(false);
     
     // Matrix dimensions - Personal Pronouns
     const [dimPersons, setDimPersons] = useState({ '1st': true, '2nd': true, '3rd': true, '4th': false });
@@ -268,6 +269,68 @@ export default function FunctionWordsTab() {
             });
 
             setMatrixData(initialData);
+
+            // Auto-enable checkboxes so saved pronouns don't appear "hidden" on reload
+            // But only do this ONCE per session, so we don't overwrite user's manual un-checks when they click Save
+            if (!hasAutoChecked.current && Object.keys(initialData).length > 0) {
+                hasAutoChecked.current = true;
+                
+                setDimPersons(prev => {
+                    const next = { ...prev };
+                    Object.keys(initialData).forEach(key => {
+                        const [p] = key.split('-');
+                        if (next[p] !== undefined) next[p] = true;
+                    });
+                    return next;
+                });
+                
+                setDimNumbers(prev => {
+                    const next = { ...prev };
+                    Object.keys(initialData).forEach(key => {
+                        const parts = key.split('-');
+                        const num = parts[1];
+                        if (next[num] !== undefined) next[num] = true;
+                    });
+                    return next;
+                });
+
+                setDimGenders(prev => {
+                    const next = { ...prev };
+                    Object.keys(initialData).forEach(key => {
+                        const parts = key.split('-');
+                        if (parts[0] !== 'Other') {
+                            const gender = parts[2];
+                            if (next[gender] !== undefined) next[gender] = true;
+                        }
+                    });
+                    return next;
+                });
+
+                setDimOtherLocation(prev => {
+                    const next = { ...prev };
+                    Object.keys(initialData).forEach(key => {
+                        const parts = key.split('-');
+                        if (parts[0] === 'Other') {
+                            const loc = parts[2];
+                            if (next[loc] !== undefined) next[loc] = true;
+                        }
+                    });
+                    return next;
+                });
+
+                setDimOtherAnimacy(prev => {
+                    const next = { ...prev };
+                    Object.keys(initialData).forEach(key => {
+                        const parts = key.split('-');
+                        if (parts[0] === 'Other') {
+                            const anim = parts[3];
+                            if (next[anim] !== undefined) next[anim] = true;
+                        }
+                    });
+                    return next;
+                });
+            }
+
     }, [rules, lexicon]);
 
     const updateStore = (updatedRules) => {
@@ -358,7 +421,7 @@ export default function FunctionWordsTab() {
                 if (existingRuleIdx !== -1) {
                     newRules[existingRuleIdx] = { 
                         ...newRules[existingRuleIdx], 
-                        freeForm: subVal || newRules[existingRuleIdx].freeForm, 
+                        freeForm: subVal, 
                         affix: affixVal 
                     };
                 } else {

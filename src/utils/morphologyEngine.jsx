@@ -174,7 +174,39 @@ export const applyAffixToBase = (base, affix) => {
  * @param {Array<Object>} personRulesArray - An array of person rule objects from the config store.
  * @returns {Array<Object>} The processed array with 'name' properties.
  */
-export const getPersonRules = (personRulesArray) => {
+export const getPersonRules = (personRulesStr) => {
+    let personRulesArray = personRulesStr;
+
+    if (typeof personRulesStr === 'string' && personRulesStr.trim()) {
+        personRulesArray = personRulesStr.split(/[\n,]/).map(line => {
+            if (!line.includes(':')) return null;
+            const parts = line.split(':');
+            const pg = parts[0].trim();
+            let person = null, number = 'S', gender = null;
+            
+            if (pg.includes('1')) person = '1st';
+            else if (pg.includes('2')) person = '2nd';
+            else if (pg.includes('3')) person = '3rd';
+            else if (pg.includes('4')) person = '4th';
+            
+            const upperPg = pg.toUpperCase();
+            if (upperPg.includes('S')) number = 'S';
+            if (upperPg.includes('P')) number = 'P';
+            else if (upperPg.includes('C')) number = 'C';
+            else if (upperPg.includes('D')) number = 'D';
+            else if (upperPg.includes('B')) number = 'B';
+            
+            if (/masc/i.test(pg)) gender = 'Masc';
+            else if (/fem/i.test(pg)) gender = 'Fem';
+            else if (/neut/i.test(pg)) gender = 'Neut';
+            else if (/anim/i.test(pg)) gender = 'Anim';
+            else if (/inan/i.test(pg)) gender = 'Inan';
+            
+            const fap = parts[1].trim().split('/');
+            return { id: `pr-${pg}`, person, number, gender, freeForm: fap[0]?.trim() || '', affix: fap[1]?.trim() || '', appliesTo: 'all' };
+        }).filter(Boolean);
+    }
+
     if (!Array.isArray(personRulesArray)) {
         return [];
     }
@@ -188,10 +220,93 @@ export const getPersonRules = (personRulesArray) => {
 
         return {
             ...rule,
+            appliesTo: rule.appliesTo || 'all',
             name: name || (rule.id ? `Rule-${rule.id.substring(0, 4)}` : 'UnnamedRule')
         };
     });
 };
+
+export const findAllParsings = (surface, lexicon, config, normalizeToBase, depth = 0) => {
+    if (depth > 3) return [];
+    let parsings = [];
+    const safeSurface = normalizeToBase(surface.toLowerCase());
+    const lexiconArray = Array.isArray(lexicon) ? lexicon : (lexicon?.lexicon || []);
+
+    // Exact match in dictionary
+    lexiconArray.filter(e => normalizeToBase(e.word.replace(/\*/g, '').toLowerCase()) === safeSurface)
+           .forEach(m => parsings.push({ root: m, rules: [] }));
+
+    const personRules = getPersonRules(config.personRules);
+    personRules.forEach(rule => { 
+        const cleanAffix = rule.affix ? rule.affix.replace(/^-|-$/g, '').toLowerCase() : null;
+        const normFree = rule.freeForm ? normalizeToBase(rule.freeForm.toLowerCase()) : null;
+        const normAffix = cleanAffix ? normalizeToBase(cleanAffix) : null;
+
+        const isFreeMatch = normFree && normFree === safeSurface;
+        
+        // Flexible match for affixes: allow matching even if apostrophes are "shared" or slightly different
+        const isAffixMatch = normAffix && (
+            normAffix === safeSurface || 
+            normAffix.replace(/^['’‘]/, '') === safeSurface ||
+            normAffix === safeSurface.replace(/^['’‘]/, '')
+        );
+
+        if (isFreeMatch || isAffixMatch) {
+            parsings.push({
+                root: { 
+                    word: rule.freeForm || cleanAffix, 
+                    wordClass: 'pronoun', 
+                    translation: `Person (${rule.name})` 
+                },
+                rules: []
+            });
+        }
+    });
+
+    // Infinitive verbs
+    if (config.verbMarker) {
+        const markers = config.verbMarker.split(',').map(m => m.trim().replace(/^-/, ''));
+        markers.forEach(marker => {
+            lexiconArray.filter(e => {
+                const isMatch = normalizeToBase(e.word.replace(/\*/g, '').toLowerCase()) === safeSurface + normalizeToBase(marker);
+                if (!isMatch) return false;
+                const classes = e.wordClass ? e.wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
+                return classes.includes('verb');
+            }).forEach(m => parsings.push({ root: m, rules: [] }));
+        });
+    }
+
+    // Recursive affix stripping
+    let allRules = [...(config.grammarRules || []), ...personRules.filter(p => p.affix).map(p => ({ ...p, appliesTo: p.appliesTo || 'all' }))];
+    allRules.forEach(rule => {
+        if (!rule.affix) return;
+        let stripped = stripAffix(safeSurface, rule.affix, normalizeToBase);
+        if (stripped) {
+            findAllParsings(stripped, lexicon, config, normalizeToBase, depth + 1).forEach(sp => {
+                let applies = rule.appliesTo ? rule.appliesTo.split(',').map(c => c.trim().toLowerCase()) : ['all'];
+                const rootClass = sp.root.wordClass?.toLowerCase();
+                const canApplyToPerson = rule.applyToPersons && rootClass === 'pronoun';
+
+                if (applies.includes('all') || rootClass === 'all' || applies.includes(rootClass) || canApplyToPerson) {
+                    parsings.push({ root: sp.root, rules: [rule, ...sp.rules] });
+                }
+            });
+        }
+    });
+    return parsings;
+};
+
+export const getUniqueParsings = (surface, lexicon, config, normalizeToBase) => {
+    let parsings = findAllParsings(surface, lexicon, config, normalizeToBase);
+    let unique = [];
+    let sigs = new Set();
+    parsings.forEach(p => {
+        let sig = p.root.word + '|' + p.root.translation + '|' + p.rules.map(r => r.name).join('|');
+        if (!sigs.has(sig)) { sigs.add(sig); unique.push(p); }
+    });
+    return unique;
+};
+
 
 /**
  * Attempts to segment a single mashed-together token into multiple valid lexicon/rule entries.

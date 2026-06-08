@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import DOMPurify from 'dompurify';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
+import { getUniqueParsings } from '@/utils/morphologyEngine.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
@@ -804,7 +805,8 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
     const textareaRef = useRef(null);
 
     const lexicon = useLexiconStore((state) => state.lexicon);
-    const { transliterate } = useTransliterator();
+    const { transliterate, normalizeToBase } = useTransliterator();
+    const config = useConfigStore();
     const personRulesStr   = useConfigStore(state => state.personRules) || "";
     const grammarRules     = useConfigStore(state => state.grammarRules) || [];
     const syntaxOrder      = useConfigStore(state => state.syntaxOrder) || 'SVO';
@@ -820,7 +822,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         if (Array.isArray(personRulesStr)) return personRulesStr;
         if (typeof personRulesStr !== 'string' || !personRulesStr.trim()) return [];
         
-        return personRulesStr.split('\n').map(line => {
+        return personRulesStr.split(/[\n,]/).map(line => {
             if (!line.includes(':')) return null;
             const parts = line.split(':');
             const pg = parts[0].trim();
@@ -871,12 +873,11 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
     useEffect(() => { setText(content || ''); }, [content]);
 
     const isVertical = writingDirection?.startsWith('vertical');
-
-
-    // Build personMap for the Interlinear Reader (affix → label)
-    const personMap = useMemo(() => {
+    // Build affixMap for the Interlinear Reader (affix → label)
+    const affixMap = useMemo(() => {
         const map = {};
         const processAffix = (aff, data) => {
+            if (!aff) return;
             const cleanAff = aff.trim().replace(/^['"-]/, '').replace(/['"-]$/, '').split('@')[0];
             if (cleanAff) { map[cleanAff] = data; map["'" + cleanAff] = data; map["-" + cleanAff] = data; }
         };
@@ -888,25 +889,71 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                 processAffix(rule.affix, { label: `${p}${n}${g}`, translation: rule.freeForm ? `(${rule.freeForm})` : '' });
             }
         });
+        grammarRules.forEach(rule => {
+            if (rule.affix) {
+                processAffix(rule.affix, { label: rule.name || 'affix', translation: '' });
+            }
+        });
         return map;
-    }, [personRulesArray]);
+    }, [personRulesArray, grammarRules]);
+
+    // Combine lexicon with pronouns for the reader to find
+    const extendedLexicon = useMemo(() => {
+        const pronouns = personRulesArray
+            .filter(r => r.freeForm)
+            .map(r => ({
+                id: `pronoun-${r.id}`,
+                word: r.freeForm,
+                wordClass: 'pronoun',
+                translation: `${r.person} ${r.number}${r.gender ? ' ' + r.gender : ''}`,
+                definition: r.translation || ''
+            }));
+        return [...lexicon, ...pronouns];
+    }, [lexicon, personRulesArray]);
 
     // Helper to find entry even if inflected
     const findEntry = (token) => {
-        const clean = token.replace(/[.,!?()[\]{}"`:;]/g, '').toLowerCase();
+        const clean = token.replace(/[.,!?()[\]{}"`:;]/g, '').replace(/[‘’]/g, "'");
+        if (!clean) return { entry: null, isExact: false };
         
-        let entry = lexicon.find(e => e.word.replace(/\*/g,'').toLowerCase() === clean);
-        if (entry) return { entry, isExact: true };
+        // Exact match in extendedLexicon
+        const cleanLower = clean.toLowerCase();
+        let exactEntry = extendedLexicon.find(e => e.word.replace(/\*/g,'').replace(/[‘’]/g, "'").toLowerCase() === cleanLower);
+        if (exactEntry) return { entry: exactEntry, isExact: true };
 
-        const sortedLexicon = [...lexicon].sort((a, b) => b.word.length - a.word.length);
+        // Robust parsing using morphology engine
+        const parsings = getUniqueParsings(clean, lexicon, config, normalizeToBase);
+        
+        if (cleanLower.includes('prikar') || cleanLower.includes('mas')) {
+            console.log("findEntry Debug for:", cleanLower);
+            console.log("Parsings:", parsings);
+        }
+
+        if (parsings.length > 0) {
+            const p = parsings[0];
+            const isExact = p.rules.length === 0;
+            const label = p.rules.map(r => r.name || r.affix || '').filter(Boolean).join(', ');
+            const trans = p.rules.map(r => r.translation || '').filter(Boolean).join(' ');
+            return { 
+                entry: p.root, 
+                isExact, 
+                personData: { label, translation: trans ? `(${trans})` : '' } 
+            };
+        }
+
+        // Fallback to WikiTab's naive affixMap lookup for cases where the grammar rule is missing applyTo
+        const sortedLexicon = [...extendedLexicon].sort((a, b) => b.word.length - a.word.length);
         for (const e of sortedLexicon) {
-            const root = e.word.replace(/\*/g,'').toLowerCase();
-            if (root.length >= 3 && clean.startsWith(root)) {
-                const suffix = clean.slice(root.length);
-                const personData = personMap[suffix] || personMap[suffix.replace(/^['"-]/, '')] || { label: suffix, translation: '' };
-                return { entry: e, isExact: false, personData };
+            const root = e.word.replace(/\*/g,'').replace(/[‘’]/g, "'").toLowerCase();
+            if (root.length >= 2 && cleanLower.includes(root) && cleanLower !== root) {
+                const affixPart = cleanLower.replace(root, '');
+                const affixData = affixMap[affixPart] || affixMap[affixPart.replace(/^['"-]|['"-]$/g, '')];
+                if (affixData) {
+                    return { entry: e, isExact: false, personData: affixData };
+                }
             }
         }
+        
         return { entry: null, isExact: false };
     };
 
@@ -1336,10 +1383,18 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                 gap: '15px',
                 padding: '20px',
                 lineHeight: '1.5',
-                minHeight: '400px'
+                minHeight: '400px',
+                alignItems: 'flex-start',
+                alignContent: 'flex-start'
             }}>
                 {tokens.map((token, i) => {
-                    if (!token.trim()) return <span key={i} style={{ whiteSpace: 'pre' }}>{token}</span>;
+                    if (!token.trim()) {
+                        if (token.includes('\n')) {
+                            const newlines = (token.match(/\n/g) || []).length;
+                            return <div key={i} style={{ flexBasis: '100%', height: `${(newlines - 1) * 20}px` }} />;
+                        }
+                        return null; // Skip regular spaces since we use flex gap
+                    }
                     
                     const { entry, isExact, personData } = findEntry(token);
                     const displayWord = transliterate(token, lexicon);
@@ -1348,7 +1403,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                         <div key={i} style={{ 
                             display: 'inline-flex', 
                             flexDirection: isVertical ? 'row' : 'column',
-                            alignItems: isVertical ? 'flex-start' : 'center',
+                            alignItems: 'flex-start',
                             gap: '2px',
                             textOrientation: 'mixed',
                             opacity: entry ? 1 : 0.6
@@ -2023,7 +2078,7 @@ export default function WikiTab() {
 
     const currentPage = currentPageId ? wikiPages[currentPageId] : null;
     const isCorpus = currentPage && typeof currentPage === 'object' && currentPage.type === 'corpus';
-    const content = isCorpus ? currentPage.content : currentPage;
+    const content = (currentPage && typeof currentPage === 'object') ? currentPage.content : currentPage;
 
     return (
         <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-start' }}>

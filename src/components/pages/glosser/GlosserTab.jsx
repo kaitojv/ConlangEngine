@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
-import { stripAffix, getPersonRules, segmentToken } from '@/utils/morphologyEngine.jsx';
+import { stripAffix, getPersonRules, segmentToken, getUniqueParsings } from '@/utils/morphologyEngine.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import Card from '@/components/UI/Card/Card.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
@@ -27,85 +27,7 @@ export default function GlosserTab() {
     const { normalizeToBase, transliterate } = useTransliterator();
 
     // --- 1. RECURSIVE PARSING ENGINE ---
-    const findAllParsings = (surface, depth = 0) => {
-        if (depth > 3) return [];
-        let parsings = [];
-        const safeSurface = normalizeToBase(surface.toLowerCase());
-
-        // Exact match in dictionary
-        lexicon.filter(e => normalizeToBase(e.word.toLowerCase()) === safeSurface)
-               .forEach(m => parsings.push({ root: m, rules: [] }));
-
-        const personRules = getPersonRules(config.personRules);
-        personRules.forEach(rule => { 
-            const cleanAffix = rule.affix ? rule.affix.replace(/^-|-$/g, '').toLowerCase() : null;
-            const normFree = rule.freeForm ? normalizeToBase(rule.freeForm.toLowerCase()) : null;
-            const normAffix = cleanAffix ? normalizeToBase(cleanAffix) : null;
-
-            const isFreeMatch = normFree && normFree === safeSurface;
-            
-            // Flexible match for affixes: allow matching even if apostrophes are "shared" or slightly different
-            const isAffixMatch = normAffix && (
-                normAffix === safeSurface || 
-                normAffix.replace(/^['’‘]/, '') === safeSurface ||
-                normAffix === safeSurface.replace(/^['’‘]/, '')
-            );
-
-            if (isFreeMatch || isAffixMatch) {
-                parsings.push({
-                    root: { 
-                        word: rule.freeForm || cleanAffix, 
-                        wordClass: 'pronoun', 
-                        translation: `Person (${rule.name})` 
-                    },
-                    rules: []
-                });
-            }
-        });
-
-        // Infinitive verbs
-        if (config.verbMarker) {
-            const markers = config.verbMarker.split(',').map(m => m.trim().replace(/^-/, ''));
-            markers.forEach(marker => {
-                lexicon.filter(e => {
-                    const isMatch = normalizeToBase(e.word.toLowerCase()) === safeSurface + normalizeToBase(marker);
-                    if (!isMatch) return false;
-                    const classes = e.wordClass ? e.wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
-                    return classes.includes('verb');
-                }).forEach(m => parsings.push({ root: m, rules: [] }));
-            });
-        }
-
-        // Recursive affix stripping
-        let allRules = [...(config.grammarRules || []), ...personRules.filter(p => p.affix).map(p => ({ ...p, appliesTo: p.appliesTo || 'all' }))];
-        allRules.forEach(rule => {
-            if (!rule.affix) return;
-            let stripped = stripAffix(safeSurface, rule.affix, normalizeToBase);
-            if (stripped) {
-                findAllParsings(stripped, depth + 1).forEach(sp => {
-                    let applies = rule.appliesTo ? rule.appliesTo.split(',').map(c => c.trim().toLowerCase()) : ['all'];
-                    const rootClass = sp.root.wordClass?.toLowerCase();
-                    const canApplyToPerson = rule.applyToPersons && rootClass === 'pronoun';
-
-                    if (applies.includes('all') || rootClass === 'all' || applies.includes(rootClass) || canApplyToPerson) {
-                        parsings.push({ root: sp.root, rules: [rule, ...sp.rules] });
-                    }
-                });
-            }
-        });
-        return parsings;
-    };
-
-    const getUniqueParsings = (surface) => {
-        let parsings = findAllParsings(surface);
-        let unique = [];
-        let sigs = new Set();
-        parsings.forEach(p => {
-            let sig = p.root.word + '|' + p.root.translation + '|' + p.rules.map(r => r.name).join('|');
-            if (!sigs.has(sig)) { sigs.add(sig); unique.push(p); }
-        });
-        return unique;
-    };
+    // (Moved to morphologyEngine.jsx)
 
     // --- 2. EXECUTE PROCESSING ---
     const handleProcess = () => {
@@ -128,11 +50,11 @@ export default function GlosserTab() {
             }
 
             // Perform Lexicon-Aware Segmentation
-            const cleanToken = token.replace(/[.,!?]/g, '');
-            const segments = segmentToken(cleanToken, lexicon, config, normalizeToBase, getUniqueParsings);
+            const cleanToken = token.replace(/[.,!?]/g, '').replace(/[‘’]/g, "'");
+            const segments = segmentToken(cleanToken, lexicon, config, normalizeToBase, (t) => getUniqueParsings(t, lexicon, config, normalizeToBase));
 
             segments.forEach(seg => {
-                const parsings = getUniqueParsings(seg);
+                const parsings = getUniqueParsings(seg, lexicon, config, normalizeToBase);
                 processed.push({ isPunctuation: false, text: seg, parsings });
             });
         });
