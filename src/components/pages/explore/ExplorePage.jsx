@@ -203,8 +203,8 @@ export default function ExplorePage() {
     const sortedConlangs = React.useMemo(() => {
         return [...conlangs].sort((a, b) => {
             if (sortBy === 'updated') {
-                const dateA = new Date(a.project_data?.last_updated || a.created_at).getTime();
-                const dateB = new Date(b.project_data?.last_updated || b.created_at).getTime();
+                const dateA = new Date(a.project_data?.last_updated || a.updated_at || a.created_at).getTime();
+                const dateB = new Date(b.project_data?.last_updated || b.updated_at || b.created_at).getTime();
                 return dateB - dateA;
             }
             if (sortBy === 'likes') {
@@ -212,8 +212,8 @@ export default function ExplorePage() {
                 const likesB = likesData[b.project_id] || 0;
                 if (likesB !== likesA) return likesB - likesA;
                 // fallback to updated
-                const dateA = new Date(a.project_data?.last_updated || a.created_at).getTime();
-                const dateB = new Date(b.project_data?.last_updated || b.created_at).getTime();
+                const dateA = new Date(a.project_data?.last_updated || a.updated_at || a.created_at).getTime();
+                const dateB = new Date(b.project_data?.last_updated || b.updated_at || b.created_at).getTime();
                 return dateB - dateA;
             }
             if (sortBy === 'name') {
@@ -339,7 +339,7 @@ export default function ExplorePage() {
                                             <span>{likesData[lang.project_id] || 0}</span>
                                         </button>
                                         <div className="explore-stat" style={{ fontSize: '0.7rem', fontWeight: 'normal', opacity: 0.7 }}>
-                                            Last updated: {new Date(lang.project_data?.last_updated || lang.created_at).toLocaleDateString()}
+                                            Last updated: {new Date(lang.project_data?.last_updated || lang.updated_at || lang.created_at).toLocaleDateString()}
                                         </div>
                                     </div>
                                 </div>
