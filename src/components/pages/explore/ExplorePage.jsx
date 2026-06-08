@@ -37,7 +37,7 @@ export default function ExplorePage() {
                 // We use .contains on the JSONB column to match { config: { isPublic: true } }
                 const { data, error: fetchError } = await supabase
                     .from('conlang_snapshots')
-                    .select('project_id, project_data, created_at')
+                    .select('project_id, project_data, created_at, updated_at')
                     .contains('project_data', { config: { isPublic: true } })
                     .order('created_at', { ascending: false })
                     .limit(50);

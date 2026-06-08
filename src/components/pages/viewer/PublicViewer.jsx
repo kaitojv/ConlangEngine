@@ -381,23 +381,75 @@ export default function PublicViewer() {
                             <FileText size={20} className="pv-section-icon" />
                             <h2 className="pv-section-title">Grammar Wiki</h2>
                         </div>
-                        <div className="pv-section-body" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                            {Object.entries(wikiPages).map(([id, pageData]) => {
-                                const isObj = typeof pageData === 'object' && pageData !== null;
-                                const title = isObj ? pageData.title : (id.charAt(0).toUpperCase() + id.slice(1));
-                                const content = isObj ? pageData.content : pageData;
-                                if (!content) return null;
-                                
+                        <div className="pv-section-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            {(() => {
+                                const notebooks = Object.keys(wikiPages).filter(k => {
+                                    const p = wikiPages[k];
+                                    return p && typeof p === 'object' && p.type === 'notebook';
+                                });
+
+                                const rootPages = Object.keys(wikiPages).filter(k => {
+                                    const p = wikiPages[k];
+                                    return (!p || typeof p !== 'object' || p.type !== 'notebook') && (!p || typeof p !== 'object' || !p.parentId || p.parentId === 'root');
+                                });
+
+                                const getChildren = (parentId) => {
+                                    return Object.keys(wikiPages).filter(k => {
+                                        const p = wikiPages[k];
+                                        return p && typeof p === 'object' && p.parentId === parentId;
+                                    });
+                                };
+
                                 return (
-                                    <div key={id} className="pv-wiki-page">
-                                        {isObj && title && <h3 style={{ color: 'var(--acc)', marginTop: 0, marginBottom: '1rem' }}>{title}</h3>}
-                                        <div 
-                                            className="pv-wiki-content"
-                                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }} 
-                                        />
-                                    </div>
+                                    <>
+                                        {notebooks.map(nbId => {
+                                            const nb = wikiPages[nbId];
+                                            const children = getChildren(nbId);
+                                            if (children.length === 0) return null;
+                                            return (
+                                                <div key={nbId} className="pv-wiki-notebook" style={{ marginBottom: '1rem' }}>
+                                                    <h3 style={{ color: 'var(--tx)', borderBottom: '1px solid var(--bd)', paddingBottom: '0.5rem', marginBottom: '1.5rem', marginTop: '1rem' }}>
+                                                        {nb.title}
+                                                    </h3>
+                                                    {children.map(childId => {
+                                                        const pageData = wikiPages[childId];
+                                                        const title = pageData.title;
+                                                        const content = pageData.content;
+                                                        if (!content) return null;
+                                                        return (
+                                                            <div key={childId} className="pv-wiki-page" style={{ paddingLeft: '1rem', borderLeft: '3px solid var(--s2)', marginBottom: '2rem' }}>
+                                                                <h4 style={{ color: 'var(--acc)', marginTop: 0, marginBottom: '1rem', fontSize: '1.1rem' }}>{title}</h4>
+                                                                <div 
+                                                                    className="pv-wiki-content"
+                                                                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }} 
+                                                                />
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            );
+                                        })}
+
+                                        {rootPages.map(pageId => {
+                                            const pageData = wikiPages[pageId];
+                                            const isObj = typeof pageData === 'object' && pageData !== null;
+                                            const title = isObj ? pageData.title : (pageId.charAt(0).toUpperCase() + pageId.slice(1));
+                                            const content = isObj ? pageData.content : pageData;
+                                            if (!content) return null;
+                                            
+                                            return (
+                                                <div key={pageId} className="pv-wiki-page" style={{ marginBottom: '2rem' }}>
+                                                    {isObj && title && <h3 style={{ color: 'var(--acc)', marginTop: 0, marginBottom: '1rem' }}>{title}</h3>}
+                                                    <div 
+                                                        className="pv-wiki-content"
+                                                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }} 
+                                                    />
+                                                </div>
+                                            );
+                                        })}
+                                    </>
                                 );
-                            })}
+                            })()}
                         </div>
                     </section>
                 )}
