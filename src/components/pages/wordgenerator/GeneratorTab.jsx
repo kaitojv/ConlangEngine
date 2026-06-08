@@ -298,13 +298,23 @@ function FillMode({ onExit }) {
     
     const addWord = useLexiconStore((state) => state.addWord);
     const checkDuplicate = useLexiconStore((state) => state.checkDuplicate);
+    const lexicon = useLexiconStore((state) => state.lexicon) || [];
     const configData = useConfigStore();
     const { normalizeToBase } = useTransliterator();
 
-    const currentChallenge = commonWords[currentIndex];
+    const availableWords = useMemo(() => {
+        return commonWords.filter(cw => 
+            !lexicon.some(lw => lw.translation?.toLowerCase() === cw.word.toLowerCase())
+        );
+    }, [lexicon]);
+
+    const safeIndex = currentIndex >= availableWords.length ? 0 : currentIndex;
+    const currentChallenge = availableWords[safeIndex];
 
     const handleSkip = () => {
-        setCurrentIndex(prev => (prev + 1) % commonWords.length);
+        if (availableWords.length > 0) {
+            setCurrentIndex(prev => (prev + 1) % availableWords.length);
+        }
         setConlangWord('');
     };
 
@@ -349,8 +359,29 @@ function FillMode({ onExit }) {
             translation: translation,
         });
 
-        handleSkip();
+        setConlangWord('');
+        if (currentIndex >= availableWords.length - 1) {
+            setCurrentIndex(0);
+        }
     };
+
+    if (availableWords.length === 0) {
+        return (
+            <div className="fill-mode-container">
+                <Card>
+                    <div className="fill-mode-header">
+                        <h2 className='flex sg-title'><BookCopy /> Fill Mode</h2>
+                        <Button variant="cancel" onClick={onExit}>Exit Fill Mode</Button>
+                    </div>
+                    <div className="explore-empty">
+                        <Check size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
+                        <h3>All done!</h3>
+                        <p>You have translated all available common words into your lexicon.</p>
+                    </div>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="fill-mode-container">
