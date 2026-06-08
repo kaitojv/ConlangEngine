@@ -18,6 +18,7 @@ export default function ExplorePage() {
     const [likesData, setLikesData] = useState({}); // { projectId: count }
     const [userLikes, setUserLikes] = useState(new Set()); // Set of projectIds liked by user
     const [sessionUser, setSessionUser] = useState(null);
+    const [sortBy, setSortBy] = useState('updated'); // 'updated', 'likes', 'name', 'words'
 
     const isPublic = useConfigStore((state) => state.isPublic);
     const updateConfig = useConfigStore((state) => state.updateConfig);
@@ -198,6 +199,36 @@ export default function ExplorePage() {
         }
     };
 
+    const sortedConlangs = React.useMemo(() => {
+        return [...conlangs].sort((a, b) => {
+            if (sortBy === 'updated') {
+                const dateA = new Date(a.updated_at || a.created_at).getTime();
+                const dateB = new Date(b.updated_at || b.created_at).getTime();
+                return dateB - dateA;
+            }
+            if (sortBy === 'likes') {
+                const likesA = likesData[a.project_id] || 0;
+                const likesB = likesData[b.project_id] || 0;
+                if (likesB !== likesA) return likesB - likesA;
+                // fallback to updated
+                const dateA = new Date(a.updated_at || a.created_at).getTime();
+                const dateB = new Date(b.updated_at || b.created_at).getTime();
+                return dateB - dateA;
+            }
+            if (sortBy === 'name') {
+                const nameA = a.project_data?.config?.conlangName || 'Unnamed Conlang';
+                const nameB = b.project_data?.config?.conlangName || 'Unnamed Conlang';
+                return nameA.localeCompare(nameB);
+            }
+            if (sortBy === 'words') {
+                const wordsA = a.project_data?.dictionary?.length || 0;
+                const wordsB = b.project_data?.dictionary?.length || 0;
+                return wordsB - wordsA;
+            }
+            return 0;
+        });
+    }, [conlangs, likesData, sortBy]);
+
     if (loading) {
         return (
             <div className="explore-loading">
@@ -223,12 +254,26 @@ export default function ExplorePage() {
                     <h1>Explore</h1>
                     <p>Discover public conlangs created by the community.</p>
                 </div>
-                <Button 
-                    variant={isPublic ? 'error' : 'primary'} 
-                    onClick={handleTogglePublish}
-                >
-                    <Globe size={16} /> {isPublic ? 'Make Active Conlang Private' : 'Publish Active Conlang'}
-                </Button>
+                <div className="explore-header-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div className="explore-sort">
+                        <select 
+                            value={sortBy} 
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className="explore-sort-select"
+                        >
+                            <option value="updated">Last Updated</option>
+                            <option value="likes">Most Liked</option>
+                            <option value="name">A-Z</option>
+                            <option value="words">Word Count</option>
+                        </select>
+                    </div>
+                    <Button 
+                        variant={isPublic ? 'error' : 'primary'} 
+                        onClick={handleTogglePublish}
+                    >
+                        <Globe size={16} /> {isPublic ? 'Make Active Conlang Private' : 'Publish Active Conlang'}
+                    </Button>
+                </div>
             </div>
 
             {conlangs.length === 0 ? (
@@ -239,7 +284,7 @@ export default function ExplorePage() {
                 </div>
             ) : (
                 <div className="explore-grid">
-                    {conlangs.map((lang) => {
+                    {sortedConlangs.map((lang) => {
                         const { config, dictionary } = lang.project_data;
                         const icon = config?.conlangIcon || '🌐';
                         const name = config?.conlangName || 'Unnamed Conlang';
@@ -293,7 +338,7 @@ export default function ExplorePage() {
                                             <span>{likesData[lang.project_id] || 0}</span>
                                         </button>
                                         <div className="explore-stat" style={{ fontSize: '0.7rem', fontWeight: 'normal', opacity: 0.7 }}>
-                                            {new Date(lang.created_at).toLocaleDateString()}
+                                            Last updated: {new Date(lang.updated_at || lang.created_at).toLocaleDateString()}
                                         </div>
                                     </div>
                                 </div>
