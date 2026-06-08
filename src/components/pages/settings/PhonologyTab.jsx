@@ -5,9 +5,7 @@ import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
-import SyllabaryManager from '../../UI/SyllabaryManager/SyllabaryManager.jsx';
-import BlockManager from '../../UI/BlockManager/BlockManager.jsx';
-import AlphabeticManager from '../../UI/AlphabeticManager/AlphabeticManager.jsx';
+
 import Button from '../../UI/Buttons/Buttons.jsx';
 import applySoundChanges from '../../../utils/applysoundchanges.jsx';
 import { VisualRuleBuilder } from './grammarMatrix/VisualRuleBuilder.jsx';
@@ -489,23 +487,7 @@ export default function PhonologyTab() {
                 )}
             </Card>
 
-            {phonologyTypes === 'alphabetic' && (
-                <div className="animate-in fade-in duration-300">
-                    <AlphabeticManager />
-                </div>
-            )}
 
-            {phonologyTypes === 'syllabic' && (
-                <div className="animate-in fade-in duration-300">
-                    <SyllabaryManager />
-                </div>
-            )}
-
-            {phonologyTypes === 'featural_block' && (
-                <div className="animate-in fade-in duration-300">
-                    <BlockManager />
-                </div>
-            )}
 
             <ProsodyRulesCard />
 

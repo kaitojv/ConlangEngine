@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/utils/supabaseClient.js';
-import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit, FileText, Map, Zap } from 'lucide-react';
+import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit, FileText, Map, Zap, ArrowLeft } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import { usePublicThemeInjector, usePublicFontInjector } from '../../../hooks/usePublicInjectors.jsx';
@@ -139,11 +139,37 @@ export default function PublicViewer() {
                     textarea.custom-font-text {
                         writing-mode: horizontal-tb !important;
                     }
+                    .pv-back-btn {
+                        position: absolute;
+                        top: 20px;
+                        left: 20px;
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        color: var(--tx2);
+                        text-decoration: none;
+                        font-size: 0.85rem;
+                        font-weight: 600;
+                        background: var(--bg);
+                        padding: 6px 12px;
+                        border-radius: 20px;
+                        border: 1px solid var(--bd);
+                        transition: all 0.2s;
+                        z-index: 10;
+                    }
+                    .pv-back-btn:hover {
+                        color: var(--tx);
+                        border-color: var(--tx3);
+                        background: var(--s1);
+                    }
                 `}
             </style>
 
             {/* ===== HERO HEADER ===== */}
-            <header className="pv-hero">
+            <header className="pv-hero" style={{ position: 'relative' }}>
+                <Link to="/" className="pv-back-btn">
+                    <ArrowLeft size={14} /> Back
+                </Link>
                 <div className="pv-hero-content">
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '10px' }}>
                         <div style={{ color: 'var(--acc)' }}>

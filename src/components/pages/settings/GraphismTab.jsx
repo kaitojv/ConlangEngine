@@ -6,8 +6,10 @@ import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
 import { Type, Brush, Trash2, Plus, Monitor } from 'lucide-react';
 import Card from '../../UI/Card/Card.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
+import AlphabeticManager from '../../UI/AlphabeticManager/AlphabeticManager.jsx';
+import SyllabaryManager from '../../UI/SyllabaryManager/SyllabaryManager.jsx';
+import BlockManager from '../../UI/BlockManager/BlockManager.jsx';
 import '../../UI/AlphabeticManager/alphabeticManager.css';
-
 export default function TypographyStudio() {
     const consonants = useConfigStore(state => state.consonants) || '';
     const vowels = useConfigStore(state => state.vowels) || '';
@@ -15,6 +17,7 @@ export default function TypographyStudio() {
     const alphabetGlyphs = useConfigStore(state => state.alphabetGlyphs) || {};
     const typographySettings = useConfigStore(state => state.typographySettings) || { customTypographyModes: [], activeDisplayMode: 'Base' };
     const writingDirection = useConfigStore((state) => state.writingDirection) || 'ltr';
+    const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const updateConfig = useConfigStore(state => state.updateConfig);
     
     const [drawingChar, setDrawingChar] = useState(null);
@@ -119,6 +122,24 @@ export default function TypographyStudio() {
                 Create multiple typography variations for your characters, such as <b>Cursive</b>, <b>Formal</b>, or <b>Calligraphy</b>. 
                 Select a mode to edit, then click <b>Draw</b> to assign custom glyphs specifically for that typography mode!
             </Infobox>
+
+            {phonologyTypes === 'alphabetic' && (
+                <div className="animate-in fade-in duration-300">
+                    <AlphabeticManager />
+                </div>
+            )}
+
+            {phonologyTypes === 'syllabic' && (
+                <div className="animate-in fade-in duration-300">
+                    <SyllabaryManager />
+                </div>
+            )}
+
+            {phonologyTypes === 'featural_block' && (
+                <div className="animate-in fade-in duration-300">
+                    <BlockManager />
+                </div>
+            )}
 
             <Card style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
