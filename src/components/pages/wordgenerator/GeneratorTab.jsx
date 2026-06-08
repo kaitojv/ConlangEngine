@@ -307,11 +307,15 @@ function FillMode({ onExit }) {
             const target = cw.word.toLowerCase();
             return !lexicon.some(lw => {
                 let trans = (lw.translation || '').toLowerCase().trim();
+                
+                // Clean up translation by removing text in parentheses or brackets
+                const cleanTrans = trans.replace(/\s*[([].*?[)\]]\s*/g, ' ').trim();
+
                 // Exact match or exact match with "to " prefix
-                if (trans === target || trans === `to ${target}`) return true;
+                if (cleanTrans === target || cleanTrans === `to ${target}`) return true;
                 
                 // Match within comma/slash separated lists (e.g. "sun, day", "to run / to jog")
-                const parts = trans.split(/[,\/;|]+/).map(p => p.trim());
+                const parts = cleanTrans.split(/[,\/;|]+/).map(p => p.trim());
                 return parts.some(p => p === target || p === `to ${target}`);
             });
         });
