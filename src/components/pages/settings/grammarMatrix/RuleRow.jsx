@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Trash2, Link, Wand2, Play } from 'lucide-react';
 import { VisualRuleBuilder } from './VisualRuleBuilder.jsx';
 import { useConfigStore } from '../../../../store/useConfigStore.jsx';
-import { applyRuleToWord } from '../../../../utils/morphologyEngine.jsx';
+import { applyRuleToWord, expandWildcardDependencies } from '../../../../utils/morphologyEngine.jsx';
 import './ruleRow.css';
 
 export const RuleRow = ({ rule, onUpdate, onDelete, allWordClasses }) => {
@@ -16,6 +16,21 @@ export const RuleRow = ({ rule, onUpdate, onDelete, allWordClasses }) => {
 
   const previewResult = useMemo(() => {
       if (!previewWord) return '';
+      
+      const depLower = (rule.dependency || '').trim().toLowerCase();
+      if (['*suffix', '*prefix', '*infix', '*affix'].includes(depLower)) {
+          // If it's a wildcard, let's preview it against the first matching rule, or show a helpful message
+          const expanded = expandWildcardDependencies([rule], grammarRules);
+          if (expanded.length <= 1 && expanded[0].id === rule.id) {
+              return '(No matching rules found to chain)';
+          }
+          // Just show the first 2 expansions so the user sees it's working
+          const results = expanded.slice(0, 2).map(exRule => {
+              return applyRuleToWord(previewWord, exRule, grammarRules, vowels, consonants, otherPhonemes);
+          });
+          return results.join(', ') + (expanded.length > 2 ? '...' : '');
+      }
+
       return applyRuleToWord(previewWord, rule, grammarRules, vowels, consonants, otherPhonemes) || previewWord;
   }, [previewWord, rule, grammarRules, vowels, consonants, otherPhonemes]);
   

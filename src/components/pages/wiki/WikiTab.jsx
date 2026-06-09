@@ -1787,27 +1787,38 @@ function LegacyWikiEditor({ content, onSave }) {
     const [linkModalOpen, setLinkModalOpen] = useState(false);
     const [linkUrl, setLinkUrl] = useState('');
     const [iconPickerOpen, setIconPickerOpen] = useState(false);
+    
+    // We use a ref to track the last content we intentionally synced with the store.
+    // This prevents DOMPurify from destroying the user's cursor position during autosave.
+    const lastContentRef = useRef(content);
 
     useEffect(() => {
-        if (editorRef.current && content !== editorRef.current.innerHTML) {
+        if (editorRef.current && content !== editorRef.current.innerHTML && content !== lastContentRef.current) {
             // SEC-1: Sanitize HTML to prevent XSS via shared/cloud projects
             editorRef.current.innerHTML = DOMPurify.sanitize(content || '', {
                 ALLOWED_TAGS: [
                     'b', 'i', 'u', 'a', 'span', 'p', 'br', 'div', 'h1', 'h2', 'h3', 'h4', 'strong', 'em', 'ul', 'ol', 'li',
-                    'table', 'tbody', 'thead', 'tr', 'td', 'th', 'svg', 'path', 'circle', 'rect', 'line', 'polyline', 'polygon'
+                    'table', 'tbody', 'thead', 'tr', 'td', 'th', 'svg', 'path', 'circle', 'rect', 'line', 'polyline', 'polygon', 'blockquote'
                 ],
                 ALLOWED_ATTR: [
-                    'href', 'class', 'style', 'target',
+                    'href', 'class', 'style', 'target', 'contenteditable',
                     'xmlns', 'viewBox', 'width', 'height', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin'
                 ]
             });
+            lastContentRef.current = content;
         }
     }, [content]);
 
+    const handleSave = () => {
+        if (editorRef.current) {
+            const html = editorRef.current.innerHTML;
+            lastContentRef.current = html;
+            onSave(html);
+        }
+    };
+
     useEffect(() => {
-        const autoSaveTimer = setInterval(() => {
-            if (editorRef.current) onSave(editorRef.current.innerHTML);
-        }, 3000);
+        const autoSaveTimer = setInterval(handleSave, 3000);
         return () => clearInterval(autoSaveTimer);
     }, [onSave]);
 
@@ -1819,6 +1830,24 @@ function LegacyWikiEditor({ content, onSave }) {
     const applyConlangFont = () => {
         const selection = window.getSelection();
         if (!selection.rangeCount) return;
+        
+        // Check if we are already inside a conlang span. If so, unwrap it.
+        let node = selection.anchorNode;
+        while (node && node !== editorRef.current) {
+            if (node.nodeType === 1 && node.classList && node.classList.contains('custom-font-text')) {
+                // We are inside a conlang span, so remove the span (unwrap)
+                const parent = node.parentNode;
+                while (node.firstChild) {
+                    parent.insertBefore(node.firstChild, node);
+                }
+                parent.removeChild(node);
+                handleSave();
+                return;
+            }
+            node = node.parentNode;
+        }
+
+        // If not inside, wrap the selection in the conlang span
         const selectedText = selection.toString();
         if (selectedText) {
             const html = `<span class="custom-font-text notranslate" style="color: var(--acc); font-weight: bold;">${selectedText}</span>`;
@@ -1869,13 +1898,13 @@ function LegacyWikiEditor({ content, onSave }) {
                 <button className="wiki-tool-btn" title="Insert Link" onClick={() => setLinkModalOpen(true)}><Link size={16} /></button>
                 <button className="wiki-tool-btn" title="Format as Conlang Font" onClick={applyConlangFont}><Type size={16} /> <span style={{fontSize: '0.7rem', marginLeft: '4px', fontWeight: 'bold'}}>CONLANG</span></button>
                 <div style={{ flex: 1 }}></div>
-                <Button variant="save" onClick={() => onSave(editorRef.current.innerHTML)}><div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}><Save size={16} /> Save Document</div></Button>
+                <Button variant="save" onClick={handleSave}><div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}><Save size={16} /> Save Document</div></Button>
             </div>
             <div 
                 className="wiki-editor" 
                 contentEditable 
                 ref={editorRef} 
-                onBlur={() => onSave(editorRef.current.innerHTML)}
+                onBlur={handleSave}
                 suppressContentEditableWarning={true}
             />
 
