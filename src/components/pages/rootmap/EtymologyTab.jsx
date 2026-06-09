@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
-import { applyRuleToWord } from '@/utils/morphologyEngine.jsx';
+import { applyRuleToWord, expandWildcardDependencies } from '@/utils/morphologyEngine.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import Card from '@/components/UI/Card/Card.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
@@ -52,10 +52,12 @@ export default function EtymologyTab() {
 
         // Now, find all grammar rules that actually apply to this specific part of speech
         const targetClasses = (targetWord.wordClass || '').split(',').map(c => c.trim().toLowerCase());
-        const applicableRules = grammarRules.filter(rule => {
+        let applicableRules = grammarRules.filter(rule => {
             const allowedClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
             return allowedClasses.includes('all') || targetClasses.some(tc => allowedClasses.includes(tc));
         });
+        
+        applicableRules = expandWildcardDependencies(applicableRules, grammarRules);
 
         // Finally, apply each rule to the base word and build our list of generated derivations
         return applicableRules.reduce((acc, rule) => {

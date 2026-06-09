@@ -6,7 +6,7 @@ import Button from '@/components/UI/Buttons/Buttons.jsx';
 import { useWordGenerator } from '@/hooks/useWordGenerator.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
-import { applyRuleToWord } from '@/utils/morphologyEngine.jsx';
+import { applyRuleToWord, expandWildcardDependencies } from '@/utils/morphologyEngine.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
 import { commonWords } from '@/components/pages/wordgenerator/commonWords.jsx';
@@ -124,10 +124,12 @@ export default function GeneratorTab() {
             if (matchedMarker) base = base.slice(0, -matchedMarker.length);
         }
 
-        const applicableRules = grammarRules.filter(rule => {
+        let applicableRules = grammarRules.filter(rule => {
             const classes = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
             return classes.includes('all') || classes.includes(generatedClass.toLowerCase());
         });
+        
+        applicableRules = expandWildcardDependencies(applicableRules, grammarRules);
 
         return applicableRules.map(rule => {
             const result = applyRuleToWord(base, rule, grammarRules, vowels, consonants, otherPhonemes);

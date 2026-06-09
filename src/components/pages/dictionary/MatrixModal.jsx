@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
-import { applyRuleToWord, getPersonRules } from '@/utils/morphologyEngine.jsx';
+import { applyRuleToWord, getPersonRules, expandWildcardDependencies } from '@/utils/morphologyEngine.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { Lightbulb, Edit2, Save, Download } from 'lucide-react';
 import { exportTextAsSVG } from '@/utils/svgExporter.jsx';
@@ -56,10 +56,12 @@ export default function MatrixModal({ wordObj }) {
         if (!liveWord) return [];
         const liveClasses = liveWord.wordClass ? liveWord.wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
         
-        return grammarRules.filter(rule => {
+        let rules = grammarRules.filter(rule => {
             const classes = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
             return classes.includes('all') || liveClasses.some(lc => classes.includes(lc));
         });
+        
+        return expandWildcardDependencies(rules, grammarRules);
     }, [liveWord, grammarRules]);
 
     const personRules = useMemo(() => {

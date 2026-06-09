@@ -68,8 +68,22 @@ export const stripAffix = (word, affixRule, normalizeToBase) => {
 };
 
 // Placeholder for applyRuleToWord - actual implementation would be more complex
-export const applyRuleToWord = (baseWord, rule, grammarRules, vowels, consonants, otherPhonemes) => {
+export const applyRuleToWord = (baseWord, rule, grammarRules, vowels, consonants, otherPhonemes, _depth = 0) => {
     if (!baseWord || !rule || !rule.affix) return baseWord;
+    if (_depth > 5) return baseWord; // Prevent infinite loops
+
+    let currentBase = baseWord;
+    
+    // Resolve dependencies first
+    if (rule.dependency) {
+        const depNames = rule.dependency.split(',').map(d => d.trim().toLowerCase());
+        for (const depName of depNames) {
+            const depRule = grammarRules.find(r => (r.name || '').toLowerCase() === depName);
+            if (depRule) {
+                currentBase = applyRuleToWord(currentBase, depRule, grammarRules, vowels, consonants, otherPhonemes, _depth + 1);
+            }
+        }
+    }
 
     // 0. Enforce Allomorph Conditions (After Vowel / After Consonant / After Other)
     if (rule.condition && rule.condition !== 'always') {
@@ -80,7 +94,7 @@ export const applyRuleToWord = (baseWord, rule, grammarRules, vowels, consonants
         const parsed = parseAffix(rule.affix);
         const type = parsed ? parsed.type : 'suffix';
         const isAtStart = type === 'prefix';
-        const wordLow = baseWord.toLowerCase();
+        const wordLow = currentBase.toLowerCase();
 
         // Helper to check if any phoneme from a list matches at the edge
         const checkAtEdge = (list) => {
@@ -108,30 +122,30 @@ export const applyRuleToWord = (baseWord, rule, grammarRules, vowels, consonants
             const replacement = parts[1].trim();
             try {
                 const regex = new RegExp(pattern, 'gi');
-                return baseWord.replace(regex, replacement);
+                return currentBase.replace(regex, replacement);
             } catch (e) {
                 console.error("Invalid Regex rule:", pattern);
-                return baseWord;
+                return currentBase;
             }
         }
     }
 
     const parsed = parseAffix(rule.affix);
-    if (!parsed) return baseWord;
+    if (!parsed) return currentBase;
 
     const { clean, type, position } = parsed;
 
     if (type === 'suffix') {
-        return baseWord + clean;
+        return currentBase + clean;
     } else if (type === 'prefix') {
-        return clean + baseWord;
+        return clean + currentBase;
     } else if (type === 'infix') {
         // 1. Handle @V position (after first vowel)
         if (position === 'V' && vowels) {
             const vowelList = vowels.split(',').map(v => v.trim().split('=')[0].toLowerCase());
-            for (let i = 0; i < baseWord.length; i++) {
-                if (vowelList.includes(baseWord[i].toLowerCase())) {
-                    return baseWord.slice(0, i + 1) + clean + baseWord.slice(i + 1);
+            for (let i = 0; i < currentBase.length; i++) {
+                if (vowelList.includes(currentBase[i].toLowerCase())) {
+                    return currentBase.slice(0, i + 1) + clean + currentBase.slice(i + 1);
                 }
             }
         }
@@ -139,19 +153,19 @@ export const applyRuleToWord = (baseWord, rule, grammarRules, vowels, consonants
         // 2. Handle @C position (after first consonant)
         if (position === 'C') {
              const vowelList = vowels ? vowels.split(',').map(v => v.trim().split('=')[0].toLowerCase()) : [];
-             for (let i = 0; i < baseWord.length; i++) {
-                if (!vowelList.includes(baseWord[i].toLowerCase())) {
-                    return baseWord.slice(0, i + 1) + clean + baseWord.slice(i + 1);
+             for (let i = 0; i < currentBase.length; i++) {
+                if (!vowelList.includes(currentBase[i].toLowerCase())) {
+                    return currentBase.slice(0, i + 1) + clean + currentBase.slice(i + 1);
                 }
             }
         }
         
         // Default: Insert in the absolute middle
-        const middle = Math.floor(baseWord.length / 2);
-        return baseWord.slice(0, middle) + clean + baseWord.slice(middle);
+        const middle = Math.floor(currentBase.length / 2);
+        return currentBase.slice(0, middle) + clean + currentBase.slice(middle);
     }
     
-    return baseWord;
+    return currentBase;
 };
 
 // Simple helper for person agreement affixes
@@ -376,6 +390,49 @@ export const segmentToken = (token, lexicon, config, normalizeToBase, getUniqueP
     return (resultTokens.length > 1 && remaining.length === 0) ? resultTokens : [token];
 };
 
+export const expandWildcardDependencies = (applicableRules, grammarRules) => {
+    let expandedRules = [];
+    applicableRules.forEach(rule => {
+        if (!rule.dependency) {
+            expandedRules.push(rule);
+            return;
+        }
+
+        const depLower = rule.dependency.trim().toLowerCase();
+        
+        // Check if the dependency is a wildcard
+        if (['*suffix', '*prefix', '*infix', '*affix'].includes(depLower)) {
+            const targetRules = grammarRules.filter(r => {
+                const p = parseAffix(r.affix);
+                if (!p || r.id === rule.id) return false;
+                
+                if (depLower === '*suffix') return p.type === 'suffix';
+                if (depLower === '*prefix') return p.type === 'prefix';
+                if (depLower === '*infix') return p.type === 'infix';
+                if (depLower === '*affix') return ['suffix', 'prefix', 'infix'].includes(p.type);
+                
+                return false;
+            });
+
+            if (targetRules.length === 0) {
+                 expandedRules.push(rule);
+            } else {
+                 targetRules.forEach(tr => {
+                     expandedRules.push({
+                         ...rule,
+                         id: `${rule.id}_after_${tr.id}`,
+                         name: `${rule.name} (after ${tr.name})`,
+                         dependency: tr.name
+                     });
+                 });
+            }
+        } else {
+            expandedRules.push(rule);
+        }
+    });
+    return expandedRules;
+};
+
 /**
  * Generates a full paradigm of inflected forms for a given word.
  * Used by exporters and MatrixModal.
@@ -395,10 +452,12 @@ export const generateParadigm = (baseWord, config, options = {}) => {
     } = options;
 
     const liveClasses = (wordClass || 'all').split(',').map(c => c.trim().toLowerCase());
-    const applicableRules = grammarRules.filter(rule => {
+    let applicableRules = grammarRules.filter(rule => {
         const ruleClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
         return ruleClasses.includes('all') || liveClasses.some(lc => ruleClasses.includes(lc));
     });
+    
+    applicableRules = expandWildcardDependencies(applicableRules, grammarRules);
 
     const results = [];
 
