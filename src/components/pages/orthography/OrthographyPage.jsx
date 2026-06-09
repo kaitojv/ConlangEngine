@@ -7,7 +7,6 @@ import Infobox from '../../UI/Infobox/Infobox.jsx';
 import { Languages, Hash, Plus, Trash2, Calculator, Settings, Edit2, Check, Table2, BookA, Type, Mic2 } from 'lucide-react';
 import IpaReferencePage from './IpaReferencePage.jsx';
 import './orthographyPage.css';
-import '../../UI/AlphabeticManager/alphabeticManager.css';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import toast from 'react-hot-toast';
