@@ -1,0 +1,80 @@
+/* src/components/pages/settings/graphismTab.css */
+
+.alphabet-table-container {
+    background: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    overflow: hidden;
+    margin-top: 1.5rem;
+}
+
+.alphabet-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.alphabet-table th {
+    background: var(--s2);
+    color: var(--tx);
+    font-weight: 600;
+    padding: 12px 16px;
+    border-bottom: 2px solid var(--bd);
+    font-size: 0.9rem;
+}
+
+.alphabet-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--bd);
+    color: var(--tx);
+    vertical-align: middle;
+}
+
+.alphabet-table tbody tr:hover {
+    background: var(--s2);
+}
+
+.alphabet-table .ipa-cell {
+    width: 80px;
+}
+
+.alphabet-table .name-cell {
+    width: 200px;
+}
+
+.alphabet-table .glyph-cell {
+    min-width: 150px;
+}
+
+.alphabet-table .actions-cell {
+    width: 150px;
+    white-space: nowrap;
+}
+
+.ipa-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: var(--s3);
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 1.1rem;
+    color: var(--tx);
+    border: 1px solid var(--bd);
+}
+
+.char-edit-wrapper input {
+    background: var(--s4);
+    color: var(--tx);
+    border: 1px solid var(--acc);
+    border-radius: 4px;
+    outline: none;
+}
+
+.char-edit-wrapper input:focus {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 20%, transparent);
+}
+
+.drawn-glyph {
+    font-size: 1.5rem;
+    line-height: 1;
+}

@@ -6,10 +6,11 @@ import { useShallow } from 'zustand/react/shallow';
 import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
-import { Sparkles, AlertTriangle, Save, Brush, X, Plus } from 'lucide-react';
+import { Sparkles, AlertTriangle, Save, Brush, X, Plus, Wand2 } from 'lucide-react';
 import { applyRuleToWord } from '../../../utils/morphologyEngine.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
+import { fetchSynonymOptions } from '../../../utils/semanticUtils.js';
 import './createWordTab.css';
 import Modal from '../../UI/Modal/Modal.jsx';
 import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
@@ -32,6 +33,8 @@ export default function CreateWordTab() {
     // Track which input field the IPA chart should paste into
     const [activeField, setActiveField] = useState('ipa'); // default to IPA field
     const [tagInput, setTagInput] = useState('');
+    const [relatedInput, setRelatedInput] = useState('');
+    const [isFetchingRelated, setIsFetchingRelated] = useState(false);
 
     // Global stores
     const addWord = useLexiconStore((state) => state.addWord);
@@ -68,12 +71,13 @@ export default function CreateWordTab() {
         translation: '',
         definition: '',
         tags: [],
+        relatedWords: [],
         ideogram: '',
         tone: '',
         stress: ''
     });
 
-    const { word, ipa, wordClass, translation, definition, tags, ideogram, tone, stress } = formData;
+    const { word, ipa, wordClass, translation, definition, tags, relatedWords, ideogram, tone, stress } = formData;
     const [isFontStudioOpen, setIsFontStudioOpen] = useState(false);
     const [selectedDerivs, setSelectedDerivs] = useState({});
     const [customTranslations, setCustomTranslations] = useState({});
@@ -107,14 +111,14 @@ export default function CreateWordTab() {
         return [...merged].sort();
     }, [customTags, lexicon]);
 
-    // If the user generated a word in the Generator Tab and clicked "Add to Lexicon", we catch it here
     useEffect(() => {
-        if (location.state?.prefillWord) {
+        if (location.state) {
             setFormData(prev => ({
                 ...prev,
-                word: location.state.prefillWord,
+                word: location.state.prefillWord || prev.word,
                 ipa: location.state.prefillIpa || prev.ipa,
-                wordClass: location.state.prefillClass || prev.wordClass
+                wordClass: location.state.prefillClass || prev.wordClass,
+                translation: location.state.prefillTranslation || prev.translation
             }));
         }
 
@@ -182,6 +186,44 @@ export default function CreateWordTab() {
         updateField('tags', formData.tags.filter(t => t !== tagToRemove));
     };
 
+    const handleAddRelated = (rWord) => {
+        const cleanRelated = rWord.trim().toLowerCase();
+        if (!cleanRelated) return;
+        if (!formData.relatedWords.includes(cleanRelated)) {
+            updateField('relatedWords', [...formData.relatedWords, cleanRelated]);
+        }
+        setRelatedInput('');
+    };
+
+    const removeRelated = (rToRemove) => {
+        updateField('relatedWords', formData.relatedWords.filter(r => r !== rToRemove));
+    };
+
+    const autoSuggestRelated = async () => {
+        if (!translation) return toast.error("Please enter a short translation first.");
+        setIsFetchingRelated(true);
+        try {
+            const results = await fetchSynonymOptions(translation);
+            if (results && results.length > 0) {
+                const newWords = results.map(r => r.lemma.toLowerCase()).filter(l => !formData.relatedWords.includes(l));
+                // Just take top 8 to avoid clutter
+                const topPicks = [...new Set(newWords)].slice(0, 8);
+                if (topPicks.length > 0) {
+                    updateField('relatedWords', [...formData.relatedWords, ...topPicks]);
+                    toast.success(`Found ${topPicks.length} related words!`);
+                } else {
+                    toast("No new related words found.", { icon: '💡' });
+                }
+            } else {
+                toast("No related words found for this concept.", { icon: '💡' });
+            }
+        } catch (e) {
+            toast.error("Failed to fetch related words.");
+        } finally {
+            setIsFetchingRelated(false);
+        }
+    };
+
     const saveConfirmedWord = (safeWord, cleanTrans, processedTags, keepRoot = false) => {
         const rootId = Date.now() + Math.random();
 
@@ -194,6 +236,7 @@ export default function CreateWordTab() {
             translation: cleanTrans,
             definition: definition.trim(),
             tags: processedTags,
+            relatedWords: relatedWords || [],
             ideogram: ideogram.trim(),
             tone: tone.trim(),
             stress: stress.trim()
@@ -226,6 +269,7 @@ export default function CreateWordTab() {
                     translation: customTranslations[idx] !== undefined ? customTranslations[idx].trim() : item.translationText,
                     definition: '',
                     tags: [...processedTags, 'derived'],
+                    relatedWords: [],
                     ideogram: '',
                     parentRootId: rootId,
                     derivationRuleId: rule?.id
@@ -241,9 +285,9 @@ export default function CreateWordTab() {
 
         // Reset the form for the next word
         if (keepRoot) {
-            setFormData(prev => ({ ...prev, translation: '', definition: '', tags: [] }));
+            setFormData(prev => ({ ...prev, translation: '', definition: '', tags: [], relatedWords: [] }));
         } else {
-            setFormData({ word: '', ipa: '', wordClass: 'noun', translation: '', definition: '', tags: [], ideogram: '', tone: '', stress: '' });
+            setFormData({ word: '', ipa: '', wordClass: 'noun', translation: '', definition: '', tags: [], relatedWords: [], ideogram: '', tone: '', stress: '' });
         }
 
         setSelectedDerivs({});
@@ -751,6 +795,39 @@ export default function CreateWordTab() {
                             <option key={tag} value={tag} />
                         ))}
                     </datalist>
+                </div>
+
+                <div style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label className="form-label">Related Words</label>
+                        <button className="btn-link" onClick={autoSuggestRelated} disabled={isFetchingRelated} style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Wand2 size={12} /> {isFetchingRelated ? 'Searching...' : 'Auto-Suggest'}
+                        </button>
+                    </div>
+                    <div className="tags-chip-container">
+                        {formData.relatedWords.map(rw => (
+                            <span key={rw} className="tag-chip" style={{ background: 'var(--s3)', borderColor: 'var(--s4)' }}>
+                                {rw}
+                                <X size={12} onClick={() => removeRelated(rw)} className="tag-remove-icon" />
+                            </span>
+                        ))}
+                        <div className="tag-input-wrap">
+                            <Input
+                                placeholder={formData.relatedWords.length === 0 ? "Add related concept (e.g. water, ocean)..." : ""}
+                                value={relatedInput}
+                                onChange={(e) => setRelatedInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ',') {
+                                        e.preventDefault();
+                                        handleAddRelated(relatedInput);
+                                    }
+                                }}
+                                onBlur={() => handleAddRelated(relatedInput)}
+                                className="tag-input-field"
+                            />
+                            <Plus size={16} className="tag-add-icon" onClick={() => handleAddRelated(relatedInput)} />
+                        </div>
+                    </div>
                 </div>
 
                 {word && translation && grammarRules.length > 0 && (

@@ -5,10 +5,11 @@ import { useShallow } from 'zustand/react/shallow';
 import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
-import { Search, Edit, Trash2, Check, X, Tag, BookOpen, Sparkles, Loader2 } from 'lucide-react';
+import { Search, Edit, Trash2, Check, X, Tag, BookOpen, Sparkles, Loader2, Link } from 'lucide-react';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import toast from 'react-hot-toast';
 import { getTagsForTranslation } from '../../../utils/semanticTagger.js';
+import { fetchSynonymOptions } from '../../../utils/semanticUtils.js';
 import './lexiconTab.css';
 
 export default function LexiconTab() {
@@ -28,6 +29,9 @@ export default function LexiconTab() {
     
     const [isAutoTagging, setIsAutoTagging] = useState(false);
     const [autoTagProgress, setAutoTagProgress] = useState(0);
+
+    const [isAutoRelating, setIsAutoRelating] = useState(false);
+    const [autoRelateProgress, setAutoRelateProgress] = useState(0);
 
     // Extract all unique POS from the lexicon
     const allPOS = useMemo(() => {
@@ -224,6 +228,54 @@ export default function LexiconTab() {
         toast.success(`Auto-categorization complete! Added tags to ${updatedCount} words.`);
     };
 
+    const handleAutoRelate = async () => {
+        if (!window.confirm("This will scan your lexicon and use the Semantic API to automatically find related concepts/synonyms for words that don't have them yet. Proceed?")) return;
+        
+        setIsAutoRelating(true);
+        setAutoRelateProgress(0);
+        
+        let processedCount = 0;
+        let updatedCount = 0;
+        const total = lexicon.length;
+        
+        for (let i = 0; i < total; i++) {
+            const entry = lexicon[i];
+            
+            // Only process if it has a translation and few/no related words
+            if (entry.translation && (!entry.relatedWords || entry.relatedWords.length < 3)) {
+                try {
+                    const results = await fetchSynonymOptions(entry.translation);
+                    if (results && results.length > 0) {
+                        const newWords = results.map(r => r.lemma.toLowerCase());
+                        const topPicks = [...new Set(newWords)].slice(0, 5);
+                        
+                        const finalRelated = [...new Set([...(entry.relatedWords || []), ...topPicks])];
+                        
+                        if (JSON.stringify(finalRelated) !== JSON.stringify(entry.relatedWords || [])) {
+                            updateWord(entry.id, { relatedWords: finalRelated });
+                            updatedCount++;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed auto-relating", entry.translation);
+                }
+            }
+            
+            processedCount++;
+            if (processedCount % 5 === 0) {
+                setAutoRelateProgress(Math.round((processedCount / total) * 100));
+                // Yield to event loop to update UI
+                await new Promise(r => setTimeout(r, 10));
+            }
+            // Add a small delay to avoid hammering the Datamuse API too hard
+            await new Promise(r => setTimeout(r, 150));
+        }
+        
+        setIsAutoRelating(false);
+        setAutoRelateProgress(0);
+        toast.success(`Auto-relating complete! Added semantic links to ${updatedCount} words.`);
+    };
+
     return (
         <Card className="lexicon-settings-tab">
             <h2 className="flex sg-title">
@@ -241,12 +293,28 @@ export default function LexiconTab() {
                 {isAutoTagging ? (
                     <div className="auto-tagger-progress">
                         <Loader2 className="spinner" size={20} />
-                        <span>Processing... {autoTagProgress}%</span>
+                        <span>Processing Tags... {autoTagProgress}%</span>
                     </div>
                 ) : (
-                    <Button variant="primary" onClick={handleAutoCategorize}>
+                    <Button variant="primary" onClick={handleAutoCategorize} style={{marginBottom: '0.5rem'}}>
                         Bulk Auto-Categorize Lexicon
                     </Button>
+                )}
+
+                {isAutoRelating ? (
+                    <div className="auto-tagger-progress">
+                        <Loader2 className="spinner" size={20} />
+                        <span>Finding Links... {autoRelateProgress}%</span>
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <Button variant="save" onClick={handleAutoRelate} style={{ width: '100%' }}>
+                            <Link size={16} style={{marginRight: '6px'}}/> Bulk Auto-Link Related Words
+                        </Button>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--tx2)', marginTop: '4px' }}>
+                            * This process may take a few minutes for larger lexicons to respect API rate limits.
+                        </span>
+                    </div>
                 )}
             </div>
 

@@ -6,15 +6,18 @@ import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
 import { Type, Brush, Trash2, Plus, Monitor } from 'lucide-react';
 import Card from '../../UI/Card/Card.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
-import AlphabeticManager from '../../UI/AlphabeticManager/AlphabeticManager.jsx';
 import SyllabaryManager from '../../UI/SyllabaryManager/SyllabaryManager.jsx';
 import BlockManager from '../../UI/BlockManager/BlockManager.jsx';
-import '../../UI/AlphabeticManager/alphabeticManager.css';
+import KeyboardManager from '../../UI/KeyboardManager/KeyboardManager.jsx';
+import { Keyboard } from 'lucide-react';
+import './graphismTab.css';
+
 export default function TypographyStudio() {
     const consonants = useConfigStore(state => state.consonants) || '';
     const vowels = useConfigStore(state => state.vowels) || '';
     const otherPhonemes = useConfigStore(state => state.otherPhonemes) || '';
     const alphabetGlyphs = useConfigStore(state => state.alphabetGlyphs) || {};
+    const alphabetNames = useConfigStore(state => state.alphabetNames) || {};
     const typographySettings = useConfigStore(state => state.typographySettings) || { customTypographyModes: [], activeDisplayMode: 'Base' };
     const writingDirection = useConfigStore((state) => state.writingDirection) || 'ltr';
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
@@ -23,6 +26,8 @@ export default function TypographyStudio() {
     const [drawingChar, setDrawingChar] = useState(null);
     const [newMode, setNewMode] = useState('');
     const [editingMode, setEditingMode] = useState('Base');
+    const [editingCharName, setEditingCharName] = useState(null);
+    const [showKeyboardManager, setShowKeyboardManager] = useState(false);
 
     const parseChars = (str) => {
         if (!str) return [];
@@ -44,6 +49,15 @@ export default function TypographyStudio() {
             ])
         ];
     }, [consonants, vowels, otherPhonemes]);
+
+    const updateName = (char, name) => {
+        updateConfig({
+            alphabetNames: {
+                ...alphabetNames,
+                [char]: name
+            }
+        });
+    };
 
     const handleAddMode = () => {
         const mode = newMode.trim();
@@ -118,16 +132,18 @@ export default function TypographyStudio() {
                 </Modal>
             )}
 
+            <Modal 
+                isOpen={showKeyboardManager} 
+                onClose={() => setShowKeyboardManager(false)}
+                title="Custom Keyboard Exporter"
+            >
+                <KeyboardManager allChars={allChars} alphabetGlyphs={alphabetGlyphs} />
+            </Modal>
+
             <Infobox title="Graphism & Typography Studio">
                 Create multiple typography variations for your characters, such as <b>Cursive</b>, <b>Formal</b>, or <b>Calligraphy</b>. 
                 Select a mode to edit, then click <b>Draw</b> to assign custom glyphs specifically for that typography mode!
             </Infobox>
-
-            {phonologyTypes === 'alphabetic' && (
-                <div className="animate-in fade-in duration-300">
-                    <AlphabeticManager />
-                </div>
-            )}
 
             {phonologyTypes === 'syllabic' && (
                 <div className="animate-in fade-in duration-300">
@@ -219,96 +235,132 @@ export default function TypographyStudio() {
                 </div>
             </Card>
 
-            <div className="alphabet-table-container">
-                <div style={{ padding: '1rem', background: 'var(--s2)', borderBottom: '1px solid var(--bd)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Currently Editing:</h3>
-                    <select 
-                        className="sg-select" 
-                        style={{ width: '200px' }}
-                        value={editingMode}
-                        onChange={e => setEditingMode(e.target.value)}
-                    >
-                        {allModes.map(mode => (
-                            <option key={mode} value={mode}>{mode}</option>
-                        ))}
-                    </select>
-                </div>
+            {phonologyTypes === 'alphabetic' && (
+                <div className="alphabet-table-container">
+                    <div style={{ padding: '1rem', background: 'var(--s2)', borderBottom: '1px solid var(--bd)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Currently Editing:</h3>
+                        <select 
+                            className="sg-select" 
+                            style={{ width: '200px' }}
+                            value={editingMode}
+                            onChange={e => setEditingMode(e.target.value)}
+                        >
+                            {allModes.map(mode => (
+                                <option key={mode} value={mode}>{mode}</option>
+                            ))}
+                        </select>
+                    </div>
 
-                {allChars.length > 0 ? (
-                    <div className="responsive-table-wrapper">
-                        <table className="alphabet-table">
-                            <thead>
-                                <tr>
-                                    <th>Letter</th>
-                                    <th>{editingMode} Glyph</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {allChars.map((char) => {
-                                    const key = editingMode === 'Base' ? char : `${char}_${editingMode.toLowerCase()}`;
-                                    const customGlyph = alphabetGlyphs[key];
-                                    
-                                    return (
-                                        <tr key={char}>
-                                            <td className="ipa-cell">
-                                                <span className="ipa-badge custom-font-text">
-                                                    {editingMode === 'Uppercase' ? char.toUpperCase() : char}
-                                                </span>
-                                            </td>
-                                            
-                                            <td className="glyph-cell">
-                                                {customGlyph ? (
-                                                    <span className="custom-font-text drawn-glyph" style={{ color: editingMode === 'Base' ? 'var(--tx)' : 'var(--acc)' }}>
-                                                        {customGlyph}
+                    {allChars.length > 0 ? (
+                        <div className="responsive-table-wrapper">
+                            <table className="alphabet-table">
+                                <thead>
+                                    <tr>
+                                        <th>Letter</th>
+                                        <th>Name</th>
+                                        <th>{editingMode} Glyph</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {allChars.map((char) => {
+                                        const key = editingMode === 'Base' ? char : `${char}_${editingMode.toLowerCase()}`;
+                                        const customGlyph = alphabetGlyphs[key];
+                                        
+                                        return (
+                                            <tr key={char}>
+                                                <td className="ipa-cell">
+                                                    <span className="ipa-badge custom-font-text">
+                                                        {editingMode === 'Uppercase' ? char.toUpperCase() : char}
                                                     </span>
-                                                ) : (
-                                                    <span style={{ color: 'var(--tx3)', fontStyle: 'italic' }}>Not drawn</span>
-                                                )}
-                                            </td>
-                                            
-                                            <td className="actions-cell">
-                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                    <button 
-                                                        className="btn-v btn-sec-v" 
-                                                        style={{ display: 'flex', gap: '6px', alignItems: 'center' }}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setDrawingChar(char);
-                                                        }}
-                                                    >
-                                                        <Brush size={14} /> {customGlyph ? 'Redraw' : 'Draw'}
-                                                    </button>
-                                                    {customGlyph && (
+                                                </td>
+                                                
+                                                <td className="name-cell" onClick={() => editingCharName !== char && setEditingCharName(char)} style={{ cursor: 'pointer' }}>
+                                                    {editingCharName === char ? (
+                                                        <div className="char-edit-wrapper" onClick={e => e.stopPropagation()}>
+                                                            <input 
+                                                                autoFocus
+                                                                className="sg-input"
+                                                                value={alphabetNames[char] || ''}
+                                                                placeholder="Name..."
+                                                                onChange={(e) => updateName(char, e.target.value)}
+                                                                onBlur={() => setEditingCharName(null)}
+                                                                onKeyDown={(e) => e.key === 'Enter' && setEditingCharName(null)}
+                                                                style={{ width: '120px', padding: '4px 8px', fontSize: '0.85rem' }}
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="name-display" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                                            <span>{alphabetNames[char] || <span style={{ color: 'var(--tx3)', fontStyle: 'italic' }}>unnamed</span>}</span>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                
+                                                <td className="glyph-cell">
+                                                    {customGlyph ? (
+                                                        <span className="custom-font-text drawn-glyph" style={{ color: editingMode === 'Base' ? 'var(--tx)' : 'var(--acc)' }}>
+                                                            {customGlyph}
+                                                        </span>
+                                                    ) : (
+                                                        <span style={{ color: 'var(--tx3)', fontStyle: 'italic' }}>Not drawn</span>
+                                                    )}
+                                                </td>
+                                                
+                                                <td className="actions-cell">
+                                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                                         <button 
-                                                            className="btn-v" 
-                                                            style={{ display: 'flex', gap: '6px', alignItems: 'center', background: 'transparent', border: '1px solid var(--err)', color: 'var(--err)' }}
+                                                            className="btn-v btn-sec-v" 
+                                                            style={{ display: 'flex', gap: '6px', alignItems: 'center' }}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                deleteGlyph(key);
+                                                                setDrawingChar(char);
                                                             }}
                                                         >
-                                                            <Trash2 size={14} />
+                                                            <Brush size={14} /> {customGlyph ? 'Redraw' : 'Draw'}
                                                         </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                ) : (
-                    <div className="empty-state glass">
-                        <Type size={48} className="text-tx2 opacity-20" />
-                        <p>No characters found in your Phonology settings.</p>
-                        <button className="btn-link" onClick={() => window.location.hash = '#/settings'}>
-                            Go to Phonology Settings
-                        </button>
-                    </div>
-                )}
-            </div>
+                                                        {customGlyph && (
+                                                            <button 
+                                                                className="btn-v" 
+                                                                style={{ display: 'flex', gap: '6px', alignItems: 'center', background: 'transparent', border: '1px solid var(--err)', color: 'var(--err)' }}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    deleteGlyph(key);
+                                                                }}
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="empty-state glass">
+                            <Type size={48} className="text-tx2 opacity-20" />
+                            <p>No characters found in your Phonology settings.</p>
+                            <button className="btn-link" onClick={() => window.location.hash = '#/settings'}>
+                                Go to Phonology Settings
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            <Card style={{ padding: '1.5rem', marginTop: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--tx)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Keyboard size={18} /> OS Keyboard Layout Exporter
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', textAlign: 'center', maxWidth: '500px', margin: 0 }}>
+                    Map your custom drawn characters to physical keys and download a Windows <code>.klc</code> file to type natively on your computer!
+                </p>
+                <Button variant="imp" onClick={() => setShowKeyboardManager(true)}>
+                    <Keyboard size={16} /> Open Keyboard Manager
+                </Button>
+            </Card>
         </div>
     );
 }

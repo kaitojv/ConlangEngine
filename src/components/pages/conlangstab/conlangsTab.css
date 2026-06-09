@@ -46,16 +46,16 @@
     font-size: 1.3rem;
     font-weight: 800;
     color: var(--tx);
-    padding-right: 30px;
+    padding-right: 0;
 }
 .project-meta { font-size: 0.9rem; color: var(--tx2); }
 .project-date { font-size: 0.8rem; color: var(--tx3); margin-top: auto; padding-top: 10px; }
 .project-card-actions {
-    position: absolute;
-    top: 15px;
-    right: 15px;
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    margin-bottom: 5px;
 }
 
 .project-action-btn {

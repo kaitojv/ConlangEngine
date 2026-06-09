@@ -28,6 +28,7 @@ export const useLexiconStore = create(
                         stress: newWordData.stress || '',
                         parentRootId: newWordData.parentRootId || null,
                         derivationRuleId: newWordData.derivationRuleId || null,
+                        relatedWords: newWordData.relatedWords || [],
                         inflectionOverrides: {},
                         createdAt: Date.now()
                     };

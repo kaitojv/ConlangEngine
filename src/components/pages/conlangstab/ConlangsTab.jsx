@@ -7,10 +7,11 @@ import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Modal from '@/components/UI/Modal/Modal.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
-import { Languages, Plus, Trash2, CheckCircle2, Lock, Copy, GitMerge, Network, LayoutGrid, Map as MapIcon, Upload, MapPin, ZoomIn, ZoomOut, Crosshair, X, ArrowUpFromLine } from 'lucide-react';
+import { Languages, Plus, Trash2, CheckCircle2, Lock, Copy, GitMerge, Network, LayoutGrid, Map as MapIcon, Upload, MapPin, ZoomIn, ZoomOut, Crosshair, X, ArrowUpFromLine, GitCompare } from 'lucide-react';
 import { supabase } from '@/utils/supabaseClient.js';
 import { sanitizeConfig, sanitizeLexicon } from '@/utils/schemaValidator.jsx';
 import { getConlangIcon } from '@/utils/iconMap.jsx';
+import LanguageCompareModal from './LanguageCompareModal.jsx';
 import './conlangsTab.css';
 
 export default function ConlangsTab() {
@@ -51,10 +52,13 @@ export default function ConlangsTab() {
     const [daughterName, setDaughterName] = useState('');
     const [soundChanges, setSoundChanges] = useState('');
 
-    // Set Parent Modal State
     const [parentModalOpen, setParentModalOpen] = useState(false);
     const [parentTargetProject, setParentTargetProject] = useState(null);
     const [selectedParentId, setSelectedParentId] = useState('');
+
+    // Compare Modal State
+    const [compareModalOpen, setCompareModalOpen] = useState(false);
+    const [compareProject, setCompareProject] = useState(null);
 
     // Check if the user has an active Pro subscription
     useEffect(() => {
@@ -294,6 +298,12 @@ export default function ConlangsTab() {
         setParentModalOpen(false);
     };
 
+    const handleOpenCompareModal = (e, project) => {
+        e.stopPropagation();
+        setCompareProject(project);
+        setCompareModalOpen(true);
+    };
+
     // State for Map Pin Selection
     const [pinSelectModalOpen, setPinSelectModalOpen] = useState(false);
 
@@ -492,6 +502,9 @@ export default function ConlangsTab() {
                 <div key={project.id} className="tree-node-wrapper">
                     <div className={`project-card tree-card ${isCurrent ? 'active-workspace' : ''}`} onClick={() => handleOpenProject(project.id)}>
                         <div className="project-card-actions">
+                            <button className="project-action-btn" onClick={(e) => handleOpenCompareModal(e, project)} title="Compare with Relatives">
+                                <GitCompare size={16} />
+                            </button>
                             <button className="project-action-btn" onClick={(e) => handleOpenParentModal(e, project)} title="Set Mother Language">
                                 <ArrowUpFromLine size={16} />
                             </button>
@@ -577,6 +590,9 @@ export default function ConlangsTab() {
                                     <div className="project-card-actions">
                                         <button className="project-action-btn" onClick={(e) => { e.stopPropagation(); setTargetingMode(project.id); setViewMode('map'); }} title="Place on Map">
                                             <MapPin size={16} />
+                                        </button>
+                                        <button className="project-action-btn" onClick={(e) => handleOpenCompareModal(e, project)} title="Compare with Relatives">
+                                            <GitCompare size={16} />
                                         </button>
                                         <button className="project-action-btn" onClick={(e) => handleOpenParentModal(e, project)} title="Set Mother Language">
                                             <ArrowUpFromLine size={16} />
@@ -726,6 +742,12 @@ export default function ConlangsTab() {
                         )
                     })}
                 </div>
+            </Modal>
+
+            <Modal isOpen={compareModalOpen} onClose={() => setCompareModalOpen(false)} title="Compare Relatives">
+                {compareProject && (
+                    <LanguageCompareModal baseProject={compareProject} localProjects={localProjects} />
+                )}
             </Modal>
         </div>
     );

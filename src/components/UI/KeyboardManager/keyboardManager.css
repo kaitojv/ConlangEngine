@@ -1,0 +1,126 @@
+.km-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+.km-keyboard {
+    background: var(--s2);
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--bd);
+    display: inline-block;
+}
+
+.km-row {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.km-key {
+    width: 44px;
+    height: 44px;
+    background: var(--s3);
+    border: 1px solid var(--bd);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    color: var(--tx);
+    font-size: 0.8rem;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.km-key:hover {
+    background: var(--s4);
+    border-color: var(--acc);
+}
+
+.km-key.mapped {
+    background: rgba(var(--acc-rgb, 99, 102, 241), 0.1);
+    border-color: var(--acc);
+}
+
+.km-key-hint {
+    font-size: 0.55rem;
+    color: var(--tx3);
+    position: absolute;
+    top: 2px;
+    left: 4px;
+}
+
+.km-key-val {
+    font-size: 1.2rem;
+    color: var(--acc);
+    line-height: 1;
+    margin-top: 6px;
+}
+
+.km-key.wide-1 { width: 66px; }
+.km-key.wide-2 { width: 78px; }
+.km-key.wide-3 { width: 98px; }
+.km-key.space { width: 280px; }
+
+.km-key.special {
+    background: var(--s1);
+    color: var(--tx2);
+    cursor: default;
+}
+.km-key.special:hover {
+    background: var(--s1);
+    border-color: var(--bd);
+}
+
+.km-key.toggleable {
+    cursor: pointer;
+}
+.km-key.toggleable.active {
+    background: var(--acc);
+    color: #fff;
+    border-color: var(--acc);
+}
+
+.km-modal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    gap: 8px;
+    margin-top: 1rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.km-char-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: var(--tx);
+    transition: all 0.15s;
+}
+
+.km-char-btn:hover {
+    background: var(--s3);
+    border-color: var(--acc);
+}
+
+.km-char-btn.clear {
+    grid-column: 1 / -1;
+    width: auto;
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.3);
+    font-size: 0.85rem;
+}

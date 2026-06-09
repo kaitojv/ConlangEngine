@@ -4,6 +4,7 @@ import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
 import { generateIpaFromWord } from '../../../utils/ipaGenerator.js';
+import { fetchSynonymOptions } from '../../../utils/semanticUtils.js';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
@@ -43,10 +44,12 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
 
     // Bundle all the form fields into one neat state object
     const [formData, setFormData] = useState({
-        word: '', ipa: '', wordClass: '', translation: '', definition: '', tags: [], ideogram: '', personCategory: '', tone: '', stress: ''
+        word: '', ipa: '', wordClass: '', translation: '', definition: '', tags: [], relatedWords: [], ideogram: '', personCategory: '', tone: '', stress: ''
     });
     const [tagInput, setTagInput] = useState('');
-    const { word, ipa, wordClass, translation, tags, ideogram, personCategory, tone, stress } = formData;
+    const [relatedInput, setRelatedInput] = useState('');
+    const [isFetchingRelated, setIsFetchingRelated] = useState(false);
+    const { word, ipa, wordClass, translation, tags, relatedWords, ideogram, personCategory, tone, stress } = formData;
 
     const parentWord = useMemo(() => {
         if (!wordObj.parentRootId) return null;
@@ -110,6 +113,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                 translation: wordObj.translation || '',
                 definition: wordObj.definition || '',
                 tags: Array.isArray(wordObj.tags) ? wordObj.tags : (typeof wordObj.tags === 'string' ? wordObj.tags.split(',').map(t => t.trim()).filter(Boolean) : []),
+                relatedWords: Array.isArray(wordObj.relatedWords) ? wordObj.relatedWords : [],
                 ideogram: wordObj.ideogram || '',
                 personCategory: wordObj.personCategory || '',
                 tone: wordObj.tone || '',
@@ -165,6 +169,44 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
         updateField('tags', formData.tags.filter(t => t !== tagToRemove));
     };
 
+    const handleAddRelated = (rWord) => {
+        const cleanRelated = rWord.trim().toLowerCase();
+        if (!cleanRelated) return;
+        if (!formData.relatedWords.includes(cleanRelated)) {
+            updateField('relatedWords', [...formData.relatedWords, cleanRelated]);
+        }
+        setRelatedInput('');
+    };
+
+    const removeRelated = (rToRemove) => {
+        updateField('relatedWords', formData.relatedWords.filter(r => r !== rToRemove));
+    };
+
+    const autoSuggestRelated = async () => {
+        if (!translation) return toast.error("Please enter a short translation first.");
+        setIsFetchingRelated(true);
+        try {
+            const results = await fetchSynonymOptions(translation);
+            if (results && results.length > 0) {
+                const newWords = results.map(r => r.lemma.toLowerCase()).filter(l => !formData.relatedWords.includes(l));
+                // Just take top 8 to avoid clutter
+                const topPicks = [...new Set(newWords)].slice(0, 8);
+                if (topPicks.length > 0) {
+                    updateField('relatedWords', [...formData.relatedWords, ...topPicks]);
+                    toast.success(`Found ${topPicks.length} related words!`);
+                } else {
+                    toast("No new related words found.", { icon: '💡' });
+                }
+            } else {
+                toast("No related words found for this concept.", { icon: '💡' });
+            }
+        } catch (e) {
+            toast.error("Failed to fetch related words.");
+        } finally {
+            setIsFetchingRelated(false);
+        }
+    };
+
     const showValidationToast = (content) => {
         toast.custom(content, { duration: Infinity, id: 'validation-toast' });
     };
@@ -177,6 +219,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
             translation: cTrans,
             definition: formData.definition.trim(),
             tags: pTags,
+            relatedWords: formData.relatedWords || [],
             ideogram: ideogram.trim(),
             personCategory: personCategory.trim(),
             tone: tone.trim(),
@@ -200,6 +243,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
             translation: cTrans,
             definition: formData.definition.trim(),
             tags: pTags,
+            relatedWords: formData.relatedWords || [],
             ideogram: ideogram.trim(),
             personCategory: personCategory.trim(),
             tone: tone.trim(),
@@ -654,6 +698,39 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                         <option key={tag} value={tag} />
                     ))}
                 </datalist>
+
+                <div style={{ marginTop: '1.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label className="form-label">Related Words</label>
+                        <button className="btn-link" onClick={autoSuggestRelated} disabled={isFetchingRelated} style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Wand2 size={12} /> {isFetchingRelated ? 'Searching...' : 'Auto-Suggest'}
+                        </button>
+                    </div>
+                    <div className="tags-chip-container">
+                        {formData.relatedWords.map(rw => (
+                            <span key={rw} className="tag-chip" style={{ background: 'var(--s3)', borderColor: 'var(--s4)' }}>
+                                {rw}
+                                <X size={12} onClick={() => removeRelated(rw)} className="tag-remove-icon" />
+                            </span>
+                        ))}
+                        <div className="tag-input-wrap">
+                            <Input
+                                placeholder={formData.relatedWords.length === 0 ? "Add related concept (e.g. water, ocean)..." : ""}
+                                value={relatedInput}
+                                onChange={(e) => setRelatedInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ',') {
+                                        e.preventDefault();
+                                        handleAddRelated(relatedInput);
+                                    }
+                                }}
+                                onBlur={() => handleAddRelated(relatedInput)}
+                                className="tag-input-field"
+                            />
+                            <Plus size={16} className="tag-add-icon" onClick={() => handleAddRelated(relatedInput)} />
+                        </div>
+                    </div>
+                </div>
 
                 {/* Etymology & Genealogy Section */}
                 {(parentWord || derivationRule) && (

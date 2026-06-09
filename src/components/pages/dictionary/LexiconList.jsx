@@ -58,7 +58,8 @@ export default function LexiconList() {
         type: 'all',
         letter: 'all',
         sort: 'newest',
-        showTones: false
+        showTones: false,
+        showRelated: true
     });
 
     // Track which words are currently selected for our popup modals
@@ -368,6 +369,15 @@ export default function LexiconList() {
                         />
                         Tones/Stress
                     </label>
+                    <label className="bound-toggle">
+                        <input 
+                            type="checkbox" 
+                            className="bound-checkbox"
+                            checked={filters.showRelated}
+                            onChange={(e) => updateFilter('showRelated', e.target.checked)}
+                        />
+                        Related Words
+                    </label>
                 </div>
 
                 {/* Active Filters Bar */}
@@ -579,6 +589,46 @@ export default function LexiconList() {
                                                             #{tag}
                                                         </span>
                                                     ))}
+                                                </div>
+                                            )}
+
+                                            {filters.showRelated && entry.relatedWords && entry.relatedWords.length > 0 && (
+                                                <div className="entry-related" style={{ marginTop: '0.5rem', display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                                    <span style={{ fontSize: '0.75rem', color: 'var(--tx2)' }}>Related:</span>
+                                                    {entry.relatedWords.map((rw, i) => {
+                                                        const cleanRw = rw.toLowerCase().trim();
+                                                        // Check if this concept already exists in the lexicon
+                                                        const exists = lexicon.some(e => 
+                                                            (e.translation && e.translation.toLowerCase() === cleanRw) || 
+                                                            (e.word && e.word.toLowerCase() === cleanRw)
+                                                        );
+                                                        
+                                                        return (
+                                                            <span 
+                                                                key={i} 
+                                                                className={`related-chip ${exists ? 'related-exists' : 'related-missing'}`}
+                                                                title={exists ? 'View this word in lexicon' : 'Create this word'}
+                                                                onClick={() => {
+                                                                    if (exists) {
+                                                                        updateFilter('search', rw);
+                                                                    } else {
+                                                                        navigate('/create', { state: { prefillTranslation: rw } });
+                                                                    }
+                                                                }}
+                                                                style={{
+                                                                    fontSize: '0.75rem',
+                                                                    padding: '2px 8px',
+                                                                    borderRadius: '12px',
+                                                                    border: `1px solid ${exists ? 'var(--ok)' : '#ef4444'}`,
+                                                                    color: exists ? 'var(--ok)' : '#ef4444',
+                                                                    background: exists ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                {rw}
+                                                            </span>
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
                                         </div>

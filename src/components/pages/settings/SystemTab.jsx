@@ -2,8 +2,9 @@ import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../UI/Card/Card.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
+import Input from '../../UI/Input/Input.jsx';
 import './systemtab.css';
-import { Palette, CaseLower, Database, ToggleLeft, Globe, Type } from 'lucide-react';
+import { Palette, CaseLower, Database, ToggleLeft, Globe, Type, Code, Copy, Check } from 'lucide-react';
 import { useConfigStore, INITIAL_CONFIG } from '../../../store/useConfigStore.jsx';
 import { useProjectStore } from '../../../store/useProjectStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
@@ -34,6 +35,17 @@ export default function SystemTab() {
     const setLexicon = useLexiconStore((state) => state.setLexicon);
     const fileInputRef = useRef(null);
     const legacyInputRef = useRef(null);
+
+    const [copiedSnippet, setCopiedSnippet] = React.useState('');
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const currentProjectId = useConfigStore((state) => state.projectId);
+
+    const handleCopySnippet = (code, id) => {
+        navigator.clipboard.writeText(code);
+        setCopiedSnippet(id);
+        setTimeout(() => setCopiedSnippet(''), 2000);
+    };
 
 
     const applyThemePreset = (preset) => {
@@ -372,6 +384,73 @@ export default function SystemTab() {
             </Card>
 
             <Card>
+                <h2 className='flex sg-title'><Code /> API Integrations</h2>
+                <p>
+                    Access your lexicon in real-time from Obsidian, Notion, desktop apps, or custom scripts using our read-only API. 
+                    Your language must be marked as <b>Publicly Visible</b> and <b>Updated</b> for the API to fetch the latest data.
+                </p>
+                
+                {(!isPublic || !currentProjectId) ? (
+                    <div style={{ marginTop: '1rem', padding: '15px', background: 'var(--s1)', borderRadius: 'var(--rad-sm)', border: '1px dashed var(--bd)' }}>
+                        <p style={{ color: 'var(--tx2)', fontSize: '0.9rem', textAlign: 'center' }}>
+                            ⚠️ You must make your conlang public (in the Visibility card above) to enable API access.
+                        </p>
+                    </div>
+                ) : (
+                    <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                        
+                        <div style={{ background: 'var(--s1)', padding: '15px', borderRadius: 'var(--rad-sm)', border: '1px solid var(--bd)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Direct API Endpoint (GET)</span>
+                                <button className="btn-link" onClick={() => handleCopySnippet(`${supabaseUrl}/rest/v1/conlang_snapshots?project_id=eq.${currentProjectId}&select=project_data`, 'url')} style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    {copiedSnippet === 'url' ? <Check size={14} /> : <Copy size={14} />} {copiedSnippet === 'url' ? 'Copied' : 'Copy'}
+                                </button>
+                            </div>
+                            <code style={{ fontSize: '0.8rem', color: 'var(--acc)', wordBreak: 'break-all' }}>
+                                {`${supabaseUrl}/rest/v1/conlang_snapshots?project_id=eq.${currentProjectId}&select=project_data`}
+                            </code>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--tx2)', marginTop: '8px' }}>
+                                Requires the apikey header below.
+                            </p>
+                        </div>
+
+                        <div style={{ background: 'var(--s1)', padding: '15px', borderRadius: 'var(--rad-sm)', border: '1px solid var(--bd)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>cURL Example</span>
+                                <button className="btn-link" onClick={() => handleCopySnippet(`curl -X GET '${supabaseUrl}/rest/v1/conlang_snapshots?project_id=eq.${currentProjectId}&select=project_data' \\\n-H 'apikey: ${supabaseAnonKey}'`, 'curl')} style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    {copiedSnippet === 'curl' ? <Check size={14} /> : <Copy size={14} />} {copiedSnippet === 'curl' ? 'Copied' : 'Copy'}
+                                </button>
+                            </div>
+                            <pre style={{ fontSize: '0.8rem', color: 'var(--tx2)', whiteSpace: 'pre-wrap', background: 'var(--s2)', padding: '10px', borderRadius: '4px', overflowX: 'auto' }}>
+{`curl -X GET '${supabaseUrl}/rest/v1/conlang_snapshots?project_id=eq.${currentProjectId}&select=project_data' \\
+-H 'apikey: ${supabaseAnonKey}'`}
+                            </pre>
+                        </div>
+
+                        <div style={{ background: 'var(--s1)', padding: '15px', borderRadius: 'var(--rad-sm)', border: '1px solid var(--bd)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>JavaScript (Fetch)</span>
+                                <button className="btn-link" onClick={() => handleCopySnippet(`const fetchDictionary = async () => {\n  const res = await fetch('${supabaseUrl}/rest/v1/conlang_snapshots?project_id=eq.${currentProjectId}&select=project_data', {\n    headers: { 'apikey': '${supabaseAnonKey}' }\n  });\n  const data = await res.json();\n  console.log(data[0].project_data.dictionary);\n};`, 'js')} style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    {copiedSnippet === 'js' ? <Check size={14} /> : <Copy size={14} />} {copiedSnippet === 'js' ? 'Copied' : 'Copy'}
+                                </button>
+                            </div>
+                            <pre style={{ fontSize: '0.8rem', color: 'var(--tx2)', whiteSpace: 'pre-wrap', background: 'var(--s2)', padding: '10px', borderRadius: '4px', overflowX: 'auto' }}>
+{`const fetchDictionary = async () => {
+  const res = await fetch('${supabaseUrl}/rest/v1/conlang_snapshots?project_id=eq.${currentProjectId}&select=project_data', {
+    headers: { 'apikey': '${supabaseAnonKey}' }
+  });
+  const data = await res.json();
+  const lexicon = data[0].project_data.dictionary;
+  console.log(lexicon);
+};`}
+                            </pre>
+                        </div>
+
+                    </div>
+                )}
+            </Card>
+
+            <Card>
                 <h2 className='flex sg-title'><CaseLower /> Typography & Custom Font</h2>
                 <p>
                     Upload your custom <b>.ttf</b> or <b>.otf</b> font to render your unique characters. The font file is converted and stored locally in your browser memory. <br />
@@ -467,15 +546,12 @@ export default function SystemTab() {
                 <p>Customize the terminology used throughout the app to match your worldbuilding project. Leave a field blank to use the default name.</p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
                     
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>App Title</label>
-                        <input 
-                            className="input" 
-                            placeholder="ConlangEngine" 
-                            value={useConfigStore(state => state.customLabels?.appTitle) || ''}
-                            onChange={(e) => updateConfig({ customLabels: { ...(useConfigStore.getState().customLabels || {}), appTitle: e.target.value } })}
-                        />
-                    </div>
+                    <Input 
+                        label="App Title"
+                        placeholder="ConlangEngine" 
+                        value={useConfigStore(state => state.customLabels?.appTitle) || ''}
+                        onChange={(e) => updateConfig({ customLabels: { ...(useConfigStore.getState().customLabels || {}), appTitle: e.target.value } })}
+                    />
 
                     {[
                         "Workspace", "Lexicon", "Linguistics", "Resources", "Help",
@@ -483,15 +559,13 @@ export default function SystemTab() {
                         "Generator", "Orthography & Numbers", "Analyzer", "Root Map", 
                         "Sentence Mapper", "Reader", "Library & Writing", "Study & Flashcards", "Help & Info"
                     ].map(label => (
-                        <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>{label}</label>
-                            <input 
-                                className="input" 
-                                placeholder={label} 
-                                value={useConfigStore(state => state.customLabels?.[label]) || ''}
-                                onChange={(e) => updateConfig({ customLabels: { ...(useConfigStore.getState().customLabels || {}), [label]: e.target.value } })}
-                            />
-                        </div>
+                        <Input 
+                            key={label}
+                            label={label}
+                            placeholder={label} 
+                            value={useConfigStore(state => state.customLabels?.[label]) || ''}
+                            onChange={(e) => updateConfig({ customLabels: { ...(useConfigStore.getState().customLabels || {}), [label]: e.target.value } })}
+                        />
                     ))}
                 </div>
             </Card>
