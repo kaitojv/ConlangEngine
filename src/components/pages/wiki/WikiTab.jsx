@@ -1809,18 +1809,33 @@ function LegacyWikiEditor({ content, onSave }) {
         }
     }, [content]);
 
-    const handleSave = () => {
+    const onSaveRef = useRef(onSave);
+    useEffect(() => {
+        onSaveRef.current = onSave;
+    }, [onSave]);
+
+    const handleSave = useCallback(() => {
         if (editorRef.current) {
             const html = editorRef.current.innerHTML;
-            lastContentRef.current = html;
-            onSave(html);
+            if (html !== lastContentRef.current) {
+                lastContentRef.current = html;
+                onSaveRef.current(html);
+            }
         }
-    };
+    }, []);
 
     useEffect(() => {
         const autoSaveTimer = setInterval(handleSave, 3000);
         return () => clearInterval(autoSaveTimer);
-    }, [onSave]);
+    }, [handleSave]);
+
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            handleSave();
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [handleSave]);
 
     const formatText = (command, value = null) => {
         document.execCommand(command, false, value);
