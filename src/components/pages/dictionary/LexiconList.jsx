@@ -627,7 +627,7 @@ export default function LexiconList() {
                                                                 title={exists ? 'View this word in lexicon' : 'Create this word'}
                                                                 onClick={() => {
                                                                     if (exists) {
-                                                                        updateFilter('search', rw);
+                                                                        updateFilter('search', '=' + rw);
                                                                     } else {
                                                                         navigate('/create', { state: { prefillTranslation: rw } });
                                                                     }

@@ -86,6 +86,13 @@ export default function BackupTab() {
                 archive.
             </Infobox>
 
+            <Infobox title="Obsidian Plugin Integration">
+                To sync your projects with Obsidian:
+                <br/>1. Download the <a href="https://github.com/niruhsa/ConlangEngine-Obsidian-Backup" target="_blank" rel="noreferrer" style={{color: 'var(--acc)', textDecoration: 'underline'}}>Obsidian Backup Plugin</a> and place it in your vault's <code>.obsidian/plugins</code> folder.
+                <br/>2. Enable the plugin in Obsidian and set its storage directory to <code>.conlang-backups</code>.
+                <br/>3. Leave the endpoint below as <code>http://localhost:3000</code> and enable backup!
+            </Infobox>
+
             {/* Master enable */}
             <label className="bk-toggle-row">
                 <div>
