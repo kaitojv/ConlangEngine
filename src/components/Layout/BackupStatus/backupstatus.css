@@ -1,0 +1,76 @@
+/* src/components/Layout/BackupStatus/backupstatus.css */
+
+.backup-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--bd);
+    background: var(--s2);
+    color: var(--tx2);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.backup-status:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+}
+
+.backup-status svg {
+    flex-shrink: 0;
+}
+
+/* Status color variants */
+.backup-status.ok {
+    color: #34d399;
+    border-color: color-mix(in srgb, #34d399 40%, transparent);
+    background: color-mix(in srgb, #34d399 12%, var(--s2));
+}
+
+.backup-status.pending {
+    color: #fbbf24;
+    border-color: color-mix(in srgb, #fbbf24 40%, transparent);
+    background: color-mix(in srgb, #fbbf24 12%, var(--s2));
+}
+
+.backup-status.saving {
+    color: var(--acc2);
+    border-color: color-mix(in srgb, var(--acc2) 40%, transparent);
+    background: color-mix(in srgb, var(--acc2) 12%, var(--s2));
+}
+
+.backup-status.offline {
+    color: #94a3b8;
+    border-color: color-mix(in srgb, #94a3b8 35%, transparent);
+    background: color-mix(in srgb, #94a3b8 10%, var(--s2));
+}
+
+.backup-status.error {
+    color: #f87171;
+    border-color: color-mix(in srgb, #f87171 45%, transparent);
+    background: color-mix(in srgb, #f87171 12%, var(--s2));
+}
+
+.backup-status .spin {
+    animation: backup-spin 1s linear infinite;
+}
+
+@keyframes backup-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Collapse the text label on narrow screens — keep the icon. */
+@media (max-width: 768px) {
+    .backup-status-label {
+        display: none;
+    }
+    .backup-status {
+        padding: 6px;
+    }
+}
