@@ -16,6 +16,8 @@ import toast from 'react-hot-toast';
 import { supabase } from '../../../utils/supabaseClient.js';
 import { useSharing } from '../../../hooks/useSharing.jsx';
 import { computeProsody } from '../../../utils/prosodyEngine.jsx';
+import { createPhonoMatcher } from '../../../utils/phonoSearch.js';
+import { reverseDictScore } from '../../../utils/reverseDictionary.js';
 import StressWave from '../../UI/StressWave/StressWave.jsx';
 import './lexiconList.css';
 
@@ -155,8 +157,20 @@ export default function LexiconList() {
         }
 
         if (filters.search) {
-            const q = filters.search.toLowerCase().trim();
-            if (q) {
+            const rawQuery = filters.search.trim();
+            if (rawQuery.startsWith('/') && rawQuery.length > 1) {
+                // Phoneme pattern mode: /#st, /VnV, /[+voiced,fricative]V#  (# anchors word edges)
+                const { match, error } = createPhonoMatcher(rawQuery, { consonants, vowels, otherPhonemes });
+                result = error ? [] : result.filter(e => match(e)).map(e => ({ ...e, searchScore: 100 }));
+            } else if (rawQuery.startsWith('=') && rawQuery.length > 1) {
+                // Reverse dictionary mode: =happy also finds entries glossed "glad", "joyful", ...
+                const meaningQuery = rawQuery.slice(1);
+                result = result
+                    .map(e => ({ ...e, searchScore: reverseDictScore(meaningQuery, e) }))
+                    .filter(e => e.searchScore > 0);
+            } else {
+                const q = rawQuery.toLowerCase();
+                if (q) {
                 result = result.map(e => {
                     const safeWord = (e.word || '').replace(/\*/g, '').toLowerCase();
                     const normalizedWord = normalizeToBase(safeWord).toLowerCase();
@@ -177,6 +191,7 @@ export default function LexiconList() {
                     
                     return { ...e, searchScore: score };
                 }).filter(e => e.searchScore > 0);
+                }
             }
         }
 
@@ -210,7 +225,7 @@ export default function LexiconList() {
         else if (filters.sort === 'za') result.sort((a, b) => b.word.replace(/\*/g, '').localeCompare(a.word.replace(/\*/g, '')));
 
         return result;
-    }, [lexicon, filters, transliterate, showBoundMorphemes, grammarRules, normalizeToBase]);
+    }, [lexicon, filters, transliterate, showBoundMorphemes, grammarRules, normalizeToBase, consonants, vowels, otherPhonemes]);
 
     // Group identical conlang words visually so the user can see multiple senses under 1 dictionary entry
     const groupedLexicon = useMemo(() => {
@@ -444,6 +459,8 @@ export default function LexiconList() {
 
             <Infobox title="Lexicon Pro Tips">
                 • <b>Search:</b> You can search by word, translation, or even tag (e.g. "#aquatic").<br />
+                • <b>Sound Search:</b> Start with <code>/</code> to search by phonemes — <code>/#st</code> (starts with /st/), <code>/VnV</code>, <code>/[+voiced,fricative]V#</code>. <code>#</code> anchors word edges, <code>*</code> is a wildcard.<br />
+                • <b>Reverse Dictionary:</b> Start with <code>=</code> to search by meaning — <code>=happy</code> also finds entries glossed "glad" or tagged with the same theme.<br />
                 • <b>Filtering:</b> Use the alphabetic bar to quickly jump to words starting with a specific letter.<br />
                 • <b>Affixes:</b> Enable "Show Affixes" to see bound morphemes like prefixes and suffixes in the list.
             </Infobox>

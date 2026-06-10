@@ -438,6 +438,44 @@
    RESPONSIVE
    ========================================= */
 /* =========================================
+   SEARCHING — Lexicon search syntax
+   ========================================= */
+
+/* Even vertical rhythm: headings open a block, grids and tips sit 16px from
+   their surrounding text on BOTH sides (shortcuts-grid only sets margin-top,
+   which made the spacing lopsided here). */
+.help-searching h4 {
+    color: var(--tx);
+    margin: 28px 0 10px;
+}
+
+.help-searching h4:first-of-type {
+    margin-top: 8px;
+}
+
+.help-searching p {
+    margin: 0 0 12px;
+}
+
+.help-searching .shortcuts-grid {
+    margin: 16px 0;
+}
+
+.help-searching .walkthrough-tip {
+    margin: 16px 0;
+}
+
+/* Inline code chips — same look as the walkthrough's code styling */
+.help-searching code {
+    background: rgba(124, 58, 237, 0.1);
+    color: var(--acc2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-family: 'Inter', monospace;
+}
+
+/* =========================================
    SHORTCUTS — Keyboard Grid
    ========================================= */
 .shortcuts-grid {
