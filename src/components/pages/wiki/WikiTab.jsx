@@ -1978,7 +1978,7 @@ export default function WikiTab() {
     const rootPages = Object.keys(wikiPages).filter(k => {
         const p = wikiPages[k];
         if (p && typeof p === 'object' && p.type === 'notebook') return false;
-        if (p && typeof p === 'object' && p.parentId) return false;
+        if (p && typeof p === 'object' && p.parentId && p.parentId !== 'root') return false;
         return true;
     });
 
