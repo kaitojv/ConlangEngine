@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Info, BookOpen, HelpCircle, Mail, Shield, ChevronRight, Lightbulb, Sparkles, PenTool, BookA, Settings2, Wand2, BrainCircuit, Globe, Lock, Database, Eye, Download, Keyboard } from 'lucide-react';
+import { Info, BookOpen, HelpCircle, Mail, Shield, ChevronRight, Lightbulb, Sparkles, PenTool, BookA, Settings2, Wand2, BrainCircuit, Globe, Lock, Database, Eye, Download, Keyboard, Search } from 'lucide-react';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import './helptab.css';
 
@@ -348,6 +348,95 @@ const Shortcuts = () => (
     </div>
 );
 
+// Searching the Lexicon — documents the search modes of the Dictionary search box
+const Searching = () => (
+    <div className="help-section help-searching">
+        <h3 className="help-section-title"><Search className="help-icon" /> Searching the Lexicon</h3>
+        <p className="help-section-subtitle">The Dictionary search box has three modes. The first character of your query picks the mode.</p>
+
+        <h4>Standard Search (no prefix)</h4>
+        <p>Type anything to match against your words, translations, definitions, IPA, and tags. Results are ranked: exact matches first, then prefix matches, then partial matches. Search a tag directly with <code>#</code> (e.g. <code>#aquatic</code>).</p>
+
+        <h4>Phoneme Search (start with <code>/</code>)</h4>
+        <p>Searches by <em>sound</em> instead of spelling. It matches against each entry's IPA field, falling back to the romanized word for entries without IPA. Build patterns from these elements:</p>
+        <div className="shortcuts-grid">
+            <div className="shortcut-item">
+                <span className="shortcut-key">t, kʰ, t͡ʃ</span>
+                <span className="shortcut-desc">Literal IPA phonemes</span>
+            </div>
+            <div className="shortcut-item">
+                <span className="shortcut-key">C / V</span>
+                <span className="shortcut-desc">Any consonant / any vowel (uppercase only)</span>
+            </div>
+            <div className="shortcut-item">
+                <span className="shortcut-key">[features]</span>
+                <span className="shortcut-desc">Feature bundle, e.g. [nasal], [+voiced, fricative]</span>
+            </div>
+            <div className="shortcut-item">
+                <span className="shortcut-key">*</span>
+                <span className="shortcut-desc">Any run of phonemes (including none)</span>
+            </div>
+            <div className="shortcut-item">
+                <span className="shortcut-key">#</span>
+                <span className="shortcut-desc">Word boundary, at pattern start or end</span>
+            </div>
+        </div>
+        <p>Patterns match anywhere inside a word unless you anchor them with <code>#</code>. Some examples:</p>
+        <div className="shortcuts-grid">
+            <div className="shortcut-item">
+                <span className="shortcut-key">/#st</span>
+                <span className="shortcut-desc">Words starting with /st/</span>
+            </div>
+            <div className="shortcut-item">
+                <span className="shortcut-key">/n#</span>
+                <span className="shortcut-desc">Words ending in /n/</span>
+            </div>
+            <div className="shortcut-item">
+                <span className="shortcut-key">/VnV</span>
+                <span className="shortcut-desc">Vowel–n–vowel anywhere</span>
+            </div>
+            <div className="shortcut-item">
+                <span className="shortcut-key">/[nasal]V#</span>
+                <span className="shortcut-desc">Nasal + vowel at the end of a word</span>
+            </div>
+            <div className="shortcut-item">
+                <span className="shortcut-key">/[+voiced, fricative]</span>
+                <span className="shortcut-desc">Contains a voiced fricative (v, z, ʒ, ...)</span>
+            </div>
+            <div className="shortcut-item">
+                <span className="shortcut-key">/#CVCV#</span>
+                <span className="shortcut-desc">Words with exactly CVCV shape</span>
+            </div>
+        </div>
+        <p>Feature bundles accept voicing (<code>voiced</code>, <code>voiceless</code>), place (<code>bilabial</code>, <code>alveolar</code>, <code>velar</code>, <code>glottal</code>, ...), manner (<code>plosive</code>/<code>stop</code>, <code>nasal</code>, <code>fricative</code>, <code>trill</code>, <code>approximant</code>, ...), vowel height (<code>close</code>, <code>mid</code>, <code>open</code>, ...), backness (<code>front</code>, <code>central</code>, <code>back</code>) and rounding (<code>rounded</code>, <code>unrounded</code>). Combine with commas for AND, and negate with <code>-</code>: <code>[-voiced]</code>.</p>
+        <div className="walkthrough-tip">
+            <Lightbulb size={14} />
+            <span>Diacritics are optional in queries but strict when given: <code>/k</code> matches both <em>kona</em> and <em>kʰona</em>, while <code>/kʰ</code> only matches the aspirated form. Affricates like <code>t͡ʃ</code> and multigraphs from your Phonology settings (<code>ch</code>, <code>ng</code>, ...) count as a single consonant.</span>
+        </div>
+
+        <h4>Reverse Dictionary (start with <code>=</code>)</h4>
+        <p>Searches by <em>meaning</em> — use it when you know the concept but forgot your word. Matching is ranked: exact gloss first, then word-form variants (<code>=to run</code> finds an entry glossed "running"), then mentions in definitions, then words sharing a semantic theme (<code>=wolf</code> can surface your word for "fox").</p>
+        <div className="shortcuts-grid">
+            <div className="shortcut-item">
+                <span className="shortcut-key">=water</span>
+                <span className="shortcut-desc">Your word glossed "water", then related entries</span>
+            </div>
+            <div className="shortcut-item">
+                <span className="shortcut-key">=to run</span>
+                <span className="shortcut-desc">Also finds "running", "runs"</span>
+            </div>
+            <div className="shortcut-item">
+                <span className="shortcut-key">=happy</span>
+                <span className="shortcut-desc">Surfaces words tagged or themed as feelings</span>
+            </div>
+        </div>
+        <div className="walkthrough-tip">
+            <Lightbulb size={14} />
+            <span>Everything runs offline — phoneme search and the reverse dictionary never call external services. For <code>C</code>/<code>V</code> classes on custom symbols, the engine reads your inventory from <strong>Settings → Phonology</strong>, and your settings win over IPA defaults (declaring <code>y</code> a vowel works as expected).</span>
+        </div>
+    </div>
+);
+
 // The Contact section tells users how to reach out for support or feedback
 const Contact = () => (
     <div className="help-section">
@@ -372,6 +461,7 @@ export default function HelpTab() {
             case 'how-to-use': return <HowToUse />;
             case 'privacy': return <Privacy />;
             case 'faq': return <FAQ />;
+            case 'searching': return <Searching />;
             case 'shortcuts': return <Shortcuts />;
             case 'contact': return <Contact />;
             default: return <About />;
@@ -407,6 +497,12 @@ export default function HelpTab() {
                         className={`help-nav-btn ${activeTab === 'faq' ? 'active' : ''}`}
                     >
                         <HelpCircle size={18} /> FAQ
+                    </Button>
+                    <Button 
+                        onClick={() => setActiveTab('searching')} 
+                        className={`help-nav-btn ${activeTab === 'searching' ? 'active' : ''}`}
+                    >
+                        <Search size={18} /> Searching
                     </Button>
                     <Button 
                         onClick={() => setActiveTab('shortcuts')} 

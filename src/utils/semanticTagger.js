@@ -5,7 +5,7 @@ import { MASSIVE_THEMES } from './offlineThemes.js';
  * Extracts the core english word from a potentially messy translation string.
  * e.g., "to run away" -> "run", "an apple" -> "apple"
  */
-function extractCoreWord(translation) {
+export function extractCoreWord(translation) {
     if (!translation) return '';
     let word = translation.toLowerCase().trim();
     
