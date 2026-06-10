@@ -14,17 +14,22 @@ import nlp from 'compromise';
 import { extractCoreWord } from './semanticTagger.js';
 import { MASSIVE_THEMES } from './offlineThemes.js';
 
+const lemmaCache = new Map();
+
 /**
  * Reduces a word to a comparable lemma: verbs → infinitive ("running" → "run"),
  * nouns → singular ("wolves" → "wolf"). Falls back to the input.
+ * Memoized to prevent NLP engine from freezing the main thread during search.
  */
 function lemma(word) {
     if (!word) return '';
+    if (lemmaCache.has(word)) return lemmaCache.get(word);
     const doc = nlp(word);
     doc.verbs().toInfinitive();
     doc.nouns().toSingular();
-    const out = doc.text().toLowerCase().trim();
-    return out || word;
+    const out = doc.text().toLowerCase().trim() || word;
+    lemmaCache.set(word, out);
+    return out;
 }
 
 /**
