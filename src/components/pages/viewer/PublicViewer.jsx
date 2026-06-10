@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/utils/supabaseClient.js';
-import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit, FileText, Map, Zap, ArrowLeft } from 'lucide-react';
+import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit, FileText, Map, Zap, ArrowLeft, Loader2 } from 'lucide-react';
+import { playAzureTTS } from '@/utils/azureTTS.js';
 import DOMPurify from 'dompurify';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import { usePublicThemeInjector, usePublicFontInjector } from '../../../hooks/usePublicInjectors.jsx';
@@ -20,6 +21,24 @@ export default function PublicViewer() {
     const [visibleCount, setVisibleCount] = useState(50);
     const [activeTab, setActiveTab] = useState('overview'); // overview, course, flashcards
     const [activeLevel, setActiveLevel] = useState(null);
+    const [playingWordId, setPlayingWordId] = useState(null);
+
+    const handlePlayIpa = useCallback(async (entry) => {
+        if (playingWordId) return; // prevent overlapping
+        setPlayingWordId(entry.id || entry.word);
+        try {
+            await playAzureTTS({
+                text: entry.word,
+                ipa: entry.ipa,
+                voice: 'ipa-default',
+                useIpa: true
+            });
+        } catch (err) {
+            console.warn('TTS playback failed:', err);
+        } finally {
+            setPlayingWordId(null);
+        }
+    }, [playingWordId]);
 
     // Fetch the project from Supabase using the project_id
     useEffect(() => {
@@ -322,7 +341,24 @@ export default function PublicViewer() {
                                                             {isLogographic && entry.ideogram ? entry.ideogram : transliterate(entry.word, dictionary)}
                                                         </span>
                                                     </td>
-                                                    <td className="pv-ipa-cell">{entry.ipa ? `/${entry.ipa}/` : '—'}</td>
+                                                    <td className="pv-ipa-cell">
+                                                        {entry.ipa ? (
+                                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                                                /{entry.ipa}/
+                                                                <button
+                                                                    className="pv-ipa-play-btn"
+                                                                    title="Listen to pronunciation"
+                                                                    onClick={(e) => { e.stopPropagation(); handlePlayIpa(entry); }}
+                                                                    disabled={!!playingWordId}
+                                                                >
+                                                                    {playingWordId === (entry.id || entry.word)
+                                                                        ? <Loader2 size={12} className="animate-spin" />
+                                                                        : <Volume2 size={12} />
+                                                                    }
+                                                                </button>
+                                                            </span>
+                                                        ) : '—'}
+                                                    </td>
                                                     <td>{entry.wordClass ? <span className="pv-class-cell">{entry.wordClass}</span> : '—'}</td>
                                                     <td className="pv-trans-cell">{entry.translation}</td>
                                                     <td>

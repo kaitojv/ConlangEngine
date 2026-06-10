@@ -321,6 +321,34 @@
     font-size: 0.9rem;
 }
 
+.pv-ipa-play-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--bd, rgba(255, 255, 255, 0.1));
+    background: var(--s2, rgba(124, 58, 237, 0.08));
+    color: var(--acc, #a78bfa);
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.pv-ipa-play-btn:hover:not(:disabled) {
+    background: var(--acc, #7c3aed);
+    color: #fff;
+    border-color: var(--acc, #7c3aed);
+    transform: scale(1.15);
+}
+
+.pv-ipa-play-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
 .pv-class-cell {
     display: inline-block;
     padding: 2px 10px;
