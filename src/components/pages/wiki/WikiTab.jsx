@@ -1790,7 +1790,7 @@ function LegacyWikiEditor({ content, onSave }) {
     
     // We use a ref to track the last content we intentionally synced with the store.
     // This prevents DOMPurify from destroying the user's cursor position during autosave.
-    const lastContentRef = useRef(content);
+    const lastContentRef = useRef(null);
 
     useEffect(() => {
         if (editorRef.current && content !== editorRef.current.innerHTML && content !== lastContentRef.current) {
