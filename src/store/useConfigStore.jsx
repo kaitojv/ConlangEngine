@@ -166,6 +166,22 @@ export const INITIAL_CONFIG = {
         customTypographyModes: [],
         activeDisplayMode: 'Base'
     },
+    // REST API backup system — per-project configuration (see https://github.com/niruhsa/ConlangEngine-Obsidian-Backup/blob/master/README.md)
+    backupSettings: {
+        enabled: false,
+        // Base URL incl. transport + host + port, e.g. http://localhost:3000
+        endpoint: 'http://localhost:3000',
+        // Periodic autosave
+        autosaveEnabled: true,
+        autosaveIntervalMinutes: 5,
+        // Back up on every committed change (debounced)
+        onChangeEnabled: false,
+        // Debounce window for change detection (ms) — waits for typing to settle
+        debounceMs: 2500,
+        // Reuse a single backup version for a window instead of spamming new ones
+        reuseEnabled: true,
+        reuseWindowMinutes: 10,
+    },
 };
 
 // IndexedDB Helper for handling massive data without breaking local storage quotas

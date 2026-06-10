@@ -3,16 +3,20 @@ import { useState } from 'react';
 import SettingsGeneral from './SettingsGeneral.jsx';
 import PhonologyTab from './PhonologyTab.jsx';
 import './settings.css';
-import { Cog, Languages, Palette, Hash, BookOpen, FileText, Bookmark, Type } from 'lucide-react'
+import { Cog, Languages, Palette, Hash, BookOpen, FileText, Bookmark, Type, Cloud } from 'lucide-react'
 import LexiconTab from './LexiconTab.jsx';
 import GrammarTab from './GrammarTab.jsx';
 import NumeralTab from './NumeralTab.jsx';
 import SystemTab from './SystemTab.jsx';
 import FunctionWordsTab from './FunctionWordsTab.jsx';
 import GraphismTab from './GraphismTab.jsx';
+import BackupTab from './BackupTab.jsx';
+import { useIsDesktop } from '../../../utils/device.js';
 
 export default function Settings() {
     const [activeTab, setActiveTab] = useState('general');
+    // Backup talks to the desktop-only Obsidian plugin — hide the tab on mobile.
+    const isDesktop = useIsDesktop();
 
     const configTabs = [
         { id: 'general', label: 'General', icon: Cog },
@@ -22,6 +26,7 @@ export default function Settings() {
         { id: 'numerals', label: 'Numerals', icon: Hash },
         { id: 'functionWords', label: 'Pronouns', icon: Bookmark },
         { id: 'graphism', label: 'Graphism', icon: Type },
+        ...(isDesktop ? [{ id: 'backup', label: 'Backup', icon: Cloud }] : []),
         { id: 'system', label: 'System and Theme', icon: Palette}
     ];
     return (
@@ -65,6 +70,9 @@ export default function Settings() {
                 )}
                 {activeTab === 'graphism' && (
                     <GraphismTab />
+                )}
+                {activeTab === 'backup' && isDesktop && (
+                    <BackupTab />
                 )}
                 {activeTab === 'system' && (
                     <SystemTab />
