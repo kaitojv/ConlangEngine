@@ -280,3 +280,109 @@ export async function fetchFollowerOptions(word) {
     }
 }
 
+/**
+ * Fetches a concise English definition for a word.
+ * Strategy:
+ *   1. Datamuse (?sp=<word>&md=d&max=1) — fast, returns defs inline
+ *   2. Wiktionary via fetchFullDictionary() — richer, but slower
+ * 
+ * @param {string} translation  The English translation/gloss (e.g. "water", "to run")
+ * @param {string} [wordClass]  Optional POS to prefer matching definitions (e.g. "noun")
+ * @returns {Promise<string|null>}  Plain-text definition string, or null
+ */
+export async function fetchDefinitionForWord(translation, wordClass) {
+    if (!translation) return null;
+
+    // Extract core word: "to run away" → "run", "an apple" → "apple"
+    let core = translation.toLowerCase().trim();
+    if (core.startsWith('to ')) core = core.substring(3);
+    if (core.startsWith('a ')) core = core.substring(2);
+    if (core.startsWith('an ')) core = core.substring(3);
+    if (core.startsWith('the ')) core = core.substring(4);
+    core = core.split(/[\s(,;]/)[0];
+    if (!core) return null;
+
+    // Normalize POS label for matching
+    const posNorm = (wordClass || '').split(',')[0].trim().toLowerCase();
+
+    // Map our POS labels to Datamuse defs prefixes
+    const POS_MAP = {
+        noun: 'n', verb: 'v', adjective: 'adj', adverb: 'adv',
+        pronoun: 'n', preposition: 'adv', conjunction: 'adv', particle: 'adv'
+    };
+    const targetPrefix = POS_MAP[posNorm] || null;
+
+    // ── 1. Datamuse (fast) ──────────────────────────────────────
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const res = await fetch(`${DATAMUSE_BASE_URL}?sp=${encodeURIComponent(core)}&md=d&max=3`, {
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+            const data = await res.json();
+            // Find exact match
+            const exact = data.find(d => d.word.toLowerCase() === core);
+            if (exact?.defs && exact.defs.length > 0) {
+                // Each def is "pos\tDefinition text"
+                // Try to match POS first
+                if (targetPrefix) {
+                    const matched = exact.defs.find(d => d.startsWith(targetPrefix + '\t'));
+                    if (matched) return matched.split('\t')[1];
+                }
+                // Otherwise take the first definition
+                return exact.defs[0].split('\t')[1];
+            }
+        }
+    } catch (e) { /* fall through to Wiktionary */ }
+
+    // ── 2. Wiktionary (richer, slower) ──────────────────────────
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        
+        // Use a wrapper to enforce timeout on the dictionary call
+        const wikiPromise = fetchFullDictionary(core);
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('timeout')), 4000);
+        });
+        
+        const wiki = await Promise.race([wikiPromise, timeoutPromise]);
+        clearTimeout(timeoutId);
+
+        if (wiki?.senses && wiki.senses.length > 0) {
+            // Try POS match
+            if (posNorm) {
+                const matchSense = wiki.senses.find(s =>
+                    s.pos?.toLowerCase().includes(posNorm)
+                );
+                if (matchSense?.definitions?.[0]) {
+                    return stripHtml(matchSense.definitions[0]);
+                }
+            }
+            // Fallback: first available definition
+            for (const sense of wiki.senses) {
+                if (sense.definitions?.[0]) {
+                    return stripHtml(sense.definitions[0]);
+                }
+            }
+        }
+    } catch (e) { /* no definition found */ }
+
+    return null;
+}
+
+/** Strips HTML tags from a Wiktionary definition string */
+function stripHtml(html) {
+    if (!html) return '';
+    return html
+        .replace(/<[^>]+>/g, '')    // remove tags
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#039;/g, "'")
+        .replace(/\s+/g, ' ')       // collapse whitespace
+        .trim();
+}

@@ -1,15 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useShallow } from 'zustand/react/shallow';
 import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
-import { Search, Edit, Trash2, Check, X, Tag, BookOpen, Sparkles, Loader2, Link } from 'lucide-react';
+import { Search, Edit, Trash2, Check, X, Tag, BookOpen, Sparkles, Loader2, Link, FileText } from 'lucide-react';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import toast from 'react-hot-toast';
 import { getTagsForTranslation } from '../../../utils/semanticTagger.js';
-import { fetchSynonymOptions } from '../../../utils/semanticUtils.js';
+import { fetchSynonymOptions, fetchDefinitionForWord } from '../../../utils/semanticUtils.js';
 import './lexiconTab.css';
 
 export default function LexiconTab() {
@@ -22,6 +22,8 @@ export default function LexiconTab() {
         updateConfig: state.updateConfig
     })));
 
+    const abortDefRef = useRef(false);
+
     const [editingItem, setEditingItem] = useState(null); // { type: 'pos' | 'tag', oldName: string, newName: string }
     const [searchTerm, setSearchTerm] = useState('');
     const [newPOS, setNewPOS] = useState('');
@@ -32,6 +34,9 @@ export default function LexiconTab() {
 
     const [isAutoRelating, setIsAutoRelating] = useState(false);
     const [autoRelateProgress, setAutoRelateProgress] = useState(0);
+
+    const [isAutoDefining, setIsAutoDefining] = useState(false);
+    const [autoDefineProgress, setAutoDefineProgress] = useState(0);
 
     // Extract all unique POS from the lexicon
     const allPOS = useMemo(() => {
@@ -276,6 +281,88 @@ export default function LexiconTab() {
         toast.success(`Auto-relating complete! Added semantic links to ${updatedCount} words.`);
     };
 
+    const handleAutoDefine = () => {
+        const doAutoDefine = async (shouldOverwrite) => {
+            abortDefRef.current = false;
+            setIsAutoDefining(true);
+            setAutoDefineProgress(0);
+
+            let processedCount = 0;
+            let updatedCount = 0;
+            let skippedCount = 0;
+            const total = lexicon.length;
+
+            for (let i = 0; i < total; i++) {
+                if (abortDefRef.current) {
+                    toast.error("Generation cancelled.");
+                    break;
+                }
+
+                const entry = lexicon[i];
+
+                // Skip entries without a translation
+                if (!entry.translation) {
+                    processedCount++;
+                    continue;
+                }
+
+                // Skip entries that already have a definition (unless overwrite)
+                if (!shouldOverwrite && entry.definition && entry.definition.trim()) {
+                    skippedCount++;
+                    processedCount++;
+                    continue;
+                }
+
+                try {
+                    const def = await fetchDefinitionForWord(entry.translation, entry.wordClass);
+                    if (def) {
+                        updateWord(entry.id, { definition: def });
+                        updatedCount++;
+                    }
+                } catch (e) {
+                    console.error("Failed auto-defining", entry.translation);
+                }
+
+                processedCount++;
+                if (processedCount % 5 === 0) {
+                    setAutoDefineProgress(Math.round((processedCount / total) * 100));
+                    await new Promise(r => setTimeout(r, 10));
+                }
+                // Rate limit to respect APIs
+                await new Promise(r => setTimeout(r, 150));
+            }
+
+            setIsAutoDefining(false);
+            setAutoDefineProgress(0);
+            const skipMsg = skippedCount > 0 ? ` (${skippedCount} skipped — already had definitions)` : '';
+            toast.success(`Auto-define complete! Generated definitions for ${updatedCount} words.${skipMsg}`);
+        };
+
+        // Show confirmation toast with overwrite checkbox
+        let overwriteChecked = false;
+        toast.custom((t) => (
+            <div className="custom-toast-v">
+                <strong>📖 Generate Full Definitions</strong>
+                <span>This will look up English definitions for all <b>{lexicon.length}</b> entries using Datamuse and Wiktionary. This may take a few minutes.</span>
+                <label className="auto-define-overwrite-label">
+                    <input
+                        type="checkbox"
+                        defaultChecked={false}
+                        onChange={(e) => { overwriteChecked = e.target.checked; }}
+                    />
+                    Regenerate existing definitions too
+                </label>
+                <div className="toast-actions-v">
+                    <button onClick={() => {
+                        toast.dismiss(t.id);
+                        doAutoDefine(overwriteChecked);
+                    }} className="btn-v btn-acc-v">Generate Definitions</button>
+                    <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                </div>
+            </div>
+        ), { duration: Infinity, id: 'auto-define-confirm' });
+    };
+
     return (
         <Card className="lexicon-settings-tab">
             <h2 className="flex sg-title">
@@ -311,11 +398,30 @@ export default function LexiconTab() {
                         <Button variant="save" onClick={handleAutoRelate} style={{ width: '100%' }}>
                             <Link size={16} style={{marginRight: '6px'}}/> Bulk Auto-Link Related Words
                         </Button>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--tx2)', marginTop: '4px' }}>
-                            * This process may take a few minutes for larger lexicons to respect API rate limits.
-                        </span>
                     </div>
                 )}
+
+                {isAutoDefining ? (
+                    <div className="auto-tagger-progress" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Loader2 className="spinner" size={20} />
+                            <span>Generating Definitions... {autoDefineProgress}%</span>
+                        </div>
+                        <Button variant="err" className="btn-sm" onClick={() => { abortDefRef.current = true; }}>
+                            Cancel
+                        </Button>
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <Button variant="save" onClick={handleAutoDefine} style={{ width: '100%' }}>
+                            <FileText size={16} style={{marginRight: '6px'}}/> Bulk Generate Full Definitions
+                        </Button>
+                    </div>
+                )}
+
+                <span style={{ fontSize: '0.75rem', color: 'var(--tx2)', marginTop: '4px', textAlign: 'center', width: '100%' }}>
+                    * These processes may take a few minutes for larger lexicons to respect API rate limits.
+                </span>
             </div>
 
             <Infobox title="Lexicon Management Tips">

@@ -111,6 +111,7 @@
     justify-content: space-between;
     align-items: center;
     gap: 16px;
+    flex-wrap: wrap;
 }
 
 .auto-tagger-info h4 {
@@ -142,4 +143,22 @@
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+}
+
+.auto-define-overwrite-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--tx2);
+    margin-top: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.auto-define-overwrite-label input[type="checkbox"] {
+    accent-color: var(--acc);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
 }
