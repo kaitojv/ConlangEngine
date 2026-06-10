@@ -1788,13 +1788,33 @@ function LegacyWikiEditor({ content, onSave }) {
     const [linkUrl, setLinkUrl] = useState('');
     const [iconPickerOpen, setIconPickerOpen] = useState(false);
     
-    // We use a ref to track the last content we intentionally synced with the store.
-    // This prevents DOMPurify from destroying the user's cursor position during autosave.
+    // Track whether the editor has been initialized with content from the store.
+    // This prevents the autosave from overwriting real content with an empty innerHTML
+    // before the editor has had a chance to populate itself.
+    const initializedRef = useRef(false);
     const lastContentRef = useRef(content);
 
     useEffect(() => {
-        if (editorRef.current && content !== editorRef.current.innerHTML && content !== lastContentRef.current) {
-            // SEC-1: Sanitize HTML to prevent XSS via shared/cloud projects
+        if (!editorRef.current) return;
+
+        if (!initializedRef.current) {
+            // FIRST MOUNT: Always populate the editor with the stored content.
+            // Without this, the editor starts empty and the autosave destroys the data.
+            editorRef.current.innerHTML = DOMPurify.sanitize(content || '', {
+                ALLOWED_TAGS: [
+                    'b', 'i', 'u', 'a', 'span', 'p', 'br', 'div', 'h1', 'h2', 'h3', 'h4', 'strong', 'em', 'ul', 'ol', 'li',
+                    'table', 'tbody', 'thead', 'tr', 'td', 'th', 'svg', 'path', 'circle', 'rect', 'line', 'polyline', 'polygon', 'blockquote'
+                ],
+                ALLOWED_ATTR: [
+                    'href', 'class', 'style', 'target', 'contenteditable',
+                    'xmlns', 'viewBox', 'width', 'height', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin'
+                ]
+            });
+            lastContentRef.current = content;
+            initializedRef.current = true;
+        } else if (content !== editorRef.current.innerHTML && content !== lastContentRef.current) {
+            // Subsequent external updates (e.g. rehydration, cross-tab sync):
+            // only overwrite if the content genuinely changed from what we last synced.
             editorRef.current.innerHTML = DOMPurify.sanitize(content || '', {
                 ALLOWED_TAGS: [
                     'b', 'i', 'u', 'a', 'span', 'p', 'br', 'div', 'h1', 'h2', 'h3', 'h4', 'strong', 'em', 'ul', 'ol', 'li',
@@ -1815,6 +1835,8 @@ function LegacyWikiEditor({ content, onSave }) {
     }, [onSave]);
 
     const handleSave = useCallback(() => {
+        // Don't save before the editor has been initialized — we'd write "" and destroy data
+        if (!initializedRef.current) return;
         if (editorRef.current) {
             const html = editorRef.current.innerHTML;
             if (html !== lastContentRef.current) {
@@ -1824,6 +1846,13 @@ function LegacyWikiEditor({ content, onSave }) {
         }
     }, []);
 
+    // Debounced save on every keystroke (500ms after user stops typing)
+    const inputTimerRef = useRef(null);
+    const handleInput = useCallback(() => {
+        if (inputTimerRef.current) clearTimeout(inputTimerRef.current);
+        inputTimerRef.current = setTimeout(() => handleSave(), 500);
+    }, [handleSave]);
+
     useEffect(() => {
         const autoSaveTimer = setInterval(handleSave, 3000);
         return () => clearInterval(autoSaveTimer);
@@ -1831,7 +1860,16 @@ function LegacyWikiEditor({ content, onSave }) {
 
     useEffect(() => {
         const handleBeforeUnload = () => {
+            // Force a synchronous save into Zustand state
             handleSave();
+            // Explicitly flush Zustand state to localStorage as a safety net
+            try {
+                const state = useConfigStore.getState();
+                const { customFontBase64: _a, customFont: _b, syllabaryMap: _c, customGlyphs: _d, ...rest } = state;
+                localStorage.setItem('conlang-config', JSON.stringify({ state: rest, version: 0 }));
+            } catch (e) {
+                // best-effort
+            }
         };
         window.addEventListener('beforeunload', handleBeforeUnload);
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
@@ -1920,6 +1958,7 @@ function LegacyWikiEditor({ content, onSave }) {
                 contentEditable 
                 ref={editorRef} 
                 onBlur={handleSave}
+                onInput={handleInput}
                 suppressContentEditableWarning={true}
             />
 
