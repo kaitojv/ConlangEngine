@@ -34,5 +34,18 @@ export function useThemeInjector() {
         if (colors.blur !== undefined) root.style.setProperty('--blur', colors.blur);
         if (colors.glow !== undefined) root.style.setProperty('--glow', colors.glow);
         
+        // Dynamic Gradients
+        if (colors.logoGradient) {
+            root.style.setProperty('--logo-gradient', colors.logoGradient);
+        } else {
+            root.style.removeProperty('--logo-gradient');
+        }
+        
+        if (colors.glowGradient) {
+            root.style.setProperty('--glow-gradient', colors.glowGradient);
+        } else {
+            root.style.removeProperty('--glow-gradient');
+        }
+        
     }, [colors]); 
 }

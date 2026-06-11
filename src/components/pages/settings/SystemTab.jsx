@@ -10,7 +10,8 @@ import { useProjectStore } from '../../../store/useProjectStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { CONLANG_ICONS, getConlangIcon } from '../../../utils/iconMap.jsx';
 import opentype from 'opentype.js';
-import { DARK_THEMES, LIGHT_THEMES } from '../../../utils/themePresets.js';
+import { DARK_THEMES, LIGHT_THEMES, PRIDE_THEMES_DARK, PRIDE_THEMES_LIGHT } from '../../../utils/themePresets.js';
+import Modal from '../../UI/Modal/Modal.jsx';
 import { Info, User } from 'lucide-react';
 import { supabase } from '../../../utils/supabaseClient.js';
 import { sanitizeConfig } from '../../../utils/schemaValidator.jsx';
@@ -35,6 +36,7 @@ export default function SystemTab() {
     const setLexicon = useLexiconStore((state) => state.setLexicon);
     const fileInputRef = useRef(null);
     const legacyInputRef = useRef(null);
+    const [isThemeModalOpen, setIsThemeModalOpen] = React.useState(false);
 
     const [copiedSnippet, setCopiedSnippet] = React.useState('');
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -485,30 +487,74 @@ export default function SystemTab() {
             </Card>
             <Card>
                 <h2 className='flex sg-title'><Palette /> Aesthetics and Theme</h2>
-                <p>Dark Themes</p>
-                <div className='theme-btn-box'>
-                    {DARK_THEMES.map((theme, i) => (
-                        <button
-                            key={i}
-                            title={theme.name}
-                            onClick={() => applyThemePreset(theme.colors)}
-                            className="theme-btn"
-                            style={{ background: theme.preview }}
-                        />
-                    ))}
-                </div>
-                <p>Light Themes</p>
-                <div className='theme-btn-box'>
-                    {LIGHT_THEMES.map((theme, i) => (
-                        <button
-                            key={i}
-                            title={theme.name}
-                            onClick={() => applyThemePreset(theme.colors)}
-                            className="theme-btn"
-                            style={{ background: theme.preview }}
-                        />
-                    ))}
-                </div>
+                <p>Customize the look and feel of the app.</p>
+                <Button variant="primary" onClick={() => setIsThemeModalOpen(true)} style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+                    Open Theme Gallery
+                </Button>
+                
+                <Modal isOpen={isThemeModalOpen} onClose={() => setIsThemeModalOpen(false)} title="Theme Gallery">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxHeight: '60vh', overflowY: 'auto', paddingRight: '10px' }}>
+                        <div>
+                            <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>Dark Themes</p>
+                            <div className='theme-btn-box'>
+                                {DARK_THEMES.map((theme, i) => (
+                                    <button
+                                        key={`dark-${i}`}
+                                        title={theme.name}
+                                        onClick={() => { applyThemePreset(theme.colors); setIsThemeModalOpen(false); }}
+                                        className="theme-btn"
+                                        style={{ background: theme.preview }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>Light Themes</p>
+                            <div className='theme-btn-box'>
+                                {LIGHT_THEMES.map((theme, i) => (
+                                    <button
+                                        key={`light-${i}`}
+                                        title={theme.name}
+                                        onClick={() => { applyThemePreset(theme.colors); setIsThemeModalOpen(false); }}
+                                        className="theme-btn"
+                                        style={{ background: theme.preview }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+
+                        <div>
+                            <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>Dark Pride Flags</p>
+                            <div className='theme-btn-box'>
+                                {PRIDE_THEMES_DARK.map((theme, i) => (
+                                    <button
+                                        key={`pride-dark-${i}`}
+                                        title={theme.name}
+                                        onClick={() => { applyThemePreset(theme.colors); setIsThemeModalOpen(false); }}
+                                        className="theme-btn"
+                                        style={{ background: theme.preview }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>Light Pride Flags</p>
+                            <div className='theme-btn-box'>
+                                {PRIDE_THEMES_LIGHT.map((theme, i) => (
+                                    <button
+                                        key={`pride-light-${i}`}
+                                        title={theme.name}
+                                        onClick={() => { applyThemePreset(theme.colors); setIsThemeModalOpen(false); }}
+                                        className="theme-btn"
+                                        style={{ background: theme.preview }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </Modal>
                 <br />
                 <h2>Custom Theme</h2>
                 <div className='pick-colors' style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>

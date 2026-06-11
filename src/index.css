@@ -30,7 +30,7 @@
   --rad: 16px;
   --rad-sm: 8px;
   --shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-  --shadow-hover: 0 20px 40px -10px rgba(124, 58, 237, 0.15);
+  --shadow-hover: 0 20px 40px -10px color-mix(in srgb, var(--acc) 15%, transparent);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0); /* This seems to be a default for foreground, not card */
   --card: var(--s1); /* Use a dark surface color for cards in dark mode */

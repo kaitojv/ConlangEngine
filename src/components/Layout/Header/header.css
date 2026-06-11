@@ -198,7 +198,7 @@
 .app-dinamic-title {
     font-size: 1.8rem;
     font-weight: 800;
-    background: linear-gradient(to right, var(--acc), var(--acc2));
+    background: var(--logo-gradient, linear-gradient(to right, var(--acc), var(--acc2)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
