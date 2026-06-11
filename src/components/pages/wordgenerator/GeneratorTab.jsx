@@ -10,7 +10,9 @@ import { applyRuleToWord, expandWildcardDependencies } from '@/utils/morphologyE
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
 import { commonWords } from '@/components/pages/wordgenerator/commonWords.jsx';
-import { Wand2, Send, Dna, BookCopy, SkipForward, Check, Settings2, Download, SlidersHorizontal } from 'lucide-react';
+import { Wand2, Send, Dna, BookCopy, SkipForward, Check, Settings2, Download, SlidersHorizontal, ListChecks, Dice5, Loader2 } from 'lucide-react';
+import { fetchDefinitionForWord, fetchSynonymOptions } from '@/utils/semanticUtils.js';
+import toast from 'react-hot-toast';
 import './generatorTab.css';
 
 
@@ -65,6 +67,7 @@ export default function GeneratorTab() {
 
     const [isFillMode, setIsFillMode] = useState(false);
     const [isBatchMode, setIsBatchMode] = useState(false);
+    const [isListFillMode, setIsListFillMode] = useState(false);
 
     const handleGenerate = () => {
         generateWord(numSyllables, targetClass);
@@ -139,6 +142,7 @@ export default function GeneratorTab() {
 
     if (isFillMode) return <FillMode onExit={() => setIsFillMode(false)} />;
     if (isBatchMode) return <BatchMode onExit={() => setIsBatchMode(false)} />;
+    if (isListFillMode) return <ListFillMode onExit={() => setIsListFillMode(false)} />;
 
     return (
         <div className="generator-container">
@@ -261,12 +265,15 @@ export default function GeneratorTab() {
                     )}
                 </div>
 
-                <div className="fill-mode-prompt" style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <div className="fill-mode-prompt" style={{ display: 'flex', gap: '10px', marginTop: '20px', flexWrap: 'wrap' }}>
                     <Button variant="edit" onClick={() => setIsFillMode(true)}>
                         <BookCopy size={18} /> Fill Mode
                     </Button>
                     <Button variant="imp" onClick={() => setIsBatchMode(true)}>
                         <Wand2 size={18} /> Batch Generator
+                    </Button>
+                    <Button variant="save" onClick={() => setIsListFillMode(true)}>
+                        <ListChecks size={18} /> Vocab Checklist
                     </Button>
                 </div>
             </Card>
@@ -586,3 +593,353 @@ function BatchMode({ onExit }) {
         </div>
     );
 }
+
+function ListFillMode({ onExit }) {
+    const { generateWord } = useWordGenerator();
+    const addWord = useLexiconStore((state) => state.addWord);
+    const lexicon = useLexiconStore((state) => state.lexicon) || [];
+    const { normalizeToBase } = useTransliterator();
+    
+    const [batchSize, setBatchSize] = useState(15);
+    const [numSyllables, setNumSyllables] = useState(2);
+    const [autoFetchSemantics, setAutoFetchSemantics] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    
+    // Filtering and pagination
+    const [posFilter, setPosFilter] = useState('all');
+    const [topicFilter, setTopicFilter] = useState('');
+    const [offset, setOffset] = useState(0);
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Track state for each row
+    const [rows, setRows] = useState([]);
+    const [selectedWords, setSelectedWords] = useState(new Set());
+
+    const loadMore = async (reset = false) => {
+        setIsLoading(true);
+        let sourceWords = [];
+        let currentOffset = reset ? 0 : offset;
+        
+        if (topicFilter.trim()) {
+            try {
+                const res = await fetch(`https://api.datamuse.com/words?ml=${encodeURIComponent(topicFilter.trim())}&md=p&max=200`);
+                if (res.ok) {
+                    const data = await res.json();
+                    sourceWords = data.map(item => {
+                        let pos = 'noun';
+                        if (item.tags) {
+                            if (item.tags.includes('v')) pos = 'verb';
+                            else if (item.tags.includes('adj')) pos = 'adjective';
+                            else if (item.tags.includes('adv')) pos = 'adverb';
+                            else if (item.tags.includes('u')) pos = 'particle';
+                        }
+                        return { word: item.word, class: pos };
+                    });
+                }
+            } catch (e) {
+                toast.error("Failed to fetch topic words");
+                sourceWords = commonWords;
+            }
+        } else {
+            sourceWords = commonWords;
+        }
+
+        // Apply POS filter
+        if (posFilter !== 'all') {
+            sourceWords = sourceWords.filter(cw => cw.class === posFilter);
+        }
+
+        // Filter out existing lexicon
+        const untranslated = sourceWords.filter(cw => {
+            const target = cw.word.toLowerCase();
+            const safeTarget = target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`\\b${safeTarget}\\b`, 'i');
+            return !lexicon.some(lw => {
+                let trans = (lw.translation || '').toLowerCase();
+                return regex.test(trans);
+            });
+        });
+
+        const nextBatch = untranslated.slice(currentOffset, currentOffset + batchSize).map(cw => ({
+            id: crypto.randomUUID(),
+            englishWord: cw.word,
+            conlangWord: '',
+            wordClass: cw.class,
+            tags: topicFilter.trim() ? topicFilter.trim() : '',
+            description: ''
+        }));
+
+        if (nextBatch.length > 0) {
+            setRows(prev => reset ? nextBatch : [...prev, ...nextBatch]);
+            setOffset(currentOffset + batchSize);
+        } else {
+            if (reset) setRows([]);
+            toast("No more words found for these criteria!", { icon: 'ℹ️' });
+        }
+        
+        setSelectedWords(new Set());
+        setIsLoading(false);
+    };
+
+    // Load initial batch only once
+    React.useEffect(() => {
+        loadMore(true);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const updateRow = (id, field, val) => {
+        setRows(prev => prev.map(r => r.id === id ? { ...r, [field]: val } : r));
+        if (field === 'conlangWord' && val.trim() && !selectedWords.has(id)) {
+            toggleSelection(id);
+        }
+    };
+
+    const rollDice = (id, wordClass) => {
+        const result = generateWord(numSyllables, wordClass);
+        if (result) {
+            updateRow(id, 'conlangWord', result.word);
+            updateRow(id, 'wordClass', result.wordClass || wordClass);
+        }
+    };
+
+    const toggleSelection = (id) => {
+        const newSet = new Set(selectedWords);
+        if (newSet.has(id)) newSet.delete(id);
+        else newSet.add(id);
+        setSelectedWords(newSet);
+    };
+
+    const handleSaveSelected = async () => {
+        setIsSaving(true);
+        let savedCount = 0;
+        
+        const selectedRows = rows.filter(r => selectedWords.has(r.id) && r.conlangWord.trim());
+        
+        for (const row of selectedRows) {
+            const safeWord = normalizeToBase(row.conlangWord.trim());
+            let finalDesc = row.description.trim();
+            let finalRelated = [];
+            let finalTags = row.tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+
+            if (autoFetchSemantics) {
+                if (!finalDesc) {
+                    try {
+                        const def = await fetchDefinitionForWord(row.englishWord, row.wordClass);
+                        if (def) finalDesc = def;
+                    } catch (e) {}
+                }
+                try {
+                    const syns = await fetchSynonymOptions(row.englishWord);
+                    if (syns && syns.length > 0) {
+                        const topPicks = [...new Set(syns.map(s => s.lemma.toLowerCase()))].slice(0, 5);
+                        finalRelated = topPicks;
+                    }
+                } catch (e) {}
+            }
+
+            addWord({
+                word: safeWord,
+                wordClass: row.wordClass,
+                translation: row.englishWord,
+                definition: finalDesc,
+                tags: finalTags,
+                relatedWords: finalRelated
+            });
+            savedCount++;
+        }
+        
+        setIsSaving(false);
+        toast.success(`Successfully saved ${savedCount} words!`);
+        
+        // Remove saved from list
+        setRows(prev => prev.filter(r => !selectedWords.has(r.id) || !r.conlangWord.trim()));
+        setSelectedWords(new Set());
+    };
+
+    if (rows.length === 0 && !isLoading && !topicFilter && posFilter === 'all') {
+        return (
+            <div className="fill-mode-container">
+                <Card>
+                    <div className="fill-mode-header">
+                        <h2 className='flex sg-title'><ListChecks /> Vocab Checklist</h2>
+                        <Button variant="cancel" onClick={onExit}>Exit</Button>
+                    </div>
+                    <div className="explore-empty">
+                        <Check size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
+                        <h3>All done!</h3>
+                        <p>You have translated all available common words into your lexicon.</p>
+                    </div>
+                </Card>
+            </div>
+        );
+    }
+
+    return (
+        <div className="fill-mode-container">
+            <Card>
+                <div className="fill-mode-header">
+                    <h2 className='flex sg-title'><ListChecks /> Vocab Checklist</h2>
+                    <Button variant="cancel" onClick={onExit}>Exit</Button>
+                </div>
+                <p>A checklist of untranslated English words. Fill in your conlang words, adjust tags and descriptions, and save them in bulk.</p>
+                
+                <div className="generator-input-row" style={{ marginTop: '20px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                    <div className="generator-input-group">
+                        <label className="generator-label">Topic / Category</label>
+                        <input 
+                            type="text" 
+                            placeholder="e.g. nature, emotion (optional)"
+                            className="generator-input"
+                            value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)} 
+                        />
+                    </div>
+                    <div className="generator-input-group">
+                        <label className="generator-label">Part of Speech</label>
+                        <select 
+                            className="generator-input"
+                            value={posFilter} onChange={(e) => setPosFilter(e.target.value)}
+                        >
+                            <option value="all">All</option>
+                            <option value="noun">Noun</option>
+                            <option value="verb">Verb</option>
+                            <option value="adjective">Adjective</option>
+                            <option value="adverb">Adverb</option>
+                        </select>
+                    </div>
+                    <div className="generator-input-group">
+                        <label className="generator-label">Words per Page</label>
+                        <input 
+                            type="number" min="5" max="50"
+                            className="generator-input"
+                            value={batchSize} onChange={(e) => setBatchSize(Number(e.target.value))} 
+                        />
+                    </div>
+                    <div className="generator-input-group">
+                        <label className="generator-label">Syllables (for Auto-gen)</label>
+                        <input 
+                            type="number" min="1" max="10"
+                            className="generator-input"
+                            value={numSyllables} onChange={(e) => setNumSyllables(Number(e.target.value))} 
+                        />
+                    </div>
+                    <Button variant="imp" onClick={() => loadMore(true)} disabled={isLoading}>
+                        {isLoading ? <Loader2 size={16} className="spinner" /> : 'Search / Reset'}
+                    </Button>
+                    <Button variant="default" onClick={() => loadMore(false)} disabled={isLoading}>
+                        Load Next
+                    </Button>
+                </div>
+                
+                <div style={{ marginTop: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <input 
+                        type="checkbox" 
+                        id="autoFetchOpt"
+                        checked={autoFetchSemantics} 
+                        onChange={(e) => setAutoFetchSemantics(e.target.checked)} 
+                    />
+                    <label htmlFor="autoFetchOpt" style={{ cursor: 'pointer', color: 'var(--tx)' }}>Auto-fetch Definitions & Related Words on save</label>
+                </div>
+
+                {rows.length > 0 && (
+                    <div className="batch-results" style={{ marginTop: '20px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                            <h3 style={{ margin: 0, color: 'var(--tx2)' }}>Words ({rows.length})</h3>
+                            <Button 
+                                variant="save" 
+                                onClick={handleSaveSelected}
+                                disabled={selectedWords.size === 0 || isSaving}
+                            >
+                                {isSaving ? <><Loader2 size={16} className="spinner" /> Saving...</> : `Save Selected (${selectedWords.size})`}
+                            </Button>
+                        </div>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '500px', overflowY: 'auto', paddingRight: '10px' }}>
+                            {rows.map(row => (
+                                <div 
+                                    key={row.id} 
+                                    style={{ 
+                                        display: 'grid', 
+                                        gridTemplateColumns: 'auto 200px 1fr', 
+                                        gap: '15px', 
+                                        background: selectedWords.has(row.id) ? 'var(--s3)' : 'var(--s2)',
+                                        padding: '15px',
+                                        borderRadius: '8px',
+                                        border: `1px solid ${selectedWords.has(row.id) ? 'var(--acc)' : 'transparent'}`
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', paddingTop: '10px' }}>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={selectedWords.has(row.id)}
+                                            onChange={() => toggleSelection(row.id)}
+                                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                        />
+                                    </div>
+                                    
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--tx)', textTransform: 'capitalize' }}>
+                                            {row.englishWord}
+                                        </div>
+                                        <select 
+                                            className="generator-input" 
+                                            style={{ padding: '4px', fontSize: '0.85rem' }}
+                                            value={row.wordClass}
+                                            onChange={(e) => updateRow(row.id, 'wordClass', e.target.value)}
+                                        >
+                                            <option value="noun">Noun</option>
+                                            <option value="verb">Verb</option>
+                                            <option value="adjective">Adjective</option>
+                                            <option value="adverb">Adverb</option>
+                                            <option value="pronoun">Pronoun</option>
+                                            <option value="particle">Particle</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        <div style={{ display: 'flex', gap: '5px' }}>
+                                            <input 
+                                                type="text" 
+                                                placeholder="Conlang Word..." 
+                                                className="generator-input custom-font-text notranslate"
+                                                value={row.conlangWord}
+                                                onChange={(e) => updateRow(row.id, 'conlangWord', e.target.value)}
+                                                style={{ flex: 1, margin: 0 }}
+                                            />
+                                            <button 
+                                                className="icon-btn" 
+                                                style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 'var(--rad-sm)', padding: '0 10px', color: 'var(--tx)' }}
+                                                title="Roll random valid word"
+                                                onClick={() => rollDice(row.id, row.wordClass)}
+                                            >
+                                                <Dice5 size={18} />
+                                            </button>
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                            <input 
+                                                type="text" 
+                                                placeholder="Tags (comma separated)..." 
+                                                className="generator-input"
+                                                value={row.tags}
+                                                onChange={(e) => updateRow(row.id, 'tags', e.target.value)}
+                                                style={{ margin: 0, fontSize: '0.85rem', padding: '6px' }}
+                                            />
+                                            <input 
+                                                type="text" 
+                                                placeholder="Description..." 
+                                                className="generator-input"
+                                                value={row.description}
+                                                onChange={(e) => updateRow(row.id, 'description', e.target.value)}
+                                                style={{ margin: 0, fontSize: '0.85rem', padding: '6px' }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </Card>
+        </div>
+    );
+}
+
