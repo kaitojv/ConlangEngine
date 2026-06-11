@@ -24,7 +24,8 @@ const VALID_CONFIG_KEYS = new Set([
     'enableToneAndStress', 'functionWords', 'calendarSystem',
     'stressRules', 'toneRules', 'isPublic', 'conlangIcon', 'parentId',
     'vowelHarmonyMode', 'vowelHarmonySets', 'vowelHarmonyOverrideWordClasses', 'vowelHarmonyOverrideTags',
-    'backupSettings'
+    'backupSettings',
+    'evolutionEpochs', 'worldMap', 'customLabels', 'ipaMappingRules', 'typographySettings', 'azureTtsUseIpa'
 ]);
 
 /**
@@ -81,6 +82,10 @@ export function sanitizeLexicon(rawLexicon) {
         derivationRuleId: entry.derivationRuleId !== undefined ? entry.derivationRuleId : null,
         inflectionOverrides: (entry.inflectionOverrides && typeof entry.inflectionOverrides === 'object')
             ? entry.inflectionOverrides : {},
+        tone: typeof entry.tone === 'string' ? entry.tone : '',
+        stress: typeof entry.stress === 'string' ? entry.stress : '',
+        relatedWords: Array.isArray(entry.relatedWords) ? entry.relatedWords : [],
+        srs: (entry.srs && typeof entry.srs === 'object') ? entry.srs : null,
         createdAt: typeof entry.createdAt === 'number' ? entry.createdAt : Date.now()
     }));
 }
