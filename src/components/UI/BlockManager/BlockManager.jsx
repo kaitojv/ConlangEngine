@@ -78,30 +78,6 @@ export default function BlockManager() {
     };
 
     const generateBlockFont = async () => {
-        // PRE-FLIGHT CHECK: Calculate total possible combinations to warn about memory/storage bloat
-        let totalCombos = 0;
-        const vListLen = parseList(vowels).length;
-        const cListLen = parseList(consonants).length + 1; // +1 for optional empty initial/final
-        const oListLen = parseList(otherPhonemes || '').length;
-
-        for (const template of activeTemplates) {
-            const maxChars = template.maxChars || 3;
-            const slotMapping = template.slotMapping || [];
-            let combosForTemplate = 1;
-            for (let i = 0; i < maxChars; i++) {
-                let slot = slotMapping[i];
-                let source = (slot && slot.source) ? slot.source : (i === 1 ? 'vowels' : 'consonants');
-                if (source === 'vowels') combosForTemplate *= vListLen;
-                else if (source === 'consonants') combosForTemplate *= cListLen;
-                else if (source === 'otherPhonemes') combosForTemplate *= oListLen;
-            }
-            totalCombos += combosForTemplate;
-        }
-
-        if (totalCombos > 60000) {
-            const confirmed = window.confirm(`⚠️ Warning: Your configuration will generate approximately ${totalCombos.toLocaleString()} unique blocks! \n\nBecause this exceeds the global 65,000 OpenType limit, the engine will mathematically split your alphabet into multiple fallback fonts. This will take a little longer to process in the background. Continue?`);
-            if (!confirmed) return;
-        }
 
         setIsGenerating(true);
         try {
@@ -324,7 +300,7 @@ export default function BlockManager() {
                             disabled={isGenerating}
                             className={isGenerating ? 'btn-loading' : ''}
                         >
-                            {isGenerating ? 'Generating Font... Please Wait' : 'Compile Block Font'}
+                            {isGenerating ? 'Rebuilding Font...' : 'Rebuild Font from Lexicon'}
                         </Button>
                         <Button 
                             variant="error" 
@@ -336,8 +312,8 @@ export default function BlockManager() {
                     </div>
                     <p className="bm-compile-help">
                         {isGenerating 
-                            ? "DO NOT REFRESH OR CLOSE. The background worker is compiling your custom font."
-                            : "This will mathematically combine all possible valid blocks based on your slots and generate a functional font mapping."
+                            ? "Working in the background... you can keep using the app!"
+                            : "Compiles only the blocks used in your lexicon. New words auto-compile their blocks when saved."
                         }
                     </p>
                 </div>
