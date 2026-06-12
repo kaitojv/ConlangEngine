@@ -164,7 +164,8 @@ export const INITIAL_CONFIG = {
     ipaMappingRules: '', // Rules for autogenerating IPA from orthography (e.g., "oo=oʊ, uu=uː")
     typographySettings: {
         customTypographyModes: [],
-        activeDisplayMode: 'Base'
+        activeDisplayMode: 'Base',
+        letterSpacing: 0
     },
     // REST API backup system — per-project configuration (see https://github.com/niruhsa/ConlangEngine-Obsidian-Backup/blob/master/README.md)
     backupSettings: {

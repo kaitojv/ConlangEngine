@@ -7,6 +7,7 @@ export function useFontInjector(){
     const customFont = useConfigStore((state) => state.customFont);
     const isRehydrating = useConfigStore((state) => state.isRehydrating);
     const projectId = useConfigStore((state) => state.projectId);
+    const typographySettings = useConfigStore((state) => state.typographySettings);
 
     useEffect(() => {
         let styleNode = document.getElementById('custom-font');
@@ -60,10 +61,11 @@ export function useFontInjector(){
                     font-family: '${fontName}', sans-serif !important;
                     font-weight: normal !important;
                     font-style: normal !important;
+                    letter-spacing: ${typographySettings?.letterSpacing || 0}em !important;
                 }
             `;
         }).catch(err => {
             console.error("Browser failed to decode custom font:", err);
         });
-    }, [customFont, isRehydrating, projectId]);    
+    }, [customFont, isRehydrating, projectId, typographySettings]);    
 }

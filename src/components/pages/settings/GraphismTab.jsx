@@ -231,6 +231,27 @@ export default function TypographyStudio() {
                                 <option key={mode} value={mode}>{mode}</option>
                             ))}
                         </select>
+                        
+                        <div style={{ marginTop: '1.5rem' }}>
+                            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>Letter Spacing</h3>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '1rem' }}>
+                                Adjust the gap between custom characters across the application.
+                            </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <input 
+                                    type="range" 
+                                    min="-1.5" 
+                                    max="1.5" 
+                                    step="0.1" 
+                                    value={typographySettings.letterSpacing || 0}
+                                    onChange={(e) => updateConfig({ typographySettings: { ...typographySettings, letterSpacing: parseFloat(e.target.value) } })}
+                                    style={{ flex: 1, accentColor: 'var(--acc)' }}
+                                />
+                                <span style={{ color: 'var(--tx)', fontWeight: 'bold', minWidth: '40px' }}>
+                                    {(typographySettings.letterSpacing || 0).toFixed(1)}em
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </Card>

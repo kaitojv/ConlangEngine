@@ -1,10 +1,11 @@
 // src/components/UI/Modal/FontStudioModal.jsx
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
 import Button from '../Buttons/Buttons.jsx';
 import { RotateCcw, Trash2, Download, Pencil, Minus, Spline, Eraser, Feather, FlipHorizontal, FlipVertical, Grid, Square, Circle, Triangle, SquareDashed, PenTool } from 'lucide-react';
 import { exportStrokesAsSVG } from '../../../utils/svgExporter.jsx';
+import { parseSVGToStrokes } from '../../../utils/svgImporter.jsx';
 import './fontStudio.css';
 
 export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
@@ -23,7 +24,65 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
     const [interactionPoints, setInteractionPoints] = useState([]); // [P0, P1, P2]
     const [interactionStage, setInteractionStage] = useState(0); // 0: Idle, 1: Dragging, 2: Setting Curve Control
 
-    const { customGlyphs, puaCounter, addCustomGlyph, incrementPuaCounter } = useConfigStore();
+    const [backgroundStrokes, setBackgroundStrokes] = useState([]);
+    const [backgroundText, setBackgroundText] = useState('');
+    const [selectedReferenceId, setSelectedReferenceId] = useState('');
+    const fileInputRef = useRef(null);
+
+    const { customGlyphs, puaCounter, addCustomGlyph, incrementPuaCounter, alphabetGlyphs, alphabetNames, featuralComponents } = useConfigStore();
+
+    const drawnGlyphsOptions = useMemo(() => {
+        const options = [];
+        if (alphabetGlyphs) {
+            Object.entries(alphabetGlyphs).forEach(([charKey, unicodeChar]) => {
+                if (!unicodeChar) return;
+                const charCode = unicodeChar.codePointAt(0);
+                if (customGlyphs[charCode]) {
+                    const name = alphabetNames?.[charKey] || charKey;
+                    options.push({ label: `${name} (${charKey})`, strokes: customGlyphs[charCode], id: charCode });
+                }
+            });
+        }
+        if (featuralComponents) {
+            Object.entries(featuralComponents).forEach(([comp, strokes]) => {
+                if (strokes && strokes.length > 0) {
+                    options.push({ label: `Radical: ${comp}`, strokes: strokes, id: `rad_${comp}` });
+                }
+            });
+        }
+        // Add untracked custom glyphs as generic
+        Object.entries(customGlyphs).forEach(([code, strokes]) => {
+            if (!options.find(o => o.id == code)) {
+                options.push({ label: `Glyph ${code}`, strokes: strokes, id: code });
+            }
+        });
+        return options;
+    }, [alphabetGlyphs, alphabetNames, customGlyphs, featuralComponents]);
+
+    const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const svgContent = event.target.result;
+            const importedStrokes = parseSVGToStrokes(svgContent);
+            if (importedStrokes && importedStrokes.length > 0) {
+                setStrokes(prev => [...prev, ...importedStrokes]);
+            }
+        };
+        reader.readAsText(file);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleSetBackground = () => {
+        const opt = drawnGlyphsOptions.find(o => o.id == selectedReferenceId);
+        if (opt) setBackgroundStrokes(opt.strokes);
+    };
+
+    const handleLoadToCanvas = () => {
+        const opt = drawnGlyphsOptions.find(o => o.id == selectedReferenceId);
+        if (opt) setStrokes(prev => [...prev, ...opt.strokes]);
+    };
 
     // Redraw the canvas whenever strokes change (for Undo support)
     useEffect(() => {
@@ -36,6 +95,49 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
         ctx.lineJoin = 'round';
         ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--tx').trim() || '#0f172a';
         
+        // Draw background strokes first
+        if (backgroundStrokes && backgroundStrokes.length > 0) {
+            ctx.save();
+            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--tx2').trim() || '#64748b';
+            ctx.globalAlpha = 0.3;
+            ctx.lineWidth = brushSize;
+            backgroundStrokes.forEach(stroke => {
+                if (stroke.length < 2) return;
+                ctx.lineCap = stroke.lineCap || 'round';
+                ctx.lineJoin = 'round';
+                if (stroke.isFilled) {
+                    ctx.fillStyle = ctx.strokeStyle;
+                    ctx.beginPath();
+                    ctx.moveTo(stroke[0].x, stroke[0].y);
+                    for (let i = 1; i < stroke.length; i++) {
+                        ctx.lineTo(stroke[i].x, stroke[i].y);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                } else {
+                    ctx.beginPath();
+                    ctx.moveTo(stroke[0].x, stroke[0].y);
+                    for (let i = 1; i < stroke.length; i++) {
+                        ctx.lineTo(stroke[i].x, stroke[i].y);
+                    }
+                    ctx.stroke();
+                }
+            });
+            ctx.restore();
+        }
+
+        // Draw text background if any
+        if (backgroundText) {
+            ctx.save();
+            ctx.font = '200px sans-serif';
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--tx2').trim() || '#64748b';
+            ctx.globalAlpha = 0.15;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(backgroundText, canvas.width / 2, canvas.height / 2);
+            ctx.restore();
+        }
+
         strokes.forEach(stroke => {
             if (stroke.length < 2) return;
             
@@ -105,7 +207,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
             ctx.stroke();
             ctx.setLineDash([]);
         }
-    }, [strokes, currentStroke, brushSize, isCalligraphy, isBrushPen]);
+    }, [strokes, currentStroke, brushSize, isCalligraphy, isBrushPen, backgroundStrokes, backgroundText]);
 
     const getCoords = (e) => {
         const rect = canvasRef.current.getBoundingClientRect();
@@ -209,16 +311,13 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
         const coords = getCoords(e);
 
         if (activeTool === 'brush') {
-            e.currentTarget.setPointerCapture(e.pointerId);
             setIsDrawing(true);
             setCurrentStroke([coords]);
         } else if (activeTool === 'line') {
-            e.currentTarget.setPointerCapture(e.pointerId);
             setIsDrawing(true);
             setInteractionPoints([coords]);
         } else if (activeTool === 'curve') {
             if (interactionStage === 0) {
-                e.currentTarget.setPointerCapture(e.pointerId);
                 setInteractionStage(1);
                 setInteractionPoints([coords]);
             } else if (interactionStage === 2) {
@@ -245,11 +344,9 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
                 setCurrentStroke([]);
             }
         } else if (activeTool === 'eraser') {
-            e.currentTarget.setPointerCapture(e.pointerId);
             setIsDrawing(true);
             eraseStrokesAt(coords);
         } else if (activeTool === 'rect' || activeTool === 'circle' || activeTool === 'triangle' || activeTool === 'select_erase') {
-            e.currentTarget.setPointerCapture(e.pointerId);
             setIsDrawing(true);
             setInteractionPoints([coords]);
         }
@@ -442,7 +539,50 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
         <div className="fs-container">
             <div className="fs-header">
                 <h3 className="fs-title">Drawing: <span className="custom-font-text">{targetLabel}</span></h3>
-                <p className="fs-subtitle">Draw your custom ideogram below.</p>
+                <p className="fs-subtitle">Draw your custom ideogram below or use a reference.</p>
+                <div className="fs-reference-tools">
+                    <div className="fs-ref-group">
+                        <select 
+                            className="fs-ref-select" 
+                            value={selectedReferenceId} 
+                            onChange={(e) => setSelectedReferenceId(e.target.value)}
+                        >
+                            <option value="">-- Select Existing Glyph --</option>
+                            {drawnGlyphsOptions.map(opt => (
+                                <option key={opt.id} value={opt.id}>{opt.label}</option>
+                            ))}
+                        </select>
+                        <Button variant="default" className="btn-sm" onClick={handleSetBackground} disabled={!selectedReferenceId}>
+                            Set Background
+                        </Button>
+                        <Button variant="default" className="btn-sm" onClick={handleLoadToCanvas} disabled={!selectedReferenceId} title="Insert strokes into your drawing">
+                            Load to Canvas
+                        </Button>
+                        <div style={{ width: '1px', height: '20px', background: 'var(--bd)' }}></div>
+                        <input 
+                            type="text" 
+                            className="fs-ref-select" 
+                            style={{ width: '80px', minWidth: '80px', textAlign: 'center', paddingRight: '10px', backgroundImage: 'none' }} 
+                            placeholder="A B C"
+                            maxLength={5}
+                            value={backgroundText}
+                            onChange={(e) => setBackgroundText(e.target.value)}
+                            title="Type system letters here to see them faintly in the background for tracing!"
+                        />
+                    </div>
+                    <div className="fs-import-group">
+                        <input 
+                            type="file" 
+                            accept=".svg" 
+                            ref={fileInputRef} 
+                            style={{ display: 'none' }} 
+                            onChange={handleFileUpload} 
+                        />
+                        <Button variant="default" className="btn-sm" onClick={() => fileInputRef.current && fileInputRef.current.click()}>
+                            <Download size={14} style={{ transform: 'rotate(180deg)', marginRight: '4px' }} /> Import SVG
+                        </Button>
+                    </div>
+                </div>
             </div>
 
             <div className="fs-workspace">
@@ -622,7 +762,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
                 <span className="fs-preview-label">Live Context Preview (Updates on stroke finish):</span>
                 <div className="fs-preview-text">
                     {(() => {
-                        const char = targetLabel.includes(':') ? targetLabel.split(':')[1].trim() : targetLabel;
+                        // The char was previously used for preview logic, safe to remove if unused.
                         
                         // Render the mini-svg inline
                         const renderMiniSVG = (key) => (

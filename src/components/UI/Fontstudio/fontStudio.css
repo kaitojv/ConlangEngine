@@ -242,9 +242,9 @@
 }
 
 .fs-opt-btn.active {
-    background: var(--ac);
-    color: white;
-    border-color: var(--ac);
+    background: var(--acc);
+    color: var(--h-bg);
+    border-color: var(--acc);
 }
 
 .fs-tool-btn {
@@ -267,9 +267,9 @@
 }
 
 .fs-tool-btn.active {
-    background: var(--ac);
-    color: white;
-    box-shadow: 0 2px 8px var(--ac-o);
+    background: var(--acc);
+    color: var(--h-bg);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--acc) 40%, transparent);
 }
 
 .fs-tool-separator {
@@ -366,4 +366,39 @@
     color: var(--tx);
     line-height: 1.5;
     word-break: break-all;
+}
+
+/* Reference Tools */
+.fs-reference-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--bd);
+    width: 100%;
+}
+
+.fs-ref-group, .fs-import-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fs-ref-select {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--bd);
+    background: var(--s2);
+    color: var(--tx);
+    font-size: 0.85rem;
+    min-width: 150px;
+    cursor: pointer;
+}
+
+.fs-ref-select:focus {
+    outline: none;
+    border-color: var(--ac);
 }
