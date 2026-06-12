@@ -739,12 +739,25 @@ export default function CreateWordTab() {
                     <div className="block-picker-section" style={{ marginTop: '1rem', background: 'var(--bg2)', padding: '1rem', borderRadius: '8px' }}>
                         <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>Visual Block Structure</label>
                         <p style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '12px', lineHeight: '1.4' }}>
-                            Choose how this word should be visually broken down into blocks. By default, the engine greedy-matches the longest blocks.
+                            Choose how this word should be visually broken down into blocks. Select from the greedy-matched suggestions below, or manually type your own distribution using periods (e.g. <code>m.e.hak.iz</code>).
                         </p>
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+
+                        <div style={{ marginBottom: '15px', display: 'flex', gap: '15px', alignItems: 'center' }}>
+                            <div style={{ flex: 1 }}>
+                                <Input
+                                    value={ideogram || possibleBlockStructures[0]}
+                                    onChange={(e) => updateField('ideogram', e.target.value.toLowerCase())}
+                                    placeholder="Type custom structure..."
+                                />
+                            </div>
+                            <div style={{ minWidth: '80px', textAlign: 'center', fontFamily: 'var(--custom-font)', fontSize: '2.5rem', color: 'var(--acc)', border: '1px solid var(--bd)', borderRadius: 'var(--rad)', padding: '0 15px', background: 'var(--bg)' }} className="notranslate">
+                                {transliterate(ideogram || possibleBlockStructures[0])}
+                            </div>
+                        </div>
+
+                        <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', gap: '8px', flexWrap: 'wrap', padding: '4px', borderTop: '1px solid var(--bd)', paddingTop: '15px' }}>
                             {possibleBlockStructures.map((struct, idx) => {
-                                // Default structure is usually the first one (longest blocks)
-                                const isSelected = ideogram === struct || (!ideogram && idx === 0);
+                                const isSelected = (ideogram || possibleBlockStructures[0]) === struct;
                                 return (
                                     <button
                                         key={struct}
