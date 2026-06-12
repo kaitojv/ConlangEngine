@@ -184,7 +184,9 @@ export default function PublicViewer() {
                         direction: ${writingDirection === 'rtl' ? 'rtl' : 'ltr'};
                     }
                     input.custom-font-text, 
-                    textarea.custom-font-text {
+                    textarea.custom-font-text,
+                    .pv-dict-table .custom-font-text,
+                    .pv-rule-affix.custom-font-text {
                         writing-mode: horizontal-tb !important;
                     }
                     .pv-back-btn {
@@ -367,7 +369,7 @@ export default function PublicViewer() {
                                                 <tr key={entry.id || i}>
                                                     <td className="pv-word-cell">
                                                         <span className={`custom-font-text notranslate ${isLogographic && entry.ideogram ? 'pv-featural-word' : ''}`}>
-                                                            {isLogographic && entry.ideogram ? entry.ideogram : transliterate(entry.word, dictionary)}
+                                                            {config.phonologyTypes === 'logographic' && entry.ideogram ? entry.ideogram : transliterate(entry.word, dictionary)}
                                                         </span>
                                                     </td>
                                                     <td className="pv-ipa-cell">
