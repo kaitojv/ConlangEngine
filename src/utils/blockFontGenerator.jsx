@@ -121,9 +121,11 @@ export const generateBlockFontData = async (config) => {
         throw new Error("No block templates found.");
     }
 
-    let compilerGlyphs = { ...customGlyphs };
+    // Always start fresh — seeding from old customGlyphs would preserve stale stroke widths
+    // and ignore the user's traceWidth setting change.
+    let compilerGlyphs = {};
     let newSyllabaryMap = {};
-    let currentPua = Math.max(puaCounter || 0, 983040); // Plane 15 PUA start
+    let currentPua = 983040; // Always restart from Plane 15 PUA base (0xF0000)
 
     // ── Step 1: Compile blocks from Lexicon ──────────────────────────────────
     // This is the primary source of blocks. We only compile what you actually use.
