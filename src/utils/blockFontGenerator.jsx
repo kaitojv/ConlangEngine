@@ -67,52 +67,51 @@ const parseList = (str) => (str || '').split(',')
     .filter(Boolean);
 
 // Helper to compile a single block string using the right template matrix
-const compileBlockStrokes = (blockStr, activeTemplates, featuralComponents, consList, vowList, otherList) => {
-    // First: try to find a template that exactly matches the block length AND slot mapping
-    let template = activeTemplates.find(t => {
-        if (t.maxChars !== blockStr.length) return false;
-        
-        // Check slot mapping to distinguish between multiple templates of the same length
-        for (let i = 0; i < blockStr.length; i++) {
-            const char = blockStr[i];
-            let slot = (t.slotMapping || [])[i];
-            let source;
-            if (typeof slot === 'string') {
-                source = i === 1 ? 'vowels' : 'consonants';
-            } else if (slot && slot.source) {
-                source = slot.source;
-            } else {
-                source = i === 1 ? 'vowels' : 'consonants';
-            }
+const compileBlockStrokes = (blockStr, activeTemplates, featuralComponents, consList, vowList, otherList, overrideLayout = null) => {
+    let template = null;
+    let layoutKey = overrideLayout;
+    
+    // Only search for a template if we don't have an explicit override
+    if (!layoutKey) {
+        // First: try to find a template that exactly matches the block length AND slot mapping
+        template = activeTemplates.find(t => {
+            if (t.maxChars !== blockStr.length) return false;
             
-            if (source === 'vowels' && !vowList.includes(char)) return false;
-            if (source === 'consonants' && !consList.includes(char)) return false;
-            if (source === 'otherPhonemes' && !otherList.includes(char)) return false;
-        }
-        return true;
-    });
+            // Check slot mapping to distinguish between multiple templates of the same length
+            for (let i = 0; i < blockStr.length; i++) {
+                const char = blockStr[i];
+                let slot = (t.slotMapping || [])[i];
+                let source;
+                if (typeof slot === 'string') {
+                    source = i === 1 ? 'vowels' : 'consonants';
+                } else if (slot && slot.source) {
+                    source = slot.source;
+                } else {
+                    source = i === 1 ? 'vowels' : 'consonants';
+                }
+                
+                if (source === 'vowels' && !vowList.includes(char)) return false;
+                if (source === 'consonants' && !consList.includes(char)) return false;
+                if (source === 'otherPhonemes' && !otherList.includes(char)) return false;
+            }
+            return true;
+        });
 
-    // Fallback: if no strict slot match, find the first template with the same length
-    if (!template) {
-        template = activeTemplates.find(t => t.maxChars === blockStr.length);
-    }
-    
-    // Fallback: if no exact match, find ANY layout in the registry that fits this block length.
-    // This handles cases like writing "ki" (2 chars) when no 2-char template is configured.
-    let matrix = null;
-    let layoutKey = null;
-    
-    if (template) {
-        layoutKey = template.layoutTemplate || '2top1bottom';
-        matrix = blockLayoutMatrices[layoutKey];
-        if (!matrix || matrix.length !== blockStr.length) {
-            layoutKey = Object.keys(blockLayoutMatrices).find(k => blockLayoutMatrices[k].length === blockStr.length);
-            matrix = layoutKey ? blockLayoutMatrices[layoutKey] : null;
+        // Fallback: if no strict slot match, find the first template with the same length
+        if (!template) {
+            template = activeTemplates.find(t => t.maxChars === blockStr.length);
+        }
+        
+        if (template) {
+            layoutKey = template.layoutTemplate || '2top1bottom';
         }
     }
     
-    // No template configured for this length — look globally across all registered layouts
-    if (!matrix) {
+    // Attempt to load the matrix for the chosen layout key
+    let matrix = layoutKey ? blockLayoutMatrices[layoutKey] : null;
+    
+    // Fallback: if layout key invalid or wrong size, or no template found at all
+    if (!matrix || matrix.length !== blockStr.length) {
         layoutKey = Object.keys(blockLayoutMatrices).find(k => blockLayoutMatrices[k].length === blockStr.length);
         matrix = layoutKey ? blockLayoutMatrices[layoutKey] : null;
     }
@@ -181,7 +180,15 @@ export const generateBlockFontData = async (config) => {
             for (const block of blocks) {
                 if (newSyllabaryMap[block]) continue; // Already compiled this block
 
-                const strokes = compileBlockStrokes(block, activeTemplates, featuralComponents, consList, vowList, otherList);
+                let cleanBlock = block;
+                let overrideLayout = null;
+                if (block.includes(':')) {
+                    const parts = block.split(':');
+                    cleanBlock = parts[0];
+                    overrideLayout = parts[1];
+                }
+
+                const strokes = compileBlockStrokes(cleanBlock, activeTemplates, featuralComponents, consList, vowList, otherList, overrideLayout);
                 if (!strokes) continue;
 
                 compilerGlyphs[currentPua] = strokes;

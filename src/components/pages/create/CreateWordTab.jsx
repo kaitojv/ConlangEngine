@@ -25,6 +25,21 @@ const STANDARD_WORD_CLASSES = [
     'particle', 'conjunction', 'preposition'
 ];
 
+const layouts = {
+    '1center': { name: '1 Center (Full)', slots: 1 },
+    '2top1bottom': { name: '2 Top, 1 Bottom', slots: 3 },
+    '1top2bottom': { name: '1 Top, 2 Bottom', slots: 3 },
+    '1left2right': { name: '1 Left, 2 Right', slots: 3 },
+    '2left1right': { name: '2 Left, 1 Right', slots: 3 },
+    '3horizontal': { name: '3 Horizontal', slots: 3 },
+    '3vertical': { name: '3 Vertical', slots: 3 },
+    '2horizontal': { name: '2 Horizontal', slots: 2 },
+    '2vertical': { name: '2 Vertical', slots: 2 },
+    '1outside1inside': { name: '1 Outside, 1 Inside', slots: 2 },
+    '1inside1outside': { name: '1 Inside, 1 Outside', slots: 2 },
+    '2x2grid': { name: '2x2 Grid', slots: 4 }
+};
+
 export default function CreateWordTab() {
     const location = useLocation();
     const navigate = useNavigate();
@@ -866,6 +881,56 @@ export default function CreateWordTab() {
                                     </button>
                                 );
                             })}
+                        </div>
+
+                        <div style={{ marginTop: '15px', padding: '10px', background: 'var(--bg)', borderRadius: 'var(--rad)' }}>
+                            <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>Layout Overrides</label>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '12px' }}>
+                                Override the layout for specific syllables in this word.
+                            </p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                {(ideogram || possibleBlockStructures[0] || '').split('.').map((blockWithOverride, bIdx) => {
+                                    if (!blockWithOverride) return null;
+                                    const parts = blockWithOverride.split(':');
+                                    const baseChunk = parts[0];
+                                    const currentOverride = parts[1] || '';
+                                    
+                                    const validLayouts = Object.entries(layouts).filter(([key, val]) => val.slots === baseChunk.length);
+                                    if (validLayouts.length <= 1) return null; // No point showing if only 1 layout exists
+                                    
+                                    return (
+                                        <div key={bIdx} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', border: '1px solid var(--bd)', borderRadius: 'var(--rad)', background: 'var(--bg2)' }}>
+                                            <div className="custom-font-text notranslate" style={{ fontSize: '1.5rem', color: 'var(--acc)', minWidth: '40px', textAlign: 'center' }}>
+                                                {transliterate(blockWithOverride)}
+                                            </div>
+                                            <div style={{ fontSize: '0.9rem', color: 'var(--tx2)', minWidth: '60px' }}>
+                                                {baseChunk}
+                                            </div>
+                                            <select
+                                                className="input-v"
+                                                style={{ flex: 1, padding: '6px', fontSize: '0.9rem' }}
+                                                value={currentOverride}
+                                                onChange={(e) => {
+                                                    const newOverride = e.target.value;
+                                                    const currentIdeogram = ideogram || possibleBlockStructures[0] || '';
+                                                    const blocks = currentIdeogram.split('.');
+                                                    if (newOverride) {
+                                                        blocks[bIdx] = `${baseChunk}:${newOverride}`;
+                                                    } else {
+                                                        blocks[bIdx] = baseChunk;
+                                                    }
+                                                    updateField('ideogram', blocks.join('.'));
+                                                }}
+                                            >
+                                                <option value="">Default for this pattern</option>
+                                                {validLayouts.map(([key, val]) => (
+                                                    <option key={key} value={key}>{val.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
                 )}
