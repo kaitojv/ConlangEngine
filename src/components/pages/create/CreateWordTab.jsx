@@ -43,7 +43,7 @@ export default function CreateWordTab() {
     const { phonologyTypes, grammarRules, vowels, consonants, otherPhonemes, syllablePattern, verbMarker,
             customWordClasses, customTags, addCustomWordClass, addCustomTag, autoReturnToLexicon,
             vowelHarmonyMode, vowelHarmonySets, vowelHarmonyOverrideWordClasses, vowelHarmonyOverrideTags,
-            updateConfig, syllabaryMap } = useConfigStore(useShallow(state => ({
+            updateConfig, syllabaryMap, blockTemplates, blockSettings } = useConfigStore(useShallow(state => ({
         phonologyTypes: state.phonologyTypes,
         grammarRules: state.grammarRules,
         vowels: state.vowels,

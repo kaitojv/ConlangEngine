@@ -57,7 +57,8 @@ const parseList = (str) => str.split(',')
     .filter(Boolean);
 
 // Recursive function to generate all Cartesian combinations with a hard limit to prevent browser crashes
-const generateCombinations = (lists, prefix = [], maxCombinations = 500000, context = { count: 0 }) => {
+// OpenType/Unicode max valid code point is 0x10FFFF. Since we start at 0xF0000, we only have ~131,000 slots!
+const generateCombinations = (lists, prefix = [], maxCombinations = 130000, context = { count: 0 }) => {
     if (context.count >= maxCombinations) return [];
     
     if (lists.length === 0) {
@@ -193,8 +194,14 @@ export const generateBlockFontData = async (config) => {
                     compilerGlyphs[currentPua] = combinedStrokes;
                     newSyllabaryMap[syllableStr] = String.fromCodePoint(currentPua);
                     currentPua++;
+                    
+                    if (currentPua >= 1114111) {
+                        console.warn("Hit absolute OpenType Unicode limit (1.11 million glyphs). Stopping generation early.");
+                        break;
+                    }
                 }
             }
+            if (currentPua >= 1114111) break;
         }
     }
 
@@ -272,6 +279,8 @@ export const generateBlockFontData = async (config) => {
             compilerGlyphs[currentPua] = soloStrokes;
             newSyllabaryMap[char] = String.fromCodePoint(currentPua);
             currentPua++;
+            
+            if (currentPua >= 1114111) break;
         }
     }
 
