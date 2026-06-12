@@ -57,7 +57,7 @@ const parseList = (str) => str.split(',')
     .filter(Boolean);
 
 // Recursive function to generate all Cartesian combinations with a hard limit to prevent browser crashes
-const generateCombinations = (lists, prefix = [], maxCombinations = 15000, context = { count: 0 }) => {
+const generateCombinations = (lists, prefix = [], maxCombinations = 4000, context = { count: 0 }) => {
     if (context.count >= maxCombinations) return [];
     
     if (lists.length === 0) {

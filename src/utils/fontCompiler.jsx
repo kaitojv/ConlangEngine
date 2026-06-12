@@ -142,13 +142,22 @@ export async function compileFont(customGlyphs) {
         });
 
         const arrayBuffer = font.toArrayBuffer();
-        let binary = '';
-        const bytes = new Uint8Array(arrayBuffer);
-        for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
-        }
         
-        return `data:font/truetype;charset=utf-8;base64,${btoa(binary)}`;
+        // SEC/PERF: Use native browser FileReader to convert ArrayBuffer to base64 asynchronously
+        // This completely eliminates the synchronous 50,000,000+ iteration string concatenation loop that causes "Page Unresponsive" browser freezes.
+        return await new Promise((resolve, reject) => {
+            const blob = new Blob([arrayBuffer], { type: 'application/octet-stream' });
+            const reader = new FileReader();
+            reader.onload = () => {
+                // reader.result is a data URL like "data:application/octet-stream;base64,..."
+                // We need to format it specifically as a TrueType font data URL
+                const base64 = reader.result.split(',')[1];
+                resolve(`data:font/truetype;charset=utf-8;base64,${base64}`);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+
     } catch (e) {
         console.error("Fatal error compiling font:", e);
         return null;
