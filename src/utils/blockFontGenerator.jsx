@@ -102,6 +102,7 @@ const compileBlockStrokes = (blockStr, activeTemplates, featuralComponents) => {
 
 export const generateBlockFontData = async (config) => {
     const { blockSettings, blockTemplates, featuralComponents, customGlyphs, puaCounter } = config;
+    const traceWidth = config.typographySettings?.traceWidth ?? 30;
 
     if (!featuralComponents || Object.keys(featuralComponents).length === 0) {
         throw new Error("You must draw at least some base characters first!");
@@ -183,7 +184,7 @@ export const generateBlockFontData = async (config) => {
 
     for (let i = 0; i < entries.length; i += CHUNK_SIZE) {
         const chunkGlyphs = Object.fromEntries(entries.slice(i, i + CHUNK_SIZE));
-        const base64Font = await compileFont(chunkGlyphs);
+        const base64Font = await compileFont(chunkGlyphs, traceWidth);
         if (base64Font) base64Fonts.push(base64Font);
     }
 

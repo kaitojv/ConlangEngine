@@ -1,7 +1,7 @@
 // src/utils/fontCompiler.js
 import opentype from 'opentype.js';
 
-export async function compileFont(customGlyphs) {
+export async function compileFont(customGlyphs, traceWidth = 30) {
     try {
         const notdefGlyph = new opentype.Glyph({
             name: '.notdef', unicode: 0, advanceWidth: 600, path: new opentype.Path()
@@ -22,7 +22,7 @@ export async function compileFont(customGlyphs) {
 
             const unicode = parseInt(unicodeStr);
             let path = new opentype.Path();
-            let r_base = 30;
+            let r_base = traceWidth; // Configurable stroke width from Graphism tab
 
             // Detect calligraphy or brush pen flag
             const hasCalligraphy = strokeArray.length > 0 && 

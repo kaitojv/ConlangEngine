@@ -252,6 +252,27 @@ export default function TypographyStudio() {
                                 </span>
                             </div>
                         </div>
+
+                        <div style={{ marginTop: '1.5rem' }}>
+                            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>Trace Width</h3>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '1rem' }}>
+                                Adjust the stroke thickness of compiled block characters. Requires a re-compile after changing.
+                            </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <input 
+                                    type="range" 
+                                    min="5" 
+                                    max="60" 
+                                    step="1" 
+                                    value={typographySettings.traceWidth ?? 30}
+                                    onChange={(e) => updateConfig({ typographySettings: { ...typographySettings, traceWidth: parseInt(e.target.value) } })}
+                                    style={{ flex: 1, accentColor: 'var(--acc)' }}
+                                />
+                                <span style={{ color: 'var(--tx)', fontWeight: 'bold', minWidth: '40px' }}>
+                                    {typographySettings.traceWidth ?? 30}px
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </Card>
