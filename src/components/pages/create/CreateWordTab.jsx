@@ -152,8 +152,9 @@ export default function CreateWordTab() {
                 results.push(currentPath.join('.'));
                 return;
             }
-            if (results.length >= 20) return; // Prevent excessive permutations
-            for (let len = 1; len <= safeBaseWord.length - currentIdx; len++) {
+            if (results.length >= 50) return; // Prevent excessive permutations
+            // Search longest chunks first so greedy matches appear at the top
+            for (let len = safeBaseWord.length - currentIdx; len >= 1; len--) {
                 const part = safeBaseWord.substring(currentIdx, currentIdx + len);
                 if (syllabaryMap[part]) {
                     search(currentIdx + len, [...currentPath, part]);

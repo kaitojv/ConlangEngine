@@ -24,6 +24,11 @@ export function useSharing(session) {
         }
 
         const configData = sanitizeConfig(useConfigStore.getState());
+        
+        // SEC/PERF: Strip massive base64 font from cloud payload to prevent Supabase statement timeouts
+        delete configData.customFontBase64;
+        delete configData.customFont;
+        
         const payload = { 
             dictionary: lexicon, 
             config: configData, 

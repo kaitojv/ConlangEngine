@@ -104,8 +104,14 @@ export const generateBlockFontData = async (config) => {
     for (const template of activeTemplates) {
         const slotMapping = template.slotMapping || [];
         const maxChars = template.maxChars || 3;
-        const layoutKey = template.layoutTemplate || '2top1bottom';
-        const matrix = blockLayoutMatrices[layoutKey];
+        let layoutKey = template.layoutTemplate || '2top1bottom';
+        let matrix = blockLayoutMatrices[layoutKey];
+
+        // Gracefully recover if the saved layoutTemplate is incompatible with maxChars
+        if (!matrix || matrix.length !== maxChars) {
+            layoutKey = Object.keys(blockLayoutMatrices).find(k => blockLayoutMatrices[k].length === maxChars) || '2top1bottom';
+            matrix = blockLayoutMatrices[layoutKey];
+        }
 
         if (!matrix || matrix.length < maxChars) {
             console.warn(`Invalid layout configuration for template ${template.id}.`);
@@ -186,19 +192,23 @@ export const generateBlockFontData = async (config) => {
     const SOLO_SCALE  = 0.9;
     const SOLO_OFFSET = 15; // px — centres the glyph with a small margin
 
-    for (const [char, strokes] of Object.entries(featuralComponents)) {
-        if (!strokes || strokes.length === 0) continue;
+    const compileStandalone = config.blockSettings?.compileStandaloneBases !== false; // true by default
 
-        const soloStrokes = strokes.map(stroke =>
-            stroke.map(point => ({
-                x: Number(((point.x * SOLO_SCALE) + SOLO_OFFSET).toFixed(1)),
-                y: Number(((point.y * SOLO_SCALE) + SOLO_OFFSET).toFixed(1))
-            }))
-        );
+    if (compileStandalone) {
+        for (const [char, strokes] of Object.entries(featuralComponents)) {
+            if (!strokes || strokes.length === 0) continue;
 
-        compilerGlyphs[currentPua] = soloStrokes;
-        newSyllabaryMap[char] = String.fromCodePoint(currentPua);
-        currentPua++;
+            const soloStrokes = strokes.map(stroke =>
+                stroke.map(point => ({
+                    x: Number(((point.x * SOLO_SCALE) + SOLO_OFFSET).toFixed(1)),
+                    y: Number(((point.y * SOLO_SCALE) + SOLO_OFFSET).toFixed(1))
+                }))
+            );
+
+            compilerGlyphs[currentPua] = soloStrokes;
+            newSyllabaryMap[char] = String.fromCodePoint(currentPua);
+            currentPua++;
+        }
     }
 
     const base64Font = await compileFont(compilerGlyphs);

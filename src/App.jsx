@@ -100,6 +100,35 @@ function App(){
       if (purgeBloatedGlyphs) purgeBloatedGlyphs();
   }, [purgeBloatedGlyphs]);
 
+  // Auto-compile the block font if missing (e.g. stripped from cloud sync payload to prevent Supabase timeouts)
+  const phonologyTypes = useConfigStore(state => state.phonologyTypes);
+  const featuralComponents = useConfigStore(state => state.featuralComponents);
+  const updateConfig = useConfigStore(state => state.updateConfig);
+
+  React.useEffect(() => {
+      if (!isRehydrating && phonologyTypes === 'featural_block' && !customFontBase64) {
+          if (featuralComponents && Object.keys(featuralComponents).length > 0) {
+              const autoCompile = async () => {
+                  try {
+                      // Dynamically import the generator to avoid bloating the main bundle if not needed
+                      const { generateBlockFontData } = await import('./utils/blockFontGenerator.jsx');
+                      const fullConfig = useConfigStore.getState();
+                      const newData = await generateBlockFontData(fullConfig);
+                      updateConfig({
+                          syllabaryMap: newData.syllabaryMap,
+                          customFontBase64: newData.customFontBase64,
+                          customFont: newData.customFontBase64,
+                          puaCounter: newData.puaCounter
+                      });
+                  } catch (e) {
+                      console.warn("Local auto-compile failed:", e);
+                  }
+              };
+              autoCompile();
+          }
+      }
+  }, [isRehydrating, phonologyTypes, customFontBase64, featuralComponents, updateConfig]);
+
   useThemeInjector();
   useFontInjector();
   useGlobalHotkeys();

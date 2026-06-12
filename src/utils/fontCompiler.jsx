@@ -79,8 +79,8 @@ export async function compileFont(customGlyphs) {
                             r = r_base * Math.max(0.1, widthMult * startMult);
                         }
 
-                        // Only draw joint circles for round caps
-                        if ((i === 0 || i === simplified.length - 1) && lineCap === 'round') {
+                        // Draw joint circles at EVERY point to ensure smooth joints and fix pixelation
+                        if (lineCap === 'round') {
                             const kappa = r * 0.55228;
                             path.moveTo(cx1, cy1 - r);
                             path.curveTo(cx1 + kappa, cy1 - r, cx1 + r, cy1 - kappa, cx1 + r, cy1);

@@ -145,6 +145,20 @@ export default function BlockManager() {
                     <h2 className="sg-title"><Layers size={20} className="bm-icon-inline"/> Block Templates</h2>
                     <Button variant="save" onClick={handleAddTemplate}>+ Add Template</Button>
                 </div>
+
+                <div className="bm-global-settings" style={{ marginBottom: '20px', padding: '15px', background: 'var(--s2)', borderRadius: 'var(--rad)' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--tx)', cursor: 'pointer' }}>
+                        <input 
+                            type="checkbox" 
+                            checked={blockSettings?.compileStandaloneBases !== false} 
+                            onChange={(e) => updateConfig({ blockSettings: { ...blockSettings, compileStandaloneBases: e.target.checked } })}
+                        />
+                        <strong>Compile Standalone Bases</strong>
+                    </label>
+                    <p style={{ margin: '5px 0 0 25px', fontSize: '0.85rem', color: 'var(--tx2)' }}>
+                        When enabled, the compiler automatically generates a 1-character block for every drawn character. This allows the Visual Picker to suggest breaking down words into individual letters. Disable to strictly enforce only the templates below.
+                    </p>
+                </div>
                 
                 <Infobox title="How to combine Syllables or Radicals">
                     <b>Want to combine full syllables instead of consonants/vowels?</b><br />

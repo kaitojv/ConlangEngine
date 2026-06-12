@@ -7,6 +7,7 @@ import DOMPurify from 'dompurify';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import { usePublicThemeInjector, usePublicFontInjector } from '../../../hooks/usePublicInjectors.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
+import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
 import PublicFlashcards from './PublicFlashcards.jsx';
 import ExercisePlayer from '../study/ExercisePlayer.jsx';
 import './publicViewer.css';
@@ -65,6 +66,34 @@ export default function PublicViewer() {
 
         if (projectId) fetchProject();
     }, [projectId]);
+
+    // Auto-compile the block font on the fly if it was stripped from the cloud sync payload
+    useEffect(() => {
+        if (!projectData || !projectData.config) return;
+        const conf = projectData.config;
+        
+        if (conf.phonologyTypes === 'featural_block' && !conf.customFontBase64 && conf.featuralComponents) {
+            const compileFont = async () => {
+                try {
+                    const newData = await generateBlockFontData(conf);
+                    setProjectData(prev => {
+                        if (!prev) return prev;
+                        return {
+                            ...prev,
+                            config: {
+                                ...prev.config,
+                                customFontBase64: newData.customFontBase64,
+                                syllabaryMap: newData.syllabaryMap
+                            }
+                        };
+                    });
+                } catch (e) {
+                    console.warn("PublicViewer auto-compile failed:", e);
+                }
+            };
+            compileFont();
+        }
+    }, [projectData]);
 
     // Extract data from the fetched project
     const config = projectData?.config || {};
