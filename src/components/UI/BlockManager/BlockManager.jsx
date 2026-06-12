@@ -101,19 +101,39 @@ export default function BlockManager() {
             if (!confirmed) return;
         }
 
+        setIsGenerating(true);
         try {
-            setIsGenerating(true);
-            const newData = await generateBlockFontData(config);
-            updateConfig({
-                syllabaryMap: newData.syllabaryMap,
-                customFontBase64: newData.customFontBase64,
-                customFont: newData.customFontBase64,
-                puaCounter: newData.puaCounter
-            });
-            alert("Block Font generated successfully! " + Object.keys(newData.syllabaryMap).length + " blocks created.");
+            const worker = new Worker(new URL('../../../utils/fontWorker.js', import.meta.url), { type: 'module' });
+            
+            worker.onmessage = (e) => {
+                if (e.data.success) {
+                    const newData = e.data.result;
+                    updateConfig({
+                        syllabaryMap: newData.syllabaryMap,
+                        customFontBase64: newData.customFontBase64,
+                        customFont: newData.customFontBase64,
+                        puaCounter: newData.puaCounter
+                    });
+                    alert("Block Font generated successfully! " + Object.keys(newData.syllabaryMap).length + " blocks created.");
+                } else {
+                    alert("Font generation failed: " + e.data.error);
+                }
+                setIsGenerating(false);
+                worker.terminate();
+            };
+            
+            worker.onerror = (err) => {
+                alert("Worker error occurred during font generation.");
+                console.error(err);
+                setIsGenerating(false);
+                worker.terminate();
+            };
+            
+            // Pass a clean clone of the config state to avoid complex object passing issues
+            worker.postMessage({ config: JSON.parse(JSON.stringify(config)) });
+            
         } catch (e) {
             alert(e.message);
-        } finally {
             setIsGenerating(false);
         }
     };

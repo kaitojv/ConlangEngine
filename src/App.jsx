@@ -108,20 +108,35 @@ function App(){
   React.useEffect(() => {
       if (!isRehydrating && phonologyTypes === 'featural_block' && !customFontBase64) {
           if (featuralComponents && Object.keys(featuralComponents).length > 0) {
-              const autoCompile = async () => {
+              const autoCompile = () => {
                   try {
-                      // Dynamically import the generator to avoid bloating the main bundle if not needed
-                      const { generateBlockFontData } = await import('./utils/blockFontGenerator.jsx');
                       const fullConfig = useConfigStore.getState();
-                      const newData = await generateBlockFontData(fullConfig);
-                      updateConfig({
-                          syllabaryMap: newData.syllabaryMap,
-                          customFontBase64: newData.customFontBase64,
-                          customFont: newData.customFontBase64,
-                          puaCounter: newData.puaCounter
-                      });
+                      // Use Web Worker to prevent UI locking during heavy font generation
+                      const worker = new Worker(new URL('./utils/fontWorker.js', import.meta.url), { type: 'module' });
+                      
+                      worker.onmessage = (e) => {
+                          if (e.data.success) {
+                              const newData = e.data.result;
+                              updateConfig({
+                                  syllabaryMap: newData.syllabaryMap,
+                                  customFontBase64: newData.customFontBase64,
+                                  customFont: newData.customFontBase64,
+                                  puaCounter: newData.puaCounter
+                              });
+                          } else {
+                              console.warn("Worker font compile failed:", e.data.error);
+                          }
+                          worker.terminate();
+                      };
+                      
+                      worker.onerror = (err) => {
+                          console.warn("Worker font compile error:", err);
+                          worker.terminate();
+                      };
+                      
+                      worker.postMessage({ config: fullConfig });
                   } catch (e) {
-                      console.warn("Local auto-compile failed:", e);
+                      console.warn("Local auto-compile failed to start:", e);
                   }
               };
               autoCompile();

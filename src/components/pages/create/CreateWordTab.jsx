@@ -147,8 +147,10 @@ export default function CreateWordTab() {
         if (!safeBaseWord) return [];
 
         const results = [];
+        let iterations = 0;
+        
         const search = (currentIdx, currentPath) => {
-            if (results.length >= 50) return true; // Signal to abort immediately
+            if (results.length >= 50 || iterations++ > 5000) return true; // Signal to abort immediately
             
             if (currentIdx === safeBaseWord.length) {
                 results.push(currentPath.join('.'));

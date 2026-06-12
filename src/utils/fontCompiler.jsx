@@ -15,8 +15,8 @@ export async function compileFont(customGlyphs) {
         let processedCount = 0;
 
         for (const [unicodeStr, strokeArray] of Object.entries(customGlyphs)) {
-            // Yield to the main thread every 20 glyphs to prevent the UI from freezing
-            if (++processedCount % 20 === 0) {
+            // Yield to the main thread every 5 glyphs to prevent the UI from freezing
+            if (++processedCount % 5 === 0) {
                 await new Promise(resolve => setTimeout(resolve, 0));
             }
 
@@ -80,9 +80,32 @@ export async function compileFont(customGlyphs) {
                             r = r_base * Math.max(0.1, widthMult * startMult);
                         }
 
-                        // Draw joint shapes at every point to ensure smooth joints and fix pixelation
-                        // SEC/PERF: Use a fast 8-sided octagon instead of 4 cubic beziers to prevent massive font files and CPU lockups
-                        if (lineCap === 'round') {
+                        // Draw start cap
+                        if (i === 0 && lineCap === 'round') {
+                            const r707 = r * 0.707;
+                            path.moveTo(cx1 + r, cy1);
+                            path.lineTo(cx1 + r707, cy1 + r707);
+                            path.lineTo(cx1, cy1 + r);
+                            path.lineTo(cx1 - r707, cy1 + r707);
+                            path.lineTo(cx1 - r, cy1);
+                            path.lineTo(cx1 - r707, cy1 - r707);
+                            path.lineTo(cx1, cy1 - r);
+                            path.lineTo(cx1 + r707, cy1 - r707);
+                            path.close();
+                        }
+                        
+                        // Draw a simple diamond joint at every point to connect overlapping rectangles smoothly
+                        // This fixes the "scattered pixels" issue without using 8+ points that freeze the browser
+                        if (i > 0 && i < simplified.length - 1 && lineCap === 'round') {
+                            path.moveTo(cx1, cy1 - r);
+                            path.lineTo(cx1 + r, cy1);
+                            path.lineTo(cx1, cy1 + r);
+                            path.lineTo(cx1 - r, cy1);
+                            path.close();
+                        }
+                        
+                        // Draw end cap
+                        if (i === simplified.length - 1 && lineCap === 'round') {
                             const r707 = r * 0.707;
                             path.moveTo(cx1 + r, cy1);
                             path.lineTo(cx1 + r707, cy1 + r707);

@@ -198,6 +198,57 @@ export const generateBlockFontData = async (config) => {
         }
     }
 
+    // ── Lexicon Override ────────────────────────────────────────────────────
+    // If the cartesian limit (4000) skipped a block the user actually typed in their dictionary,
+    // we MUST force-compile it so it renders properly in their text!
+    if (config.lexicon && Array.isArray(config.lexicon)) {
+        for (const entry of config.lexicon) {
+            const sourceStr = entry.ideogram || entry.word?.replace(/\*/g, '').toLowerCase() || '';
+            const blocks = sourceStr.split('.');
+            
+            for (const block of blocks) {
+                if (!block || newSyllabaryMap[block]) continue; // Already compiled
+                
+                // Find a template that matches the block's length
+                const template = activeTemplates.find(t => t.maxChars === block.length);
+                if (!template) continue; // No template supports this block length
+                
+                let layoutKey = template.layoutTemplate || '2top1bottom';
+                let matrix = blockLayoutMatrices[layoutKey];
+                if (!matrix || matrix.length !== block.length) {
+                    layoutKey = Object.keys(blockLayoutMatrices).find(k => blockLayoutMatrices[k].length === block.length) || '2top1bottom';
+                    matrix = blockLayoutMatrices[layoutKey];
+                }
+                
+                if (!matrix || matrix.length < block.length) continue;
+                
+                const combinedStrokes = [];
+                let valid = true;
+                
+                for (let i = 0; i < block.length; i++) {
+                    const char = block[i];
+                    const strokes = featuralComponents[char];
+                    if (!strokes) { valid = false; break; }
+                    
+                    const transform = matrix[i];
+                    const transformedStrokes = strokes.map(stroke => 
+                        stroke.map(point => ({
+                            x: Number(((point.x * transform.scale) + transform.tx).toFixed(1)),
+                            y: Number(((point.y * transform.scale) + transform.ty).toFixed(1))
+                        }))
+                    );
+                    combinedStrokes.push(...transformedStrokes);
+                }
+                
+                if (valid && combinedStrokes.length > 0) {
+                    compilerGlyphs[currentPua] = combinedStrokes;
+                    newSyllabaryMap[block] = String.fromCodePoint(currentPua);
+                    currentPua++;
+                }
+            }
+        }
+    }
+
     // ── Standalone Radicals ─────────────────────────────────────────────────
     // Any drawn base character that has NO syllabaryMap entry yet (i.e. it never
     // appeared as part of a full-block combination) gets compiled at full scale so
