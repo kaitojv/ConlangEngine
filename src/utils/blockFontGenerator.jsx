@@ -58,16 +58,30 @@ const parseList = (str) => str.split(',')
 
 // Helper to compile a single block string using the right template matrix
 const compileBlockStrokes = (blockStr, activeTemplates, featuralComponents) => {
-    const template = activeTemplates.find(t => t.maxChars === blockStr.length);
-    if (!template) return null;
-
-    let layoutKey = template.layoutTemplate || '2top1bottom';
-    let matrix = blockLayoutMatrices[layoutKey];
-    if (!matrix || matrix.length !== blockStr.length) {
+    // First: try to find a template that exactly matches the block length
+    let template = activeTemplates.find(t => t.maxChars === blockStr.length);
+    
+    // Fallback: if no exact match, find ANY layout in the registry that fits this block length.
+    // This handles cases like writing "ki" (2 chars) when no 2-char template is configured.
+    let matrix = null;
+    let layoutKey = null;
+    
+    if (template) {
+        layoutKey = template.layoutTemplate || '2top1bottom';
+        matrix = blockLayoutMatrices[layoutKey];
+        if (!matrix || matrix.length !== blockStr.length) {
+            layoutKey = Object.keys(blockLayoutMatrices).find(k => blockLayoutMatrices[k].length === blockStr.length);
+            matrix = layoutKey ? blockLayoutMatrices[layoutKey] : null;
+        }
+    }
+    
+    // No template configured for this length — look globally across all registered layouts
+    if (!matrix) {
         layoutKey = Object.keys(blockLayoutMatrices).find(k => blockLayoutMatrices[k].length === blockStr.length);
         matrix = layoutKey ? blockLayoutMatrices[layoutKey] : null;
     }
-    if (!matrix || matrix.length < blockStr.length) return null;
+    
+    if (!matrix) return null;
 
     const combinedStrokes = [];
     for (let i = 0; i < blockStr.length; i++) {

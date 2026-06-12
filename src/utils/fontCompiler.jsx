@@ -134,7 +134,7 @@ export async function compileFont(customGlyphs) {
             });
 
             glyphs.push(new opentype.Glyph({
-                name: `syl_${unicode}`, unicode: unicode, advanceWidth: 1000, path: path
+                name: `syl_${unicode}`, unicode: unicode, advanceWidth: 1150, path: path
             }));
         }
 
