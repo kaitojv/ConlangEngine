@@ -179,7 +179,13 @@ export function useTransliterator(overrideConfig = null) {
             const blocks = sourceStr.split('.');
             let finalOut = "";
 
-            blocks.forEach(block => {
+            blocks.forEach(rawBlock => {
+                let block = rawBlock;
+                // If the block has an override but the specific font glyph hasn't been compiled yet, strip the override to prevent rendering literal characters
+                if (rawBlock.includes(':') && !syllabaryMap[rawBlock]) {
+                    block = rawBlock.split(':')[0];
+                }
+
                 let out = "";
                 if (syllabificationAlgorithm === 'rtl') {
                     // Right-to-Left Greedy Match
