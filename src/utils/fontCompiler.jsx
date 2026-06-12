@@ -80,18 +80,19 @@ export async function compileFont(customGlyphs) {
                             r = r_base * Math.max(0.1, widthMult * startMult);
                         }
 
-                        // Because font compilation is now in a background Web Worker, we can afford
-                        // to use mathematically perfect Bezier circles for joints without freezing the UI!
-                        // This entirely fixes the "circles and pixels" jagged rendering problem.
-                        const k = 0.552284749831; // Magic number to approximate a circle with bezier curves
-                        
-                        // Draw perfect circle joint at EVERY point to ensure buttery smooth curves and caps
+                        // Draw an 8-point octagon joint at EVERY point. 
+                        // This fixes the jagged "scattered pixels" issue by making joints look circular,
+                        // while avoiding the extreme V8 memory overhead of true Bezier curves.
                         if (lineCap === 'round') {
+                            const r707 = r * 0.707;
                             path.moveTo(cx1 + r, cy1);
-                            path.curveTo(cx1 + r, cy1 + r * k, cx1 + r * k, cy1 + r, cx1, cy1 + r);
-                            path.curveTo(cx1 - r * k, cy1 + r, cx1 - r, cy1 + r * k, cx1 - r, cy1);
-                            path.curveTo(cx1 - r, cy1 - r * k, cx1 - r * k, cy1 - r, cx1, cy1 - r);
-                            path.curveTo(cx1 + r * k, cy1 - r, cx1 + r, cy1 - r * k, cx1 + r, cy1);
+                            path.lineTo(cx1 + r707, cy1 + r707);
+                            path.lineTo(cx1, cy1 + r);
+                            path.lineTo(cx1 - r707, cy1 + r707);
+                            path.lineTo(cx1 - r, cy1);
+                            path.lineTo(cx1 - r707, cy1 - r707);
+                            path.lineTo(cx1, cy1 - r);
+                            path.lineTo(cx1 + r707, cy1 - r707);
                             path.close();
                         }
 
