@@ -2,7 +2,7 @@ import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
-import { Bolt } from 'lucide-react';
+import { Bolt, Atom } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function SettingsGeneral() {
@@ -11,6 +11,7 @@ export default function SettingsGeneral() {
     const description = useConfigStore((state) => state.description) || '';
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const alphabeticScript = useConfigStore((state) => state.alphabeticScript);
+    const usesParticles = useConfigStore((state) => state.usesParticles) || false;
     const updateConfig = useConfigStore((state) => state.updateConfig);
 
     const handleTypologyChange = (newType) => {
@@ -82,6 +83,24 @@ export default function SettingsGeneral() {
                     <option value="featural_block">Featural Block (Hangul-style)</option>
                     <option value="logographic">Logographic (Ideograms)</option>
                 </select>
+            </div>
+
+            <div className="sg-input-group" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', marginBottom: '1rem', background: usesParticles ? 'rgba(124, 58, 237, 0.1)' : 'var(--s2)', borderRadius: '0.5rem', border: usesParticles ? '1px solid var(--acc)' : '1px solid var(--bd)' }}>
+                <Atom size={20} color={usesParticles ? 'var(--acc)' : 'var(--tx2)'} />
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', flex: 1 }}>
+                    <input
+                        type="checkbox"
+                        checked={usesParticles}
+                        onChange={(e) => updateConfig({ usesParticles: e.target.checked })}
+                        style={{ transform: 'scale(1.2)' }}
+                    />
+                    <div>
+                        <span style={{ fontWeight: 600 }}>Uses Particles</span>
+                        <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginTop: '2px' }}>
+                            Enable the particle system for isolating or particle-based languages. Unlocks the Particles tab in settings.
+                        </span>
+                    </div>
+                </label>
             </div>
 
             {phonologyTypes === 'alphabetic' && (

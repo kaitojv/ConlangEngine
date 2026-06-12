@@ -25,6 +25,9 @@ const VALID_CONFIG_KEYS = new Set([
     'stressRules', 'toneRules', 'isPublic', 'conlangIcon', 'parentId',
     'vowelHarmonyMode', 'vowelHarmonySets', 'vowelHarmonyOverrideWordClasses', 'vowelHarmonyOverrideTags',
     'backupSettings',
+    'morphologyMode', 'morphSlots', 'fusionRules', 'boundaryRules',
+    'particleDatabase', 'compositeParticles', 'allowRecursiveComposites',
+    'usesParticles',
     'evolutionEpochs', 'worldMap', 'customLabels', 'ipaMappingRules', 'typographySettings', 'azureTtsUseIpa'
 ]);
 

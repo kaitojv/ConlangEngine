@@ -182,6 +182,20 @@ export const INITIAL_CONFIG = {
         reuseEnabled: true,
         reuseWindowMinutes: 10,
     },
+
+    // Morphological typology system
+    morphologyMode: 'agglutinative', // 'isolating' | 'agglutinative' | 'fusional' | 'polysynthetic'
+    morphSlots: [],        // Array of { id, name, type, position, required, maxOccurrences, ruleTag, appliesToPOS? }
+    fusionRules: [],       // Array of { id, name, conditions, fusedAffix, priority }
+    boundaryRules: [],     // Array of { id, name, trigger, action, epenthetic?, replacementMap? }
+
+    // Particle system (for isolating/particle-based languages)
+    particleDatabase: [],       // Array of particle definitions
+    compositeParticles: [],     // Array of composite particle definitions
+    allowRecursiveComposites: false, // When false, composites can only use primitives
+
+    // Feature flags
+    usesParticles: false, // Enable the particle system for isolating/particle-based languages
 };
 
 // IndexedDB Helper for handling massive data without breaking local storage quotas

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { stripAffix, getPersonRules, segmentToken } from '@/utils/morphologyEngine.jsx';
+import { findParticleBySurface, resolveSense, getNeighborPOS } from '@/utils/particleEngine.js';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import Card from '@/components/UI/Card/Card.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
@@ -17,9 +18,12 @@ export default function AnalyzerTab() {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Store Data
-    const rawLexicon = useLexiconStore((state) => state.lexicon);
+        const rawLexicon = useLexiconStore((state) => state.lexicon);
     const lexicon = Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []);
     const config = useConfigStore();
+    const particleDatabase = useConfigStore((state) => state.particleDatabase) || [];
+    const compositeParticles = useConfigStore((state) => state.compositeParticles) || [];
+    const usesParticles = useConfigStore((state) => state.usesParticles) || false;
     const { normalizeToBase, transliterate } = useTransliterator();
 
     // Text-to-Speech handler for the translation reader
@@ -158,10 +162,35 @@ export default function AnalyzerTab() {
             const segments = segmentToken(cleanToken, lexicon, config, normalizeToBase, getUniqueParsings);
 
             segments.forEach(seg => {
+                const parsings = getUniqueParsings(seg);
+
+                // 2b. If no lexicon match, check if it's a particle
+                if (parsings.length === 0 && usesParticles && particleDatabase.length > 0) {
+                    const matchingParticles = findParticleBySurface(seg, particleDatabase);
+                    if (matchingParticles.length > 0) {
+                        // Build a temporary token stream for context resolution
+                        const tokenStream = finalTokens.map(t => ({
+                            token: t.original,
+                            type: t.parsings?.length > 0 ? 'word' : 'unknown',
+                            lexiconEntry: t.parsings?.[0]?.root,
+                        }));
+                        tokenStream.push({ token: seg });
+                        const neighborPOS = getNeighborPOS(tokenStream, tokenStream.length - 1, matchingParticles[0].position || 'standalone');
+                        const sense = resolveSense(matchingParticles[0], neighborPOS);
+                        if (sense) {
+                            parsings.push({
+                                root: { word: seg, wordClass: 'particle', translation: sense.meaning },
+                                rules: [],
+                                particleSense: sense,
+                            });
+                        }
+                    }
+                }
+
                 finalTokens.push({
                     original: seg,
                     clean: seg,
-                    parsings: getUniqueParsings(seg),
+                    parsings,
                     selectedIdx: 0,
                     manualRole: null
                 });
