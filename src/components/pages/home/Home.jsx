@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
+import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import FloatingBackground from './FloatingBackground.jsx';
 import { Sunrise, Sun, Moon, Sparkles, Settings2, BookA, PlusCircle, BrainCircuit, Flame, ArrowRight, Bookmark, Library, HelpCircle, Heart, Coffee } from 'lucide-react';
@@ -14,6 +15,9 @@ export default function Home() {
     const streak = useConfigStore((state) => state.streak) || 0;
     const lastStudyDate = useConfigStore((state) => state.lastStudyDate);
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
+    const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
+    const isFeaturalBlock = phonologyTypes === 'featural_block';
+    const { transliterate } = useTransliterator();
     const navigate = useNavigate();
 
     const [greeting, setGreeting] = useState({
@@ -220,8 +224,11 @@ export default function Home() {
                     {wordOfTheDay ? (
                         <div className="wotd-content">
                             <div className="wotd-display">
-                                <span className="custom-font-text notranslate wotd-word">
-                                    {wordOfTheDay.word.replace(/\*/g, '')}
+                                <span className={`notranslate wotd-word${isFeaturalBlock ? '' : ' custom-font-text'}`}>
+                                    {isFeaturalBlock
+                                        ? wordOfTheDay.word.replace(/\*/g, '')
+                                        : transliterate(wordOfTheDay.word.replace(/\*/g, ''), lexicon)
+                                    }
                                 </span>
                                 <span className="wotd-translation">
                                     {wordOfTheDay.wordClass ? `[${wordOfTheDay.wordClass}] ` : ''}{wordOfTheDay.translation}
