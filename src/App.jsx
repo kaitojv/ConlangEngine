@@ -108,9 +108,12 @@ function App(){
   React.useEffect(() => {
       if (!isRehydrating && phonologyTypes === 'featural_block' && !customFontBase64) {
           if (featuralComponents && Object.keys(featuralComponents).length > 0) {
-              const autoCompile = () => {
+              const autoCompile = async () => {
                   try {
+                      // Import useLexiconStore to extract lexicon
+                      const { useLexiconStore } = await import('./store/useLexiconStore.jsx');
                       const fullConfig = useConfigStore.getState();
+                      const lexicon = useLexiconStore.getState().lexicon;
                       // Use Web Worker to prevent UI locking during heavy font generation
                       const worker = new Worker(new URL('./utils/fontWorker.js', import.meta.url), { type: 'module' });
                       
@@ -134,7 +137,7 @@ function App(){
                           worker.terminate();
                       };
                       
-                      worker.postMessage({ config: fullConfig });
+                      worker.postMessage({ config: JSON.parse(JSON.stringify({ ...fullConfig, lexicon })) });
                   } catch (e) {
                       console.warn("Local auto-compile failed to start:", e);
                   }

@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
+import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import Card from '../Card/Card.jsx';
 import Button from '../Buttons/Buttons.jsx';
 import Modal from '../Modal/Modal.jsx';
 import FontStudioModal from '../Fontstudio/FontStudio.jsx';
 import Infobox from '../Infobox/Infobox.jsx';
-import { Brush, Grid3X3, Settings2, Info, Layers, Trash2 } from 'lucide-react';
+import { Brush, Grid3X3, Settings2, Info, Layers, Trash2, Eraser } from 'lucide-react';
 import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
 import './blockManager.css';
 
 export default function BlockManager() {
     const config = useConfigStore();
+    const lexicon = useLexiconStore(state => state.lexicon);
     const { consonants, vowels, otherPhonemes, blockSettings, blockTemplates, featuralComponents, updateConfig } = config;
     const [drawingForComp, setDrawingForComp] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -130,11 +132,23 @@ export default function BlockManager() {
             };
             
             // Pass a clean clone of the config state to avoid complex object passing issues
-            worker.postMessage({ config: JSON.parse(JSON.stringify(config)) });
+            worker.postMessage({ config: JSON.parse(JSON.stringify({ ...config, lexicon })) });
             
         } catch (e) {
             alert(e.message);
             setIsGenerating(false);
+        }
+    };
+
+    const handleClearFont = () => {
+        if (window.confirm("Are you sure you want to delete all compiled blocks? This will revert text back to basic base characters until you compile again.")) {
+            updateConfig({
+                syllabaryMap: {},
+                customFontBase64: null,
+                customFont: null,
+                puaCounter: 57344
+            });
+            alert("Compiled font data erased.");
         }
     };
 
@@ -300,17 +314,26 @@ export default function BlockManager() {
                 </div>
 
                 <div className="bm-compile-section">
-                    <Button 
-                        variant="save" 
-                        onClick={generateBlockFont} 
-                        disabled={isGenerating}
-                        className={isGenerating ? 'btn-loading' : ''}
-                    >
-                        {isGenerating ? 'Generating Font... Please Wait' : 'Compile Block Font'}
-                    </Button>
+                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                        <Button 
+                            variant="save" 
+                            onClick={generateBlockFont} 
+                            disabled={isGenerating}
+                            className={isGenerating ? 'btn-loading' : ''}
+                        >
+                            {isGenerating ? 'Generating Font... Please Wait' : 'Compile Block Font'}
+                        </Button>
+                        <Button 
+                            variant="error" 
+                            onClick={handleClearFont}
+                            disabled={isGenerating}
+                        >
+                            <Eraser size={16} style={{marginRight: '5px'}} /> Clear Data
+                        </Button>
+                    </div>
                     <p className="bm-compile-help">
                         {isGenerating 
-                            ? "DO NOT REFRESH OR CLOSE. The browser may seem unresponsive while calculating thousands of glyph combinations."
+                            ? "DO NOT REFRESH OR CLOSE. The background worker is compiling your custom font."
                             : "This will mathematically combine all possible valid blocks based on your slots and generate a functional font mapping."
                         }
                     </p>

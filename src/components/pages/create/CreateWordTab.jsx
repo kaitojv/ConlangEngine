@@ -60,6 +60,8 @@ export default function CreateWordTab() {
         vowelHarmonySets: state.vowelHarmonySets || [],
         vowelHarmonyOverrideWordClasses: state.vowelHarmonyOverrideWordClasses || [],
         vowelHarmonyOverrideTags: state.vowelHarmonyOverrideTags || [],
+        blockTemplates: state.blockTemplates,
+        blockSettings: state.blockSettings,
         updateConfig: state.updateConfig,
         syllabaryMap: state.syllabaryMap || {}
     })));
@@ -146,6 +148,63 @@ export default function CreateWordTab() {
         const safeBaseWord = normalizeToBase(word.trim()).toLowerCase();
         if (!safeBaseWord) return [];
 
+        const activeTemplates = blockTemplates || (blockSettings ? [
+            {
+                id: 'legacy',
+                maxChars: blockSettings.maxChars || 3,
+                layoutTemplate: blockSettings.layoutTemplate || '2top1bottom',
+                slotMapping: blockSettings.slotMapping || []
+            }
+        ] : [
+            {
+                id: 'default',
+                maxChars: 3,
+                layoutTemplate: '2top1bottom',
+                slotMapping: [{label:'Initial', source:'consonants'}, {label:'Vowel', source:'vowels'}, {label:'Final', source:'consonants'}]
+            }
+        ]);
+
+        const parseList = (str) => (str || '').split(',')
+            .map(s => {
+                let clean = s.trim().toLowerCase();
+                if (clean.includes('=')) clean = clean.split('=')[0].trim();
+                return clean;
+            })
+            .filter(Boolean);
+
+        const consList = ["", ...parseList(consonants)];
+        const vowList = parseList(vowels);
+        const otherList = parseList(otherPhonemes);
+
+        const isValidBlock = (part) => {
+            if (syllabaryMap[part]) return true; // Already compiled
+            
+            // Check if it perfectly matches an active template's slot mapping
+            for (const template of activeTemplates) {
+                if (part.length !== (template.maxChars || 3)) continue;
+                
+                let matches = true;
+                for (let i = 0; i < part.length; i++) {
+                    const char = part[i];
+                    let slot = (template.slotMapping || [])[i];
+                    let source;
+                    if (typeof slot === 'string') {
+                        source = i === 1 ? 'vowels' : 'consonants';
+                    } else if (slot && slot.source) {
+                        source = slot.source;
+                    } else {
+                        source = i === 1 ? 'vowels' : 'consonants';
+                    }
+                    
+                    if (source === 'vowels' && !vowList.includes(char)) { matches = false; break; }
+                    if (source === 'consonants' && !consList.includes(char)) { matches = false; break; }
+                    if (source === 'otherPhonemes' && !otherList.includes(char)) { matches = false; break; }
+                }
+                if (matches) return true;
+            }
+            return false;
+        };
+
         const results = [];
         let iterations = 0;
         
@@ -160,7 +219,7 @@ export default function CreateWordTab() {
             // Search longest chunks first so greedy matches appear at the top
             for (let len = safeBaseWord.length - currentIdx; len >= 1; len--) {
                 const part = safeBaseWord.substring(currentIdx, currentIdx + len);
-                if (syllabaryMap[part]) {
+                if (isValidBlock(part)) {
                     const shouldAbort = search(currentIdx + len, [...currentPath, part]);
                     if (shouldAbort) return true;
                 }
@@ -169,10 +228,8 @@ export default function CreateWordTab() {
         };
         search(0, []);
         
-        // Ensure the default greedy match is always at the top of the list
-        // And if the user has a manually typed '.' string, maybe include it? 
         return results;
-    }, [word, phonologyTypes, syllabaryMap, normalizeToBase]);
+    }, [word, phonologyTypes, syllabaryMap, normalizeToBase, blockTemplates, blockSettings, consonants, vowels, otherPhonemes]);
 
     const { isDuplicateWord, isDuplicateTranslation } = checkDuplicate(word, translation);
     const isDuplicate = (isDuplicateWord || isDuplicateTranslation) && (word !== '' || translation !== '');
@@ -345,6 +402,37 @@ export default function CreateWordTab() {
 
         if (!keepRoot && autoReturnToLexicon) {
             navigate('/lexicon');
+        }
+
+        // --- Auto-Compile Missing Blocks on Save ---
+        if (phonologyTypes === 'featural_block') {
+            try {
+                const fullConfig = useConfigStore.getState();
+                const currentLexicon = useLexiconStore.getState().lexicon;
+                const worker = new Worker(new URL('../../../utils/fontWorker.js', import.meta.url), { type: 'module' });
+                
+                worker.onmessage = (e) => {
+                    if (e.data.success) {
+                        const newData = e.data.result;
+                        updateConfig({
+                            syllabaryMap: newData.syllabaryMap,
+                            customFontBase64: newData.customFontBase64,
+                            customFont: newData.customFontBase64,
+                            puaCounter: newData.puaCounter
+                        });
+                        toast.success("Font updated with new block!", { icon: '✨' });
+                    }
+                    worker.terminate();
+                };
+                
+                worker.onerror = (err) => {
+                    worker.terminate();
+                };
+                
+                worker.postMessage({ config: JSON.parse(JSON.stringify({ ...fullConfig, lexicon: currentLexicon })) });
+            } catch (e) {
+                console.warn("Failed to trigger background compiler:", e);
+            }
         }
     };
 

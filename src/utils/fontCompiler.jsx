@@ -80,41 +80,18 @@ export async function compileFont(customGlyphs) {
                             r = r_base * Math.max(0.1, widthMult * startMult);
                         }
 
-                        // Draw start cap
-                        if (i === 0 && lineCap === 'round') {
-                            const r707 = r * 0.707;
-                            path.moveTo(cx1 + r, cy1);
-                            path.lineTo(cx1 + r707, cy1 + r707);
-                            path.lineTo(cx1, cy1 + r);
-                            path.lineTo(cx1 - r707, cy1 + r707);
-                            path.lineTo(cx1 - r, cy1);
-                            path.lineTo(cx1 - r707, cy1 - r707);
-                            path.lineTo(cx1, cy1 - r);
-                            path.lineTo(cx1 + r707, cy1 - r707);
-                            path.close();
-                        }
+                        // Because font compilation is now in a background Web Worker, we can afford
+                        // to use mathematically perfect Bezier circles for joints without freezing the UI!
+                        // This entirely fixes the "circles and pixels" jagged rendering problem.
+                        const k = 0.552284749831; // Magic number to approximate a circle with bezier curves
                         
-                        // Draw a simple diamond joint at every point to connect overlapping rectangles smoothly
-                        // This fixes the "scattered pixels" issue without using 8+ points that freeze the browser
-                        if (i > 0 && i < simplified.length - 1 && lineCap === 'round') {
-                            path.moveTo(cx1, cy1 - r);
-                            path.lineTo(cx1 + r, cy1);
-                            path.lineTo(cx1, cy1 + r);
-                            path.lineTo(cx1 - r, cy1);
-                            path.close();
-                        }
-                        
-                        // Draw end cap
-                        if (i === simplified.length - 1 && lineCap === 'round') {
-                            const r707 = r * 0.707;
+                        // Draw perfect circle joint at EVERY point to ensure buttery smooth curves and caps
+                        if (lineCap === 'round') {
                             path.moveTo(cx1 + r, cy1);
-                            path.lineTo(cx1 + r707, cy1 + r707);
-                            path.lineTo(cx1, cy1 + r);
-                            path.lineTo(cx1 - r707, cy1 + r707);
-                            path.lineTo(cx1 - r, cy1);
-                            path.lineTo(cx1 - r707, cy1 - r707);
-                            path.lineTo(cx1, cy1 - r);
-                            path.lineTo(cx1 + r707, cy1 - r707);
+                            path.curveTo(cx1 + r, cy1 + r * k, cx1 + r * k, cy1 + r, cx1, cy1 + r);
+                            path.curveTo(cx1 - r * k, cy1 + r, cx1 - r, cy1 + r * k, cx1 - r, cy1);
+                            path.curveTo(cx1 - r, cy1 - r * k, cx1 - r * k, cy1 - r, cx1, cy1 - r);
+                            path.curveTo(cx1 + r * k, cy1 - r, cx1 + r, cy1 - r * k, cx1 + r, cy1);
                             path.close();
                         }
 
