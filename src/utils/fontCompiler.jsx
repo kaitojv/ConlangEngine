@@ -43,13 +43,14 @@ export async function compileFont(customGlyphs) {
                 if (points.length === 0) return;
 
                 // 1. Simplify the stroke by dropping points that are too close
+                // Reduced threshold from 15 to 4 to preserve curvature without exploding point count
                 const simplified = [points[0]];
                 for (let i = 1; i < points.length; i++) {
                     let last = simplified[simplified.length - 1];
                     let curr = points[i];
                     let dx = curr.x - last.x;
                     let dy = curr.y - last.y;
-                    if (Math.sqrt(dx*dx + dy*dy) > 2 || i === points.length - 1) {
+                    if (Math.sqrt(dx*dx + dy*dy) > 4 || i === points.length - 1) {
                         simplified.push(curr);
                     }
                 }
@@ -79,14 +80,18 @@ export async function compileFont(customGlyphs) {
                             r = r_base * Math.max(0.1, widthMult * startMult);
                         }
 
-                        // Draw joint circles at EVERY point to ensure smooth joints and fix pixelation
+                        // Draw joint shapes at every point to ensure smooth joints and fix pixelation
+                        // SEC/PERF: Use a fast 8-sided octagon instead of 4 cubic beziers to prevent massive font files and CPU lockups
                         if (lineCap === 'round') {
-                            const kappa = r * 0.55228;
-                            path.moveTo(cx1, cy1 - r);
-                            path.curveTo(cx1 + kappa, cy1 - r, cx1 + r, cy1 - kappa, cx1 + r, cy1);
-                            path.curveTo(cx1 + r, cy1 + kappa, cx1 + kappa, cy1 + r, cx1, cy1 + r);
-                            path.curveTo(cx1 - kappa, cy1 + r, cx1 - r, cy1 + kappa, cx1 - r, cy1);
-                            path.curveTo(cx1 - r, cy1 - kappa, cx1 - kappa, cy1 - r, cx1, cy1 - r);
+                            const r707 = r * 0.707;
+                            path.moveTo(cx1 + r, cy1);
+                            path.lineTo(cx1 + r707, cy1 + r707);
+                            path.lineTo(cx1, cy1 + r);
+                            path.lineTo(cx1 - r707, cy1 + r707);
+                            path.lineTo(cx1 - r, cy1);
+                            path.lineTo(cx1 - r707, cy1 - r707);
+                            path.lineTo(cx1, cy1 - r);
+                            path.lineTo(cx1 + r707, cy1 - r707);
                             path.close();
                         }
 

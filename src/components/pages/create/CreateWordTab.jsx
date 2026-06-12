@@ -148,18 +148,22 @@ export default function CreateWordTab() {
 
         const results = [];
         const search = (currentIdx, currentPath) => {
+            if (results.length >= 50) return true; // Signal to abort immediately
+            
             if (currentIdx === safeBaseWord.length) {
                 results.push(currentPath.join('.'));
-                return;
+                return results.length >= 50;
             }
-            if (results.length >= 50) return; // Prevent excessive permutations
+            
             // Search longest chunks first so greedy matches appear at the top
             for (let len = safeBaseWord.length - currentIdx; len >= 1; len--) {
                 const part = safeBaseWord.substring(currentIdx, currentIdx + len);
                 if (syllabaryMap[part]) {
-                    search(currentIdx + len, [...currentPath, part]);
+                    const shouldAbort = search(currentIdx + len, [...currentPath, part]);
+                    if (shouldAbort) return true;
                 }
             }
+            return false;
         };
         search(0, []);
         
