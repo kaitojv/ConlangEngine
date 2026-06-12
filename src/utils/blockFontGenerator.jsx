@@ -56,15 +56,22 @@ const parseList = (str) => str.split(',')
     })
     .filter(Boolean);
 
-// Recursive function to generate all Cartesian combinations
-const generateCombinations = (lists, prefix = []) => {
-    if (lists.length === 0) return [prefix];
+// Recursive function to generate all Cartesian combinations with a hard limit to prevent browser crashes
+const generateCombinations = (lists, prefix = [], maxCombinations = 15000, context = { count: 0 }) => {
+    if (context.count >= maxCombinations) return [];
+    
+    if (lists.length === 0) {
+        context.count++;
+        return [prefix];
+    }
+    
     const currentList = lists[0];
     const remainingLists = lists.slice(1);
     const combinations = [];
     
     for (const item of currentList) {
-        combinations.push(...generateCombinations(remainingLists, [...prefix, item]));
+        if (context.count >= maxCombinations) break;
+        combinations.push(...generateCombinations(remainingLists, [...prefix, item], maxCombinations, context));
     }
     
     return combinations;
@@ -140,7 +147,13 @@ export const generateBlockFontData = async (config) => {
 
         const allCombinations = generateCombinations(listsToCombine);
 
+        let loopCount = 0;
         for (const combo of allCombinations) {
+            // Yield to main thread every 500 combinations to prevent browser freezing
+            if (++loopCount % 500 === 0) {
+                await new Promise(r => setTimeout(r, 0));
+            }
+
             const syllableStr = combo.join('');
             if (!syllableStr) continue; // Skip totally empty blocks
             
