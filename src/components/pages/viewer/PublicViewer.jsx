@@ -75,7 +75,7 @@ export default function PublicViewer() {
         if (conf.phonologyTypes === 'featural_block' && !conf.customFontBase64 && conf.featuralComponents) {
             const compileFont = async () => {
                 try {
-                    const newData = await generateBlockFontData(conf);
+                    const newData = await generateBlockFontData({ ...conf, lexicon: projectData.dictionary || [] });
                     setProjectData(prev => {
                         if (!prev) return prev;
                         return {
