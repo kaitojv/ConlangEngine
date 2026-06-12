@@ -98,8 +98,8 @@ export default function BlockManager() {
             totalCombos += combosForTemplate;
         }
 
-        if (totalCombos > 10000) {
-            const confirmed = window.confirm(`⚠️ Warning: Your configuration will generate approximately ${totalCombos.toLocaleString()} unique blocks. This may take a moment to compile and consume significant memory. Continue?`);
+        if (totalCombos > 60000) {
+            const confirmed = window.confirm(`⚠️ Warning: Your configuration will generate approximately ${totalCombos.toLocaleString()} unique blocks! \n\nBecause this exceeds the global 65,000 OpenType limit, the engine will mathematically split your alphabet into multiple fallback fonts. This will take a little longer to process in the background. Continue?`);
             if (!confirmed) return;
         }
 

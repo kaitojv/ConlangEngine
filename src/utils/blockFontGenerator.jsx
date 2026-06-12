@@ -57,7 +57,7 @@ const parseList = (str) => str.split(',')
     .filter(Boolean);
 
 // Recursive function to generate all Cartesian combinations with a hard limit to prevent browser crashes
-const generateCombinations = (lists, prefix = [], maxCombinations = 65000, context = { count: 0 }) => {
+const generateCombinations = (lists, prefix = [], maxCombinations = 500000, context = { count: 0 }) => {
     if (context.count >= maxCombinations) return [];
     
     if (lists.length === 0) {
@@ -275,11 +275,21 @@ export const generateBlockFontData = async (config) => {
         }
     }
 
-    const base64Font = await compileFont(compilerGlyphs);
+    const base64Fonts = [];
+    const entries = Object.entries(compilerGlyphs);
+    const CHUNK_SIZE = 60000; // Safe limit under OpenType's 65,535 maximum
+    
+    for (let i = 0; i < entries.length; i += CHUNK_SIZE) {
+        const chunkEntries = entries.slice(i, i + CHUNK_SIZE);
+        const chunkGlyphs = Object.fromEntries(chunkEntries);
+        const base64Font = await compileFont(chunkGlyphs);
+        base64Fonts.push(base64Font);
+    }
 
     return {
         syllabaryMap: newSyllabaryMap,
-        customFontBase64: base64Font,
+        // If there's only one chunk, keep it as a single string for backward compatibility, otherwise return array
+        customFontBase64: base64Fonts.length === 1 ? base64Fonts[0] : base64Fonts,
         puaCounter: currentPua
     };
 };

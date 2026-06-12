@@ -32,18 +32,19 @@ export function useFontInjector(){
         
         }
 
-        // Remove 'charset=utf-8' as it corrupts binary font decoding!
-        // Base64 fonts are binary, and forcing utf-8 causes the browser to reject them.
-        let safeFontUrl = customFont.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,');
-
         const fontName = 'ConlangCustomFont';
+        const fontStrings = Array.isArray(customFont) ? customFont : [customFont];
         
-        // Use the modern FontFace API to load the massive base64 string. 
-        const newFont = new FontFace(fontName, `url('${safeFontUrl}')`);
-        newFont.load().then((loadedFont) => {
-            document.fonts.add(loadedFont);
+        // Use the modern FontFace API to load massive base64 strings in parallel
+        Promise.all(fontStrings.map(fontStr => {
+            // Remove 'charset=utf-8' as it corrupts binary font decoding!
+            let safeFontUrl = fontStr.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,');
+            const newFont = new FontFace(fontName, `url('${safeFontUrl}')`);
+            return newFont.load();
+        })).then((loadedFonts) => {
+            loadedFonts.forEach(loadedFont => document.fonts.add(loadedFont));
             
-            // Apply styles only after font is successfully added to the browser's font cache
+            // Apply styles only after fonts are successfully added to the browser's font cache
             styleNode.innerHTML = `
             .notranslate, 
                 .custom-font-text,
@@ -65,7 +66,7 @@ export function useFontInjector(){
                 }
             `;
         }).catch(err => {
-            console.error("Browser failed to decode custom font:", err);
+            console.error("Browser failed to decode custom font arrays:", err);
         });
     }, [customFont, isRehydrating, projectId, typographySettings]);    
 }
