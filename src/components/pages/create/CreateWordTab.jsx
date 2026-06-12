@@ -843,7 +843,7 @@ export default function CreateWordTab() {
                                     placeholder="Type custom structure..."
                                 />
                             </div>
-                            <div style={{ minWidth: '80px', textAlign: 'center', fontFamily: 'var(--custom-font)', fontSize: '2.5rem', color: 'var(--acc)', border: '1px solid var(--bd)', borderRadius: 'var(--rad)', padding: '0 15px', background: 'var(--bg)' }} className="notranslate">
+                            <div style={{ minWidth: '80px', textAlign: 'center', fontSize: '2.5rem', color: 'var(--acc)', border: '1px solid var(--bd)', borderRadius: 'var(--rad)', padding: '0 15px', background: 'var(--bg)' }} className="custom-font-text notranslate">
                                 {transliterate(ideogram || possibleBlockStructures[0])}
                             </div>
                         </div>
@@ -856,10 +856,10 @@ export default function CreateWordTab() {
                                         key={struct}
                                         onClick={() => updateField('ideogram', struct)}
                                         className={`btn-v ${isSelected ? 'btn-acc-v' : 'btn-sec-v'}`}
-                                        style={{ fontFamily: 'var(--custom-font)', fontSize: '1.2rem', padding: '6px 16px', border: '1px solid var(--bd)' }}
+                                        style={{ fontSize: '1.2rem', padding: '6px 16px', border: '1px solid var(--bd)' }}
                                         title={struct}
                                     >
-                                        <span className="notranslate">{transliterate(struct)}</span>
+                                        <span className="custom-font-text notranslate">{transliterate(struct)}</span>
                                         <div style={{ fontSize: '0.65rem', color: isSelected ? 'var(--bg)' : 'var(--tx2)', marginTop: '4px', fontFamily: 'sans-serif', opacity: 0.8 }}>
                                             {struct.replace(/\./g, ' + ')}
                                         </div>

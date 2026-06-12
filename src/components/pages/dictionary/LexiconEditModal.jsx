@@ -39,6 +39,10 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
     const vowelHarmonyOverrideWordClasses = useConfigStore((state) => state.vowelHarmonyOverrideWordClasses) || [];
     const vowelHarmonyOverrideTags = useConfigStore((state) => state.vowelHarmonyOverrideTags) || [];
     const ipaMappingRules = useConfigStore((state) => state.ipaMappingRules) || '';
+    const otherPhonemes = useConfigStore(state => state.otherPhonemes);
+    const blockTemplates = useConfigStore(state => state.blockTemplates);
+    const blockSettings = useConfigStore(state => state.blockSettings);
+    const syllabaryMap = useConfigStore(state => state.syllabaryMap) || {};
 
     const [activeField, setActiveField] = useState('word');
 
@@ -76,6 +80,94 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
         const overriddenByTag = (tags || []).some(t => vowelHarmonyOverrideTags.includes(t));
         return overriddenByClass || overriddenByTag;
     }, [wordClass, tags, vowelHarmonyOverrideWordClasses, vowelHarmonyOverrideTags, harmonyStatus]);
+
+    const possibleBlockStructures = useMemo(() => {
+        if (phonologyTypes !== 'featural_block' || !word || !syllabaryMap) return [];
+        const safeBaseWord = normalizeToBase(word.trim()).toLowerCase();
+        if (!safeBaseWord) return [];
+
+        const activeTemplates = blockTemplates || (blockSettings ? [
+            {
+                id: 'legacy',
+                maxChars: blockSettings.maxChars || 3,
+                layoutTemplate: blockSettings.layoutTemplate || '2top1bottom',
+                slotMapping: blockSettings.slotMapping || []
+            }
+        ] : [
+            {
+                id: 'default',
+                maxChars: 3,
+                layoutTemplate: '2top1bottom',
+                slotMapping: [{label:'Initial', source:'consonants'}, {label:'Vowel', source:'vowels'}, {label:'Final', source:'consonants'}]
+            }
+        ]);
+
+        const parseList = (str) => (str || '').split(',')
+            .map(s => {
+                let clean = s.trim().toLowerCase();
+                if (clean.includes('=')) clean = clean.split('=')[0].trim();
+                return clean;
+            })
+            .filter(Boolean);
+
+        const consList = ["", ...parseList(consonants)];
+        const vowList = parseList(vowels);
+        const otherList = parseList(otherPhonemes);
+
+        const isValidBlock = (part) => {
+            if (syllabaryMap[part]) return true; // Already compiled
+            
+            // Check if it perfectly matches an active template's slot mapping
+            for (const template of activeTemplates) {
+                if (part.length !== (template.maxChars || 3)) continue;
+                
+                let matches = true;
+                for (let i = 0; i < part.length; i++) {
+                    const char = part[i];
+                    let slot = (template.slotMapping || [])[i];
+                    let source;
+                    if (typeof slot === 'string') {
+                        source = i === 1 ? 'vowels' : 'consonants';
+                    } else if (slot && slot.source) {
+                        source = slot.source;
+                    } else {
+                        source = i === 1 ? 'vowels' : 'consonants';
+                    }
+                    
+                    if (source === 'vowels' && !vowList.includes(char)) { matches = false; break; }
+                    if (source === 'consonants' && !consList.includes(char)) { matches = false; break; }
+                    if (source === 'otherPhonemes' && !otherList.includes(char)) { matches = false; break; }
+                }
+                if (matches) return true;
+            }
+            return false;
+        };
+
+        const results = [];
+        let iterations = 0;
+        
+        const search = (currentIdx, currentPath) => {
+            if (results.length >= 50 || iterations++ > 5000) return true; // Signal to abort immediately
+            
+            if (currentIdx === safeBaseWord.length) {
+                results.push(currentPath.join('.'));
+                return results.length >= 50;
+            }
+            
+            // Search longest chunks first so greedy matches appear at the top
+            for (let len = safeBaseWord.length - currentIdx; len >= 1; len--) {
+                const part = safeBaseWord.substring(currentIdx, currentIdx + len);
+                if (isValidBlock(part)) {
+                    const shouldAbort = search(currentIdx + len, [...currentPath, part]);
+                    if (shouldAbort) return true;
+                }
+            }
+            return false;
+        };
+        search(0, []);
+        
+        return results;
+    }, [word, phonologyTypes, syllabaryMap, normalizeToBase, blockTemplates, blockSettings, consonants, vowels, otherPhonemes]);
 
     const updateField = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
 
@@ -586,6 +678,48 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                         onChange={(e) => updateField('ideogram', e.target.value)}
                         className="ideogram-edit-input notranslate custom-font-text"
                     />
+                </div>
+            )}
+
+            {phonologyTypes === 'featural_block' && possibleBlockStructures.length > 0 && (
+                <div className="block-picker-section" style={{ marginTop: '1rem', background: 'var(--bg2)', padding: '1rem', borderRadius: '8px' }}>
+                    <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>Visual Block Structure</label>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '12px', lineHeight: '1.4' }}>
+                        Choose how this word should be visually broken down into blocks. Select from the greedy-matched suggestions below, or manually type your own distribution using periods (e.g. <code>m.e.hak.iz</code>).
+                    </p>
+
+                    <div style={{ marginBottom: '15px', display: 'flex', gap: '15px', alignItems: 'center' }}>
+                        <div style={{ flex: 1 }}>
+                            <Input
+                                value={ideogram || possibleBlockStructures[0]}
+                                onChange={(e) => updateField('ideogram', e.target.value.toLowerCase())}
+                                placeholder="Type custom structure..."
+                            />
+                        </div>
+                        <div style={{ minWidth: '80px', textAlign: 'center', fontSize: '2.5rem', color: 'var(--acc)', border: '1px solid var(--bd)', borderRadius: 'var(--rad)', padding: '0 15px', background: 'var(--bg)' }} className="custom-font-text notranslate">
+                            {transliterate(ideogram || possibleBlockStructures[0])}
+                        </div>
+                    </div>
+
+                    <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', gap: '8px', flexWrap: 'wrap', padding: '4px', borderTop: '1px solid var(--bd)', paddingTop: '15px' }}>
+                        {possibleBlockStructures.map((struct, idx) => {
+                            const isSelected = (ideogram || possibleBlockStructures[0]) === struct;
+                            return (
+                                <button
+                                    key={struct}
+                                    onClick={() => updateField('ideogram', struct)}
+                                    className={`btn-v ${isSelected ? 'btn-acc-v' : 'btn-sec-v'}`}
+                                    style={{ fontSize: '1.2rem', padding: '6px 16px', border: '1px solid var(--bd)' }}
+                                    title={struct}
+                                >
+                                    <span className="custom-font-text notranslate">{transliterate(struct)}</span>
+                                    <div style={{ fontSize: '0.65rem', color: isSelected ? 'var(--bg)' : 'var(--tx2)', marginTop: '4px', fontFamily: 'sans-serif', opacity: 0.8 }}>
+                                        {struct.replace(/\./g, ' + ')}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
             )}
 
