@@ -126,6 +126,7 @@ export default function BlockManager() {
     };
 
     const layouts = {
+        '1center': { name: '1 Center (Full)', slots: 1 },
         '2top1bottom': { name: '2 Top, 1 Bottom', slots: 3 },
         '1top2bottom': { name: '1 Top, 2 Bottom', slots: 3 },
         '1left2right': { name: '1 Left, 2 Right', slots: 3 },
@@ -174,6 +175,7 @@ export default function BlockManager() {
                                     value={template.maxChars || 3}
                                     onChange={(e) => handleUpdateTemplate(template.id, 'maxChars', parseInt(e.target.value))}
                                 >
+                                    <option value={1}>1 Character</option>
                                     <option value={2}>2 Characters</option>
                                     <option value={3}>3 Characters</option>
                                     <option value={4}>4 Characters</option>

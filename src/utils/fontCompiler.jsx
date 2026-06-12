@@ -49,7 +49,7 @@ export async function compileFont(customGlyphs) {
                     let curr = points[i];
                     let dx = curr.x - last.x;
                     let dy = curr.y - last.y;
-                    if (Math.sqrt(dx*dx + dy*dy) > 15 || i === points.length - 1) {
+                    if (Math.sqrt(dx*dx + dy*dy) > 2 || i === points.length - 1) {
                         simplified.push(curr);
                     }
                 }

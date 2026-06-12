@@ -1,6 +1,9 @@
 import { compileFont } from './fontCompiler.jsx';
 
 export const blockLayoutMatrices = {
+    '1center': [
+        { scale: 0.9, tx: 15, ty: 15 }
+    ],
     '2top1bottom': [
         { scale: 0.48, tx: 5, ty: 5 },
         { scale: 0.48, tx: 125, ty: 5 },
@@ -185,7 +188,6 @@ export const generateBlockFontData = async (config) => {
 
     for (const [char, strokes] of Object.entries(featuralComponents)) {
         if (!strokes || strokes.length === 0) continue;
-        if (newSyllabaryMap[char]) continue; // Already compiled as part of a combination
 
         const soloStrokes = strokes.map(stroke =>
             stroke.map(point => ({

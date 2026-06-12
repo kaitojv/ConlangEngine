@@ -43,7 +43,7 @@ export default function CreateWordTab() {
     const { phonologyTypes, grammarRules, vowels, consonants, otherPhonemes, syllablePattern, verbMarker,
             customWordClasses, customTags, addCustomWordClass, addCustomTag, autoReturnToLexicon,
             vowelHarmonyMode, vowelHarmonySets, vowelHarmonyOverrideWordClasses, vowelHarmonyOverrideTags,
-            updateConfig } = useConfigStore(useShallow(state => ({
+            updateConfig, syllabaryMap } = useConfigStore(useShallow(state => ({
         phonologyTypes: state.phonologyTypes,
         grammarRules: state.grammarRules,
         vowels: state.vowels,
@@ -60,7 +60,8 @@ export default function CreateWordTab() {
         vowelHarmonySets: state.vowelHarmonySets || [],
         vowelHarmonyOverrideWordClasses: state.vowelHarmonyOverrideWordClasses || [],
         vowelHarmonyOverrideTags: state.vowelHarmonyOverrideTags || [],
-        updateConfig: state.updateConfig
+        updateConfig: state.updateConfig,
+        syllabaryMap: state.syllabaryMap || {}
     })));
 
     // Let's track all our input fields in one neat object
@@ -139,6 +140,32 @@ export default function CreateWordTab() {
         const overriddenByTag = (tags || []).some(t => vowelHarmonyOverrideTags.includes(t));
         return overriddenByClass || overriddenByTag;
     }, [wordClass, tags, vowelHarmonyOverrideWordClasses, vowelHarmonyOverrideTags, harmonyStatus]);
+
+    const possibleBlockStructures = useMemo(() => {
+        if (phonologyTypes !== 'featural_block' || !word || !syllabaryMap) return [];
+        const safeBaseWord = normalizeToBase(word.trim()).toLowerCase();
+        if (!safeBaseWord) return [];
+
+        const results = [];
+        const search = (currentIdx, currentPath) => {
+            if (currentIdx === safeBaseWord.length) {
+                results.push(currentPath.join('.'));
+                return;
+            }
+            if (results.length >= 20) return; // Prevent excessive permutations
+            for (let len = 1; len <= safeBaseWord.length - currentIdx; len++) {
+                const part = safeBaseWord.substring(currentIdx, currentIdx + len);
+                if (syllabaryMap[part]) {
+                    search(currentIdx + len, [...currentPath, part]);
+                }
+            }
+        };
+        search(0, []);
+        
+        // Ensure the default greedy match is always at the top of the list
+        // And if the user has a manually typed '.' string, maybe include it? 
+        return results;
+    }, [word, phonologyTypes, syllabaryMap, normalizeToBase]);
 
     const { isDuplicateWord, isDuplicateTranslation } = checkDuplicate(word, translation);
     const isDuplicate = (isDuplicateWord || isDuplicateTranslation) && (word !== '' || translation !== '');
@@ -699,6 +726,35 @@ export default function CreateWordTab() {
                             <Button variant="edit" onClick={() => setIsFontStudioOpen(true)}>
                                 <Brush size={16} /> Draw Symbol
                             </Button>
+                        </div>
+                    </div>
+                )}
+
+                {phonologyTypes === 'featural_block' && possibleBlockStructures.length > 0 && (
+                    <div className="block-picker-section" style={{ marginTop: '1rem', background: 'var(--bg2)', padding: '1rem', borderRadius: '8px' }}>
+                        <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>Visual Block Structure</label>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '12px', lineHeight: '1.4' }}>
+                            Choose how this word should be visually broken down into blocks. By default, the engine greedy-matches the longest blocks.
+                        </p>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            {possibleBlockStructures.map((struct, idx) => {
+                                // Default structure is usually the first one (longest blocks)
+                                const isSelected = ideogram === struct || (!ideogram && idx === 0);
+                                return (
+                                    <button
+                                        key={struct}
+                                        onClick={() => updateField('ideogram', struct)}
+                                        className={`btn-v ${isSelected ? 'btn-acc-v' : 'btn-sec-v'}`}
+                                        style={{ fontFamily: 'var(--custom-font)', fontSize: '1.2rem', padding: '6px 16px', border: '1px solid var(--bd)' }}
+                                        title={struct}
+                                    >
+                                        <span className="notranslate">{transliterate(struct)}</span>
+                                        <div style={{ fontSize: '0.65rem', color: isSelected ? 'var(--bg)' : 'var(--tx2)', marginTop: '4px', fontFamily: 'sans-serif', opacity: 0.8 }}>
+                                            {struct.replace(/\./g, ' + ')}
+                                        </div>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 )}

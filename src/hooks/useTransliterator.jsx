@@ -171,8 +171,12 @@ export function useTransliterator(overrideConfig = null) {
         if (phonologyTypes === 'syllabic' || phonologyTypes === 'featural_block') {
             const syllables = Object.keys(syllabaryMap).sort((a, b) => b.length - a.length);
             
+            // Allow manual override of block structure via ideogram field
+            const dictEntry = lexicon.find(e => e.word.replace(/\*/g, '').toLowerCase() === cleanWord);
+            const sourceStr = (dictEntry && dictEntry.ideogram) ? dictEntry.ideogram : cleanWord;
+            
             // Explicit boundary logic + LTR/RTL parsing
-            const blocks = cleanWord.split('.');
+            const blocks = sourceStr.split('.');
             let finalOut = "";
 
             blocks.forEach(block => {
