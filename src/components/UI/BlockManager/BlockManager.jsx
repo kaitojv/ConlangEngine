@@ -131,8 +131,11 @@ export default function BlockManager() {
                 worker.terminate();
             };
             
-            // Pass a clean clone of the config state to avoid complex object passing issues
-            worker.postMessage({ config: JSON.parse(JSON.stringify({ ...config, lexicon })) });
+            // Pass a clean clone of the config state, STRIPPING massive fonts to prevent OOM serialization crashes
+            const cleanConfig = { ...config, lexicon };
+            delete cleanConfig.customFontBase64;
+            delete cleanConfig.customFont;
+            worker.postMessage({ config: JSON.parse(JSON.stringify(cleanConfig)) });
             
         } catch (e) {
             alert(e.message);

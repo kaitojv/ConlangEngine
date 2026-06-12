@@ -137,7 +137,10 @@ function App(){
                           worker.terminate();
                       };
                       
-                      worker.postMessage({ config: JSON.parse(JSON.stringify({ ...fullConfig, lexicon })) });
+                      const cleanConfig = { ...fullConfig, lexicon };
+                      delete cleanConfig.customFontBase64;
+                      delete cleanConfig.customFont;
+                      worker.postMessage({ config: JSON.parse(JSON.stringify(cleanConfig)) });
                   } catch (e) {
                       console.warn("Local auto-compile failed to start:", e);
                   }

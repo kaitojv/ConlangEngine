@@ -429,7 +429,10 @@ export default function CreateWordTab() {
                     worker.terminate();
                 };
                 
-                worker.postMessage({ config: JSON.parse(JSON.stringify({ ...fullConfig, lexicon: currentLexicon })) });
+                const cleanConfig = { ...fullConfig, lexicon: currentLexicon };
+                delete cleanConfig.customFontBase64;
+                delete cleanConfig.customFont;
+                worker.postMessage({ config: JSON.parse(JSON.stringify(cleanConfig)) });
             } catch (e) {
                 console.warn("Failed to trigger background compiler:", e);
             }
