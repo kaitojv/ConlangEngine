@@ -57,8 +57,10 @@ const parseList = (str) => str.split(',')
     .filter(Boolean);
 
 // Recursive function to generate all Cartesian combinations with a hard limit to prevent browser crashes
-// OpenType/Unicode max valid code point is 0x10FFFF. Since we start at 0xF0000, we only have ~131,000 slots!
-const generateCombinations = (lists, prefix = [], maxCombinations = 130000, context = { count: 0 }) => {
+// OpenType/Unicode max valid code point is 0x10FFFF.
+// CRITICAL: We cap this at 10,000 to prevent Chrome's V8 Engine from hitting its hard-coded memory limit (OOM).
+// Generating 121k perfect bezier curve glyphs requires ~5-6 GB of heap memory, which Chrome blocks regardless of system RAM.
+const generateCombinations = (lists, prefix = [], maxCombinations = 10000, context = { count: 0 }) => {
     if (context.count >= maxCombinations) return [];
     
     if (lists.length === 0) {
