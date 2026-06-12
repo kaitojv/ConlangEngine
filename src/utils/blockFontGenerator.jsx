@@ -5,32 +5,42 @@ export const blockLayoutMatrices = {
         { scale: 0.9, tx: 15, ty: 15 }
     ],
     '2top1bottom': [
-        { scale: 0.48, tx: 5, ty: 5 },
-        { scale: 0.48, tx: 125, ty: 5 },
-        { scale: 0.48, tx: 65, ty: 125 }
+        { scale: 0.45, tx: 10, ty: 10 },
+        { scale: 0.45, tx: 155, ty: 10 },
+        { scale: 0.45, tx: 82.5, ty: 155 }
     ],
     '1top2bottom': [
-        { scale: 0.48, tx: 65, ty: 5 },
-        { scale: 0.48, tx: 5, ty: 125 },
-        { scale: 0.48, tx: 125, ty: 125 }
+        { scale: 0.45, tx: 82.5, ty: 10 },
+        { scale: 0.45, tx: 10, ty: 155 },
+        { scale: 0.45, tx: 155, ty: 155 }
     ],
     '1left2right': [
-        { scale: 0.48, tx: 5, ty: 65 },
-        { scale: 0.48, tx: 125, ty: 5 },
-        { scale: 0.48, tx: 125, ty: 125 }
+        { scale: 0.45, tx: 10, ty: 82.5 },
+        { scale: 0.45, tx: 155, ty: 10 },
+        { scale: 0.45, tx: 155, ty: 155 }
+    ],
+    '2left1right': [
+        { scale: 0.45, tx: 10, ty: 10 },
+        { scale: 0.45, tx: 10, ty: 155 },
+        { scale: 0.45, tx: 155, ty: 82.5 }
     ],
     '3horizontal': [
-        { scale: 0.32, tx: 5, ty: 85 },
-        { scale: 0.32, tx: 85, ty: 85 },
-        { scale: 0.32, tx: 165, ty: 85 }
+        { scale: 0.3, tx: 5, ty: 105 },
+        { scale: 0.3, tx: 105, ty: 105 },
+        { scale: 0.3, tx: 205, ty: 105 }
+    ],
+    '3vertical': [
+        { scale: 0.3, tx: 105, ty: 5 },
+        { scale: 0.3, tx: 105, ty: 105 },
+        { scale: 0.3, tx: 105, ty: 205 }
     ],
     '2horizontal': [
-        { scale: 0.48, tx: 5, ty: 65 },
-        { scale: 0.48, tx: 125, ty: 65 }
+        { scale: 0.45, tx: 10, ty: 75 },
+        { scale: 0.45, tx: 155, ty: 75 }
     ],
     '2vertical': [
-        { scale: 0.48, tx: 65, ty: 5 },
-        { scale: 0.48, tx: 65, ty: 125 }
+        { scale: 0.45, tx: 75, ty: 10 },
+        { scale: 0.45, tx: 75, ty: 155 }
     ],
     '1outside1inside': [
         { scale: 0.99, tx: 1.25, ty: 1.25 },
@@ -41,14 +51,14 @@ export const blockLayoutMatrices = {
         { scale: 0.99, tx: 1.25, ty: 1.25 }
     ],
     '2x2grid': [
-        { scale: 0.48, tx: 5, ty: 5 },
-        { scale: 0.48, tx: 125, ty: 5 },
-        { scale: 0.48, tx: 5, ty: 125 },
-        { scale: 0.48, tx: 125, ty: 125 }
+        { scale: 0.45, tx: 10, ty: 10 },
+        { scale: 0.45, tx: 155, ty: 10 },
+        { scale: 0.45, tx: 10, ty: 155 },
+        { scale: 0.45, tx: 155, ty: 155 }
     ]
 };
 
-const parseList = (str) => str.split(',')
+const parseList = (str) => (str || '').split(',')
     .map(s => {
         let clean = s.trim().toLowerCase();
         if (clean.includes('=')) clean = clean.split('=')[0].trim();
@@ -57,9 +67,35 @@ const parseList = (str) => str.split(',')
     .filter(Boolean);
 
 // Helper to compile a single block string using the right template matrix
-const compileBlockStrokes = (blockStr, activeTemplates, featuralComponents) => {
-    // First: try to find a template that exactly matches the block length
-    let template = activeTemplates.find(t => t.maxChars === blockStr.length);
+const compileBlockStrokes = (blockStr, activeTemplates, featuralComponents, consList, vowList, otherList) => {
+    // First: try to find a template that exactly matches the block length AND slot mapping
+    let template = activeTemplates.find(t => {
+        if (t.maxChars !== blockStr.length) return false;
+        
+        // Check slot mapping to distinguish between multiple templates of the same length
+        for (let i = 0; i < blockStr.length; i++) {
+            const char = blockStr[i];
+            let slot = (t.slotMapping || [])[i];
+            let source;
+            if (typeof slot === 'string') {
+                source = i === 1 ? 'vowels' : 'consonants';
+            } else if (slot && slot.source) {
+                source = slot.source;
+            } else {
+                source = i === 1 ? 'vowels' : 'consonants';
+            }
+            
+            if (source === 'vowels' && !vowList.includes(char)) return false;
+            if (source === 'consonants' && !consList.includes(char)) return false;
+            if (source === 'otherPhonemes' && !otherList.includes(char)) return false;
+        }
+        return true;
+    });
+
+    // Fallback: if no strict slot match, find the first template with the same length
+    if (!template) {
+        template = activeTemplates.find(t => t.maxChars === blockStr.length);
+    }
     
     // Fallback: if no exact match, find ANY layout in the registry that fits this block length.
     // This handles cases like writing "ki" (2 chars) when no 2-char template is configured.
@@ -101,7 +137,7 @@ const compileBlockStrokes = (blockStr, activeTemplates, featuralComponents) => {
 };
 
 export const generateBlockFontData = async (config) => {
-    const { blockSettings, blockTemplates, featuralComponents, customGlyphs, puaCounter } = config;
+    const { blockSettings, blockTemplates, featuralComponents, customGlyphs, puaCounter, consonants, vowels, otherPhonemes } = config;
     const traceWidth = config.typographySettings?.traceWidth ?? 30;
 
     if (!featuralComponents || Object.keys(featuralComponents).length === 0) {
@@ -120,6 +156,10 @@ export const generateBlockFontData = async (config) => {
     if (activeTemplates.length === 0) {
         throw new Error("No block templates found.");
     }
+
+    const consList = parseList(consonants);
+    const vowList = parseList(vowels);
+    const otherList = parseList(otherPhonemes);
 
     // Always start fresh — seeding from old customGlyphs would preserve stale stroke widths
     // and ignore the user's traceWidth setting change.
@@ -141,7 +181,7 @@ export const generateBlockFontData = async (config) => {
             for (const block of blocks) {
                 if (newSyllabaryMap[block]) continue; // Already compiled this block
 
-                const strokes = compileBlockStrokes(block, activeTemplates, featuralComponents);
+                const strokes = compileBlockStrokes(block, activeTemplates, featuralComponents, consList, vowList, otherList);
                 if (!strokes) continue;
 
                 compilerGlyphs[currentPua] = strokes;

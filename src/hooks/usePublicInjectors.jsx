@@ -74,6 +74,12 @@ export function usePublicFontInjector(config) {
                 .custom-font-text, .conlang-word, .dict-ipa {
                     font-family: '${fontName}', 'Inter', sans-serif !important;
                 }
+
+                .custom-font-text::placeholder,
+                .conlang-word::placeholder {
+                    font-family: 'Inter', sans-serif !important;
+                    letter-spacing: normal !important;
+                }
             `;
         }).catch(err => {
             console.error('PublicViewer: failed to load custom font', err);

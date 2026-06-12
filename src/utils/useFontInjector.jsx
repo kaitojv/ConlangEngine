@@ -46,7 +46,6 @@ export function useFontInjector(){
             
             // Apply styles only after fonts are successfully added to the browser's font cache
             styleNode.innerHTML = `
-            .notranslate, 
                 .custom-font-text,
                 .conlang-word,
                 .word-text,
@@ -63,6 +62,18 @@ export function useFontInjector(){
                     font-weight: normal !important;
                     font-style: normal !important;
                     letter-spacing: ${typographySettings?.letterSpacing || 0}em !important;
+                }
+
+                .custom-font-text::placeholder,
+                .conlang-word::placeholder,
+                .word-text::placeholder,
+                .word::placeholder,
+                .lexicon-word::placeholder,
+                .matrix-base-word::placeholder,
+                .entry-main-word::placeholder,
+                #syllabary-render-area input::placeholder {
+                    font-family: 'Inter', sans-serif !important;
+                    letter-spacing: normal !important;
                 }
             `;
         }).catch(err => {
