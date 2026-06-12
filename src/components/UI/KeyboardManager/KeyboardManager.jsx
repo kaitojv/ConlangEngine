@@ -45,7 +45,7 @@ export default function KeyboardManager({ allChars, alphabetGlyphs }) {
             const glyphCode = alphabetGlyphs[char];
             return {
                 char: char,
-                unicode: glyphCode ? String.fromCodePoint(glyphCode) : char,
+                unicode: glyphCode ? glyphCode : char,
                 hasGlyph: !!glyphCode
             };
         }),

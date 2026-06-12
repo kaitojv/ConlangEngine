@@ -392,17 +392,19 @@ export default function TypographyStudio() {
                 </div>
             )}
 
-            <Card style={{ padding: '1.5rem', marginTop: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--tx)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Keyboard size={18} /> OS Keyboard Layout Exporter
-                </h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', textAlign: 'center', maxWidth: '500px', margin: 0 }}>
-                    Map your custom drawn characters to physical keys and download a Windows <code>.klc</code> file to type natively on your computer!
-                </p>
-                <Button variant="imp" onClick={() => setShowKeyboardManager(true)}>
-                    <Keyboard size={16} /> Open Keyboard Manager
-                </Button>
-            </Card>
+            {phonologyTypes === 'alphabetic' && (
+                <Card style={{ padding: '1.5rem', marginTop: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--tx)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Keyboard size={18} /> OS Keyboard Layout Exporter
+                    </h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', textAlign: 'center', maxWidth: '500px', margin: 0 }}>
+                        Map your custom drawn characters to physical keys and download a Windows <code>.klc</code> file to type natively on your computer!
+                    </p>
+                    <Button variant="imp" onClick={() => setShowKeyboardManager(true)}>
+                        <Keyboard size={16} /> Open Keyboard Manager
+                    </Button>
+                </Card>
+            )}
         </div>
     );
 }
