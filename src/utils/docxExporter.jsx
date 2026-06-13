@@ -141,6 +141,13 @@ export const generateDocxExport = (config, lexicon, template = 'academic', optio
                     font-family: 'Courier New', monospace; 
                     white-space: pre-wrap; 
                 }
+                ${(config.customFont || config.customFontBase64) ? `
+                @font-face {
+                    font-family: 'ConlangCustomFont';
+                    src: url('${config.customFont || config.customFontBase64}') format('truetype');
+                }
+                .custom-font { font-family: 'ConlangCustomFont', ${styles.font}; }
+                ` : ''}
             </style>
         </head>
         <body>
@@ -153,8 +160,8 @@ export const generateDocxExport = (config, lexicon, template = 'academic', optio
             <p><strong>Inventory:</strong></p>
             <table>
                 <tr><th>Category</th><th>Graphemes / Phonemes</th></tr>
-                <tr><td>Consonants</td><td>${consonants || '—'}</td></tr>
-                <tr><td>Vowels</td><td>${vowels || '—'}</td></tr>
+                <tr><td>Consonants</td><td class="custom-font">${consonants || '—'}</td></tr>
+                <tr><td>Vowels</td><td class="custom-font">${vowels || '—'}</td></tr>
             </table>
             
             ${historicalRules ? `
@@ -213,7 +220,7 @@ export const generateDocxExport = (config, lexicon, template = 'academic', optio
 
                 return `
                     <div class="dictionary-entry">
-                        <span class="word-head">${baseWord}</span> 
+                        <span class="word-head custom-font">${baseWord}</span> 
                         <span style="color: #666;">[${e.ipa || '—'}]</span>
                         <span style="font-style: italic; margin-left: 10pt;">${e.wordClass || '—'}</span>
                         <p style="margin: 5pt 0;">${e.translation || '—'}</p>
@@ -222,14 +229,14 @@ export const generateDocxExport = (config, lexicon, template = 'academic', optio
                             <table class="inflection-table">
                                 ${inflectionMode === 'compact' ? `
                                     <tr style="background: #fafafa;"><th style="background: #eee; color: #444;">Form</th><th style="background: #eee; color: #444;">Result</th></tr>
-                                    ${paradigm.map(p => `<tr><td>${p.ruleName}</td><td>${p.result || '—'}</td></tr>`).join('')}
+                                    ${paradigm.map(p => `<tr><td>${p.ruleName}</td><td class="custom-font">${p.result || '—'}</td></tr>`).join('')}
                                 ` : `
                                     <tr style="background: #fafafa;"><th style="background: #eee; color: #444;">Rule</th><th style="background: #eee; color: #444;">Person</th><th style="background: #eee; color: #444;">Result</th></tr>
                                     ${paradigm.map(p => `
                                         <tr>
                                             <td>${p.ruleName}</td>
                                             <td>${p.personName}</td>
-                                            <td>${p.result || '—'}</td>
+                                            <td class="custom-font">${p.result || '—'}</td>
                                         </tr>
                                     `).join('')}
                                 `}

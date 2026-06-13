@@ -122,13 +122,25 @@ const compileBlockStrokes = (blockStr, activeTemplates, featuralComponents, cons
     for (let i = 0; i < blockStr.length; i++) {
         const char = blockStr[i];
         const strokes = featuralComponents[char];
-        if (!strokes) return null; // Missing drawing for this char, skip block
+        if (!strokes || strokes.length === 0) return null; // Missing drawing for this char, skip block
+
+        // Find the bounding box origin to auto-align the character to the top-left of its slot
+        let minX = Infinity;
+        let minY = Infinity;
+        strokes.forEach(stroke => {
+            stroke.forEach(pt => {
+                if (pt.x < minX) minX = pt.x;
+                if (pt.y < minY) minY = pt.y;
+            });
+        });
+        if (minX === Infinity) minX = 0;
+        if (minY === Infinity) minY = 0;
 
         const transform = matrix[i];
         combinedStrokes.push(...strokes.map(stroke =>
             stroke.map(point => ({
-                x: Number(((point.x * transform.scale) + transform.tx).toFixed(1)),
-                y: Number(((point.y * transform.scale) + transform.ty).toFixed(1))
+                x: Number((((point.x - minX) * transform.scale) + transform.tx).toFixed(1)),
+                y: Number((((point.y - minY) * transform.scale) + transform.ty).toFixed(1))
             }))
         ));
     }
@@ -212,10 +224,22 @@ export const generateBlockFontData = async (config) => {
             if (!strokes || strokes.length === 0) continue;
             if (newSyllabaryMap[char]) continue; // Already mapped (e.g. as a 1-char block from lexicon)
 
+            // Find the bounding box origin to auto-align standalone bases too
+            let minX = Infinity;
+            let minY = Infinity;
+            strokes.forEach(stroke => {
+                stroke.forEach(pt => {
+                    if (pt.x < minX) minX = pt.x;
+                    if (pt.y < minY) minY = pt.y;
+                });
+            });
+            if (minX === Infinity) minX = 0;
+            if (minY === Infinity) minY = 0;
+
             const soloStrokes = strokes.map(stroke =>
                 stroke.map(point => ({
-                    x: Number(((point.x * SOLO_SCALE) + SOLO_OFFSET).toFixed(1)),
-                    y: Number(((point.y * SOLO_SCALE) + SOLO_OFFSET).toFixed(1))
+                    x: Number((((point.x - minX) * SOLO_SCALE) + SOLO_OFFSET).toFixed(1)),
+                    y: Number((((point.y - minY) * SOLO_SCALE) + SOLO_OFFSET).toFixed(1))
                 }))
             );
 

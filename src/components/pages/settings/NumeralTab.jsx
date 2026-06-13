@@ -215,7 +215,7 @@ export default function NumeralTab() {
                     <div className="converter-arrow">→</div>
                     <div className="converter-result-box">
                         <label className="form-label">Base-{numeralBase}</label>
-                        <div className="converter-result-value">
+                        <div className="converter-result-value custom-font-text notranslate">
                             {conversionResult ? conversionResult.converted : '—'}
                         </div>
                     </div>
@@ -263,7 +263,7 @@ export default function NumeralTab() {
                         {calcResult?.error ? (
                             <span className="calc-error">{calcResult.error}</span>
                         ) : (
-                            <span className="calc-value">{calcResult?.value || '—'}</span>
+                            <span className="calc-value custom-font-text notranslate">{calcResult?.value || '—'}</span>
                         )}
                     </div>
                 </div>
@@ -282,7 +282,7 @@ export default function NumeralTab() {
                         <div key={decimal} className="reference-item">
                             <span className="ref-decimal">{decimal}</span>
                             <span className="ref-arrow">→</span>
-                            <span className="ref-converted">{converted}</span>
+                            <span className="ref-converted custom-font-text notranslate">{converted}</span>
                         </div>
                     ))}
                 </div>
