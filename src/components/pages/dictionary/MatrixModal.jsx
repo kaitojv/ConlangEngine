@@ -3,6 +3,7 @@ import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { applyRuleToWord, getPersonRules, expandWildcardDependencies } from '@/utils/morphologyEngine.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
+import { renderWordInScript } from '../../../utils/scriptRendering.js';
 import { Lightbulb, Edit2, Save, Download } from 'lucide-react';
 import { exportTextAsSVG } from '@/utils/svgExporter.jsx';
 import toast from 'react-hot-toast';

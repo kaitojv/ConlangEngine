@@ -1,0 +1,452 @@
+/* scriptManager.css */
+.script-manager {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.script-manager-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.script-manager-header h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--tx);
+    margin: 0;
+}
+
+.script-manager-desc {
+    color: var(--tx2);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.script-section-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--tx2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.5rem;
+}
+
+/* ── Default script drop zone ──────────────────────────── */
+
+.script-default-section {
+    margin-bottom: 0.5rem;
+}
+
+.script-default-slot {
+    position: relative;
+    min-height: 60px;
+    border: none;
+    border-radius: 0.85rem;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.script-default-slot .script-card {
+    border-color: var(--acc);
+    box-shadow: 0 0 0 1px var(--acc), 0 0 16px rgba(124, 58, 237, 0.12);
+    border-radius: 0.75rem;
+}
+
+/* ── Drop separator (appears below default card on drag) ── */
+
+.script-drop-separator {
+    position: relative;
+    height: 0;
+    overflow: visible;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0;
+    transition: height 0.2s, margin-top 0.2s;
+}
+
+.script-drop-separator::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 2px;
+    background: var(--acc);
+    border-radius: 1px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.script-drop-separator-label {
+    position: relative;
+    z-index: 1;
+    background: var(--s1);
+    padding: 0 0.65rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--acc);
+    opacity: 0;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+}
+
+.script-drop-separator-visible {
+    height: 1.5rem;
+    margin-top: 0.5rem;
+}
+
+.script-drop-separator-visible::before {
+    opacity: 1;
+}
+
+.script-drop-separator-visible .script-drop-separator-label {
+    opacity: 1;
+}
+
+/* ── Ghost effects for drag-over-default preview ─────── */
+
+.script-card-ghost-slot {
+    opacity: 0.35;
+    transition: opacity 0.25s;
+    pointer-events: none;
+}
+
+.script-card-ghost-preview {
+    animation: ghost-slide-in 0.25s ease-out forwards;
+    opacity: 0;
+}
+
+.script-card-ghost-preview .script-card {
+    border-style: dashed;
+    opacity: 0.55;
+}
+
+@keyframes ghost-slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(-12px);
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        max-height: 200px;
+    }
+}
+
+/* ── Other scripts list ────────────────────────────────── */
+
+.script-other-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.script-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+/* ── Script card ───────────────────────────────────────── */
+
+.script-card {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 0.75rem;
+    transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s;
+    overflow: hidden;
+}
+
+.script-card:hover {
+    border-color: color-mix(in srgb, var(--tx2) 40%, transparent);
+}
+
+.script-card-default {
+    border-color: var(--acc);
+    box-shadow: 0 0 0 1px var(--acc), 0 0 16px rgba(124, 58, 237, 0.12);
+}
+
+.script-card-dragging {
+    opacity: 0.4;
+}
+
+.script-card-drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.35rem;
+    color: var(--tx2);
+    opacity: 0.35;
+    cursor: grab;
+    flex-shrink: 0;
+    transition: opacity 0.15s;
+}
+
+.script-card-drag-handle:hover {
+    opacity: 0.7;
+}
+
+.script-card-drag-handle:active {
+    cursor: grabbing;
+}
+
+.script-card-body {
+    flex: 1;
+    min-width: 0;
+    padding: 0.6rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.script-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.script-card-name-row {
+    flex: 1;
+    min-width: 0;
+}
+
+.script-card-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--tx);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.script-name-edit {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.script-name-input {
+    font-size: 1rem;
+    padding: 0.5rem 0.75rem;
+    min-width: 0;
+    background: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm, 0.5rem);
+    color: var(--tx);
+    line-height: 1.4;
+}
+
+/* ── Action buttons ────────────────────────────────────── */
+
+.script-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex-shrink: 0;
+}
+
+.script-btn {
+    background: transparent;
+    border: 1px solid var(--bd);
+    border-radius: 0.5rem;
+    padding: 0.45rem 0.6rem;
+    cursor: pointer;
+    color: var(--tx2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    min-width: 2rem;
+    min-height: 2rem;
+    line-height: 1;
+}
+
+.script-btn:hover {
+    background: var(--s3);
+    color: var(--tx);
+    border-color: var(--tx2);
+}
+
+.script-btn-save {
+    color: #4ade80;
+    border-color: #4ade80;
+}
+
+.script-btn-save:hover {
+    background: rgba(74, 222, 128, 0.15);
+}
+
+.script-btn-cancel {
+    color: var(--tx2);
+}
+
+.script-btn-danger {
+    color: #f87171;
+    border-color: transparent;
+}
+
+.script-btn-danger:hover {
+    background: rgba(248, 113, 113, 0.15);
+    border-color: #f87171;
+}
+
+.script-confirm-delete {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.script-confirm-delete .script-btn {
+    padding: 0.4rem 0.6rem;
+    min-width: auto;
+    font-size: 0.8rem;
+    gap: 0.25rem;
+}
+
+/* ── Warning ───────────────────────────────────────────── */
+
+.script-warning {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.65rem;
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    border-radius: 0.5rem;
+    color: #fbbf24;
+    font-size: 0.8rem;
+}
+
+/* ── Meta row (type selector) ──────────────────────────── */
+
+.script-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.script-card-meta-spacer {
+    flex: 1;
+}
+
+.script-type-label {
+    font-size: 0.8rem;
+    color: var(--tx2);
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.script-type-select {
+    padding: 0.4rem 2rem 0.4rem 0.65rem;
+    min-height: 2rem;
+    background: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm, 0.5rem);
+    color: var(--tx);
+    font-size: 0.85rem;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    appearance: none;
+    line-height: 1.4;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+}
+
+.script-type-select:focus {
+    border-color: var(--acc);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 15%, transparent);
+}
+
+.script-default-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: transparent;
+    border: none;
+    padding: 0.25rem 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--tx2);
+    cursor: pointer;
+    border-radius: 0.35rem;
+    transition: color 0.15s, background 0.15s;
+    opacity: 0.55;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.script-default-btn:hover {
+    opacity: 1;
+    color: var(--acc);
+    background: color-mix(in srgb, var(--acc) 8%, transparent);
+}
+
+.script-default-btn-active {
+    color: var(--acc);
+    opacity: 1;
+    cursor: default;
+}
+
+.script-default-btn-active:hover {
+    background: transparent;
+}
+
+/* ── Active script dropdown (used in OrthographyPage) ──── */
+
+.script-active-dropdown-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 1.25rem;
+    padding: 0.65rem 0.85rem;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 0.75rem;
+}
+
+.script-active-dropdown-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--tx2);
+    flex-shrink: 0;
+}
+
+.script-active-dropdown {
+    flex: 1;
+    min-width: 0;
+    padding: 0.4rem 2rem 0.4rem 0.65rem;
+    min-height: 2rem;
+    background: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm, 0.5rem);
+    color: var(--tx);
+    font-size: 0.875rem;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    appearance: none;
+    line-height: 1.4;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+}
+
+.script-active-dropdown:focus {
+    border-color: var(--acc);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 15%, transparent);
+}

@@ -25,7 +25,9 @@ const VALID_CONFIG_KEYS = new Set([
     'stressRules', 'toneRules', 'isPublic', 'conlangIcon', 'parentId',
     'vowelHarmonyMode', 'vowelHarmonySets', 'vowelHarmonyOverrideWordClasses', 'vowelHarmonyOverrideTags',
     'backupSettings',
-    'evolutionEpochs', 'worldMap', 'customLabels', 'ipaMappingRules', 'typographySettings', 'azureTtsUseIpa'
+    'evolutionEpochs', 'worldMap', 'customLabels', 'ipaMappingRules', 'typographySettings', 'azureTtsUseIpa',
+    // Multi-script fields
+    'scriptSystems', 'scriptRules', 'activeScriptSystemId', 'configVersion'
 ]);
 
 /**
@@ -86,7 +88,11 @@ export function sanitizeLexicon(rawLexicon) {
         stress: typeof entry.stress === 'string' ? entry.stress : '',
         relatedWords: Array.isArray(entry.relatedWords) ? entry.relatedWords : [],
         srs: (entry.srs && typeof entry.srs === 'object') ? entry.srs : null,
-        createdAt: typeof entry.createdAt === 'number' ? entry.createdAt : Date.now()
+        createdAt: typeof entry.createdAt === 'number' ? entry.createdAt : Date.now(),
+        // Multi-script fields
+        scriptOverride: entry.scriptOverride || null,
+        scriptForms: (entry.scriptForms && typeof entry.scriptForms === 'object') ? entry.scriptForms : {},
+        scriptRole: typeof entry.scriptRole === 'string' ? entry.scriptRole : '',
     }));
 }
 

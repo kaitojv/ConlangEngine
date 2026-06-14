@@ -80,6 +80,7 @@ export default function CreateWordTab() {
         updateConfig: state.updateConfig,
         syllabaryMap: state.syllabaryMap || {}
     })));
+    const scriptSystems = useConfigStore(state => state.scriptSystems) || [];
 
     // Let's track all our input fields in one neat object
     const [formData, setFormData] = useState({
@@ -92,10 +93,11 @@ export default function CreateWordTab() {
         relatedWords: [],
         ideogram: '',
         tone: '',
-        stress: ''
+        stress: '',
+        scriptOverride: null,
     });
 
-    const { word, ipa, wordClass, translation, definition, tags, relatedWords, ideogram, tone, stress } = formData;
+    const { word, ipa, wordClass, translation, definition, tags, relatedWords, ideogram, tone, stress, scriptOverride } = formData;
     const [isFontStudioOpen, setIsFontStudioOpen] = useState(false);
     const [selectedDerivs, setSelectedDerivs] = useState({});
     const [customTranslations, setCustomTranslations] = useState({});
@@ -345,7 +347,8 @@ export default function CreateWordTab() {
             relatedWords: relatedWords || [],
             ideogram: ideogram.trim(),
             tone: tone.trim(),
-            stress: stress.trim()
+            stress: stress.trim(),
+            scriptOverride: scriptOverride,
         });
 
         // 2. Save any selected derivations
@@ -840,6 +843,22 @@ export default function CreateWordTab() {
                                 <Brush size={16} /> Draw Symbol
                             </Button>
                         </div>
+                    </div>
+                )}
+
+                {scriptSystems.length > 1 && (
+                    <div style={{ marginTop: '0.5rem' }}>
+                        <label className="form-label" style={{ marginBottom: '4px', display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--tx2)' }}>Script Override (Optional)</label>
+                        <select
+                            className="select select-bordered w-full"
+                            value={scriptOverride || ''}
+                            onChange={(e) => updateField('scriptOverride', e.target.value || null)}
+                        >
+                            <option value="">(Use rules / default)</option>
+                            {scriptSystems.map(s => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                            ))}
+                        </select>
                     </div>
                 )}
 

@@ -58,12 +58,14 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
     const blockTemplates = useConfigStore(state => state.blockTemplates);
     const blockSettings = useConfigStore(state => state.blockSettings);
     const syllabaryMap = useConfigStore(state => state.syllabaryMap) || {};
+    const scriptSystems = useConfigStore(state => state.scriptSystems) || [];
+    const setWordScriptOverride = useLexiconStore((state) => state.setWordScriptOverride);
 
     const [activeField, setActiveField] = useState('word');
 
     // Bundle all the form fields into one neat state object
     const [formData, setFormData] = useState({
-        word: '', ipa: '', wordClass: '', translation: '', definition: '', tags: [], relatedWords: [], ideogram: '', personCategory: '', tone: '', stress: ''
+        word: '', ipa: '', wordClass: '', translation: '', definition: '', tags: [], relatedWords: [], ideogram: '', personCategory: '', tone: '', stress: '', scriptOverride: null
     });
     const [tagInput, setTagInput] = useState('');
     const [relatedInput, setRelatedInput] = useState('');
@@ -224,7 +226,8 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                 ideogram: wordObj.ideogram || '',
                 personCategory: wordObj.personCategory || '',
                 tone: wordObj.tone || '',
-                stress: wordObj.stress || ''
+                stress: wordObj.stress || '',
+                scriptOverride: wordObj.scriptOverride || null
             });
         }
         return () => toast.dismiss();
@@ -330,7 +333,8 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
             ideogram: ideogram.trim(),
             personCategory: personCategory.trim(),
             tone: tone.trim(),
-            stress: stress.trim()
+            stress: stress.trim(),
+            scriptOverride: formData.scriptOverride,
         });
 
         if (wordClass && !STANDARD_WORD_CLASSES.includes(wordClass.trim().toLowerCase())) {
@@ -811,6 +815,21 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                         <option value="4th" />
                     </datalist>
                 </div>
+                {scriptSystems.length > 1 && (
+                    <div>
+                        <label className="form-label" style={{ marginBottom: '4px', display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--tx2)' }}>Script Override</label>
+                        <select
+                            className="select select-bordered w-full"
+                            value={formData.scriptOverride || ''}
+                            onChange={(e) => updateField('scriptOverride', e.target.value || null)}
+                        >
+                            <option value="">(Use rules / default)</option>
+                            {scriptSystems.map(s => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
             </div>
 
             <details className="tone-stress-details">

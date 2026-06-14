@@ -1,0 +1,212 @@
+/* scriptRulesEditor.css */
+.script-rules-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.script-rules-header h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--tx);
+    margin: 0;
+}
+
+.script-rules-desc {
+    color: var(--tx2);
+    font-size: 0.9rem;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.script-rules-default {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 0.75rem;
+}
+
+.script-rules-default-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--tx2);
+}
+
+.script-rules-default-value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--acc);
+}
+
+.script-rules-default-hint {
+    font-size: 0.8rem;
+    color: var(--tx2);
+    opacity: 0.7;
+}
+
+.script-rules-group {
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+}
+
+.script-rules-group-header {
+    margin-bottom: 1rem;
+}
+
+.script-rules-group-header h4 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--tx);
+    margin: 0 0 0.25rem 0;
+}
+
+.script-rules-group-desc {
+    font-size: 0.85rem;
+    color: var(--tx2);
+    line-height: 1.4;
+}
+
+.script-rules-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.script-rules-empty {
+    font-size: 0.85rem;
+    color: var(--tx2);
+    opacity: 0.6;
+    padding: 0.5rem 0;
+    font-style: italic;
+}
+
+.script-rule-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--s4);
+    border-radius: 0.5rem;
+}
+
+.script-rule-key {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--tx);
+    min-width: 80px;
+}
+
+.script-rule-arrow {
+    color: var(--tx2);
+    font-size: 0.85rem;
+    opacity: 0.5;
+}
+
+.script-rule-select {
+    flex: 1;
+    min-width: 0;
+    padding: 0.45rem 2rem 0.45rem 0.75rem;
+    min-height: 2rem;
+    background: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm, 0.5rem);
+    color: var(--tx);
+    font-size: 0.875rem;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    appearance: none;
+    line-height: 1.4;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+}
+
+.script-rule-select:focus {
+    border-color: var(--acc);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 15%, transparent);
+}
+
+.script-rule-remove {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--tx2);
+    padding: 0.35rem;
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.35rem;
+    transition: color 0.15s, background 0.15s;
+}
+
+.script-rule-remove:hover {
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.1);
+}
+
+.script-rules-add {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.script-rules-add-input {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm, 0.5rem);
+    color: var(--tx);
+    line-height: 1.4;
+}
+
+.script-rules-add-input:focus {
+    border-color: var(--acc);
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 15%, transparent);
+}
+
+.script-rules-add-select {
+    flex: 1;
+    min-width: 0;
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    min-height: 2.25rem;
+    background: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm, 0.5rem);
+    color: var(--tx);
+    font-size: 0.875rem;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    appearance: none;
+    line-height: 1.4;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+}
+
+.script-rules-add-select:focus {
+    border-color: var(--acc);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 15%, transparent);
+}
+
+.script-rules-add-or {
+    font-size: 0.75rem;
+    color: var(--tx2);
+    opacity: 0.6;
+    flex-shrink: 0;
+}

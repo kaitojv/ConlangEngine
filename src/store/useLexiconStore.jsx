@@ -30,7 +30,11 @@ export const useLexiconStore = create(
                         derivationRuleId: newWordData.derivationRuleId || null,
                         relatedWords: newWordData.relatedWords || [],
                         inflectionOverrides: {},
-                        createdAt: Date.now()
+                        createdAt: Date.now(),
+                        // Multi-script fields
+                        scriptOverride: newWordData.scriptOverride || null,
+                        scriptForms: (newWordData.scriptForms && typeof newWordData.scriptForms === 'object') ? newWordData.scriptForms : {},
+                        scriptRole: typeof newWordData.scriptRole === 'string' ? newWordData.scriptRole : '',
                     };
                     return { lexicon: [...(state.lexicon || []), newEntry] };
                 }),
@@ -52,6 +56,35 @@ export const useLexiconStore = create(
 
                 deleteWord: (id) => set((state) => ({
                     lexicon: (state.lexicon || []).filter(word => word.id !== id)
+                })),
+
+                // ── Script Actions ─────────────────────────────────────────
+
+                setWordScriptOverride: (id, scriptIdOrNull) => set((state) => ({
+                    lexicon: (state.lexicon || []).map(word =>
+                        word.id === id ? { ...word, scriptOverride: scriptIdOrNull } : word
+                    )
+                })),
+
+                setWordScriptForm: (id, scriptId, form) => set((state) => ({
+                    lexicon: (state.lexicon || []).map(word =>
+                        word.id === id ? { ...word, scriptForms: { ...(word.scriptForms || {}), [scriptId]: form } } : word
+                    )
+                })),
+
+                clearWordScriptForm: (id, scriptId) => set((state) => ({
+                    lexicon: (state.lexicon || []).map(word => {
+                        if (word.id !== id) return word;
+                        const forms = { ...(word.scriptForms || {}) };
+                        delete forms[scriptId];
+                        return { ...word, scriptForms: forms };
+                    })
+                })),
+
+                setWordScriptRole: (id, role) => set((state) => ({
+                    lexicon: (state.lexicon || []).map(word =>
+                        word.id === id ? { ...word, scriptRole: role } : word
+                    )
                 })),
 
                 checkDuplicate: (word, translation) => {

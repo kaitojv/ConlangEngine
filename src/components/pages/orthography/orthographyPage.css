@@ -504,7 +504,10 @@ input:checked + .slider:before {
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
-    height: 36px;
+    min-height: 2.25rem;
+    padding: 0.45rem 1rem;
+    font-size: 0.875rem;
+    line-height: 1.4;
 }
 
 .btn-add:hover {

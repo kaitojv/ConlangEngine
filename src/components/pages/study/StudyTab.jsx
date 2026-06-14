@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
+import { renderWordInScript } from '../../../utils/scriptRendering.js';
 import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import { BrainCircuit, Flame, RotateCcw, Check, X, Play, Map, Zap, Volume2 } from 'lucide-react';
@@ -499,7 +500,10 @@ export default function StudyTab() {
                                         {flashcardDirection === 'toEnglish' ? (
                                             <>
                                                 <div className="fc-word custom-font-text notranslate">
-                                                    {transliterate(currentWord.word)}
+                                                    {currentWord.scriptOverride
+                                                        ? renderWordInScript(currentWord, useConfigStore.getState(), lexicon).text
+                                                        : transliterate(currentWord.word)
+                                                    }
                                                 </div>
                                                 {currentWord.ipa && (
                                                     <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>

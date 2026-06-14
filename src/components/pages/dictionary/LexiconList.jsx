@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
+import { renderWordInScript } from '../../../utils/scriptRendering.js';
+import { getScriptSystem, getDefaultScriptId } from '../../../utils/scriptResolver.js';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import Card from '../../UI/Card/Card.jsx';
 import Modal from '../../UI/Modal/Modal.jsx'
@@ -49,6 +51,10 @@ export default function LexiconList() {
     // Toggle for showing romanized form beneath the conscript in script modes
     const [showRomanization, setShowRomanization] = useState(false);
     const isScriptMode = ['syllabic', 'featural_block', 'logographic', 'featural', 'block'].includes(phonologyTypes);
+    const scriptSystems = useConfigStore(state => state.scriptSystems) || [];
+    const scriptRules = useConfigStore(state => state.scriptRules) || {};
+    const configFull = useConfigStore();
+    const defaultScriptId = scriptRules.defaultScriptId || 'default';
     
     // Spin up the transliterator to convert base words into the language's custom script
     const { transliterate, normalizeToBase } = useTransliterator();
@@ -511,6 +517,11 @@ export default function LexiconList() {
                                         <span className={`notranslate entry-main-word custom-font-text ${phonologyTypes === 'featural_block' ? 'featural-block-render' : ''}`} style={{ textAlign: 'center' }}>
                                             {displayWord}
                                         </span>
+                                        {baseEntry.scriptOverride && scriptSystems.length > 1 && (
+                                            <span className="script-badge-inline" title={`Script: ${getScriptSystem(configFull, baseEntry.scriptOverride).name}`}>
+                                                {getScriptSystem(configFull, baseEntry.scriptOverride).name}
+                                            </span>
+                                        )}
                                     </div>
 
                                     {/* Romanized form — shown as a dedicated readable line when toggle is on */}

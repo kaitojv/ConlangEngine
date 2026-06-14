@@ -7,6 +7,7 @@ import DOMPurify from 'dompurify';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import { usePublicThemeInjector, usePublicFontInjector } from '../../../hooks/usePublicInjectors.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
+import { renderWordInScript } from '../../../utils/scriptRendering.js';
 import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
 import PublicFlashcards from './PublicFlashcards.jsx';
 import ExercisePlayer from '../study/ExercisePlayer.jsx';
@@ -369,7 +370,15 @@ export default function PublicViewer() {
                                                 <tr key={entry.id || i}>
                                                     <td className="pv-word-cell">
                                                         <span className={`custom-font-text notranslate ${isLogographic && entry.ideogram ? 'pv-featural-word' : ''}`}>
-                                                            {config.phonologyTypes === 'logographic' && entry.ideogram ? entry.ideogram : transliterate(entry.word, dictionary)}
+                                                            {(() => {
+                                                                // Use script rendering if script override exists
+                                                                if (entry.scriptOverride) {
+                                                                    const rendered = renderWordInScript(entry, config, dictionary);
+                                                                    return rendered.text;
+                                                                }
+                                                                // Legacy fallback
+                                                                return config.phonologyTypes === 'logographic' && entry.ideogram ? entry.ideogram : transliterate(entry.word, dictionary);
+                                                            })()}
                                                         </span>
                                                     </td>
                                                     <td className="pv-ipa-cell">

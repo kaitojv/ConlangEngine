@@ -4,6 +4,7 @@ import Input from '../../UI/Input/Input.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import { Bolt } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getDefaultScriptId } from '../../../utils/scriptResolver.js';
 
 export default function SettingsGeneral() {
     const conlangName = useConfigStore((state) => state.conlangName);
@@ -12,6 +13,10 @@ export default function SettingsGeneral() {
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const alphabeticScript = useConfigStore((state) => state.alphabeticScript);
     const updateConfig = useConfigStore((state) => state.updateConfig);
+    const scriptSystems = useConfigStore((state) => state.scriptSystems) || [];
+    const scriptRules = useConfigStore((state) => state.scriptRules) || {};
+    const updateScriptSystem = useConfigStore((state) => state.updateScriptSystem);
+    const defaultScriptId = scriptRules.defaultScriptId || getDefaultScriptId({ scriptSystems, scriptRules });
 
     const handleTypologyChange = (newType) => {
         if (newType === phonologyTypes) return;
@@ -24,6 +29,10 @@ export default function SettingsGeneral() {
                     <button 
                         onClick={() => {
                             updateConfig({ phonologyTypes: newType });
+                            // Also update the default script system's type
+                            if (defaultScriptId) {
+                                updateScriptSystem(defaultScriptId, { type: newType });
+                            }
                             toast.dismiss(t.id);
                         }}
                         style={{ background: 'var(--acc)', color: 'white', border: 'none', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer' }}
@@ -91,7 +100,10 @@ export default function SettingsGeneral() {
                         <select 
                             className="fi settings-select-full" 
                             value={alphabeticScript === 'custom' ? 'latin' : (alphabeticScript || 'latin')}
-                            onChange={(e) => updateConfig({ alphabeticScript: e.target.value })}
+                            onChange={(e) => {
+                                updateConfig({ alphabeticScript: e.target.value });
+                                if (defaultScriptId) updateScriptSystem(defaultScriptId, { alphabeticScript: e.target.value });
+                            }}
                         >
                             <option value="latin">Latin (Default)</option>
                             <option value="cyrillic">Cyrillic</option>

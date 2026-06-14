@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { normalizeScriptType, normalizeScriptName, repairScriptSystems, normalizeRuleKey } from '../utils/scriptResolver.js';
 
 export const INITIAL_CONFIG = {
     projectId: null,
@@ -135,8 +136,35 @@ export const INITIAL_CONFIG = {
     vowelHarmonyOverrideTags: [], // semantic tags exempted in 'flexible' mode
     // { 'a': '\uE001', 'b': '\uE002' }
     alphabetGlyphs: {},
+    // Multi-script systems (v2)
+    scriptSystems: [
+        {
+            id: 'default',
+            name: 'Main Script',
+            type: 'alphabetic',
+            isDefault: true,
+            alphabeticScript: 'latin',
+            writingDirection: 'ltr',
+            syllabificationAlgorithm: 'ltr',
+            blockSettings: { maxChars: 3, layoutTemplate: '2top1bottom', slotMapping: ['Initial', 'Vowel', 'Final'] },
+            blockTemplates: [],
+            alphabetNames: {},
+        },
+    ],
+    activeScriptSystemId: 'default',
+    scriptRules: {
+        defaultScriptId: 'default',
+        wordClasses: {},
+        tags: {},
+        personCategories: {},
+        roles: {},
+    },
     // { [synsetId]: { word: '...', ipa: '...', meaning: '...' } },
     semanticMappings: {},
+    // Runtime-only script data (excluded from localStorage)
+    scriptDataById: {},
+    // Config version for migration
+    configVersion: 2,
     wordAssistConfig: {
         syntaxOrder: 'QCTLJNORVMSAPG',
         copulaBehavior: 'normal',
@@ -241,24 +269,142 @@ const loadLargeDataFromDB = (projectId) => {
     });
 };
 
+// Script-scoped IndexedDB helpers
+const scriptKey = (projectId, scriptId) => `${projectId}::script::${scriptId}`;
+
+const saveScriptDataToDB = (projectId, scriptId, data) => {
+    return saveLargeDataToDB(projectId, { [scriptId]: data });
+};
+
+const loadScriptDataFromDB = (projectId, scriptId) => {
+    return new Promise((resolve) => {
+        if (!projectId) return resolve(null);
+        const req = indexedDB.open(DB_NAME, 3);
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME);
+            }
+        };
+        req.onsuccess = (e) => {
+            try {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) return resolve(null);
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const getReq = tx.objectStore(STORE_NAME).get(scriptKey(projectId, scriptId));
+                getReq.onsuccess = () => resolve(getReq.result);
+                getReq.onerror = () => resolve(null);
+            } catch { resolve(null); }
+        };
+        req.onerror = () => resolve(null);
+    });
+};
+
+// Config migration for multi-script support
+function migrateConfig(persistedState) {
+    if (!persistedState) return null;
+    const updates = {};
+
+    // Ensure scriptSystems exists
+    if (!persistedState.scriptSystems || !Array.isArray(persistedState.scriptSystems) || persistedState.scriptSystems.length === 0) {
+        updates.scriptSystems = [{
+            id: 'default',
+            name: normalizeScriptName(persistedState.scriptName || 'Main Script', 'Main Script'),
+            type: normalizeScriptType(persistedState.phonologyTypes || 'alphabetic'),
+            isDefault: true,
+            alphabeticScript: persistedState.alphabeticScript || 'latin',
+            writingDirection: persistedState.writingDirection || 'ltr',
+            syllabificationAlgorithm: persistedState.syllabificationAlgorithm || 'ltr',
+            blockSettings: persistedState.blockSettings || INITIAL_CONFIG.blockSettings,
+            blockTemplates: persistedState.blockTemplates || INITIAL_CONFIG.blockTemplates,
+            alphabetNames: persistedState.alphabetNames || {},
+        }];
+    }
+
+    // Ensure activeScriptSystemId
+    if (!persistedState.activeScriptSystemId) {
+        updates.activeScriptSystemId = 'default';
+    }
+
+    // Ensure scriptRules
+    if (!persistedState.scriptRules || typeof persistedState.scriptRules !== 'object') {
+        updates.scriptRules = {
+            defaultScriptId: 'default',
+            wordClasses: {},
+            tags: {},
+            personCategories: {},
+            roles: {},
+        };
+    }
+
+    // Repair scriptSystems invariants
+    if (updates.scriptSystems || persistedState.scriptSystems) {
+        const repaired = repairScriptSystems({
+            ...persistedState,
+            ...updates,
+        });
+        updates.scriptSystems = repaired.scriptSystems;
+        updates.scriptRules = { ...(updates.scriptRules || persistedState.scriptRules), ...repaired.scriptRules };
+    }
+
+    if (Object.keys(updates).length > 0) {
+        return updates;
+    }
+    return null;
+}
+
 export const useConfigStore = create(
     persist(
         (set) => ({
             ...INITIAL_CONFIG,
 
             rehydrateBloat: async () => {
-                const { projectId } = useConfigStore.getState();
+                const state = useConfigStore.getState();
+                const { projectId } = state;
                 if (!projectId) return;
                 set({ isRehydrating: true });
                 try {
-                    const bloat = await loadLargeDataFromDB(projectId);
-                    if (bloat) {
-                        const font = bloat.customFontBase64 || bloat.customFont || null;
-                        set(() => ({
+                    // Migrate config if needed
+                    const migrated = migrateConfig(state);
+                    if (migrated) set(migrated);
+
+                    // Load default script data from script-scoped key
+                    const defaultScriptId = state.scriptRules?.defaultScriptId || 'default';
+                    let scriptData = await loadScriptDataFromDB(projectId, defaultScriptId);
+
+                    // Lazy migration: if no script-scoped data, try legacy key
+                    if (!scriptData) {
+                        const legacyBloat = await loadLargeDataFromDB(projectId);
+                        if (legacyBloat) {
+                            // Migrate legacy data to script-scoped key
+                            const migratedData = {
+                                customGlyphs: legacyBloat.customGlyphs || {},
+                                syllabaryMap: legacyBloat.syllabaryMap || {},
+                                featuralComponents: legacyBloat.featuralComponents || {},
+                                alphabetGlyphs: legacyBloat.alphabetGlyphs || {},
+                                customFontBase64: legacyBloat.customFontBase64 || null,
+                                customFont: legacyBloat.customFont || null,
+                                puaCounter: legacyBloat.puaCounter || 57344,
+                            };
+                            await saveLargeDataToDB(projectId, { [defaultScriptId]: migratedData });
+                            scriptData = migratedData;
+                        }
+                    }
+
+                    if (scriptData) {
+                        const font = scriptData.customFontBase64 || scriptData.customFont || null;
+                        set((prev) => ({
                             customFont: font,
                             customFontBase64: font,
-                            syllabaryMap: bloat.syllabaryMap || {},
-                            customGlyphs: bloat.customGlyphs || {}
+                            syllabaryMap: scriptData.syllabaryMap || {},
+                            customGlyphs: scriptData.customGlyphs || {},
+                            featuralComponents: scriptData.featuralComponents || prev.featuralComponents,
+                            alphabetGlyphs: scriptData.alphabetGlyphs || prev.alphabetGlyphs,
+                            puaCounter: scriptData.puaCounter || prev.puaCounter,
+                            scriptDataById: {
+                                ...prev.scriptDataById,
+                                [defaultScriptId]: scriptData,
+                            },
                         }));
                     }
                 } finally {
@@ -275,6 +421,12 @@ export const useConfigStore = create(
                     if (newConfig.syllabaryMap) bloat.syllabaryMap = newConfig.syllabaryMap;
                     if (newConfig.customGlyphs) bloat.customGlyphs = newConfig.customGlyphs;
                     if (Object.keys(bloat).length > 0) saveLargeDataToDB(projectId, bloat);
+                }
+                // Repair script systems if present
+                if (newConfig.scriptSystems) {
+                    const repaired = repairScriptSystems({ ...INITIAL_CONFIG, ...newConfig });
+                    newConfig.scriptSystems = repaired.scriptSystems;
+                    newConfig.scriptRules = { ...(newConfig.scriptRules || {}), ...repaired.scriptRules };
                 }
                 set(() => ({ ...INITIAL_CONFIG, ...newConfig }));
             },
@@ -457,6 +609,188 @@ export const useConfigStore = create(
                 return {};
             }),
 
+            // ── Script System Actions ───────────────────────────────────────
+
+            addScriptSystem: (partialScript) => set((state) => {
+                const id = partialScript.id || `script-${Date.now()}`;
+                const name = normalizeScriptName(partialScript.name, `Script ${(state.scriptSystems || []).length + 1}`);
+                const type = normalizeScriptType(partialScript.type || 'alphabetic');
+                const isFirst = !state.scriptSystems || state.scriptSystems.length === 0;
+
+                const newScript = {
+                    id,
+                    name,
+                    type,
+                    isDefault: isFirst,
+                    alphabeticScript: partialScript.alphabeticScript || 'latin',
+                    writingDirection: partialScript.writingDirection || 'ltr',
+                    syllabificationAlgorithm: partialScript.syllabificationAlgorithm || 'ltr',
+                    blockSettings: partialScript.blockSettings || INITIAL_CONFIG.blockSettings,
+                    blockTemplates: partialScript.blockTemplates || [],
+                    alphabetNames: partialScript.alphabetNames || {},
+                    ...partialScript,
+                    id,
+                    name,
+                    type,
+                };
+
+                const scriptSystems = [...(state.scriptSystems || []), newScript];
+                const scriptRules = { ...(state.scriptRules || {}) };
+                if (isFirst) {
+                    scriptRules.defaultScriptId = id;
+                }
+
+                return {
+                    scriptSystems,
+                    scriptRules,
+                    activeScriptSystemId: id,
+                    activity: [{ text: `Created script: ${name}`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15),
+                };
+            }),
+
+            removeScriptSystem: (scriptId) => set((state) => {
+                const systems = state.scriptSystems || [];
+                if (systems.length <= 1) return {}; // Cannot remove last script
+
+                const remaining = systems.filter(s => s.id !== scriptId);
+                if (remaining.length === 0) return {};
+
+                const removedScript = systems.find(s => s.id === scriptId);
+                const wasDefault = removedScript?.isDefault;
+
+                // If removed was default, set first remaining as default
+                if (wasDefault) {
+                    remaining[0].isDefault = true;
+                }
+
+                const scriptRules = { ...(state.scriptRules || {}) };
+                if (wasDefault) {
+                    scriptRules.defaultScriptId = remaining[0].id;
+                }
+                // Clear rules pointing to removed script
+                if (scriptRules.wordClasses) {
+                    Object.keys(scriptRules.wordClasses).forEach(k => {
+                        if (scriptRules.wordClasses[k] === scriptId) delete scriptRules.wordClasses[k];
+                    });
+                }
+                if (scriptRules.tags) {
+                    Object.keys(scriptRules.tags).forEach(k => {
+                        if (scriptRules.tags[k] === scriptId) delete scriptRules.tags[k];
+                    });
+                }
+                if (scriptRules.personCategories) {
+                    Object.keys(scriptRules.personCategories).forEach(k => {
+                        if (scriptRules.personCategories[k] === scriptId) delete scriptRules.personCategories[k];
+                    });
+                }
+                if (scriptRules.roles) {
+                    Object.keys(scriptRules.roles).forEach(k => {
+                        if (scriptRules.roles[k] === scriptId) delete scriptRules.roles[k];
+                    });
+                }
+
+                // Remove script data from runtime
+                const scriptDataById = { ...(state.scriptDataById || {}) };
+                delete scriptDataById[scriptId];
+
+                const activeScriptSystemId = state.activeScriptSystemId === scriptId
+                    ? (scriptRules.defaultScriptId || remaining[0].id)
+                    : state.activeScriptSystemId;
+
+                return {
+                    scriptSystems: remaining,
+                    scriptRules,
+                    scriptDataById,
+                    activeScriptSystemId,
+                    activity: [{ text: `Removed script: ${removedScript?.name || scriptId}`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15),
+                };
+            }),
+
+            updateScriptSystem: (scriptId, patch) => set((state) => {
+                const systems = (state.scriptSystems || []).map(s => {
+                    if (s.id !== scriptId) return s;
+                    const updated = { ...s, ...patch };
+                    if (patch.name !== undefined) {
+                        updated.name = normalizeScriptName(patch.name, s.name);
+                    }
+                    if (patch.type !== undefined) {
+                        updated.type = normalizeScriptType(patch.type);
+                    }
+                    return updated;
+                });
+                return { scriptSystems: systems };
+            }),
+
+            setDefaultScriptSystem: (scriptId) => set((state) => {
+                const systems = (state.scriptSystems || []).map(s => ({
+                    ...s,
+                    isDefault: s.id === scriptId,
+                }));
+                const scriptRules = {
+                    ...(state.scriptRules || {}),
+                    defaultScriptId: scriptId,
+                };
+                return { scriptSystems: systems, scriptRules };
+            }),
+
+            setActiveScriptSystem: (scriptId) => set({ activeScriptSystemId: scriptId }),
+
+            setScriptRule: (ruleGroup, key, scriptId) => set((state) => {
+                const normalized = normalizeRuleKey(key);
+                const scriptRules = { ...(state.scriptRules || {}) };
+                if (!scriptRules[ruleGroup]) scriptRules[ruleGroup] = {};
+                scriptRules[ruleGroup][normalized] = scriptId;
+                return { scriptRules };
+            }),
+
+            clearScriptRule: (ruleGroup, key) => set((state) => {
+                const normalized = normalizeRuleKey(key);
+                const scriptRules = { ...(state.scriptRules || {}) };
+                if (scriptRules[ruleGroup]) {
+                    delete scriptRules[ruleGroup][normalized];
+                }
+                return { scriptRules };
+            }),
+
+            updateScriptData: (scriptId, patch) => set((state) => {
+                const scriptDataById = { ...(state.scriptDataById || {}) };
+                scriptDataById[scriptId] = { ...(scriptDataById[scriptId] || {}), ...patch };
+
+                // Mirror to legacy fields if active/default script
+                const defaultId = state.scriptRules?.defaultScriptId || 'default';
+                const legacyMirror = {};
+                if (scriptId === defaultId) {
+                    if (patch.customGlyphs) legacyMirror.customGlyphs = patch.customGlyphs;
+                    if (patch.syllabaryMap) legacyMirror.syllabaryMap = patch.syllabaryMap;
+                    if (patch.customFontBase64) legacyMirror.customFontBase64 = patch.customFontBase64;
+                    if (patch.customFont) legacyMirror.customFont = patch.customFont;
+                    if (patch.featuralComponents) legacyMirror.featuralComponents = patch.featuralComponents;
+                    if (patch.alphabetGlyphs) legacyMirror.alphabetGlyphs = patch.alphabetGlyphs;
+                    if (patch.puaCounter) legacyMirror.puaCounter = patch.puaCounter;
+                }
+
+                // Save to IndexedDB
+                if (state.projectId) {
+                    saveLargeDataToDB(state.projectId, { [scriptId]: scriptDataById[scriptId] });
+                }
+
+                return { scriptDataById, ...legacyMirror };
+            }),
+
+            rehydrateScriptData: async (scriptId) => {
+                const state = useConfigStore.getState();
+                if (!state.projectId) return;
+                const data = await loadScriptDataFromDB(state.projectId, scriptId);
+                if (data) {
+                    set((prev) => ({
+                        scriptDataById: {
+                            ...prev.scriptDataById,
+                            [scriptId]: data,
+                        },
+                    }));
+                }
+            },
+
             updateConfig: (newConfig) => set((state) => {
                 const keys = Object.keys(newConfig);
                 if (keys.length === 0) return {};
@@ -498,9 +832,18 @@ export const useConfigStore = create(
         }),
         {
             name: 'conlang-config',
+            version: 2,
+            migrate: (persistedState, version) => {
+                if (version < 2) {
+                    const migrated = migrateConfig(persistedState);
+                    if (migrated) return { ...persistedState, ...migrated, configVersion: 2 };
+                    return { ...persistedState, configVersion: 2 };
+                }
+                return persistedState;
+            },
             partialize: (state) => {
                 // Exclude large fields from localStorage (quota limit)
-                const { customFontBase64: _customFontBase64, customFont: _customFont, syllabaryMap: _syllabaryMap, customGlyphs: _customGlyphs, ...rest } = state;
+                const { customFontBase64: _customFontBase64, customFont: _customFont, syllabaryMap: _syllabaryMap, customGlyphs: _customGlyphs, scriptDataById: _scriptDataById, featuralComponents: _fe, alphabetGlyphs: _ag, isRehydrating: _ir, ...rest } = state;
                 return rest;
             }
         }
@@ -518,7 +861,7 @@ if (typeof BroadcastChannel !== 'undefined') {
             externalUpdate = false;
             return;
         }
-        const { customFontBase64: _customFontBase64, customFont: _customFont, syllabaryMap: _syllabaryMap, customGlyphs: _customGlyphs, isRehydrating: _isRehydrating, ...rest } = state;
+        const { customFontBase64: _customFontBase64, customFont: _customFont, syllabaryMap: _syllabaryMap, customGlyphs: _customGlyphs, isRehydrating: _isRehydrating, scriptDataById: _scriptDataById, featuralComponents: _fe, alphabetGlyphs: _ag, ...rest } = state;
         channel.postMessage(JSON.stringify(rest));
     });
 

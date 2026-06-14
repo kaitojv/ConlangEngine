@@ -21,6 +21,7 @@ import { CsvImportModal } from './CsvImportModal.jsx';
 import BackupStatus from '../BackupStatus/BackupStatus.jsx';
 import { sanitizeBackup } from '../../../utils/schemaValidator.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
+import { renderWordInScript } from '../../../utils/scriptRendering.js';
 
 export default function Header({ openMenu, onBackupNow }) {
     const navigate = useNavigate();
@@ -203,10 +204,14 @@ export default function Header({ openMenu, onBackupNow }) {
             };
         });
 
-        const transliteratedLexicon = lexicon.map(w => ({
-            ...w,
-            displayWord: transliterate(w.word.replace(/\*/g, ''), lexicon)
-        }));
+        const transliteratedLexicon = lexicon.map(w => {
+            // Use script rendering if script override exists
+            if (w.scriptOverride) {
+                const rendered = renderWordInScript(w, config, lexicon);
+                return { ...w, displayWord: rendered.text };
+            }
+            return { ...w, displayWord: transliterate(w.word.replace(/\*/g, ''), lexicon) };
+        });
 
         if (exportType === 'pdf') {
             generateConlangPDF(config, transliteratedLexicon, template, options);

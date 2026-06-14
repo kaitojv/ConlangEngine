@@ -4,11 +4,14 @@ import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
-import { Languages, Hash, Plus, Trash2, Calculator, Settings, Edit2, Check, Table2, BookA, Type, Mic2 } from 'lucide-react';
+import { Languages, Hash, Plus, Trash2, Calculator, Settings, Edit2, Check, Table2, BookA, Type, Mic2, PenTool, ListChecks } from 'lucide-react';
 import IpaReferencePage from './IpaReferencePage.jsx';
 import './orthographyPage.css';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
+import { getScriptSystem, buildScriptConfig, getDefaultScriptId } from '../../../utils/scriptResolver.js';
+import ScriptManager from '../../UI/ScriptManager/ScriptManager.jsx';
+import ScriptRulesEditor from '../../UI/ScriptRulesEditor/ScriptRulesEditor.jsx';
 import toast from 'react-hot-toast';
 
 // --- SUB-COMPONENTS ---
@@ -1074,16 +1077,45 @@ const BlockShowcase = () => {
 
 export default function OrthographyPage() {
     const phonologyTypes = useConfigStore(state => state.phonologyTypes);
+    const activeScriptSystemId = useConfigStore(state => state.activeScriptSystemId);
+    const scriptSystems = useConfigStore(state => state.scriptSystems) || [];
+    const scriptRules = useConfigStore(state => state.scriptRules) || {};
+    const setActiveScriptSystem = useConfigStore(state => state.setActiveScriptSystem);
     const [activeTab, setActiveTab] = useState('script');
 
-    const renderScriptManager = () => {
-        switch (phonologyTypes) {
-            case 'syllabic':      return <SyllabaryShowcase />;
-            case 'logographic':   return <LogographicShowcase />;
+    const defaultScriptId = scriptRules.defaultScriptId || getDefaultScriptId({ scriptSystems, scriptRules });
+    const activeScript = getScriptSystem({ scriptSystems, scriptRules, phonologyTypes }, activeScriptSystemId || defaultScriptId);
+    const scriptType = activeScript?.type || phonologyTypes || 'alphabetic';
+
+    // Active script selector bar (shown on script-editing tabs)
+    const showScriptPicker = scriptSystems.length > 1 && (activeTab === 'script' || activeTab === 'rules');
+
+    const renderActiveScriptDropdown = () => {
+        if (!showScriptPicker) return null;
+        return (
+            <div className="script-active-dropdown-wrap">
+                <label className="script-active-dropdown-label">Editing script:</label>
+                <select
+                    className="script-active-dropdown"
+                    value={activeScriptSystemId || defaultScriptId}
+                    onChange={e => setActiveScriptSystem(e.target.value)}
+                >
+                    {scriptSystems.map(s => (
+                        <option key={s.id} value={s.id}>{s.name}{s.id === defaultScriptId ? ' (default)' : ''}</option>
+                    ))}
+                </select>
+            </div>
+        );
+    };
+
+    const renderScriptShowcase = () => {
+        switch (scriptType) {
+            case 'syllabic':      return <SyllabaryShowcase scriptId={activeScriptSystemId} />;
+            case 'logographic':   return <LogographicShowcase scriptId={activeScriptSystemId} />;
             case 'featural_block':
             case 'featural':
-            case 'block':         return <BlockShowcase />;
-            default:              return <AlphabeticShowcase />;
+            case 'block':         return <BlockShowcase scriptId={activeScriptSystemId} />;
+            default:              return <AlphabeticShowcase scriptId={activeScriptSystemId} />;
         }
     };
 
@@ -1102,10 +1134,22 @@ export default function OrthographyPage() {
 
                 <nav className="tabs tabs-boxed page-subnav">
                     <button 
+                        className={`tab ${activeTab === 'scripts' ? 'tab-active' : ''}`}
+                        onClick={() => setActiveTab('scripts')}
+                    >
+                        <PenTool size={18} /> Scripts
+                    </button>
+                    <button 
                         className={`tab ${activeTab === 'script' ? 'tab-active' : ''}`}
                         onClick={() => setActiveTab('script')}
                     >
                         <BookA size={18} /> Script Register
+                    </button>
+                    <button 
+                        className={`tab ${activeTab === 'rules' ? 'tab-active' : ''}`}
+                        onClick={() => setActiveTab('rules')}
+                    >
+                        <ListChecks size={18} /> Rules
                     </button>
                     <button 
                         className={`tab ${activeTab === 'numbers' ? 'tab-active' : ''}`}
@@ -1123,7 +1167,23 @@ export default function OrthographyPage() {
             </header>
 
             <main className="page-main-content">
-                {activeTab === 'script'  && renderScriptManager()}
+                {activeTab === 'scripts'  && (
+                    <div className="tab-pane-container">
+                        <ScriptManager />
+                    </div>
+                )}
+                {activeTab === 'script'  && (
+                    <div className="tab-pane-container">
+                        {renderActiveScriptDropdown()}
+                        {renderScriptShowcase()}
+                    </div>
+                )}
+                {activeTab === 'rules'   && (
+                    <div className="tab-pane-container">
+                        {renderActiveScriptDropdown()}
+                        <ScriptRulesEditor />
+                    </div>
+                )}
                 {activeTab === 'numbers' && <NumbersTab />}
                 {activeTab === 'ipa'     && <IpaReferencePage />}
             </main>

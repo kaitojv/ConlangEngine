@@ -530,3 +530,19 @@
     color: white;
     border-color: var(--err);
 }
+
+/* Script badge inline with word display */
+.script-badge-inline {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    background: var(--acc);
+    color: #fff;
+    vertical-align: middle;
+    margin-left: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+}
