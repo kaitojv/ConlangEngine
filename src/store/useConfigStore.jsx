@@ -498,11 +498,23 @@ export const useConfigStore = create(
             }),
 
             addWikiPage: (pageId, title, type = 'wiki', parentId = null) => set((state) => {
+                const siblings = Object.keys(state.wikiPages).filter(k => {
+                    const p = state.wikiPages[k];
+                    const pId = typeof p === 'object' ? p.parentId : null;
+                    return pId === parentId;
+                });
+                const maxOrder = siblings.reduce((max, k) => {
+                    const p = state.wikiPages[k];
+                    const o = typeof p === 'object' && p.order !== undefined ? p.order : 0;
+                    return Math.max(max, o);
+                }, -1);
+                const nextOrder = maxOrder + 1;
+
                 const newPage = type === 'notebook' 
-                    ? { type: 'notebook', title: title, expanded: true }
+                    ? { type: 'notebook', title: title, expanded: true, order: nextOrder, parentId }
                     : type === 'corpus'
-                        ? { type: 'corpus', title: title, content: '', parentId }
-                        : { type: 'wiki', title: title, content: `<h1>${title}</h1><p>Start typing...</p>`, parentId };
+                        ? { type: 'corpus', title: title, content: '', parentId, order: nextOrder }
+                        : { type: 'wiki', title: title, content: `<h1>${title}</h1><p>Start typing...</p>`, parentId, order: nextOrder };
 
                 return {
                     wikiPages: {
@@ -564,12 +576,17 @@ export const useConfigStore = create(
                 
                 const parentId = typeof targetPage === 'object' ? targetPage.parentId : null;
                 
-                const keys = Object.keys(pages);
-                const siblings = keys.filter(k => {
-                    const p = pages[k];
-                    const pId = typeof p === 'object' ? p.parentId : null;
-                    return pId === parentId;
-                });
+                const siblings = Object.keys(pages)
+                    .filter(k => {
+                        const p = pages[k];
+                        const pId = typeof p === 'object' ? p.parentId : null;
+                        return pId === parentId;
+                    })
+                    .sort((a, b) => {
+                        const orderA = typeof pages[a] === 'object' && pages[a].order !== undefined ? pages[a].order : 0;
+                        const orderB = typeof pages[b] === 'object' && pages[b].order !== undefined ? pages[b].order : 0;
+                        return orderA - orderB;
+                    });
                 
                 const idx = siblings.indexOf(pageId);
                 if (idx < 0) return {};
@@ -579,21 +596,16 @@ export const useConfigStore = create(
 
                 [siblings[idx], siblings[newIdx]] = [siblings[newIdx], siblings[idx]];
 
-                const newKeys = [];
-                let siblingCounter = 0;
-                for (const k of keys) {
-                    if (siblings.includes(k)) {
-                        newKeys.push(siblings[siblingCounter]);
-                        siblingCounter++;
+                const newPages = { ...pages };
+                siblings.forEach((k, i) => {
+                    const p = newPages[k];
+                    if (typeof p === 'string') {
+                        newPages[k] = { type: 'wiki', title: k, content: p, order: i };
                     } else {
-                        newKeys.push(k);
+                        newPages[k] = { ...p, order: i };
                     }
-                }
+                });
 
-                const newPages = {};
-                for (const k of newKeys) {
-                    newPages[k] = pages[k];
-                }
                 return { wikiPages: newPages };
             }),
 

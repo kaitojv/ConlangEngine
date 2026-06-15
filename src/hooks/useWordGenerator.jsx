@@ -127,10 +127,19 @@ export function useWordGenerator() {
             : (classFinal === 'verb' ? verbMarker : '');
 
         if (resolvedMarker) {
-            const cleanMarker = resolvedMarker.split(',')[0].trim().replace(/^-/, '');
-            if (cleanMarker && !orthResult.endsWith(cleanMarker)) {
-                orthResult += cleanMarker;
-                ipaResult += cleanMarker;
+            let cleanMarker = resolvedMarker.split(',')[0].trim();
+            if (cleanMarker.endsWith('-')) {
+                cleanMarker = cleanMarker.slice(0, -1);
+                if (cleanMarker && !orthResult.startsWith(cleanMarker)) {
+                    orthResult = cleanMarker + orthResult;
+                    ipaResult = cleanMarker + ipaResult;
+                }
+            } else {
+                cleanMarker = cleanMarker.replace(/^-/, '');
+                if (cleanMarker && !orthResult.endsWith(cleanMarker)) {
+                    orthResult += cleanMarker;
+                    ipaResult += cleanMarker;
+                }
             }
         }
 

@@ -17,6 +17,7 @@ import './generatorTab.css';
 
 
 export default function GeneratorTab() {
+    const { transliterate } = useTransliterator();
     const { generatedWord, generatedIpa, generatedClass, generateWord } = useWordGenerator();
     const [numSyllables, setNumSyllables] = useState(2);
     const [targetClass, setTargetClass] = useState('random');
@@ -283,14 +284,14 @@ export default function GeneratorTab() {
                 <Card>
                     <h2 className='flex sg-title' style={{ marginBottom: 0 }}>Laboratory Result</h2>
                     <div className="generator-result-section">
-                        <h1 className="custom-font-text notranslate generator-result-word">{generatedWord}</h1>
+                        <h1 className="custom-font-text notranslate generator-result-word">{transliterate(generatedWord)}</h1>
                         <p className="generator-result-meta"><span className="notranslate generator-ipa">/{generatedIpa}/</span> <span className="generator-separator">|</span> <span className="generator-class-badge">{generatedClass}</span></p>
                     </div>
                     {derivations.length > 0 && (
                         <div className="derivation-preview-section">
                             <h3 className="derivation-preview-title">Derivation Preview</h3>
                             <div className="derivation-grid">
-                                {derivations.map((d, i) => (<div key={i} className="derivation-item"><span className="derivation-rule-name">{d.name}</span><span className="custom-font-text notranslate derivation-result-word">{d.result || '---'}</span></div>))}
+                                {derivations.map((d, i) => (<div key={i} className="derivation-item"><span className="derivation-rule-name">{d.name}</span><span className="custom-font-text notranslate derivation-result-word">{transliterate(d.result || '') || '---'}</span></div>))}
                             </div>
                         </div>
                     )}
@@ -441,6 +442,7 @@ function FillMode({ onExit }) {
 }
 
 function BatchMode({ onExit }) {
+    const { transliterate } = useTransliterator();
     const { generateWord } = useWordGenerator();
     const addWord = useLexiconStore((state) => state.addWord);
     
@@ -572,7 +574,7 @@ function BatchMode({ onExit }) {
                                         style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                                     />
                                     <div>
-                                        <div className="custom-font-text notranslate" style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--tx)' }}>{item.word}</div>
+                                        <div className="custom-font-text notranslate" style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--tx)' }}>{transliterate(item.word)}</div>
                                         <div style={{ fontSize: '0.8rem', color: 'var(--tx3)' }}>/{item.ipa}/ • {item.wordClass}</div>
                                     </div>
                                     <input 

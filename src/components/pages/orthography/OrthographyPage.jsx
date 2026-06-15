@@ -22,6 +22,7 @@ const NumberDerivationView = ({ generateNumberName, numeralBase }) => {
     const timeSystemVocab = useConfigStore(state => state.timeSystemVocab) || { second: '', minute: '', hour: '', day: '', week: '', month: '', year: '' };
     const updateConfig = useConfigStore(state => state.updateConfig);
     const addWord = useLexiconStore(state => state.addWord);
+    const { transliterate } = useTransliterator();
 
     const [testNum, setTestNum] = useState(1);
 
@@ -132,19 +133,19 @@ const NumberDerivationView = ({ generateNumberName, numeralBase }) => {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
                         <div style={{ background: 'var(--s4)', padding: '1rem', borderRadius: '0.75rem', border: '1px dashed var(--acc)' }}>
                             <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 700 }}>Base</div>
-                            <div className="custom-font-text" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{testBaseForm || '-'}</div>
+                            <div className="custom-font-text" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{transliterate(testBaseForm || '') || '-'}</div>
                         </div>
                         <div style={{ background: 'var(--s4)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--bd)' }}>
                             <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 700 }}>Ordinal</div>
-                            <div className="custom-font-text" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{testOrdinal || '-'}</div>
+                            <div className="custom-font-text" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{transliterate(testOrdinal || '') || '-'}</div>
                         </div>
                         <div style={{ background: 'var(--s4)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--bd)' }}>
                             <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 700 }}>Fractional</div>
-                            <div className="custom-font-text" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{testFractional || '-'}</div>
+                            <div className="custom-font-text" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{transliterate(testFractional || '') || '-'}</div>
                         </div>
                         <div style={{ background: 'var(--s4)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--bd)' }}>
                             <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 700 }}>Multiplier</div>
-                            <div className="custom-font-text" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{testMultiplier || '-'}</div>
+                            <div className="custom-font-text" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{transliterate(testMultiplier || '') || '-'}</div>
                         </div>
                     </div>
                 </div>
@@ -255,6 +256,7 @@ const NumbersTab = () => {
         }
     };
     const updateConfig = useConfigStore(state => state.updateConfig);
+    const { transliterate } = useTransliterator();
     const [testNumber, setTestNumber] = useState('');
     const [matrixMode, setMatrixMode] = useState(false);
     
@@ -651,7 +653,7 @@ const NumbersTab = () => {
                             />
                             <div className="result-display">
                                 <label>Result:</label>
-                                <div className="result-value custom-font-text">{testResult || '—'}</div>
+                                <div className="result-value custom-font-text">{transliterate(testResult || '') || '—'}</div>
                             </div>
                         </div>
                     </Card>

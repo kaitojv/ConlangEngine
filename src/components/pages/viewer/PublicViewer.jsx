@@ -459,69 +459,74 @@ export default function PublicViewer() {
                         </div>
                         <div className="pv-section-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             {(() => {
-                                const notebooks = Object.keys(wikiPages).filter(k => {
+                                const rootItems = Object.keys(wikiPages).filter(k => {
                                     const p = wikiPages[k];
-                                    return p && typeof p === 'object' && p.type === 'notebook';
-                                });
-
-                                const rootPages = Object.keys(wikiPages).filter(k => {
-                                    const p = wikiPages[k];
-                                    return (!p || typeof p !== 'object' || p.type !== 'notebook') && (!p || typeof p !== 'object' || !p.parentId || p.parentId === 'root');
+                                    const pId = typeof p === 'object' ? p.parentId : null;
+                                    return pId === 'root' || pId === null || pId === undefined;
+                                }).sort((a, b) => {
+                                    const orderA = typeof wikiPages[a] === 'object' && wikiPages[a].order !== undefined ? wikiPages[a].order : 0;
+                                    const orderB = typeof wikiPages[b] === 'object' && wikiPages[b].order !== undefined ? wikiPages[b].order : 0;
+                                    return orderA - orderB;
                                 });
 
                                 const getChildren = (parentId) => {
                                     return Object.keys(wikiPages).filter(k => {
                                         const p = wikiPages[k];
                                         return p && typeof p === 'object' && p.parentId === parentId;
+                                    }).sort((a, b) => {
+                                        const orderA = typeof wikiPages[a] === 'object' && wikiPages[a].order !== undefined ? wikiPages[a].order : 0;
+                                        const orderB = typeof wikiPages[b] === 'object' && wikiPages[b].order !== undefined ? wikiPages[b].order : 0;
+                                        return orderA - orderB;
                                     });
                                 };
 
                                 return (
                                     <>
-                                        {notebooks.map(nbId => {
-                                            const nb = wikiPages[nbId];
-                                            const children = getChildren(nbId);
-                                            if (children.length === 0) return null;
-                                            return (
-                                                <div key={nbId} className="pv-wiki-notebook" style={{ marginBottom: '1rem' }}>
-                                                    <h3 style={{ color: 'var(--tx)', borderBottom: '1px solid var(--bd)', paddingBottom: '0.5rem', marginBottom: '1.5rem', marginTop: '1rem' }}>
-                                                        {nb.title}
-                                                    </h3>
-                                                    {children.map(childId => {
-                                                        const pageData = wikiPages[childId];
-                                                        const title = pageData.title;
-                                                        const content = pageData.content;
-                                                        if (!content) return null;
-                                                        return (
-                                                            <div key={childId} className="pv-wiki-page" style={{ paddingLeft: '1rem', borderLeft: '3px solid var(--s2)', marginBottom: '2rem' }}>
-                                                                <h4 style={{ color: 'var(--acc)', marginTop: 0, marginBottom: '1rem', fontSize: '1.1rem' }}>{title}</h4>
-                                                                <div 
-                                                                    className="pv-wiki-content"
-                                                                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }} 
-                                                                />
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            );
-                                        })}
+                                        {rootItems.map(itemId => {
+                                            const p = wikiPages[itemId];
+                                            const isNotebook = p && typeof p === 'object' && p.type === 'notebook';
 
-                                        {rootPages.map(pageId => {
-                                            const pageData = wikiPages[pageId];
-                                            const isObj = typeof pageData === 'object' && pageData !== null;
-                                            const title = isObj ? pageData.title : (pageId.charAt(0).toUpperCase() + pageId.slice(1));
-                                            const content = isObj ? pageData.content : pageData;
-                                            if (!content) return null;
-                                            
-                                            return (
-                                                <div key={pageId} className="pv-wiki-page" style={{ marginBottom: '2rem' }}>
-                                                    {isObj && title && <h3 style={{ color: 'var(--acc)', marginTop: 0, marginBottom: '1rem' }}>{title}</h3>}
-                                                    <div 
-                                                        className="pv-wiki-content"
-                                                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }} 
-                                                    />
-                                                </div>
-                                            );
+                                            if (isNotebook) {
+                                                const children = getChildren(itemId);
+                                                if (children.length === 0) return null;
+                                                return (
+                                                    <div key={itemId} className="pv-wiki-notebook" style={{ marginBottom: '1rem' }}>
+                                                        <h3 style={{ color: 'var(--tx)', borderBottom: '1px solid var(--bd)', paddingBottom: '0.5rem', marginBottom: '1.5rem', marginTop: '1rem' }}>
+                                                            {p.title}
+                                                        </h3>
+                                                        {children.map(childId => {
+                                                            const pageData = wikiPages[childId];
+                                                            const title = pageData.title;
+                                                            const content = pageData.content;
+                                                            if (!content) return null;
+                                                            return (
+                                                                <div key={childId} className="pv-wiki-page" style={{ paddingLeft: '1rem', borderLeft: '3px solid var(--s2)', marginBottom: '2rem' }}>
+                                                                    <h4 style={{ color: 'var(--acc)', marginTop: 0, marginBottom: '1rem', fontSize: '1.1rem' }}>{title}</h4>
+                                                                    <div 
+                                                                        className="pv-wiki-content"
+                                                                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }} 
+                                                                    />
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                );
+                                            } else {
+                                                const isObj = typeof p === 'object' && p !== null;
+                                                const title = isObj ? p.title : (itemId.charAt(0).toUpperCase() + itemId.slice(1));
+                                                const content = isObj ? p.content : p;
+                                                if (!content) return null;
+                                                
+                                                return (
+                                                    <div key={itemId} className="pv-wiki-page" style={{ marginBottom: '2rem' }}>
+                                                        {isObj && title && <h3 style={{ color: 'var(--acc)', marginTop: 0, marginBottom: '1rem' }}>{title}</h3>}
+                                                        <div 
+                                                            className="pv-wiki-content"
+                                                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }} 
+                                                        />
+                                                    </div>
+                                                );
+                                            }
                                         })}
                                     </>
                                 );

@@ -1783,6 +1783,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
 
 // The Classic Rich Text Editor
 function LegacyWikiEditor({ content, onSave }) {
+    const { transliterate } = useTransliterator();
     const editorRef = useRef(null);
     const [linkModalOpen, setLinkModalOpen] = useState(false);
     const [linkUrl, setLinkUrl] = useState('');
@@ -1903,7 +1904,7 @@ function LegacyWikiEditor({ content, onSave }) {
         // If not inside, wrap the selection in the conlang span
         const selectedText = selection.toString();
         if (selectedText) {
-            const html = `<span class="custom-font-text notranslate" style="color: var(--acc); font-weight: bold;">${selectedText}</span>`;
+            const html = `<span class="custom-font-text notranslate" style="color: var(--acc); font-weight: bold;">${transliterate(selectedText)}</span>`;
             document.execCommand('insertHTML', false, html);
         }
     };
@@ -2024,22 +2025,26 @@ export default function WikiTab() {
     const [editIcon, setEditIcon] = useState('');
     const [editParentId, setEditParentId] = useState('root');
 
-    const notebooks = Object.keys(wikiPages).filter(k => {
-        const p = wikiPages[k];
-        return p && typeof p === 'object' && p.type === 'notebook';
-    });
-
-    const rootPages = Object.keys(wikiPages).filter(k => {
-        const p = wikiPages[k];
-        if (p && typeof p === 'object' && p.type === 'notebook') return false;
-        if (p && typeof p === 'object' && p.parentId && p.parentId !== 'root') return false;
-        return true;
-    });
+    const rootItems = Object.keys(wikiPages)
+        .filter(k => {
+            const p = wikiPages[k];
+            const pId = typeof p === 'object' ? p.parentId : null;
+            return pId === 'root' || pId === null || pId === undefined;
+        })
+        .sort((a, b) => {
+            const orderA = typeof wikiPages[a] === 'object' && wikiPages[a].order !== undefined ? wikiPages[a].order : 0;
+            const orderB = typeof wikiPages[b] === 'object' && wikiPages[b].order !== undefined ? wikiPages[b].order : 0;
+            return orderA - orderB;
+        });
 
     const getChildren = (notebookId) => {
         return Object.keys(wikiPages).filter(k => {
             const p = wikiPages[k];
             return p && typeof p === 'object' && p.parentId === notebookId;
+        }).sort((a, b) => {
+            const orderA = typeof wikiPages[a] === 'object' && wikiPages[a].order !== undefined ? wikiPages[a].order : 0;
+            const orderB = typeof wikiPages[b] === 'object' && wikiPages[b].order !== undefined ? wikiPages[b].order : 0;
+            return orderA - orderB;
         });
     };
 
@@ -2054,7 +2059,7 @@ export default function WikiTab() {
                 alert("Title cannot be empty!");
                 return;
             }
-            const pageId = newPageTitle.trim().toLowerCase().replace(/\s+/g, '-');
+            const pageId = crypto.randomUUID();
             const parent = newPageParentId === 'root' ? null : newPageParentId;
             addWikiPage(pageId, newPageTitle.trim(), newPageType, parent);
             
@@ -2178,39 +2183,45 @@ export default function WikiTab() {
                         <p style={{ textAlign: 'center', color: 'var(--tx3)', fontStyle: 'italic', marginTop: '20px' }}>No documents created yet.</p>
                     ) : (
                         <>
-                            {notebooks.map(nbId => {
-                                const nb = wikiPages[nbId];
-                                const isExpanded = expandedNotebooks[nbId];
-                                const children = getChildren(nbId);
-                                const NbIcon = nb.icon && icons[nb.icon] ? icons[nb.icon] : (isExpanded ? FolderOpen : Folder);
-                                
-                                return (
-                                    <div key={nbId} className="wiki-notebook-container">
-                                        <div className="wiki-notebook-header" onClick={(e) => toggleNotebook(nbId, e)}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
-                                                <div style={{ flexShrink: 0, display: 'flex', color: 'var(--acc)' }}>
-                                                    <NbIcon size={16} />
+                            {rootItems.map(itemId => {
+                                const p = wikiPages[itemId];
+                                const isNotebook = p && typeof p === 'object' && p.type === 'notebook';
+
+                                if (isNotebook) {
+                                    const nbId = itemId;
+                                    const nb = p;
+                                    const isExpanded = expandedNotebooks[nbId];
+                                    const children = getChildren(nbId);
+                                    const NbIcon = nb.icon && icons[nb.icon] ? icons[nb.icon] : (isExpanded ? FolderOpen : Folder);
+                                    
+                                    return (
+                                        <div key={nbId} className="wiki-notebook-container">
+                                            <div className="wiki-notebook-header" onClick={(e) => toggleNotebook(nbId, e)}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                                                    <div style={{ flexShrink: 0, display: 'flex', color: 'var(--acc)' }}>
+                                                        <NbIcon size={16} />
+                                                    </div>
+                                                    <span style={{ fontWeight: 'bold', color: 'var(--tx)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nb.title}</span>
                                                 </div>
-                                                <span style={{ fontWeight: 'bold', color: 'var(--tx)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nb.title}</span>
+                                                <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }} className="wiki-item-controls">
+                                                    <button className="wiki-del-btn" title="Move Up" onClick={(e) => { e.stopPropagation(); reorderWikiPage(nbId, 'up'); }}><ChevronUp size={14} /></button>
+                                                    <button className="wiki-del-btn" title="Move Down" onClick={(e) => { e.stopPropagation(); reorderWikiPage(nbId, 'down'); }}><ChevronDown size={14} /></button>
+                                                    <button className="wiki-del-btn" title="Edit Notebook" onClick={(e) => handleOpenEdit(nbId, e)}><Edit2 size={14} /></button>
+                                                    <button className="wiki-del-btn" title="Delete" onClick={(e) => handleDeletePage(nbId, e)}><Trash2 size={14} /></button>
+                                                </div>
                                             </div>
-                                            <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }} className="wiki-item-controls">
-                                                <button className="wiki-del-btn" title="Move Up" onClick={(e) => { e.stopPropagation(); reorderWikiPage(nbId, 'up'); }}><ChevronUp size={14} /></button>
-                                                <button className="wiki-del-btn" title="Move Down" onClick={(e) => { e.stopPropagation(); reorderWikiPage(nbId, 'down'); }}><ChevronDown size={14} /></button>
-                                                <button className="wiki-del-btn" title="Edit Notebook" onClick={(e) => handleOpenEdit(nbId, e)}><Edit2 size={14} /></button>
-                                                <button className="wiki-del-btn" title="Delete" onClick={(e) => handleDeletePage(nbId, e)}><Trash2 size={14} /></button>
-                                            </div>
+                                            {isExpanded && (
+                                                <div className="wiki-notebook-children">
+                                                    {children.length === 0 && <div style={{ padding: '8px 20px', fontSize: '0.8rem', color: 'var(--tx3)', fontStyle: 'italic', borderLeft: '2px solid var(--bd)', marginLeft: '12px' }}>Empty notebook</div>}
+                                                    {children.map(childId => renderPageItem(childId, true))}
+                                                </div>
+                                            )}
                                         </div>
-                                        {isExpanded && (
-                                            <div className="wiki-notebook-children">
-                                                {children.length === 0 && <div style={{ padding: '8px 20px', fontSize: '0.8rem', color: 'var(--tx3)', fontStyle: 'italic', borderLeft: '2px solid var(--bd)', marginLeft: '12px' }}>Empty notebook</div>}
-                                                {children.map(childId => renderPageItem(childId, true))}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
+                                    );
+                                } else {
+                                    return renderPageItem(itemId, false);
+                                }
                             })}
-                            
-                            {rootPages.map(pageId => renderPageItem(pageId, false))}
                         </>
                     )}
                 </div>
