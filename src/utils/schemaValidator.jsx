@@ -27,7 +27,7 @@ const VALID_CONFIG_KEYS = new Set([
     'backupSettings',
     'evolutionEpochs', 'worldMap', 'customLabels', 'ipaMappingRules', 'typographySettings', 'azureTtsUseIpa',
     // Multi-script fields
-    'scriptSystems', 'scriptRules', 'activeScriptSystemId', 'configVersion',
+    'scriptSystems', 'scriptRules', 'activeScriptSystemId', 'configVersion', 'scriptDataById',
     // Particle fields
     'morphologyMode', 'morphSlots', 'fusionRules', 'boundaryRules',
     'particleDatabase', 'compositeParticles', 'allowRecursiveComposites',
@@ -51,6 +51,19 @@ export function sanitizeConfig(rawConfig) {
 
         clean[key] = rawConfig[key];
     }
+
+    // Deduplicate legacy root bloat fields to prevent doubled JSON file size
+    // when scriptDataById is present (as of PR 7). rehydrateBloat handles
+    // reconstructing these into the root during startup.
+    if (clean.scriptDataById && Object.keys(clean.scriptDataById).length > 0) {
+        delete clean.customGlyphs;
+        delete clean.alphabetGlyphs;
+        delete clean.syllabaryMap;
+        delete clean.featuralComponents;
+        delete clean.customFont;
+        delete clean.customFontBase64;
+    }
+
     return clean;
 }
 

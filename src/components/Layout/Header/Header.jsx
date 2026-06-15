@@ -85,7 +85,7 @@ export default function Header({ openMenu, onBackupNow }) {
 
     // Bundle up the conlang data and trigger a JSON file download
     const handleSave = (exportAll = true) => {
-        const config = useConfigStore.getState();
+        const config = sanitizeConfig(useConfigStore.getState());
         const projectStoreState = useProjectStore.getState();
         const lexicon = useLexiconStore.getState();
 
