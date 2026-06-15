@@ -2167,6 +2167,7 @@ export default function WikiTab() {
     const currentPage = currentPageId ? wikiPages[currentPageId] : null;
     const isCorpus = currentPage && typeof currentPage === 'object' && currentPage.type === 'corpus';
     const content = (currentPage && typeof currentPage === 'object') ? currentPage.content : currentPage;
+    const notebooks = Object.keys(wikiPages).filter(k => wikiPages[k] && typeof wikiPages[k] === 'object' && wikiPages[k].type === 'notebook');
 
     return (
         <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
