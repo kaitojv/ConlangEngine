@@ -27,7 +27,11 @@ const VALID_CONFIG_KEYS = new Set([
     'backupSettings',
     'evolutionEpochs', 'worldMap', 'customLabels', 'ipaMappingRules', 'typographySettings', 'azureTtsUseIpa',
     // Multi-script fields
-    'scriptSystems', 'scriptRules', 'activeScriptSystemId', 'configVersion'
+    'scriptSystems', 'scriptRules', 'activeScriptSystemId', 'configVersion',
+    // Particle fields
+    'morphologyMode', 'morphSlots', 'fusionRules', 'boundaryRules',
+    'particleDatabase', 'compositeParticles', 'allowRecursiveComposites',
+    'usesParticles'
 ]);
 
 /**
