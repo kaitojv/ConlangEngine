@@ -382,42 +382,51 @@ export const useConfigStore = create(
                     const migrated = migrateConfig(state);
                     if (migrated) set(migrated);
 
-                    // Load default script data from script-scoped key
-                    const defaultScriptId = state.scriptRules?.defaultScriptId || 'default';
-                    let scriptData = await loadScriptDataFromDB(projectId, defaultScriptId);
+                    const bloat = await loadLargeDataFromDB(projectId);
+                    if (!bloat) return;
 
-                    // Lazy migration: if no script-scoped data, try legacy key
-                    if (!scriptData) {
-                        const legacyBloat = await loadLargeDataFromDB(projectId);
-                        if (legacyBloat) {
-                            // Migrate legacy data to script-scoped key
-                            const migratedData = {
-                                customGlyphs: legacyBloat.customGlyphs || {},
-                                syllabaryMap: legacyBloat.syllabaryMap || {},
-                                featuralComponents: legacyBloat.featuralComponents || {},
-                                alphabetGlyphs: legacyBloat.alphabetGlyphs || {},
-                                customFontBase64: legacyBloat.customFontBase64 || null,
-                                customFont: legacyBloat.customFont || null,
-                                puaCounter: legacyBloat.puaCounter || 57344,
-                            };
-                            await saveLargeDataToDB(projectId, { [defaultScriptId]: migratedData });
-                            scriptData = migratedData;
-                        }
+                    const defaultScriptId = state.scriptRules?.defaultScriptId || 'default';
+                    let defaultScriptData = bloat[defaultScriptId];
+
+                    // Lazy migration for default script if not in bloat yet
+                    if (!defaultScriptData) {
+                        const migratedData = {
+                            customGlyphs: bloat.customGlyphs || {},
+                            syllabaryMap: bloat.syllabaryMap || {},
+                            featuralComponents: bloat.featuralComponents || {},
+                            alphabetGlyphs: bloat.alphabetGlyphs || {},
+                            customFontBase64: bloat.customFontBase64 || null,
+                            customFont: bloat.customFont || null,
+                            puaCounter: bloat.puaCounter || 57344,
+                        };
+                        await saveLargeDataToDB(projectId, { [defaultScriptId]: migratedData });
+                        defaultScriptData = migratedData;
                     }
 
-                    if (scriptData) {
-                        const font = scriptData.customFontBase64 || scriptData.customFont || null;
+                    // Extract ALL script data from bloat
+                    const scriptSystems = state.scriptSystems || [];
+                    const scriptDataById = {};
+                    scriptSystems.forEach(s => {
+                        if (bloat[s.id]) {
+                            scriptDataById[s.id] = bloat[s.id];
+                        }
+                    });
+                    // Ensure defaultScriptData is present
+                    scriptDataById[defaultScriptId] = defaultScriptData;
+
+                    if (defaultScriptData) {
+                        const font = defaultScriptData.customFontBase64 || defaultScriptData.customFont || null;
                         set((prev) => ({
                             customFont: font,
                             customFontBase64: font,
-                            syllabaryMap: scriptData.syllabaryMap || {},
-                            customGlyphs: scriptData.customGlyphs || {},
-                            featuralComponents: scriptData.featuralComponents || prev.featuralComponents,
-                            alphabetGlyphs: scriptData.alphabetGlyphs || prev.alphabetGlyphs,
-                            puaCounter: scriptData.puaCounter || prev.puaCounter,
+                            syllabaryMap: defaultScriptData.syllabaryMap || {},
+                            customGlyphs: defaultScriptData.customGlyphs || {},
+                            featuralComponents: defaultScriptData.featuralComponents || prev.featuralComponents,
+                            alphabetGlyphs: defaultScriptData.alphabetGlyphs || prev.alphabetGlyphs,
+                            puaCounter: defaultScriptData.puaCounter || prev.puaCounter,
                             scriptDataById: {
                                 ...prev.scriptDataById,
-                                [defaultScriptId]: scriptData,
+                                ...scriptDataById,
                             },
                         }));
                     }
@@ -434,6 +443,13 @@ export const useConfigStore = create(
                     if (newConfig.customFont) bloat.customFont = newConfig.customFont;
                     if (newConfig.syllabaryMap) bloat.syllabaryMap = newConfig.syllabaryMap;
                     if (newConfig.customGlyphs) bloat.customGlyphs = newConfig.customGlyphs;
+                    if (newConfig.alphabetGlyphs) bloat.alphabetGlyphs = newConfig.alphabetGlyphs;
+                    if (newConfig.featuralComponents) bloat.featuralComponents = newConfig.featuralComponents;
+                    if (newConfig.scriptDataById) {
+                        Object.keys(newConfig.scriptDataById).forEach(id => {
+                            bloat[id] = newConfig.scriptDataById[id];
+                        });
+                    }
                     if (Object.keys(bloat).length > 0) saveLargeDataToDB(projectId, bloat);
                 }
                 // Repair script systems if present
@@ -841,16 +857,35 @@ export const useConfigStore = create(
 
                 if (state.projectId) {
                     const bloat = {};
+                    const scriptDataPatch = {};
+                    const defaultScriptId = state.scriptRules?.defaultScriptId || 'default';
+
                     if (newConfig.customFontBase64) {
                         bloat.customFontBase64 = newConfig.customFontBase64;
                         bloat.customFont = newConfig.customFontBase64;
+                        scriptDataPatch.customFontBase64 = newConfig.customFontBase64;
+                        scriptDataPatch.customFont = newConfig.customFontBase64;
                     } else if (newConfig.customFont) {
                         bloat.customFont = newConfig.customFont;
                         bloat.customFontBase64 = newConfig.customFont;
+                        scriptDataPatch.customFont = newConfig.customFont;
+                        scriptDataPatch.customFontBase64 = newConfig.customFont;
                     }
-                    if (newConfig.syllabaryMap) bloat.syllabaryMap = newConfig.syllabaryMap;
-                    if (newConfig.customGlyphs) bloat.customGlyphs = newConfig.customGlyphs;
-                    if (Object.keys(bloat).length > 0) saveLargeDataToDB(state.projectId, bloat);
+                    if (newConfig.syllabaryMap) { bloat.syllabaryMap = newConfig.syllabaryMap; scriptDataPatch.syllabaryMap = newConfig.syllabaryMap; }
+                    if (newConfig.customGlyphs) { bloat.customGlyphs = newConfig.customGlyphs; scriptDataPatch.customGlyphs = newConfig.customGlyphs; }
+                    if (newConfig.alphabetGlyphs) { bloat.alphabetGlyphs = newConfig.alphabetGlyphs; scriptDataPatch.alphabetGlyphs = newConfig.alphabetGlyphs; }
+                    if (newConfig.featuralComponents) { bloat.featuralComponents = newConfig.featuralComponents; scriptDataPatch.featuralComponents = newConfig.featuralComponents; }
+                    if (newConfig.puaCounter) { bloat.puaCounter = newConfig.puaCounter; scriptDataPatch.puaCounter = newConfig.puaCounter; }
+
+                    if (Object.keys(bloat).length > 0) {
+                        const currentScriptData = state.scriptDataById?.[defaultScriptId] || {};
+                        const mergedScriptData = { ...currentScriptData, ...scriptDataPatch };
+                        saveLargeDataToDB(state.projectId, { ...bloat, [defaultScriptId]: mergedScriptData });
+                        
+                        const newScriptDataById = { ...(state.scriptDataById || {}) };
+                        newScriptDataById[defaultScriptId] = mergedScriptData;
+                        newConfig.scriptDataById = newScriptDataById;
+                    }
                 }
 
                 return { ...newConfig, activity: newActivity };
