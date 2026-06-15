@@ -369,17 +369,26 @@ export default function PublicViewer() {
                                             {visibleDictionary.map((entry, i) => (
                                                 <tr key={entry.id || i}>
                                                     <td className="pv-word-cell">
-                                                        <span className={`custom-font-text notranslate ${isLogographic && entry.ideogram ? 'pv-featural-word' : ''}`}>
-                                                            {(() => {
-                                                                // Use script rendering if script override exists
-                                                                if (entry.scriptOverride) {
-                                                                    const rendered = renderWordInScript(entry, config, dictionary);
-                                                                    return rendered.text;
-                                                                }
-                                                                // Legacy fallback
-                                                                return config.phonologyTypes === 'logographic' && entry.ideogram ? entry.ideogram : transliterate(entry.word, dictionary);
-                                                            })()}
-                                                        </span>
+                                                        {config.customGlyphs?.[(entry.word || '').toLowerCase()] ? (
+                                                            <img 
+                                                                src={config.customGlyphs[(entry.word || '').toLowerCase()]} 
+                                                                alt={entry.word}
+                                                                className="entry-custom-glyph"
+                                                                style={{ maxHeight: '40px', maxWidth: '100px', objectFit: 'contain' }}
+                                                            />
+                                                        ) : (
+                                                            <span className={`custom-font-text notranslate ${isLogographic && entry.ideogram ? 'pv-featural-word' : ''}`}>
+                                                                {(() => {
+                                                                    // Use script rendering if script override exists
+                                                                    if (entry.scriptOverride) {
+                                                                        const rendered = renderWordInScript(entry, config, dictionary);
+                                                                        return rendered.text;
+                                                                    }
+                                                                    // Legacy fallback
+                                                                    return config.phonologyTypes === 'logographic' && entry.ideogram ? entry.ideogram : transliterate(entry.word, dictionary);
+                                                                })()}
+                                                            </span>
+                                                        )}
                                                     </td>
                                                     <td className="pv-ipa-cell">
                                                         {entry.ipa ? (

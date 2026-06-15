@@ -158,8 +158,16 @@ export default function PublicFlashcards({ lexicon = [], config = {} }) {
                                     </>
                                 ) : currentWord ? (
                                     <>
-                                        <div className="fc-word custom-font-text notranslate">
-                                            {transliterate(currentWord.word)}
+                                        <div className="fc-word custom-font-text notranslate" style={{ display: 'flex', justifyContent: 'center' }}>
+                                            {config.customGlyphs?.[(currentWord.word || '').toLowerCase()] ? (
+                                                <img 
+                                                    src={config.customGlyphs[(currentWord.word || '').toLowerCase()]} 
+                                                    alt={currentWord.word}
+                                                    style={{ maxHeight: '80px', maxWidth: '200px', objectFit: 'contain' }}
+                                                />
+                                            ) : (
+                                                transliterate(currentWord.word)
+                                            )}
                                         </div>
                                         {currentWord.ipa && (
                                             <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>
