@@ -19,7 +19,7 @@ import { exportMinecraftResourcePack } from '../../../utils/minecraftExporter.js
 import { ExportModal } from './ExportModal.jsx';
 import { CsvImportModal } from './CsvImportModal.jsx';
 import BackupStatus from '../BackupStatus/BackupStatus.jsx';
-import { sanitizeBackup } from '../../../utils/schemaValidator.jsx';
+import { sanitizeBackup, sanitizeConfig } from '../../../utils/schemaValidator.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { renderWordInScript } from '../../../utils/scriptRendering.js';
 
