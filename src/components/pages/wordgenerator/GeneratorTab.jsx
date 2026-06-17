@@ -452,17 +452,24 @@ function BatchMode({ onExit }) {
     const [selectedWords, setSelectedWords] = useState(new Set());
     const [translations, setTranslations] = useState({});
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const PAGE_SIZE = 50;
+
     const handleGenerateBatch = () => {
         const newBatch = [];
+        const seenWords = new Set();
         for (let i = 0; i < batchSize; i++) {
             const result = generateWord(numSyllables, 'random');
-            if (result && !newBatch.some(w => w.word === result.word)) {
+            if (result && !seenWords.has(result.word)) {
+                seenWords.add(result.word);
                 newBatch.push({ ...result, id: crypto.randomUUID() });
             }
         }
         setGeneratedBatch(newBatch);
         setSelectedWords(new Set());
         setTranslations({});
+        setCurrentPage(1);
     };
 
     const toggleSelection = (id) => {
@@ -498,9 +505,20 @@ function BatchMode({ onExit }) {
         alert(`Successfully saved ${savedCount} words to the lexicon!`);
         
         // Remove saved words from the batch
-        setGeneratedBatch(prev => prev.filter(w => !selectedWords.has(w.id)));
+        setGeneratedBatch(prev => {
+            const newBatch = prev.filter(w => !selectedWords.has(w.id));
+            // Adjust page if we deleted the last items on current page
+            const newTotalPages = Math.ceil(newBatch.length / PAGE_SIZE);
+            if (currentPage > newTotalPages && newTotalPages > 0) {
+                setCurrentPage(newTotalPages);
+            }
+            return newBatch;
+        });
         setSelectedWords(new Set());
     };
+
+    const totalPages = Math.ceil(generatedBatch.length / PAGE_SIZE);
+    const paginatedBatch = generatedBatch.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     return (
         <div className="fill-mode-container">
@@ -513,9 +531,9 @@ function BatchMode({ onExit }) {
                 
                 <div className="generator-input-row" style={{ marginTop: '20px' }}>
                     <div className="generator-input-group">
-                        <label className="generator-label">Words to Generate</label>
+                        <label className="generator-label">Words to Generate (Max 3000)</label>
                         <input 
-                            type="number" min="5" max="50"
+                            type="number" min="5" max="3000"
                             className="generator-input"
                             value={batchSize} onChange={(e) => setBatchSize(Number(e.target.value))} 
                         />
@@ -536,8 +554,31 @@ function BatchMode({ onExit }) {
 
                 {generatedBatch.length > 0 && (
                     <div className="batch-results">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
                             <h3 style={{ margin: 0, color: 'var(--tx2)' }}>Results ({generatedBatch.length})</h3>
+                            
+                            {totalPages > 1 && (
+                                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                    <Button 
+                                        variant="default" 
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                    >
+                                        Prev
+                                    </Button>
+                                    <span style={{ color: 'var(--tx2)', fontSize: '0.9rem' }}>
+                                        Page {currentPage} of {totalPages}
+                                    </span>
+                                    <Button 
+                                        variant="default" 
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages}
+                                    >
+                                        Next
+                                    </Button>
+                                </div>
+                            )}
+
                             <Button 
                                 variant="save" 
                                 onClick={handleSaveSelected}
@@ -547,8 +588,8 @@ function BatchMode({ onExit }) {
                             </Button>
                         </div>
                         
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '400px', overflowY: 'auto', paddingRight: '10px' }}>
-                            {generatedBatch.map(item => (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '450px', overflowY: 'auto', paddingRight: '10px' }}>
+                            {paginatedBatch.map(item => (
                                 <div 
                                     key={item.id} 
                                     style={{ 
