@@ -144,20 +144,23 @@ export default function FunctionWordsTab() {
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
     const setLexicon = useLexiconStore((state) => state.setLexicon);
 
+    const storedMatrixData = useConfigStore(state => state.pronounMatrixData);
+    const storedMatrixSettings = useConfigStore(state => state.pronounMatrixSettings);
+
     const [rules, setRules] = useState([]);
-    const hasAutoChecked = useRef(false);
+    const extractionDone = useRef(false);
     
     // Matrix dimensions - Personal Pronouns
-    const [dimPersons, setDimPersons] = useState({ '1st': true, '2nd': true, '3rd': true, '4th': false });
-    const [dimNumbers, setDimNumbers] = useState({ 'S': true, 'P': true, 'C': false, 'D': false, 'N': false });
-    const [dimGenders, setDimGenders] = useState({ 'General': true, 'Masc': false, 'Fem': false, 'Neut': false, 'Anim': false, 'Inan': false });
+    const [dimPersons, setDimPersons] = useState(storedMatrixSettings?.dimPersons || { '1st': true, '2nd': true, '3rd': true, '4th': false });
+    const [dimNumbers, setDimNumbers] = useState(storedMatrixSettings?.dimNumbers || { 'S': true, 'P': true, 'C': false, 'D': false, 'N': false });
+    const [dimGenders, setDimGenders] = useState(storedMatrixSettings?.dimGenders || { 'General': true, 'Masc': false, 'Fem': false, 'Neut': false, 'Anim': false, 'Inan': false });
 
     // Matrix dimensions - Other Pronouns (Demonstrative, Interrogative, Relative, Indefinite)
-    const [dimOtherLocation, setDimOtherLocation] = useState({ 'Near': true, 'Far': true, 'General': false });
-    const [dimOtherAnimacy, setDimOtherAnimacy] = useState({ 'Anim': true, 'Inan': true, 'General': false });
+    const [dimOtherLocation, setDimOtherLocation] = useState(storedMatrixSettings?.dimOtherLocation || { 'Near': true, 'Far': true, 'General': false });
+    const [dimOtherAnimacy, setDimOtherAnimacy] = useState(storedMatrixSettings?.dimOtherAnimacy || { 'Anim': true, 'Inan': true, 'General': false });
     
     // Matrix inputs key: `${person}-${number}-${gender}-${caseType}` -> value: conlang word
-    const [matrixData, setMatrixData] = useState({});
+    const [matrixData, setMatrixData] = useState(storedMatrixData || {});
     const [saveStatus, setSaveStatus] = useState(null);
 
     // Initialize list rules from store
@@ -207,8 +210,18 @@ export default function FunctionWordsTab() {
         }
     }, [storedPersonRules]);
 
-    // Populate Matrix from Lexicon and Rules
+    // Populate Matrix from Lexicon and Rules ONLY once, if not in config
     useEffect(() => {
+        if (storedMatrixData && Object.keys(storedMatrixData).length > 0) return;
+        if (extractionDone.current) return;
+        
+        // Wait for rules to populate first if storedPersonRules is not empty
+        if ((typeof storedPersonRules === 'string' && storedPersonRules.trim() !== '' && rules.length === 0) || 
+            (Array.isArray(storedPersonRules) && storedPersonRules.length > 0 && rules.length === 0)) {
+            return;
+        }
+
+        extractionDone.current = true;
         const initialData = {};
         
         // 1. Pre-fill from personRules (Subjective form & Affix)
@@ -222,116 +235,112 @@ export default function FunctionWordsTab() {
             }
         });
 
-            // 2. Pre-fill from Lexicon
-            lexicon.forEach(entry => {
-                if (entry.wordClass?.toLowerCase() === 'pronoun' && entry.translation) {
-                    const trans = entry.translation.toLowerCase();
-                    
-                    // Personal Pronouns check
-                    const activePersons = ['1st', '2nd', '3rd', '4th'];
-                    const activeNumbers = ['S', 'P', 'C', 'D', 'N'];
-                    const activeGenders = ['General', 'Masc', 'Fem', 'Neut', 'Anim', 'Inan'];
-                    const cases = ['sub', 'obj', 'det', 'pos', 'ref'];
+        // 2. Pre-fill from Lexicon
+        lexicon.forEach(entry => {
+            if (entry.wordClass?.toLowerCase() === 'pronoun' && entry.translation) {
+                const trans = entry.translation.toLowerCase();
+                
+                // Personal Pronouns check
+                const activePersons = ['1st', '2nd', '3rd', '4th'];
+                const activeNumbers = ['S', 'P', 'C', 'D', 'N'];
+                const activeGenders = ['General', 'Masc', 'Fem', 'Neut', 'Anim', 'Inan'];
+                const cases = ['sub', 'obj', 'det', 'pos', 'ref'];
 
-                    for (const p of activePersons) {
-                        for (const n of activeNumbers) {
-                            for (const g of activeGenders) {
-                                for (const c of cases) {
-                                    const eng = getEnglishPronoun(p, n, g === 'General' ? '' : g, c).toLowerCase();
-                                    if (eng === trans) {
-                                        initialData[`${p}-${n}-${g}-${c}`] = entry.word;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Other Pronouns check
-                    const otherLocs = ['Near', 'Far', 'General'];
-                    const otherAnims = ['Anim', 'Inan', 'General'];
-                    const otherCases = ['dem', 'int', 'rel', 'ind'];
-
-                    for (const loc of otherLocs) {
-                        for (const anim of otherAnims) {
-                            for (const n of activeNumbers) {
-                                for (const c of otherCases) {
-                                    const prop = c === 'dem' ? loc : anim;
-                                    const eng = getEnglishPronoun('Other', n, prop, c).toLowerCase();
-                                    // simplistic matching for demo
-                                    if (trans.includes(eng.split('/')[0].trim())) {
-                                        initialData[`Other-${n}-${loc}-${anim}-${c}`] = entry.word;
-                                    }
+                for (const p of activePersons) {
+                    for (const n of activeNumbers) {
+                        for (const g of activeGenders) {
+                            for (const c of cases) {
+                                const eng = getEnglishPronoun(p, n, g === 'General' ? '' : g, c).toLowerCase();
+                                if (eng === trans) {
+                                    initialData[`${p}-${n}-${g}-${c}`] = entry.word;
                                 }
                             }
                         }
                     }
                 }
+
+                // Other Pronouns check
+                const otherLocs = ['Near', 'Far', 'General'];
+                const otherAnims = ['Anim', 'Inan', 'General'];
+                const otherCases = ['dem', 'int', 'rel', 'ind'];
+
+                for (const loc of otherLocs) {
+                    for (const anim of otherAnims) {
+                        for (const n of activeNumbers) {
+                            for (const c of otherCases) {
+                                const prop = c === 'dem' ? loc : anim;
+                                const eng = getEnglishPronoun('Other', n, prop, c).toLowerCase();
+                                // simplistic matching for demo
+                                if (trans.includes(eng.split('/')[0].trim())) {
+                                    initialData[`Other-${n}-${loc}-${anim}-${c}`] = entry.word;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        setMatrixData(initialData);
+
+        // Auto-enable checkboxes so saved pronouns don't appear "hidden" on reload
+        if (Object.keys(initialData).length > 0) {
+            setDimPersons(prev => {
+                const next = { ...prev };
+                Object.keys(initialData).forEach(key => {
+                    const [p] = key.split('-');
+                    if (next[p] !== undefined) next[p] = true;
+                });
+                return next;
+            });
+            
+            setDimNumbers(prev => {
+                const next = { ...prev };
+                Object.keys(initialData).forEach(key => {
+                    const parts = key.split('-');
+                    const num = parts[1];
+                    if (next[num] !== undefined) next[num] = true;
+                });
+                return next;
             });
 
-            setMatrixData(initialData);
-
-            // Auto-enable checkboxes so saved pronouns don't appear "hidden" on reload
-            // But only do this ONCE per session, so we don't overwrite user's manual un-checks when they click Save
-            if (!hasAutoChecked.current && Object.keys(initialData).length > 0) {
-                hasAutoChecked.current = true;
-                
-                setDimPersons(prev => {
-                    const next = { ...prev };
-                    Object.keys(initialData).forEach(key => {
-                        const [p] = key.split('-');
-                        if (next[p] !== undefined) next[p] = true;
-                    });
-                    return next;
+            setDimGenders(prev => {
+                const next = { ...prev };
+                Object.keys(initialData).forEach(key => {
+                    const parts = key.split('-');
+                    if (parts[0] !== 'Other') {
+                        const gender = parts[2];
+                        if (next[gender] !== undefined) next[gender] = true;
+                    }
                 });
-                
-                setDimNumbers(prev => {
-                    const next = { ...prev };
-                    Object.keys(initialData).forEach(key => {
-                        const parts = key.split('-');
-                        const num = parts[1];
-                        if (next[num] !== undefined) next[num] = true;
-                    });
-                    return next;
-                });
+                return next;
+            });
 
-                setDimGenders(prev => {
-                    const next = { ...prev };
-                    Object.keys(initialData).forEach(key => {
-                        const parts = key.split('-');
-                        if (parts[0] !== 'Other') {
-                            const gender = parts[2];
-                            if (next[gender] !== undefined) next[gender] = true;
-                        }
-                    });
-                    return next;
+            setDimOtherLocation(prev => {
+                const next = { ...prev };
+                Object.keys(initialData).forEach(key => {
+                    const parts = key.split('-');
+                    if (parts[0] === 'Other') {
+                        const loc = parts[2];
+                        if (next[loc] !== undefined) next[loc] = true;
+                    }
                 });
+                return next;
+            });
 
-                setDimOtherLocation(prev => {
-                    const next = { ...prev };
-                    Object.keys(initialData).forEach(key => {
-                        const parts = key.split('-');
-                        if (parts[0] === 'Other') {
-                            const loc = parts[2];
-                            if (next[loc] !== undefined) next[loc] = true;
-                        }
-                    });
-                    return next;
+            setDimOtherAnimacy(prev => {
+                const next = { ...prev };
+                Object.keys(initialData).forEach(key => {
+                    const parts = key.split('-');
+                    if (parts[0] === 'Other') {
+                        const anim = parts[3];
+                        if (next[anim] !== undefined) next[anim] = true;
+                    }
                 });
-
-                setDimOtherAnimacy(prev => {
-                    const next = { ...prev };
-                    Object.keys(initialData).forEach(key => {
-                        const parts = key.split('-');
-                        if (parts[0] === 'Other') {
-                            const anim = parts[3];
-                            if (next[anim] !== undefined) next[anim] = true;
-                        }
-                    });
-                    return next;
-                });
-            }
-
-    }, [rules, lexicon]);
+                return next;
+            });
+        }
+    }, [rules, lexicon, storedPersonRules, storedMatrixData]);
 
     const updateStore = (updatedRules) => {
         const sortedRules = [...updatedRules].sort((a, b) => {
@@ -352,7 +361,13 @@ export default function FunctionWordsTab() {
             return getOrder(genderOrder, a.gender) - getOrder(genderOrder, b.gender);
         });
         setRules(sortedRules);
-        updateConfig({ personRules: sortedRules });
+        updateConfig({ 
+            personRules: sortedRules,
+            pronounMatrixData: matrixData,
+            pronounMatrixSettings: {
+                dimPersons, dimNumbers, dimGenders, dimOtherLocation, dimOtherAnimacy
+            }
+        });
     };
 
     // Matrix Generation Combinations

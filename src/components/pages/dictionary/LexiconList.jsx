@@ -580,7 +580,7 @@ export default function LexiconList() {
 
                             <div className="entry-senses">
                                 {senses.map((entry, index) => (
-                                    <div key={entry.id} className={`sense-row ${senses.length > 1 ? 'has-multiple' : ''}`}>
+                                    <div key={entry.id} className={`lexicon-sense-row ${senses.length > 1 ? 'has-multiple' : ''}`}>
                                         {senses.length > 1 && <div className="sense-index">{index + 1}.</div>}
                                         <div className="sense-content">
                                             <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', flexWrap: 'wrap' }}>

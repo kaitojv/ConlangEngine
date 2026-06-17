@@ -31,6 +31,7 @@ export default function SystemTab() {
     const autoReturnToLexicon = useConfigStore((state) => state.autoReturnToLexicon);
     const isPublic = useConfigStore((state) => state.isPublic) || false;
     const conlangIcon = useConfigStore((state) => state.conlangIcon) || 'Globe';
+    const floatingBackground = useConfigStore((state) => state.floatingBackground) || { enabled: true, global: false, type: 'greetings' };
     const setFullConfig = useConfigStore((state) => state.setFullConfig);
     const updateConfig = useConfigStore((state) => state.updateConfig);
     const setLexicon = useLexiconStore((state) => state.setLexicon);
@@ -585,6 +586,51 @@ export default function SystemTab() {
                         </div>
                     ))}
                 </div>
+
+                <br />
+                <hr style={{ borderColor: 'var(--bd)', margin: '1rem 0' }} />
+                <h2>Dynamic Background</h2>
+                <p>Customize the animated floating background.</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input 
+                            type="checkbox" 
+                            checked={floatingBackground.enabled} 
+                            onChange={(e) => updateConfig({ floatingBackground: { ...floatingBackground, enabled: e.target.checked } })} 
+                            style={{ transform: 'scale(1.2)' }}
+                        />
+                        <span style={{ fontWeight: 600 }}>Enable Background Animation</span>
+                    </label>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                        <input 
+                            type="checkbox" 
+                            checked={floatingBackground.global} 
+                            onChange={(e) => updateConfig({ floatingBackground: { ...floatingBackground, global: e.target.checked } })} 
+                            style={{ transform: 'scale(1.2)' }}
+                        />
+                        <span style={{ fontWeight: 600 }}>Show on All Tabs (Not just Home)</span>
+                    </label>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <label style={{ fontWeight: 600 }}>Background Style</label>
+                        <select 
+                            value={floatingBackground.type} 
+                            onChange={(e) => updateConfig({ floatingBackground: { ...floatingBackground, type: e.target.value } })}
+                            style={{ padding: '0.5rem', borderRadius: 'var(--rad-sm)', border: '1px solid var(--bd)', background: 'var(--s1)', color: 'var(--tx)' }}
+                        >
+                            <option value="greetings">Greetings (Olá, Hello, Hola...)</option>
+                            <option value="clouds">Clouds ☁️</option>
+                            <option value="hearts">Hearts ❤️</option>
+                            <option value="stars">Stars ⭐</option>
+                            <option value="geometry">Geometry ▲■●</option>
+                            <option value="nature">Nature 🌿</option>
+                            <option value="magic">Magic ✨</option>
+                            <option value="music">Music 🎵</option>
+                        </select>
+                    </div>
+                </div>
+
             </Card>
 
             <Card>

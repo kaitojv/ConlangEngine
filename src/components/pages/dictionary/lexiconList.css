@@ -474,13 +474,13 @@
     border-top: 1px solid var(--bd);
 }
 
-.sense-row {
+.lexicon-sense-row {
     display: flex;
     gap: 12px;
     padding: 1rem 0;
 }
 
-.sense-row.has-multiple:not(:last-child) {
+.lexicon-sense-row.has-multiple:not(:last-child) {
     border-bottom: 1px dashed var(--bd);
 }
 

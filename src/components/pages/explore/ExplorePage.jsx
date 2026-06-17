@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { sanitizeConfig } from '../../../utils/schemaValidator.jsx';
+import { transliterateText } from '../../../utils/transliteration.js';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import './explorePage.css';
 
@@ -297,6 +298,16 @@ export default function ExplorePage() {
                         const customFont = config?.customFontBase64;
                         const fontName = customFont ? `ExploreFont_${lang.project_id}` : undefined;
 
+                        let displayName = name;
+                        let displayDesc = desc;
+
+                        // Hanul (featural_block) uses font ligatures so it doesn't need text replacement
+                        const needsTransliteration = ['logographic', 'syllabic', 'alphabetic'].includes(config?.phonologyTypes);
+                        if (needsTransliteration) {
+                            displayName = name.split(/(\s+)/).map(w => w.trim() ? transliterateText(w, config, dictionary || []) : w).join('');
+                            displayDesc = desc.split(/(\s+)/).map(w => w.trim() ? transliterateText(w, config, dictionary || []) : w).join('');
+                        }
+
                         return (
                             <div 
                                 key={lang.project_id} 
@@ -317,13 +328,13 @@ export default function ExplorePage() {
                                         {getConlangIcon(icon, 32)}
                                     </div>
                                     <div className="explore-titles">
-                                        <h3 className="explore-name" title={name} style={customFont ? { fontFamily: `'${fontName}', 'Inter', sans-serif` } : {}}>{name}</h3>
+                                        <h3 className="explore-name custom-font-text notranslate" title={name} style={customFont ? { fontFamily: `'${fontName}', 'Inter', sans-serif` } : {}}>{displayName}</h3>
                                         <p className="explore-author">
                                             <User size={12} /> {author}
                                         </p>
                                     </div>
                                 </div>
-                                <p className="explore-desc" style={customFont ? { fontFamily: `'${fontName}', 'Inter', sans-serif` } : {}}>{desc}</p>
+                                <p className="explore-desc custom-font-text notranslate" style={customFont ? { fontFamily: `'${fontName}', 'Inter', sans-serif` } : {}}>{displayDesc}</p>
                                 <div className="explore-stats">
                                     <div className="explore-stat">
                                         <BookA size={14} />

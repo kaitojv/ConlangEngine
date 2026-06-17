@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
-import FloatingBackground from './FloatingBackground.jsx';
+
 import { Sunrise, Sun, Moon, Sparkles, Settings2, BookA, PlusCircle, BrainCircuit, Flame, ArrowRight, Bookmark, Library, HelpCircle, Heart, Coffee } from 'lucide-react';
 import Card from '@/components/UI/Card/Card.jsx';
 import './home.css';
@@ -151,7 +151,7 @@ export default function Home() {
 
     return (
         <>
-        <FloatingBackground />
+
         
         <div className="home-container">
             {/* Main Welcome Dashboard */}

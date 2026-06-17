@@ -13,6 +13,7 @@ import { useGlobalHotkeys } from './hooks/useGlobalHotkeys.jsx';
 import { useBackupManager } from './hooks/useBackupManager.jsx';
 import Footer from './components/Layout/Footer/Footer.jsx';
 import FloatingKeyboard from './components/UI/FloatingKeyboard/FloatingKeyboard.jsx';
+import FloatingBackground from './components/pages/home/FloatingBackground.jsx';
 import PWAInstallPrompt from './components/UI/PWAInstallPrompt/PWAInstallPrompt.jsx';
 
 import { Toaster } from 'react-hot-toast';
@@ -211,6 +212,8 @@ function App(){
     <div className="App">
       <Header openMenu={() => setOpenMenu(true)} onBackupNow={backupNow} />
       <NavBar isMenuOpen={openMenu} closeMenu={() => setOpenMenu(false)} />
+
+      <FloatingBackground />
 
       <main className="content">
         <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', padding: '50px', color: 'var(--tx2)' }}>Loading...</div>}>

@@ -205,23 +205,4 @@
         word-break: break-word; /* Fallback for older browsers */
     }
 }
-
-/* --- Floating Background Animations --- */
-.floating-bg-container {
-    position: absolute;
-    inset: 0; /* Shorthand for top, right, bottom, left: 0 */
-    overflow: hidden;
-    pointer-events: none;
-    z-index: 0;
-}
-
-.floating-bg-word {
-    position: absolute;
-    color: var(--tx2);
-    font-weight: bold;
-    white-space: nowrap;
-    left: 0;
-    top: 0;
-    /* Pushes this element's animations to the GPU to prevent lag */
-    will-change: transform; 
-}
+

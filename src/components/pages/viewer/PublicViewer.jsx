@@ -176,6 +176,18 @@ export default function PublicViewer() {
     // --- MAIN VIEW ---
     const writingDirection = config.writingDirection || 'ltr';
 
+    // Prepare title and description
+    let displayName = config.conlangName || 'Untitled Conlang';
+    let displayDesc = config.description;
+
+    const needsTransliteration = ['logographic', 'syllabic', 'alphabetic'].includes(config.phonologyTypes);
+    if (needsTransliteration) {
+        displayName = (config.conlangName || 'Untitled Conlang').split(/(\s+)/).map(w => w.trim() ? transliterate(w, dictionary) : w).join('');
+        if (displayDesc && displayDesc !== 'A brief description of your conlang.') {
+            displayDesc = displayDesc.split(/(\s+)/).map(w => w.trim() ? transliterate(w, dictionary) : w).join('');
+        }
+    }
+
     return (
         <div className="pv-page">
             <style>
@@ -226,14 +238,14 @@ export default function PublicViewer() {
                         <div style={{ color: 'var(--acc)' }}>
                             {getConlangIcon(config.conlangIcon, 40)}
                         </div>
-                        <h1 className="pv-lang-name" style={{ margin: 0 }}>{config.conlangName || 'Untitled Conlang'}</h1>
+                        <h1 className="pv-lang-name custom-font-text notranslate" style={{ margin: 0, writingMode: 'horizontal-tb' }}>{displayName}</h1>
                     </div>
                     <div className="pv-author">
                         <User size={14} />
                         <span>Created by {config.authorName || 'Anonymous'}</span>
                     </div>
-                    {config.description && config.description !== 'A brief description of your conlang.' && (
-                        <p className="pv-description">{config.description}</p>
+                    {displayDesc && displayDesc !== 'A brief description of your conlang.' && (
+                        <p className="pv-description custom-font-text notranslate" style={{ writingMode: 'horizontal-tb' }}>{displayDesc}</p>
                     )}
                     <div className="pv-badges">
                         <span className="pv-badge"><Globe size={12} /> {directionLabel}</span>

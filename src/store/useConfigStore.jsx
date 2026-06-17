@@ -181,6 +181,13 @@ export const INITIAL_CONFIG = {
         y: null
     },
     functionWords: [],
+    pronounMatrixData: null,
+    pronounMatrixSettings: null,
+    floatingBackground: {
+        enabled: true,
+        global: false,
+        type: 'greetings'
+    },
     // Prosody rules — evaluated at display time to auto-compute stress & tone
     // Array of { id, type, value, fallback? }
     stressRules: [],

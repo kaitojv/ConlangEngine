@@ -239,7 +239,7 @@ export function transliterateText(word, config, lexicon = []) {
     }
 
     if (phonologyTypes === 'logographic') {
-        const dictEntry = lexicon.find(e => e.word.replace(/\*/g, '').toLowerCase() === cleanWord);
+        const dictEntry = lexicon.find(e => e.word.replace(/\*/g, '').toLowerCase() === cleanWord.toLowerCase());
         return (dictEntry && dictEntry.ideogram) ? dictEntry.ideogram : cleanWord;
     }
 
