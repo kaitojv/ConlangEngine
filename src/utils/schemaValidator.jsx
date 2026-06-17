@@ -23,6 +23,7 @@ const VALID_CONFIG_KEYS = new Set([
     'semanticMappings', 'wordAssistConfig', 'autoReturnToLexicon', 'syllablePatternWeights',
     'enableToneAndStress', 'functionWords', 'calendarSystem',
     'stressRules', 'toneRules', 'isPublic', 'conlangIcon', 'parentId',
+    'pronounMatrixData', 'pronounMatrixSettings',
     'vowelHarmonyMode', 'vowelHarmonySets', 'vowelHarmonyOverrideWordClasses', 'vowelHarmonyOverrideTags',
     'backupSettings',
     'evolutionEpochs', 'worldMap', 'customLabels', 'ipaMappingRules', 'typographySettings', 'azureTtsUseIpa',

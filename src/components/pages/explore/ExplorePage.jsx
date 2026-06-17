@@ -295,17 +295,25 @@ export default function ExplorePage() {
                         const themeColor = config?.colors?.accent || 'var(--acc)';
                         const wordCount = dictionary ? dictionary.length : 0;
                         
-                        const customFont = config?.customFontBase64;
+                        const defaultScriptId = config?.scriptRules?.defaultScriptId || 'default';
+                        const scriptData = config?.scriptDataById?.[defaultScriptId] || config || {};
+
+                        const customFont = scriptData?.customFontBase64 || config?.customFontBase64;
                         const fontName = customFont ? `ExploreFont_${lang.project_id}` : undefined;
+                        // Strip charset to prevent browser decoding failure for binary fonts
+                        const safeFontUrl = customFont ? customFont.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,') : '';
 
                         let displayName = name;
                         let displayDesc = desc;
 
+                        // Merge scriptData into a temporary config for transliteration
+                        const translitConfig = { ...config, ...scriptData };
+
                         // Hanul (featural_block) uses font ligatures so it doesn't need text replacement
                         const needsTransliteration = ['logographic', 'syllabic', 'alphabetic'].includes(config?.phonologyTypes);
                         if (needsTransliteration) {
-                            displayName = name.split(/(\s+)/).map(w => w.trim() ? transliterateText(w, config, dictionary || []) : w).join('');
-                            displayDesc = desc.split(/(\s+)/).map(w => w.trim() ? transliterateText(w, config, dictionary || []) : w).join('');
+                            displayName = name.split(/(\s+)/).map(w => w.trim() ? transliterateText(w, translitConfig, dictionary || []) : w).join('');
+                            displayDesc = desc.split(/(\s+)/).map(w => w.trim() ? transliterateText(w, translitConfig, dictionary || []) : w).join('');
                         }
 
                         return (
@@ -319,7 +327,7 @@ export default function ExplorePage() {
                                     <style>{`
                                         @font-face {
                                             font-family: '${fontName}';
-                                            src: url(${customFont});
+                                            src: url('${safeFontUrl}');
                                         }
                                     `}</style>
                                 )}
