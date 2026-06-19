@@ -10,12 +10,43 @@ import { Brush, Grid3X3, Settings2, Info, Layers, Trash2, Eraser } from 'lucide-
 import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
 import './blockManager.css';
 
-export default function BlockManager() {
+export default function BlockManager({ scriptId } = {}) {
     const config = useConfigStore();
     const lexicon = useLexiconStore(state => state.lexicon);
-    const { consonants, vowels, otherPhonemes, blockSettings, blockTemplates, featuralComponents, updateConfig } = config;
+    const { consonants, vowels, otherPhonemes, updateConfig } = config;
+    const updateScriptData = useConfigStore(s => s.updateScriptData);
+    const updateScriptSystem = useConfigStore(s => s.updateScriptSystem);
+    const defaultScriptId = config.scriptRules?.defaultScriptId || 'default';
+    const targetScriptId = scriptId || defaultScriptId;
+    const isDefaultScript = targetScriptId === defaultScriptId;
+    // Block settings/templates live on the scriptSystems entry. For the default
+    // script, prefer the script entry but fall back to the legacy top-level
+    // fields so legacy projects keep rendering.
+    const targetScript = config.scriptSystems?.find(s => s.id === targetScriptId);
+    const blockSettings = targetScript?.blockSettings
+        || (isDefaultScript ? config.blockSettings : null);
+    const blockTemplates = (targetScript?.blockTemplates && targetScript.blockTemplates.length)
+        ? targetScript.blockTemplates
+        : (isDefaultScript ? config.blockTemplates : null);
+    // Read featuralComponents from the selected script's data, falling back to
+    // the legacy top-level field only for the default script.
+    const featuralComponents = (config.scriptDataById?.[targetScriptId]?.featuralComponents)
+        || (isDefaultScript ? config.featuralComponents : {})
+        || {};
     const [drawingForComp, setDrawingForComp] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
+
+    // Per-script writers. updateScriptData persists glyph/font bytes to
+    // IndexedDB under the chosen scriptId; small script settings
+    // (blockSettings, blockTemplates) live on the scriptSystems entry itself.
+    const writeScriptData = (patch) => {
+        updateScriptData(targetScriptId, patch);
+        if (isDefaultScript) updateConfig(patch); // mirror legacy fields
+    };
+    const writeScriptSettings = (patch) => {
+        updateScriptSystem(targetScriptId, patch);
+        if (isDefaultScript) updateConfig(patch);
+    };
 
     const activeTemplates = blockTemplates || (blockSettings ? [
         {
@@ -50,22 +81,22 @@ export default function BlockManager() {
             layoutTemplate: '2horizontal',
             slotMapping: [{label:'Consonant', source:'consonants'}, {label:'Vowel', source:'vowels'}]
         };
-        updateConfig({ blockTemplates: [...activeTemplates, newTemplate] });
+        writeScriptSettings({ blockTemplates: [...activeTemplates, newTemplate] });
     };
 
     const handleRemoveTemplate = (id) => {
         if (activeTemplates.length === 1) return alert("You must have at least one template.");
-        updateConfig({ blockTemplates: activeTemplates.filter(t => t.id !== id) });
+        writeScriptSettings({ blockTemplates: activeTemplates.filter(t => t.id !== id) });
     };
 
     const handleUpdateTemplate = (id, field, val) => {
-        updateConfig({
+        writeScriptSettings({
             blockTemplates: activeTemplates.map(t => t.id === id ? { ...t, [field]: val } : t)
         });
     };
 
     const handleUpdateSlotMapping = (templateId, index, field, val) => {
-        updateConfig({
+        writeScriptSettings({
             blockTemplates: activeTemplates.map(t => {
                 if (t.id !== templateId) return t;
                 const newMapping = [...(t.slotMapping || [])];
@@ -86,7 +117,7 @@ export default function BlockManager() {
             worker.onmessage = (e) => {
                 if (e.data.success) {
                     const newData = e.data.result;
-                    updateConfig({
+                    writeScriptData({
                         syllabaryMap: newData.syllabaryMap,
                         customFontBase64: newData.customFontBase64,
                         customFont: newData.customFontBase64,
@@ -121,7 +152,7 @@ export default function BlockManager() {
 
     const handleClearFont = () => {
         if (window.confirm("Are you sure you want to delete all compiled blocks? This will revert text back to basic base characters until you compile again.")) {
-            updateConfig({
+            writeScriptData({
                 syllabaryMap: {},
                 customFontBase64: null,
                 customFont: null,
@@ -132,7 +163,7 @@ export default function BlockManager() {
     };
 
     const handleSaveDrawing = (strokes) => {
-        updateConfig({
+        writeScriptData({
             featuralComponents: { ...featuralComponents, [drawingForComp]: strokes }
         });
         setDrawingForComp(null);
@@ -166,7 +197,7 @@ export default function BlockManager() {
                         <input 
                             type="checkbox" 
                             checked={blockSettings?.compileStandaloneBases !== false} 
-                            onChange={(e) => updateConfig({ blockSettings: { ...blockSettings, compileStandaloneBases: e.target.checked } })}
+                            onChange={(e) => writeScriptSettings({ blockSettings: { ...blockSettings, compileStandaloneBases: e.target.checked } })}
                         />
                         <strong>Compile Standalone Bases</strong>
                     </label>

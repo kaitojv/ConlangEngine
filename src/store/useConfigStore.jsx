@@ -258,7 +258,21 @@ const saveLargeDataToDB = (projectId, data) => {
                 const getReq = store.get(projectId);
                 getReq.onsuccess = () => {
                     const existing = getReq.result || {};
-                    store.put({ ...existing, ...data }, projectId);
+                    // One-level deep merge: per-script-id data objects (e.g. `default`,
+                    // `script-123`) must merge field-by-field. A shallow `{...existing, ...data}`
+                    // would replace a whole script's data object when only one field
+                    // (e.g. customGlyphs) is written, silently wiping siblings like
+                    // alphabetGlyphs. See FIX.md (alphabet glyph wipe bug).
+                    const merged = { ...existing };
+                    for (const key of Object.keys(data)) {
+                        const incoming = data[key];
+                        const prev = merged[key];
+                        const isPlainObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
+                        merged[key] = (isPlainObj(prev) && isPlainObj(incoming))
+                            ? { ...prev, ...incoming }
+                            : incoming;
+                    }
+                    store.put(merged, projectId);
                 };
                 tx.oncomplete = () => resolve(true);
             } catch { resolve(false); }
@@ -393,22 +407,39 @@ export const useConfigStore = create(
                     if (!bloat) return;
 
                     const defaultScriptId = state.scriptRules?.defaultScriptId || 'default';
-                    let defaultScriptData = bloat[defaultScriptId];
 
-                    // Lazy migration for default script if not in bloat yet
-                    if (!defaultScriptData) {
-                        const migratedData = {
-                            customGlyphs: bloat.customGlyphs || {},
-                            syllabaryMap: bloat.syllabaryMap || {},
-                            featuralComponents: bloat.featuralComponents || {},
-                            alphabetGlyphs: bloat.alphabetGlyphs || {},
-                            customFontBase64: bloat.customFontBase64 || null,
-                            customFont: bloat.customFont || null,
-                            puaCounter: bloat.puaCounter || 57344,
-                        };
-                        await saveLargeDataToDB(projectId, { [defaultScriptId]: migratedData });
-                        defaultScriptData = migratedData;
-                    }
+                    // Build the default script's data by layering three sources, in order
+                    // of trust: any previously-saved per-script object, then the legacy
+                    // top-level bloat fields, then the freshly-hydrated in-memory state.
+                    //
+                    // The in-memory fallback is essential during the v1 -> v2 upgrade:
+                    // the old version persisted `alphabetGlyphs`/`puaCounter` in
+                    // localStorage (never in IndexedDB), but the new `partialize` excludes
+                    // them from localStorage. On the first post-upgrade load those values
+                    // still live in memory; without rescuing them here they are dropped
+                    // from localStorage AND never written to IndexedDB, so the next reload
+                    // shows blank alphabet glyphs and a reset puaCounter. See FIX.md.
+                    const existingDefault = bloat[defaultScriptId] || {};
+                    const nonEmptyObj = (v) => v && typeof v === 'object' && Object.keys(v).length > 0;
+                    const pickObj = (...candidates) => candidates.find(nonEmptyObj) || {};
+                    const pickVal = (...candidates) => {
+                        const hit = candidates.find((v) => v != null);
+                        return hit != null ? hit : null;
+                    };
+
+                    const defaultScriptData = {
+                        customGlyphs: pickObj(existingDefault.customGlyphs, bloat.customGlyphs, state.customGlyphs),
+                        syllabaryMap: pickObj(existingDefault.syllabaryMap, bloat.syllabaryMap, state.syllabaryMap),
+                        featuralComponents: pickObj(existingDefault.featuralComponents, bloat.featuralComponents, state.featuralComponents),
+                        alphabetGlyphs: pickObj(existingDefault.alphabetGlyphs, bloat.alphabetGlyphs, state.alphabetGlyphs),
+                        customFontBase64: pickVal(existingDefault.customFontBase64, bloat.customFontBase64, state.customFontBase64),
+                        customFont: pickVal(existingDefault.customFont, bloat.customFont, state.customFont),
+                        puaCounter: pickVal(existingDefault.puaCounter, bloat.puaCounter, state.puaCounter) || 57344,
+                    };
+
+                    // Persist the rescued/merged default data so it survives the next reload
+                    // (idempotent: deep-merge keeps any sibling fields already stored).
+                    await saveLargeDataToDB(projectId, { [defaultScriptId]: defaultScriptData });
 
                     // Extract ALL script data from bloat
                     const scriptSystems = state.scriptSystems || [];
@@ -421,7 +452,7 @@ export const useConfigStore = create(
                     // Ensure defaultScriptData is present
                     scriptDataById[defaultScriptId] = defaultScriptData;
 
-                    if (defaultScriptData) {
+                    {
                         const font = defaultScriptData.customFontBase64 || defaultScriptData.customFont || null;
                         set((prev) => ({
                             customFont: font,
@@ -689,9 +720,28 @@ export const useConfigStore = create(
                     scriptRules.defaultScriptId = id;
                 }
 
+                // Give the new script its OWN empty data bucket. Without this, getScriptData
+                // has no entry for the new id and downstream code can fall back to the
+                // default script's glyphs/fonts, making a brand-new (e.g. logographic)
+                // script appear to inherit every custom glyph. See FIX.md.
+                const emptyScriptData = {
+                    customGlyphs: {},
+                    syllabaryMap: {},
+                    featuralComponents: {},
+                    alphabetGlyphs: {},
+                    customFontBase64: null,
+                    customFont: null,
+                    puaCounter: 57344,
+                };
+                const scriptDataById = { ...(state.scriptDataById || {}), [id]: emptyScriptData };
+                if (state.projectId) {
+                    saveLargeDataToDB(state.projectId, { [id]: emptyScriptData });
+                }
+
                 return {
                     scriptSystems,
                     scriptRules,
+                    scriptDataById,
                     activeScriptSystemId: id,
                     activity: [{ text: `Created script: ${name}`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15),
                 };
@@ -885,8 +935,24 @@ export const useConfigStore = create(
                     if (newConfig.puaCounter) { bloat.puaCounter = newConfig.puaCounter; scriptDataPatch.puaCounter = newConfig.puaCounter; }
 
                     if (Object.keys(bloat).length > 0) {
-                        const currentScriptData = state.scriptDataById?.[defaultScriptId] || {};
+                        // Seed the merge base from any known default-script data AND the
+                        // current legacy top-level fields. Early in the session
+                        // scriptDataById can still be empty (rehydrateBloat may not have
+                        // run yet); without backfilling from legacy fields the in-memory
+                        // default-script object would be reduced to just the patched key.
+                        const currentScriptData = {
+                            customGlyphs: state.customGlyphs || {},
+                            syllabaryMap: state.syllabaryMap || {},
+                            featuralComponents: state.featuralComponents || {},
+                            alphabetGlyphs: state.alphabetGlyphs || {},
+                            customFontBase64: state.customFontBase64 || null,
+                            customFont: state.customFont || null,
+                            puaCounter: state.puaCounter || 57344,
+                            ...(state.scriptDataById?.[defaultScriptId] || {}),
+                        };
                         const mergedScriptData = { ...currentScriptData, ...scriptDataPatch };
+                        // saveLargeDataToDB deep-merges the per-script object, so siblings
+                        // already in IndexedDB are preserved even if missing here.
                         saveLargeDataToDB(state.projectId, { ...bloat, [defaultScriptId]: mergedScriptData });
                         
                         const newScriptDataById = { ...(state.scriptDataById || {}) };

@@ -10,7 +10,7 @@ import FontStudioModal from "../Fontstudio/FontStudio.jsx";
 import Infobox from "../Infobox/Infobox.jsx";
 
 
-export default function SyllabaryManager() {
+export default function SyllabaryManager({ scriptId } = {}) {
   
   const [viewMode, setViewMode] = useState('grid');
 
@@ -18,7 +18,28 @@ export default function SyllabaryManager() {
   const [newSylVal, setNewSylVal] = useState('');
   const [drawingForSyl, setDrawingForSyl] = useState(null);
 
-  const {consonants, vowels, otherPhonemes, syllabaryMap, updateConfig} = useConfigStore();
+  const consonants = useConfigStore(s => s.consonants);
+  const vowels = useConfigStore(s => s.vowels);
+  const otherPhonemes = useConfigStore(s => s.otherPhonemes);
+  const legacySyllabaryMap = useConfigStore(s => s.syllabaryMap);
+  const scriptDataById = useConfigStore(s => s.scriptDataById);
+  const defaultScriptId = useConfigStore(s => s.scriptRules?.defaultScriptId) || 'default';
+  const updateConfig = useConfigStore(s => s.updateConfig);
+  const updateScriptData = useConfigStore(s => s.updateScriptData);
+
+  const targetScriptId = scriptId || defaultScriptId;
+  const isDefault = targetScriptId === defaultScriptId;
+  // Read from script-scoped data; fall back to legacy top-level only for default.
+  const syllabaryMap = scriptDataById?.[targetScriptId]?.syllabaryMap
+    || (isDefault ? legacySyllabaryMap : {})
+    || {};
+
+  // Route writes to the selected script. Mirror to legacy field for default so
+  // transliteration / public viewer keep working.
+  const writeSyllabaryMap = (nextMap) => {
+    updateScriptData(targetScriptId, { syllabaryMap: nextMap });
+    if (isDefault) updateConfig({ syllabaryMap: nextMap });
+  };
 
   const parseList = (str) => str.split(',')
   .map(s=>{
@@ -33,9 +54,7 @@ export default function SyllabaryManager() {
   const otherList = parseList(otherPhonemes || '');
 
   const handleUpdateSyllable = (key, val) => {
-        updateConfig({ 
-            syllabaryMap: { ...syllabaryMap, [key]: val } 
-        });
+        writeSyllabaryMap({ ...syllabaryMap, [key]: val });
     };
 
     const handleAddSyllable = () => {
@@ -48,7 +67,7 @@ export default function SyllabaryManager() {
     const handleRemoveSyllable = (key) => {
         const newMap = {...syllabaryMap};
         delete newMap[key];
-        updateConfig({ syllabaryMap: newMap });
+        writeSyllabaryMap(newMap);
     };
 
     return (

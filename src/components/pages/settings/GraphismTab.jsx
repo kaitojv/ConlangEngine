@@ -12,17 +12,64 @@ import KeyboardManager from '../../UI/KeyboardManager/KeyboardManager.jsx';
 import { Keyboard } from 'lucide-react';
 import './graphismTab.css';
 
+const TYPE_LABELS = {
+    alphabetic: 'Alphabetic',
+    syllabic: 'Syllabic',
+    logographic: 'Logographic',
+    featural_block: 'Featural/Block',
+};
+
 export default function TypographyStudio() {
     const consonants = useConfigStore(state => state.consonants) || '';
     const vowels = useConfigStore(state => state.vowels) || '';
     const otherPhonemes = useConfigStore(state => state.otherPhonemes) || '';
-    const alphabetGlyphs = useConfigStore(state => state.alphabetGlyphs) || {};
-    const alphabetNames = useConfigStore(state => state.alphabetNames) || {};
     const typographySettings = useConfigStore(state => state.typographySettings) || { customTypographyModes: [], activeDisplayMode: 'Base' };
-    const writingDirection = useConfigStore((state) => state.writingDirection) || 'ltr';
-    const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const updateConfig = useConfigStore(state => state.updateConfig);
-    
+
+    // Multi-script wiring. Select the raw value (no `|| []` fallback in the
+    // selector — that returns a fresh array each render and trips the
+    // exhaustive-deps lint rule for the useMemo below).
+    const scriptSystemsRaw = useConfigStore(state => state.scriptSystems);
+    const scriptSystems = scriptSystemsRaw || [];
+    const scriptDataById = useConfigStore(state => state.scriptDataById) || {};
+    const defaultScriptId = useConfigStore(state => state.scriptRules?.defaultScriptId) || 'default';
+    const legacyAlphabetGlyphs = useConfigStore(state => state.alphabetGlyphs) || {};
+    const legacyAlphabetNames = useConfigStore(state => state.alphabetNames) || {};
+    const legacyWritingDirection = useConfigStore(state => state.writingDirection) || 'ltr';
+    const legacyPhonologyTypes = useConfigStore(state => state.phonologyTypes);
+    const updateScriptData = useConfigStore(state => state.updateScriptData);
+    const updateScriptSystem = useConfigStore(state => state.updateScriptSystem);
+
+    // Track which script is being edited. Default to the project's default script.
+    const [editingScriptId, setEditingScriptId] = useState(defaultScriptId);
+
+    // Repair stale selection if scripts change underneath us.
+    const selectedScript = useMemo(() => {
+        const list = scriptSystemsRaw || [];
+        return list.find(s => s.id === editingScriptId)
+            || list.find(s => s.id === defaultScriptId)
+            || list[0]
+            || null;
+    }, [scriptSystemsRaw, editingScriptId, defaultScriptId]);
+
+    const selectedScriptId = selectedScript?.id || defaultScriptId;
+    const isDefaultSelected = selectedScriptId === defaultScriptId;
+    const hasMultipleScripts = scriptSystems.length > 1;
+
+    // Read script-scoped data. For the default script, fall back to legacy top-level
+    // fields so existing single-script projects keep working unchanged.
+    const scriptData = scriptDataById[selectedScriptId];
+    const alphabetGlyphs = scriptData?.alphabetGlyphs
+        || (isDefaultSelected ? legacyAlphabetGlyphs : {})
+        || {};
+    const alphabetNames = (selectedScript?.alphabetNames && Object.keys(selectedScript.alphabetNames).length > 0)
+        ? selectedScript.alphabetNames
+        : (isDefaultSelected ? legacyAlphabetNames : {}) || {};
+    const writingDirection = selectedScript?.writingDirection
+        || (isDefaultSelected ? legacyWritingDirection : 'ltr');
+    const scriptType = selectedScript?.type
+        || (isDefaultSelected ? legacyPhonologyTypes : 'alphabetic');
+
     const [drawingChar, setDrawingChar] = useState(null);
     const [newMode, setNewMode] = useState('');
     const [editingMode, setEditingMode] = useState('Base');
@@ -50,13 +97,22 @@ export default function TypographyStudio() {
         ];
     }, [consonants, vowels, otherPhonemes]);
 
+    // Write `alphabetGlyphs` to the selected script's bucket. For the default
+    // script we also mirror to the legacy top-level field via updateConfig so
+    // existing readers (PublicViewer, transliteration) keep seeing the data.
+    const writeAlphabetGlyphs = (nextGlyphs) => {
+        updateScriptData(selectedScriptId, { alphabetGlyphs: nextGlyphs });
+        if (isDefaultSelected) {
+            updateConfig({ alphabetGlyphs: nextGlyphs });
+        }
+    };
+
     const updateName = (char, name) => {
-        updateConfig({
-            alphabetNames: {
-                ...alphabetNames,
-                [char]: name
-            }
-        });
+        const nextNames = { ...alphabetNames, [char]: name };
+        updateScriptSystem(selectedScriptId, { alphabetNames: nextNames });
+        if (isDefaultSelected) {
+            updateConfig({ alphabetNames: nextNames });
+        }
     };
 
     const handleAddMode = () => {
@@ -96,21 +152,24 @@ export default function TypographyStudio() {
         });
     };
 
+    const handleWritingDirection = (e) => {
+        const next = e.target.value;
+        updateScriptSystem(selectedScriptId, { writingDirection: next });
+        if (isDefaultSelected) {
+            updateConfig({ writingDirection: next });
+        }
+    };
+
     const updateGlyph = (char, newCharUnicode) => {
         const key = editingMode === 'Base' ? char : `${char}_${editingMode.toLowerCase()}`;
-        updateConfig({
-            alphabetGlyphs: {
-                ...alphabetGlyphs,
-                [key]: newCharUnicode
-            }
-        });
+        writeAlphabetGlyphs({ ...alphabetGlyphs, [key]: newCharUnicode });
         setDrawingChar(null);
     };
 
     const deleteGlyph = (key) => {
         const newGlyphs = { ...alphabetGlyphs };
         delete newGlyphs[key];
-        updateConfig({ alphabetGlyphs: newGlyphs });
+        writeAlphabetGlyphs(newGlyphs);
     };
 
     const customModes = (typographySettings.customTypographyModes || []).filter(m => m.toLowerCase() !== 'uppercase' && m.toLowerCase() !== 'base');
@@ -145,15 +204,41 @@ export default function TypographyStudio() {
                 Select a mode to edit, then click <b>Draw</b> to assign custom glyphs specifically for that typography mode!
             </Infobox>
 
-            {phonologyTypes === 'syllabic' && (
+            {hasMultipleScripts && (
+                <Card style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', margin: 0 }}>
+                            Editing Script
+                        </h3>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--tx2)', margin: 0 }}>
+                            Two writing systems can share the same script type. Pick which one this Graphism page edits.
+                        </p>
+                    </div>
+                    <select
+                        className="sg-select"
+                        style={{ minWidth: '260px', padding: '0.5rem', marginLeft: 'auto' }}
+                        value={selectedScriptId}
+                        onChange={(e) => setEditingScriptId(e.target.value)}
+                    >
+                        {scriptSystems.map(s => (
+                            <option key={s.id} value={s.id}>
+                                {s.name} — {TYPE_LABELS[s.type] || s.type}
+                                {s.id === defaultScriptId ? ' (default)' : ''}
+                            </option>
+                        ))}
+                    </select>
+                </Card>
+            )}
+
+            {scriptType === 'syllabic' && (
                 <div className="animate-in fade-in duration-300">
-                    <SyllabaryManager />
+                    <SyllabaryManager scriptId={selectedScriptId} />
                 </div>
             )}
 
-            {phonologyTypes === 'featural_block' && (
+            {scriptType === 'featural_block' && (
                 <div className="animate-in fade-in duration-300">
-                    <BlockManager />
+                    <BlockManager scriptId={selectedScriptId} />
                 </div>
             )}
 
@@ -166,7 +251,7 @@ export default function TypographyStudio() {
                             className="sg-select" 
                             style={{ width: '100%', padding: '0.5rem' }}
                             value={writingDirection}
-                            onChange={(e) => updateConfig({ writingDirection: e.target.value })}
+                            onChange={handleWritingDirection}
                         >
                             <option value="ltr">Horizontal (Left to Right)</option>
                             <option value="rtl">Horizontal (Right to Left)</option>
@@ -277,7 +362,7 @@ export default function TypographyStudio() {
                 </div>
             </Card>
 
-            {phonologyTypes === 'alphabetic' && (
+            {scriptType === 'alphabetic' && (
                 <div className="alphabet-table-container">
                     <div style={{ padding: '1rem', background: 'var(--s2)', borderBottom: '1px solid var(--bd)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Currently Editing:</h3>
@@ -392,7 +477,7 @@ export default function TypographyStudio() {
                 </div>
             )}
 
-            {phonologyTypes === 'alphabetic' && (
+            {scriptType === 'alphabetic' && (
                 <Card style={{ padding: '1.5rem', marginTop: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--tx)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Keyboard size={18} /> OS Keyboard Layout Exporter

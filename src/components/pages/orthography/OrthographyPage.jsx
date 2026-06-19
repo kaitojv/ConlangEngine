@@ -16,6 +16,27 @@ import toast from 'react-hot-toast';
 
 // --- SUB-COMPONENTS ---
 
+// Returns large glyph/font data scoped to a specific script. Falls back to the
+// legacy global fields ONLY for the default script, so a non-default script
+// (e.g. a freshly created logographic register) starts empty instead of
+// inheriting every custom glyph from the default script. See FIX.md.
+const useScriptScopedData = (scriptId) => {
+    const scriptDataById = useConfigStore(state => state.scriptDataById);
+    const defaultScriptId = useConfigStore(state => state.scriptRules?.defaultScriptId) || 'default';
+    const customGlyphsG = useConfigStore(state => state.customGlyphs);
+    const syllabaryMapG = useConfigStore(state => state.syllabaryMap);
+    const featuralComponentsG = useConfigStore(state => state.featuralComponents);
+    const alphabetGlyphsG = useConfigStore(state => state.alphabetGlyphs);
+    const sd = scriptId ? scriptDataById?.[scriptId] : null;
+    const isDefault = !scriptId || scriptId === defaultScriptId;
+    return {
+        customGlyphs: sd?.customGlyphs || (isDefault ? customGlyphsG : {}) || {},
+        syllabaryMap: sd?.syllabaryMap || (isDefault ? syllabaryMapG : {}) || {},
+        featuralComponents: sd?.featuralComponents || (isDefault ? featuralComponentsG : {}) || {},
+        alphabetGlyphs: sd?.alphabetGlyphs || (isDefault ? alphabetGlyphsG : {}) || {},
+    };
+};
+
 const NumberDerivationView = ({ generateNumberName, numeralBase }) => {
     const numberMatrix = useConfigStore(state => state.numberMatrix) || {};
     const numberDerivedRules = useConfigStore(state => state.numberDerivedRules) || { ordinal: '', fractional: '', multiplier: '' };
@@ -667,12 +688,12 @@ const NumbersTab = () => {
     );
 };
 
-const AlphabeticShowcase = () => {
+const AlphabeticShowcase = ({ scriptId } = {}) => {
     const consonants = useConfigStore(state => state.consonants) || '';
     const vowels = useConfigStore(state => state.vowels) || '';
     const otherPhonemes = useConfigStore(state => state.otherPhonemes) || '';
     const alphabetNames = useConfigStore(state => state.alphabetNames) || {};
-    const alphabetGlyphs = useConfigStore(state => state.alphabetGlyphs) || {};
+    const { alphabetGlyphs } = useScriptScopedData(scriptId);
     const { transliterate } = useTransliterator();
 
     const parseChars = (str) => {
@@ -741,9 +762,8 @@ const AlphabeticShowcase = () => {
 
 // ─── SYLLABARY SHOWCASE ───────────────────────────────────────────────────────
 
-const SyllabaryShowcase = () => {
-    const syllabaryMap = useConfigStore(state => state.syllabaryMap) || {};
-    const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
+const SyllabaryShowcase = ({ scriptId } = {}) => {
+    const { syllabaryMap, customGlyphs } = useScriptScopedData(scriptId);
     const consonants   = useConfigStore(state => state.consonants) || '';
     const vowels       = useConfigStore(state => state.vowels) || '';
 
@@ -837,9 +857,9 @@ const SyllabaryShowcase = () => {
 
 // ─── LOGOGRAPHIC SHOWCASE ─────────────────────────────────────────────────────
 
-const LogographicShowcase = () => {
+const LogographicShowcase = ({ scriptId } = {}) => {
     const lexicon = useLexiconStore(state => state.lexicon) || [];
-    const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
+    const { customGlyphs } = useScriptScopedData(scriptId);
 
     const logographicWords = useMemo(() => {
         return lexicon.filter(w => w.ideogram && w.ideogram.trim() !== '');
@@ -909,10 +929,8 @@ const LogographicShowcase = () => {
 
 // ─── HELPER COMPONENTS ───────────────────────────────────────────────────────────
 
-const BlockShowcase = () => {
-    const syllabaryMap       = useConfigStore(state => state.syllabaryMap) || {};
-    const featuralComponents = useConfigStore(state => state.featuralComponents) || {};
-    const customGlyphs       = useConfigStore(state => state.customGlyphs) || {};
+const BlockShowcase = ({ scriptId } = {}) => {
+    const { syllabaryMap, featuralComponents, customGlyphs } = useScriptScopedData(scriptId);
     const consonants         = useConfigStore(state => state.consonants) || '';
     const vowels             = useConfigStore(state => state.vowels) || '';
     const otherPhonemes      = useConfigStore(state => state.otherPhonemes) || '';
