@@ -309,6 +309,14 @@ export default function ExplorePage() {
                         // Merge scriptData into a temporary config for transliteration
                         const translitConfig = { ...config, ...scriptData };
 
+                        // If the snapshot is missing a compiled font, do not attempt to map to PUA glyphs, 
+                        // as they will only render as tofu. This will allow standard Unicode transliterations 
+                        // (like Cyrillic or Greek) to continue working, while falling back to base letters for custom scripts.
+                        if (!customFont) {
+                            translitConfig.alphabetGlyphs = {};
+                            translitConfig.syllabaryMap = {};
+                        }
+
                         // Hanul (featural_block) uses font ligatures so it doesn't need text replacement
                         const needsTransliteration = ['logographic', 'syllabic', 'alphabetic'].includes(config?.phonologyTypes);
                         if (needsTransliteration) {
