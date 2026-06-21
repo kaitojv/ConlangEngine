@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Info, BookOpen, HelpCircle, Mail, Shield, ChevronRight, Lightbulb, Sparkles, PenTool, BookA, Settings2, Wand2, BrainCircuit, Globe, Lock, Database, Eye, Download, Keyboard, Search } from 'lucide-react';
+import { Info, BookOpen, HelpCircle, Mail, Shield, ChevronRight, Lightbulb, Sparkles, PenTool, BookA, Settings2, Wand2, BrainCircuit, Globe, Lock, Database, Eye, Download, Keyboard, Search, Heart } from 'lucide-react';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import './helptab.css';
 
@@ -450,6 +450,32 @@ const Contact = () => (
     </div>
 );
 
+// The Thanks section for acknowledgements
+const Thanks = () => (
+    <div className="help-section">
+        <h3 className="help-section-title"><Heart className="help-icon" /> Special Thanks</h3>
+        <p>I would like to extend a special thanks to the following people and contributors for their amazing support:</p>
+        <ul className="help-faq-list">
+            <li>
+                <strong>Family & Friends</strong>
+                <p>Thank you to my family, my husband Hugo, my cat Hilda, and my best friend Nath.</p>
+            </li>
+            <li>
+                <strong>Discord Community</strong>
+                <p>Thank you to the entire Discord community for being a part of this journey.</p>
+            </li>
+            <li>
+                <strong>Slapstick Mojo</strong>
+                <p>For your contributions and excellent suggestions for the site.</p>
+            </li>
+            <li>
+                <strong>niruhsa</strong>
+                <p>For all your Pull Requests and brilliant ideas contributed to the app.</p>
+            </li>
+        </ul>
+    </div>
+);
+
 export default function HelpTab() {
     // We use this state to remember which tab the user is currently looking at
     const [activeTab, setActiveTab] = useState('about');
@@ -464,6 +490,7 @@ export default function HelpTab() {
             case 'searching': return <Searching />;
             case 'shortcuts': return <Shortcuts />;
             case 'contact': return <Contact />;
+            case 'thanks': return <Thanks />;
             default: return <About />;
         }
     };
@@ -515,6 +542,12 @@ export default function HelpTab() {
                         className={`help-nav-btn ${activeTab === 'contact' ? 'active' : ''}`}
                     >
                         <Mail size={18} /> Contact
+                    </Button>
+                    <Button 
+                        onClick={() => setActiveTab('thanks')} 
+                        className={`help-nav-btn ${activeTab === 'thanks' ? 'active' : ''}`}
+                    >
+                        <Heart size={18} /> Thanks
                     </Button>
                 </nav>
             </header>
