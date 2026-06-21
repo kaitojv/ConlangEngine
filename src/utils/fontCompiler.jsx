@@ -24,16 +24,25 @@ export async function compileFont(customGlyphs, traceWidth = 30) {
             let path = new opentype.Path();
             let r_base = traceWidth; // Configurable stroke width from Graphism tab
 
-            // Detect calligraphy or brush pen flag
-            const hasCalligraphy = strokeArray.length > 0 && 
-                                  strokeArray[0].length === 1 && 
-                                  strokeArray[0][0].x === -999;
-            const hasBrushPen = strokeArray.length > 0 && 
-                                  strokeArray[0].length === 1 && 
-                                  strokeArray[0][0].x === -998;
+            let meta = { scale: 1, leftMargin: 100, rightMargin: 100, yOffset: 0, isCalligraphy: false, isBrushPen: false };
+            let actualStrokes = strokeArray;
             
-            const isSpecialBrush = hasCalligraphy || hasBrushPen;
-            const actualStrokes = isSpecialBrush ? strokeArray.slice(1) : strokeArray;
+            if (strokeArray.length > 0) {
+                const firstStroke = strokeArray[0];
+                if (!Array.isArray(firstStroke) && firstStroke.isMeta) {
+                    meta = { ...meta, ...firstStroke };
+                    actualStrokes = strokeArray.slice(1);
+                } else if (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -999) {
+                    meta.isCalligraphy = true;
+                    actualStrokes = strokeArray.slice(1);
+                } else if (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -998) {
+                    meta.isBrushPen = true;
+                    actualStrokes = strokeArray.slice(1);
+                }
+            }
+
+            const hasCalligraphy = meta.isCalligraphy;
+            const hasBrushPen = meta.isBrushPen;
 
             let minX = Infinity;
             let maxX = -Infinity;
@@ -53,9 +62,9 @@ export async function compileFont(customGlyphs, traceWidth = 30) {
                 maxX = 0;
             }
 
-            const sideBearing = 100;
+            const scaledWidth = (maxX - minX) * 2.85 * meta.scale;
             const glyphAdvanceWidth = hasPoints 
-                ? sideBearing + ((maxX - minX) * 2.85) + sideBearing + r_base
+                ? meta.leftMargin + scaledWidth + meta.rightMargin + (r_base * meta.scale)
                 : 500;
 
             actualStrokes.forEach(strokeData => {
@@ -80,27 +89,27 @@ export async function compileFont(customGlyphs, traceWidth = 30) {
 
                 if (isFilled && simplified.length >= 3) {
                     // Draw a solid filled path
-                    path.moveTo(sideBearing + (simplified[0].x - minX) * 2.85, 800 - simplified[0].y * 2.85);
+                    path.moveTo(meta.leftMargin + (simplified[0].x - minX) * 2.85 * meta.scale, 400 + ((800 - simplified[0].y * 2.85 - 400) * meta.scale) + meta.yOffset);
                     for (let i = 1; i < simplified.length; i++) {
-                        path.lineTo(sideBearing + (simplified[i].x - minX) * 2.85, 800 - simplified[i].y * 2.85);
+                        path.lineTo(meta.leftMargin + (simplified[i].x - minX) * 2.85 * meta.scale, 400 + ((800 - simplified[i].y * 2.85 - 400) * meta.scale) + meta.yOffset);
                     }
                     path.close();
                 } else {
                     // Standard thickened stroke logic
                     for (let i = 0; i < simplified.length; i++) {
                         let pt1 = simplified[i];
-                        let cx1 = sideBearing + ((pt1.x - minX) * 2.85);
-                        let cy1 = 800 - (pt1.y * 2.85);
+                        let cx1 = meta.leftMargin + ((pt1.x - minX) * 2.85 * meta.scale);
+                        let cy1 = 400 + ((800 - pt1.y * 2.85 - 400) * meta.scale) + meta.yOffset;
 
-                        let r = r_base;
+                        let r = r_base * meta.scale;
                         if (hasCalligraphy) {
                             const taper = Math.sin((i / (simplified.length - 1 || 1)) * Math.PI);
-                            r = r_base * (0.3 + 0.7 * taper);
+                            r = (r_base * meta.scale) * (0.3 + 0.7 * taper);
                         } else if (hasBrushPen) {
                             const progress = i / (simplified.length - 1 || 1);
                             const widthMult = progress < 0.8 ? 1.0 : (1.0 - (progress - 0.8) * 5); // 1.0 down to 0.0
                             const startMult = progress < 0.1 ? (0.5 + progress * 5) : 1.0; 
-                            r = r_base * Math.max(0.1, widthMult * startMult);
+                            r = (r_base * meta.scale) * Math.max(0.1, widthMult * startMult);
                         }
 
                         // Draw an 8-point octagon joint at EVERY point. 
@@ -121,18 +130,18 @@ export async function compileFont(customGlyphs, traceWidth = 30) {
 
                         if (i < simplified.length - 1) {
                             let pt2 = simplified[i+1];
-                            let cx2 = sideBearing + ((pt2.x - minX) * 2.85);
-                            let cy2 = 800 - (pt2.y * 2.85);
+                            let cx2 = meta.leftMargin + ((pt2.x - minX) * 2.85 * meta.scale);
+                            let cy2 = 400 + ((800 - pt2.y * 2.85 - 400) * meta.scale) + meta.yOffset;
 
-                            let next_r = r_base;
+                            let next_r = r_base * meta.scale;
                             if (hasCalligraphy) {
                                 const next_taper = Math.sin(((i+1) / (simplified.length - 1 || 1)) * Math.PI);
-                                next_r = r_base * (0.3 + 0.7 * next_taper);
+                                next_r = (r_base * meta.scale) * (0.3 + 0.7 * next_taper);
                             } else if (hasBrushPen) {
                                 const next_progress = (i+1) / (simplified.length - 1 || 1);
                                 const next_widthMult = next_progress < 0.8 ? 1.0 : (1.0 - (next_progress - 0.8) * 5); 
                                 const next_startMult = next_progress < 0.1 ? (0.5 + next_progress * 5) : 1.0; 
-                                next_r = r_base * Math.max(0.1, next_widthMult * next_startMult);
+                                next_r = (r_base * meta.scale) * Math.max(0.1, next_widthMult * next_startMult);
                             }
 
                             let dx = cx2 - cx1;

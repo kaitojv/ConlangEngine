@@ -24,6 +24,12 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     const [interactionPoints, setInteractionPoints] = useState([]); // [P0, P1, P2]
     const [interactionStage, setInteractionStage] = useState(0); // 0: Idle, 1: Dragging, 2: Setting Curve Control
 
+    // Metadata States
+    const [glyphScale, setGlyphScale] = useState(1.0);
+    const [leftMargin, setLeftMargin] = useState(100);
+    const [rightMargin, setRightMargin] = useState(100);
+    const [yOffset, setYOffset] = useState(0);
+
     const [backgroundStrokes, setBackgroundStrokes] = useState([]);
     const [backgroundText, setBackgroundText] = useState('');
     const [selectedReferenceId, setSelectedReferenceId] = useState('');
@@ -58,6 +64,35 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         });
         return options;
     }, [alphabetGlyphs, alphabetNames, customGlyphs, featuralComponents]);
+
+    // Load existing strokes if we are redrawing an existing character
+    useEffect(() => {
+        if (existingCharCode && customGlyphs[existingCharCode]) {
+            const existingStrokes = customGlyphs[existingCharCode];
+            if (existingStrokes && existingStrokes.length > 0) {
+                let actualStrokes = existingStrokes;
+                const firstStroke = existingStrokes[0];
+                
+                if (!Array.isArray(firstStroke) && firstStroke.isMeta) {
+                    setGlyphScale(firstStroke.scale ?? 1.0);
+                    setLeftMargin(firstStroke.leftMargin ?? 100);
+                    setRightMargin(firstStroke.rightMargin ?? 100);
+                    setYOffset(firstStroke.yOffset ?? 0);
+                    setIsCalligraphy(firstStroke.isCalligraphy ?? false);
+                    setIsBrushPen(firstStroke.isBrushPen ?? false);
+                    actualStrokes = existingStrokes.slice(1);
+                } else if (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -999) {
+                    setIsCalligraphy(true);
+                    actualStrokes = existingStrokes.slice(1);
+                } else if (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -998) {
+                    setIsBrushPen(true);
+                    actualStrokes = existingStrokes.slice(1);
+                }
+                
+                setStrokes(actualStrokes);
+            }
+        }
+    }, [existingCharCode]); // Only run on mount or when existingCharCode changes
 
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
@@ -533,13 +568,18 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
             incrementPuaCounter();
         }
 
-        // 1. Temporarily add the new strokes to the dictionary for the compiler
-        // We include a metadata stroke if calligraphy or brush pen is on
-        let metaStrokes = [];
-        if (isCalligraphy) metaStrokes = [[{ x: -999, y: -999 }]];
-        else if (isBrushPen) metaStrokes = [[{ x: -998, y: -998 }]];
+        // 1. Save metadata object as the first stroke
+        const metaObj = {
+            isMeta: true,
+            scale: glyphScale,
+            leftMargin: leftMargin,
+            rightMargin: rightMargin,
+            yOffset: yOffset,
+            isCalligraphy: isCalligraphy,
+            isBrushPen: isBrushPen
+        };
 
-        const strokesToSave = [...metaStrokes, ...strokes];
+        const strokesToSave = [metaObj, ...strokes];
 
         const updatedGlyphDb = { ...customGlyphs, [charCode]: strokesToSave };
         
@@ -602,6 +642,25 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                         <Button variant="default" className="btn-sm" onClick={() => fileInputRef.current && fileInputRef.current.click()}>
                             <Download size={14} style={{ transform: 'rotate(180deg)', marginRight: '4px' }} /> Import SVG
                         </Button>
+                    </div>
+                </div>
+
+                <div className="fs-metadata-tools" style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginBottom: '15px', padding: '10px', background: 'var(--s2)', borderRadius: 'var(--rad-sm)' }}>
+                    <div className="fs-tool-group" style={{ flex: 1, minWidth: '120px' }}>
+                        <label className="fs-tool-label">Scale ({glyphScale.toFixed(2)}x)</label>
+                        <input type="range" min="0.5" max="2.0" step="0.05" value={glyphScale} onChange={(e) => setGlyphScale(parseFloat(e.target.value))} />
+                    </div>
+                    <div className="fs-tool-group" style={{ flex: 1, minWidth: '120px' }}>
+                        <label className="fs-tool-label">Left Margin ({leftMargin})</label>
+                        <input type="range" min="-200" max="500" step="10" value={leftMargin} onChange={(e) => setLeftMargin(parseInt(e.target.value))} />
+                    </div>
+                    <div className="fs-tool-group" style={{ flex: 1, minWidth: '120px' }}>
+                        <label className="fs-tool-label">Right Margin ({rightMargin})</label>
+                        <input type="range" min="-200" max="500" step="10" value={rightMargin} onChange={(e) => setRightMargin(parseInt(e.target.value))} />
+                    </div>
+                    <div className="fs-tool-group" style={{ flex: 1, minWidth: '120px' }}>
+                        <label className="fs-tool-label">Y-Offset ({yOffset})</label>
+                        <input type="range" min="-500" max="500" step="10" value={yOffset} onChange={(e) => setYOffset(parseInt(e.target.value))} />
                     </div>
                 </div>
             </div>
