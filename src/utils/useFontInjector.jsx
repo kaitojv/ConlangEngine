@@ -42,6 +42,14 @@ export function useFontInjector(){
             const newFont = new FontFace(fontName, `url('${safeFontUrl}')`);
             return newFont.load();
         })).then((loadedFonts) => {
+            if (document.fonts) {
+                // Clear existing font faces with the same name to force a repaint when the font updates
+                document.fonts.forEach(f => {
+                    if (f.family === fontName || f.family === `'${fontName}'`) {
+                        document.fonts.delete(f);
+                    }
+                });
+            }
             loadedFonts.forEach(loadedFont => document.fonts.add(loadedFont));
             
             // Apply styles only after fonts are successfully added to the browser's font cache
