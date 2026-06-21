@@ -508,24 +508,68 @@ export const useConfigStore = create(
             }),
 
             addCustomGlyph: (charCode, strokesArray, base64Font) => {
-                const { projectId } = useConfigStore.getState();
+                const state = useConfigStore.getState();
+                const { projectId, scriptRules, scriptDataById } = state;
+                const defaultScriptId = scriptRules?.defaultScriptId || 'default';
+
                 if (projectId) {
-                    const bloat = { customGlyphs: { ...useConfigStore.getState().customGlyphs, [charCode]: strokesArray } };
+                    const bloat = { customGlyphs: { ...state.customGlyphs, [charCode]: strokesArray } };
                     if (base64Font) {
                         bloat.customFontBase64 = base64Font;
                         bloat.customFont = base64Font;
                     }
                     saveLargeDataToDB(projectId, bloat);
+
+                    const scriptData = scriptDataById[defaultScriptId] || {};
+                    const newScriptData = {
+                        ...scriptData,
+                        customGlyphs: { ...(scriptData.customGlyphs || {}), [charCode]: strokesArray },
+                    };
+                    if (base64Font) {
+                        newScriptData.customFontBase64 = base64Font;
+                        newScriptData.customFont = base64Font;
+                    }
+                    saveScriptDataToDB(projectId, defaultScriptId, newScriptData);
                 }
                 set((state) => ({
                     customGlyphs: { ...state.customGlyphs, [charCode]: strokesArray },
                     customFontBase64: base64Font,
                     customFont: base64Font,
+                    scriptDataById: {
+                        ...state.scriptDataById,
+                        [defaultScriptId]: {
+                            ...(state.scriptDataById[defaultScriptId] || {}),
+                            customGlyphs: { ...(state.scriptDataById[defaultScriptId]?.customGlyphs || {}), [charCode]: strokesArray },
+                            ...(base64Font ? { customFontBase64: base64Font, customFont: base64Font } : {})
+                        }
+                    },
                     activity: [{ text: `Created custom glyph (${charCode})`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15)
                 }));
             },
 
-            incrementPuaCounter: () => set((state) => ({ puaCounter: state.puaCounter + 1 })),
+            incrementPuaCounter: () => {
+                const state = useConfigStore.getState();
+                const { projectId, scriptRules, scriptDataById } = state;
+                const defaultScriptId = scriptRules?.defaultScriptId || 'default';
+                const nextCounter = state.puaCounter + 1;
+                
+                if (projectId) {
+                    const scriptData = scriptDataById[defaultScriptId] || {};
+                    saveScriptDataToDB(projectId, defaultScriptId, { ...scriptData, puaCounter: nextCounter });
+                    saveLargeDataToDB(projectId, { puaCounter: nextCounter });
+                }
+
+                set((state) => ({ 
+                    puaCounter: nextCounter,
+                    scriptDataById: {
+                        ...state.scriptDataById,
+                        [defaultScriptId]: {
+                            ...(state.scriptDataById[defaultScriptId] || {}),
+                            puaCounter: nextCounter
+                        }
+                    }
+                }));
+            },
 
             addCustomWordClass: (cls) => set((state) => {
                 const list = state.customWordClasses || [];
