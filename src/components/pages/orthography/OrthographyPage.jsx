@@ -733,7 +733,7 @@ const AlphabeticShowcase = ({ scriptId } = {}) => {
                         return (
                             <div key={char} className="char-card glass" style={{ cursor: 'default' }}>
                                 <div className="char-display custom-font-text" style={{ fontSize: customGlyph ? '3rem' : '2rem', marginBottom: customGlyph ? '0' : '0.5rem' }}>
-                                    {customGlyph || transliterate(char)}
+                                    {customGlyph || char}
                                 </div>
                                 {customGlyph && (
                                     <div style={{ fontSize: '0.9rem', color: 'var(--tx2)', marginBottom: '12px' }}>

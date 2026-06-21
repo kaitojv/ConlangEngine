@@ -401,7 +401,7 @@ export default function TypographyStudio() {
                                         
                                         return (
                                             <tr key={char}>
-                                                <td className="ipa-cell">
+                                                <td className="letter-cell">
                                                     <span className="ipa-badge custom-font-text">
                                                         {editingMode === 'Uppercase' ? char.toUpperCase() : char}
                                                     </span>

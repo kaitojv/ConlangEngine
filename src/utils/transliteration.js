@@ -109,47 +109,61 @@ export function transliterateText(word, config, lexicon = []) {
         const lowerWord = rawWord.toLowerCase();
 
         while (i < lowerWord.length) {
-            let match = null;
+            let matchFound = null;
+            
             for (let base of sortedBases) {
                 if (lowerWord.startsWith(base, i)) {
-                    match = base;
-                    break;
-                }
-            }
+                    const match = base;
+                    const originalStr = rawWord.substring(i, i + match.length);
+                    const isCapitalized = originalStr[0] !== originalStr[0].toLowerCase();
+                    const isInitial = i === 0 || !/[a-zA-Z]/.test(rawWord[i - 1]);
+                    const isFinal = i + match.length === rawWord.length || !/[a-zA-Z]/.test(rawWord[i + match.length]);
 
-            if (match) {
-                const originalStr = rawWord.substring(i, i + match.length);
-                const isCapitalized = originalStr[0] !== originalStr[0].toLowerCase();
-                const isInitial = i === 0 || !/[a-zA-Z]/.test(rawWord[i - 1]);
-                const isFinal = i + match.length === rawWord.length || !/[a-zA-Z]/.test(rawWord[i + match.length]);
+                    let mappedChar = null;
 
-                let mappedChar = null;
-
-                // 1. Alphabet Glyphs (highest priority)
-                if (activeDisplayMode !== 'Base') {
-                    const modeSuffix = `_${activeDisplayMode.toLowerCase()}`;
-                    if (alphabetGlyphs[`${match}${modeSuffix}`]) {
-                        mappedChar = alphabetGlyphs[`${match}${modeSuffix}`];
+                    // 1. Alphabet Glyphs (highest priority)
+                    if (activeDisplayMode !== 'Base') {
+                        const modeSuffix = `_${activeDisplayMode.toLowerCase()}`;
+                        if (alphabetGlyphs[`${match}${modeSuffix}`]) {
+                            mappedChar = alphabetGlyphs[`${match}${modeSuffix}`];
+                        }
                     }
-                }
-                if (!mappedChar && isCapitalized && alphabetGlyphs[`${match}_uppercase`]) {
-                    mappedChar = alphabetGlyphs[`${match}_uppercase`];
-                }
-                if (!mappedChar && alphabetGlyphs[match]) {
-                    mappedChar = alphabetGlyphs[match];
-                }
+                    if (!mappedChar && isCapitalized && alphabetGlyphs[`${match}_uppercase`]) {
+                        mappedChar = alphabetGlyphs[`${match}_uppercase`];
+                    }
+                    if (!mappedChar && alphabetGlyphs[match]) {
+                        mappedChar = alphabetGlyphs[match];
+                    }
 
-                // 2. Script mappings
-                if (!mappedChar && scriptMap[match]) {
-                    mappedChar = scriptMap[match];
-                }
+                    // 2. Script mappings
+                    if (!mappedChar && scriptMap[match]) {
+                        mappedChar = scriptMap[match];
+                    }
 
-                // 3. Custom mappings
-                if (!mappedChar && mapToText[match]) {
-                    mappedChar = mapToText[match];
-                }
+                    // 3. Custom mappings
+                    if (!mappedChar && mapToText[match]) {
+                        mappedChar = mapToText[match];
+                    }
 
-                if (mappedChar) {
+                    // If a mapping resolved to a Latin/base character (like 'sh' -> 'ʃ'),
+                    // check if that resulting character has a custom drawn glyph.
+                    if (mappedChar && !mappedChar.match(/[\uE000-\uF8FF]/)) {
+                        if (activeDisplayMode !== 'Base' && alphabetGlyphs[`${mappedChar}_${activeDisplayMode.toLowerCase()}`]) {
+                            mappedChar = alphabetGlyphs[`${mappedChar}_${activeDisplayMode.toLowerCase()}`];
+                        } else if (isCapitalized && alphabetGlyphs[`${mappedChar}_uppercase`]) {
+                            mappedChar = alphabetGlyphs[`${mappedChar}_uppercase`];
+                        } else if (alphabetGlyphs[mappedChar]) {
+                            mappedChar = alphabetGlyphs[mappedChar];
+                        }
+                    }
+
+                    // If we STILL don't have a mappedChar, it means this base was in the phonology list
+                    // but hasn't been drawn or aliased yet. We should ignore this match and let the 
+                    // transliterator fall back to shorter matches (e.g. 'aa' falls back to 'a' + 'a').
+                    if (!mappedChar) {
+                        continue;
+                    }
+
                     if (isCapitalized && !mappedChar.match(/[\uE000-\uF8FF]/)) {
                         if (!alphabetGlyphs[`${match}_uppercase`]) {
                             out += mappedChar.toUpperCase();
@@ -159,11 +173,14 @@ export function transliterateText(word, config, lexicon = []) {
                     } else {
                         out += mappedChar;
                     }
-                } else {
-                    out += isCapitalized ? match.toUpperCase() : match;
+                    
+                    matchFound = match;
+                    break;
                 }
+            }
 
-                i += match.length;
+            if (matchFound) {
+                i += matchFound.length;
             } else {
                 out += rawWord[i];
                 i++;
