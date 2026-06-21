@@ -402,3 +402,29 @@
     outline: none;
     border-color: var(--ac);
 }
+
+.fs-metadata-tools {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+    padding: 12px;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    width: 100%;
+}
+
+.fs-metadata-group {
+    flex: 1;
+    min-width: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.fs-metadata-label {
+    font-size: 0.8rem;
+    color: var(--tx);
+    font-weight: 500;
+}

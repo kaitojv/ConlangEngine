@@ -645,22 +645,22 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                     </div>
                 </div>
 
-                <div className="fs-metadata-tools" style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginBottom: '15px', padding: '10px', background: 'var(--s2)', borderRadius: 'var(--rad-sm)' }}>
-                    <div className="fs-tool-group" style={{ flex: 1, minWidth: '120px' }}>
-                        <label className="fs-tool-label">Scale ({glyphScale.toFixed(2)}x)</label>
-                        <input type="range" min="0.5" max="2.0" step="0.05" value={glyphScale} onChange={(e) => setGlyphScale(parseFloat(e.target.value))} />
+                <div className="fs-metadata-tools">
+                    <div className="fs-metadata-group">
+                        <label className="fs-metadata-label">Scale ({glyphScale.toFixed(2)}x)</label>
+                        <input type="range" className="range range-xs range-primary" min="0.5" max="2.0" step="0.05" value={glyphScale} onChange={(e) => setGlyphScale(parseFloat(e.target.value))} />
                     </div>
-                    <div className="fs-tool-group" style={{ flex: 1, minWidth: '120px' }}>
-                        <label className="fs-tool-label">Left Margin ({leftMargin})</label>
-                        <input type="range" min="-200" max="500" step="10" value={leftMargin} onChange={(e) => setLeftMargin(parseInt(e.target.value))} />
+                    <div className="fs-metadata-group">
+                        <label className="fs-metadata-label">Left Margin ({leftMargin})</label>
+                        <input type="range" className="range range-xs range-primary" min="-200" max="500" step="10" value={leftMargin} onChange={(e) => setLeftMargin(parseInt(e.target.value))} />
                     </div>
-                    <div className="fs-tool-group" style={{ flex: 1, minWidth: '120px' }}>
-                        <label className="fs-tool-label">Right Margin ({rightMargin})</label>
-                        <input type="range" min="-200" max="500" step="10" value={rightMargin} onChange={(e) => setRightMargin(parseInt(e.target.value))} />
+                    <div className="fs-metadata-group">
+                        <label className="fs-metadata-label">Right Margin ({rightMargin})</label>
+                        <input type="range" className="range range-xs range-primary" min="-200" max="500" step="10" value={rightMargin} onChange={(e) => setRightMargin(parseInt(e.target.value))} />
                     </div>
-                    <div className="fs-tool-group" style={{ flex: 1, minWidth: '120px' }}>
-                        <label className="fs-tool-label">Y-Offset ({yOffset})</label>
-                        <input type="range" min="-500" max="500" step="10" value={yOffset} onChange={(e) => setYOffset(parseInt(e.target.value))} />
+                    <div className="fs-metadata-group">
+                        <label className="fs-metadata-label">Y-Offset ({yOffset})</label>
+                        <input type="range" className="range range-xs range-primary" min="-500" max="500" step="10" value={yOffset} onChange={(e) => setYOffset(parseInt(e.target.value))} />
                     </div>
                 </div>
             </div>
