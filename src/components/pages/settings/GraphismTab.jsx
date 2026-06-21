@@ -178,8 +178,9 @@ export default function TypographyStudio() {
         const tId = toast.loading("Recompiling custom font...");
         try {
             const currentSettings = useConfigStore.getState().typographySettings || {};
+            const currentCustomGlyphs = useConfigStore.getState().customGlyphs || {};
             const base64Font = await compileFont(
-                alphabetGlyphs, 
+                currentCustomGlyphs, 
                 currentSettings.traceWidth ?? 30, 
                 currentSettings.customFontScale ?? 1.0
             );
