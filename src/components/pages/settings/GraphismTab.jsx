@@ -185,6 +185,11 @@ export default function TypographyStudio() {
                 >
                     <FontStudioModal
                         targetLabel={`Letter: ${drawingChar}`}
+                        existingCharCode={(() => {
+                            const key = editingMode === 'Base' ? drawingChar : `${drawingChar}_${editingMode.toLowerCase()}`;
+                            const existingUnicode = alphabetGlyphs[key];
+                            return existingUnicode ? existingUnicode.codePointAt(0) : null;
+                        })()}
                         onSave={(newCharUnicode) => updateGlyph(drawingChar, newCharUnicode)}
                         onCancel={() => setDrawingChar(null)}
                     />

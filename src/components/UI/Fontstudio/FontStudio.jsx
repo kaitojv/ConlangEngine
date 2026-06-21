@@ -8,7 +8,7 @@ import { exportStrokesAsSVG } from '../../../utils/svgExporter.jsx';
 import { parseSVGToStrokes } from '../../../utils/svgImporter.jsx';
 import './fontStudio.css';
 
-export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
+export default function FontStudioModal({ targetLabel, onSave, onCancel, existingCharCode }) {
     const canvasRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [strokes, setStrokes] = useState([]);
@@ -523,8 +523,15 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
     const handleSave = async () => {
         if (strokes.length === 0) return alert("Draw something before saving!");
 
-        const charCode = puaCounter;
-        incrementPuaCounter();
+        // If we're redrawing an existing character, reuse its charCode.
+        // Only allocate a new PUA slot for genuinely new characters.
+        let charCode;
+        if (existingCharCode != null) {
+            charCode = typeof existingCharCode === 'number' ? existingCharCode : parseInt(existingCharCode);
+        } else {
+            charCode = puaCounter;
+            incrementPuaCounter();
+        }
 
         // 1. Temporarily add the new strokes to the dictionary for the compiler
         // We include a metadata stroke if calligraphy or brush pen is on

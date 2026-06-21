@@ -437,6 +437,16 @@ export const useConfigStore = create(
                         puaCounter: pickVal(existingDefault.puaCounter, bloat.puaCounter, state.puaCounter) || 57344,
                     };
 
+                    // Safety net: ensure puaCounter is always higher than any existing charCode
+                    // to prevent stale counter values from causing glyph overwrites.
+                    const existingCodes = Object.keys(defaultScriptData.customGlyphs || {}).map(Number).filter(n => !isNaN(n));
+                    if (existingCodes.length > 0) {
+                        const maxExisting = Math.max(...existingCodes);
+                        if (defaultScriptData.puaCounter <= maxExisting) {
+                            defaultScriptData.puaCounter = maxExisting + 1;
+                        }
+                    }
+
                     // Persist the rescued/merged default data so it survives the next reload
                     // (idempotent: deep-merge keeps any sibling fields already stored).
                     await saveLargeDataToDB(projectId, { [defaultScriptId]: defaultScriptData });
