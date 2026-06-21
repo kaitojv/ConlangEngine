@@ -9,7 +9,9 @@ import Button from '../../UI/Buttons/Buttons.jsx';
 import SyllabaryManager from '../../UI/SyllabaryManager/SyllabaryManager.jsx';
 import BlockManager from '../../UI/BlockManager/BlockManager.jsx';
 import KeyboardManager from '../../UI/KeyboardManager/KeyboardManager.jsx';
-import { Keyboard } from 'lucide-react';
+import { Keyboard, RefreshCw } from 'lucide-react';
+import { compileFont } from '../../../utils/fontCompiler.jsx';
+import toast from 'react-hot-toast';
 import './graphismTab.css';
 
 const TYPE_LABELS = {
@@ -170,6 +172,33 @@ export default function TypographyStudio() {
         const newGlyphs = { ...alphabetGlyphs };
         delete newGlyphs[key];
         writeAlphabetGlyphs(newGlyphs);
+    };
+
+    const handleRecompileFont = async () => {
+        const tId = toast.loading("Recompiling custom font...");
+        try {
+            const currentSettings = useConfigStore.getState().typographySettings || {};
+            const base64Font = await compileFont(
+                alphabetGlyphs, 
+                currentSettings.traceWidth ?? 30, 
+                currentSettings.customFontScale ?? 1.0
+            );
+            
+            updateScriptData(selectedScriptId, {
+                customFontBase64: base64Font
+            });
+            
+            if (isDefaultSelected) {
+                updateConfig({
+                    customFontBase64: base64Font,
+                    customFont: base64Font
+                });
+            }
+            toast.success("Font recompiled successfully!", { id: tId });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to recompile font.", { id: tId });
+        }
     };
 
     const customModes = (typographySettings.customTypographyModes || []).filter(m => m.toLowerCase() !== 'uppercase' && m.toLowerCase() !== 'base');
@@ -383,6 +412,12 @@ export default function TypographyStudio() {
                                     {typographySettings.traceWidth ?? 30}px
                                 </span>
                             </div>
+                        </div>
+
+                        <div style={{ marginTop: '2rem' }}>
+                            <Button variant="imp" onClick={handleRecompileFont} style={{ width: '100%' }}>
+                                <RefreshCw size={16} /> Apply Settings & Recompile Font
+                            </Button>
                         </div>
                     </div>
                 </div>
