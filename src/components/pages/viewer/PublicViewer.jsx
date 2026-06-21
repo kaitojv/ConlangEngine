@@ -71,7 +71,10 @@ export default function PublicViewer() {
     // Auto-compile the block font on the fly if it was stripped from the cloud sync payload
     useEffect(() => {
         if (!projectData || !projectData.config) return;
-        const conf = projectData.config;
+        const rawConf = projectData.config;
+        const defaultScriptId = rawConf.scriptRules?.defaultScriptId || 'default';
+        const scriptData = rawConf.scriptDataById?.[defaultScriptId] || {};
+        const conf = { ...rawConf, ...scriptData };
         
         if (conf.phonologyTypes === 'featural_block' && !conf.customFontBase64 && conf.featuralComponents) {
             const compileFont = async () => {
@@ -97,7 +100,11 @@ export default function PublicViewer() {
     }, [projectData]);
 
     // Extract data from the fetched project
-    const config = projectData?.config || {};
+    const rawConfig = projectData?.config || {};
+    const defaultScriptId = rawConfig.scriptRules?.defaultScriptId || 'default';
+    const scriptData = rawConfig.scriptDataById?.[defaultScriptId] || {};
+    const config = { ...rawConfig, ...scriptData };
+    
     const dictionary = projectData?.dictionary || [];
     const grammarRules = config.grammarRules || [];
     const wikiPages = config.wikiPages || {};
