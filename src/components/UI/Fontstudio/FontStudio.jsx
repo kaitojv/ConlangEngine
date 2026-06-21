@@ -584,7 +584,8 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         const updatedGlyphDb = { ...customGlyphs, [charCode]: strokesToSave };
         
         // 2. Compile the font
-        const base64Font = await compileFont(updatedGlyphDb);
+        const typographySettings = useConfigStore.getState().typographySettings || {};
+        const base64Font = await compileFont(updatedGlyphDb, typographySettings.traceWidth ?? 30, typographySettings.customFontScale ?? 1.0);
         
         // 3. Save everything to Zustand
         if (base64Font) {

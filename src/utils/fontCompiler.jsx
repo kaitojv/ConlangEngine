@@ -1,7 +1,7 @@
 // src/utils/fontCompiler.js
 import opentype from 'opentype.js';
 
-export async function compileFont(customGlyphs, traceWidth = 30) {
+export async function compileFont(customGlyphs, traceWidth = 30, fontScale = 1.0) {
     try {
         const notdefGlyph = new opentype.Glyph({
             name: '.notdef', unicode: 0, advanceWidth: 600, path: new opentype.Path()
@@ -171,7 +171,7 @@ export async function compileFont(customGlyphs, traceWidth = 30) {
         }
 
         const font = new opentype.Font({
-            familyName: 'ConlangFont', styleName: 'Regular', unitsPerEm: 1000, ascender: 800, descender: -200, glyphs: glyphs
+            familyName: 'ConlangFont', styleName: 'Regular', unitsPerEm: Math.max(10, Math.round(1000 / fontScale)), ascender: 800, descender: -200, glyphs: glyphs
         });
 
         const arrayBuffer = font.toArrayBuffer();

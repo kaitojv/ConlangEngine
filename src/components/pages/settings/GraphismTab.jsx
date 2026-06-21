@@ -344,6 +344,27 @@ export default function TypographyStudio() {
                         </div>
 
                         <div style={{ marginTop: '1.5rem' }}>
+                            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>Custom Font Scale</h3>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '1rem' }}>
+                                Scale up or down the size of the compiled font across the entire application. Requires a re-compile after changing.
+                            </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <input 
+                                    type="range" 
+                                    min="0.5" 
+                                    max="3.0" 
+                                    step="0.1" 
+                                    value={typographySettings.customFontScale || 1.0}
+                                    onChange={(e) => updateConfig({ typographySettings: { ...typographySettings, customFontScale: parseFloat(e.target.value) } })}
+                                    style={{ flex: 1, accentColor: 'var(--acc)' }}
+                                />
+                                <span style={{ color: 'var(--tx)', fontWeight: 'bold', minWidth: '40px' }}>
+                                    {(typographySettings.customFontScale || 1.0).toFixed(1)}x
+                                </span>
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: '1.5rem' }}>
                             <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>Trace Width</h3>
                             <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '1rem' }}>
                                 Adjust the stroke thickness of compiled block characters. Requires a re-compile after changing.
