@@ -58,9 +58,9 @@ export function useFontInjector(){
                 #f-ideogram, 
                 #edit-ideogram,
                 #alphabet-render-area div {
-                    font-family: '${fontName}', sans-serif !important;
-                    font-weight: normal !important;
-                    font-style: normal !important;
+                    font-family: '${fontName}', sans-serif;
+                    font-weight: normal;
+                    font-style: normal;
                     letter-spacing: ${typographySettings?.letterSpacing ? typographySettings.letterSpacing + 'em' : 'normal'} !important;
                 }
 
