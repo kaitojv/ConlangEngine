@@ -80,10 +80,25 @@ export function transliterateText(word, config, lexicon = []) {
             scriptMap = { ...(SCRIPT_MAPS[alphabeticScript] || {}) };
         }
 
+        // Parse all defined phonemes (base forms) so multi-character entries
+        // like 'aa', 'ee', 'sh', 'th' etc. participate in longest-match-first.
+        const parsePhonemeBase = (str) => (str || '').split(',').map(s => {
+            let clean = s.trim();
+            if (clean.includes('=')) clean = clean.split('=')[0].trim();
+            return clean.toLowerCase();
+        }).filter(Boolean);
+
+        const allPhonemes = [
+            ...parsePhonemeBase(consonants),
+            ...parsePhonemeBase(vowels),
+            ...parsePhonemeBase(config.otherPhonemes),
+        ];
+
         const allBases = new Set([
             ...Object.keys(mapToText),
             ...Object.keys(scriptMap),
-            ...Object.keys(alphabetGlyphs).map(k => k.split('_')[0])
+            ...Object.keys(alphabetGlyphs).map(k => k.split('_')[0]),
+            ...allPhonemes,
         ]);
 
         const sortedBases = Array.from(allBases).sort((a, b) => b.length - a.length);

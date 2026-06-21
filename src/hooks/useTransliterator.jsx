@@ -17,6 +17,7 @@ export function useTransliterator(overrideConfig = null) {
         activeConfig.syllabaryMap,
         activeConfig.consonants,
         activeConfig.vowels,
+        activeConfig.otherPhonemes,
         activeConfig.syllabificationAlgorithm,
     ]);
 
@@ -28,6 +29,7 @@ export function useTransliterator(overrideConfig = null) {
         activeConfig.alphabetGlyphs,
         activeConfig.consonants,
         activeConfig.vowels,
+        activeConfig.otherPhonemes,
     ]);
 
     return { transliterate, normalizeToBase };
