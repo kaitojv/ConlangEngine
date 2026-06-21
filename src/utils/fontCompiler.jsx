@@ -35,6 +35,29 @@ export async function compileFont(customGlyphs, traceWidth = 30) {
             const isSpecialBrush = hasCalligraphy || hasBrushPen;
             const actualStrokes = isSpecialBrush ? strokeArray.slice(1) : strokeArray;
 
+            let minX = Infinity;
+            let maxX = -Infinity;
+            let hasPoints = false;
+
+            actualStrokes.forEach(strokeData => {
+                const points = Array.isArray(strokeData) ? strokeData : (strokeData.points || []);
+                points.forEach(pt => {
+                    if (pt.x < minX) minX = pt.x;
+                    if (pt.x > maxX) maxX = pt.x;
+                    hasPoints = true;
+                });
+            });
+
+            if (!hasPoints) {
+                minX = 0;
+                maxX = 0;
+            }
+
+            const sideBearing = 100;
+            const glyphAdvanceWidth = hasPoints 
+                ? sideBearing + ((maxX - minX) * 2.85) + sideBearing + r_base
+                : 500;
+
             actualStrokes.forEach(strokeData => {
                 const points = Array.isArray(strokeData) ? strokeData : (strokeData.points || []);
                 const isFilled = strokeData.isFilled || false;
@@ -57,16 +80,16 @@ export async function compileFont(customGlyphs, traceWidth = 30) {
 
                 if (isFilled && simplified.length >= 3) {
                     // Draw a solid filled path
-                    path.moveTo(100 + simplified[0].x * 2.85, 800 - simplified[0].y * 2.85);
+                    path.moveTo(sideBearing + (simplified[0].x - minX) * 2.85, 800 - simplified[0].y * 2.85);
                     for (let i = 1; i < simplified.length; i++) {
-                        path.lineTo(100 + simplified[i].x * 2.85, 800 - simplified[i].y * 2.85);
+                        path.lineTo(sideBearing + (simplified[i].x - minX) * 2.85, 800 - simplified[i].y * 2.85);
                     }
                     path.close();
                 } else {
                     // Standard thickened stroke logic
                     for (let i = 0; i < simplified.length; i++) {
                         let pt1 = simplified[i];
-                        let cx1 = 100 + (pt1.x * 2.85);
+                        let cx1 = sideBearing + ((pt1.x - minX) * 2.85);
                         let cy1 = 800 - (pt1.y * 2.85);
 
                         let r = r_base;
@@ -98,15 +121,15 @@ export async function compileFont(customGlyphs, traceWidth = 30) {
 
                         if (i < simplified.length - 1) {
                             let pt2 = simplified[i+1];
-                            let cx2 = 100 + (pt2.x * 2.85);
+                            let cx2 = sideBearing + ((pt2.x - minX) * 2.85);
                             let cy2 = 800 - (pt2.y * 2.85);
 
                             let next_r = r_base;
                             if (hasCalligraphy) {
-                                const next_taper = Math.sin(((i + 1) / (simplified.length - 1 || 1)) * Math.PI);
+                                const next_taper = Math.sin(((i+1) / (simplified.length - 1 || 1)) * Math.PI);
                                 next_r = r_base * (0.3 + 0.7 * next_taper);
                             } else if (hasBrushPen) {
-                                const next_progress = (i + 1) / (simplified.length - 1 || 1);
+                                const next_progress = (i+1) / (simplified.length - 1 || 1);
                                 const next_widthMult = next_progress < 0.8 ? 1.0 : (1.0 - (next_progress - 0.8) * 5); 
                                 const next_startMult = next_progress < 0.1 ? (0.5 + next_progress * 5) : 1.0; 
                                 next_r = r_base * Math.max(0.1, next_widthMult * next_startMult);
@@ -134,7 +157,7 @@ export async function compileFont(customGlyphs, traceWidth = 30) {
             });
 
             glyphs.push(new opentype.Glyph({
-                name: `syl_${unicode}`, unicode: unicode, advanceWidth: 1150, path: path
+                name: `syl_${unicode}`, unicode: unicode, advanceWidth: Math.round(glyphAdvanceWidth), path: path
             }));
         }
 
