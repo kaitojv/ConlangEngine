@@ -306,16 +306,6 @@ export default function ExplorePage() {
                         let displayName = name;
                         let displayDesc = desc;
 
-                        // Merge scriptData into a temporary config for transliteration
-                        const translitConfig = { ...config, ...scriptData };
-
-                        // Hanul (featural_block) uses font ligatures so it doesn't need text replacement
-                        const needsTransliteration = ['logographic', 'syllabic', 'alphabetic'].includes(config?.phonologyTypes);
-                        if (needsTransliteration) {
-                            displayName = name.split(/(\s+)/).map(w => w.trim() ? transliterateText(w, translitConfig, dictionary || []) : w).join('');
-                            displayDesc = desc.split(/(\s+)/).map(w => w.trim() ? transliterateText(w, translitConfig, dictionary || []) : w).join('');
-                        }
-
                         return (
                             <div 
                                 key={lang.project_id} 
@@ -336,13 +326,13 @@ export default function ExplorePage() {
                                         {getConlangIcon(icon, 32)}
                                     </div>
                                     <div className="explore-titles">
-                                        <h3 className="explore-name custom-font-text notranslate" title={name} style={customFont ? { fontFamily: `'${fontName}', 'Inter', sans-serif` } : {}}>{displayName}</h3>
+                                        <h3 className="explore-name notranslate" title={name}>{displayName}</h3>
                                         <p className="explore-author">
                                             <User size={12} /> {author}
                                         </p>
                                     </div>
                                 </div>
-                                <p className="explore-desc custom-font-text notranslate" style={customFont ? { fontFamily: `'${fontName}', 'Inter', sans-serif` } : {}}>{displayDesc}</p>
+                                <p className="explore-desc notranslate">{displayDesc}</p>
                                 <div className="explore-stats">
                                     <div className="explore-stat">
                                         <BookA size={14} />
