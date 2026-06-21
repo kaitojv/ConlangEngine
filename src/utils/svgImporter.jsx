@@ -4,6 +4,7 @@ export const parseSVGToStrokes = (svgString) => {
     const paths = doc.querySelectorAll('path');
     
     const allStrokes = [];
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     
     paths.forEach(path => {
         const d = path.getAttribute('d');
@@ -22,7 +23,13 @@ export const parseSVGToStrokes = (svgString) => {
             
             if (type === 'M' || type === 'L') {
                 if (args.length >= 2) {
-                    currentStroke.push({ x: args[0], y: args[1] });
+                    const x = args[0];
+                    const y = args[1];
+                    currentStroke.push({ x, y });
+                    minX = Math.min(minX, x);
+                    minY = Math.min(minY, y);
+                    maxX = Math.max(maxX, x);
+                    maxY = Math.max(maxY, y);
                 }
             }
         });
@@ -33,6 +40,25 @@ export const parseSVGToStrokes = (svgString) => {
             allStrokes.push(currentStroke);
         }
     });
+    
+    if (allStrokes.length > 0 && minX !== Infinity) {
+        const width = maxX - minX;
+        const height = maxY - minY;
+        
+        // Target canvas size is 300x300. We want a 20px padding, so max size 260.
+        const scale = (width === 0 && height === 0) ? 1 : Math.min(260 / (width || 1), 260 / (height || 1));
+        
+        // Center the scaled bounding box inside the 300x300 canvas
+        const offsetX = (300 - width * scale) / 2 - minX * scale;
+        const offsetY = (300 - height * scale) / 2 - minY * scale;
+        
+        allStrokes.forEach(stroke => {
+            stroke.forEach(pt => {
+                pt.x = pt.x * scale + offsetX;
+                pt.y = pt.y * scale + offsetY;
+            });
+        });
+    }
     
     return allStrokes;
 };

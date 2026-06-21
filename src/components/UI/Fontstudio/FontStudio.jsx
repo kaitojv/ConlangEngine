@@ -76,12 +76,26 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel }) {
 
     const handleSetBackground = () => {
         const opt = drawnGlyphsOptions.find(o => o.id == selectedReferenceId);
-        if (opt) setBackgroundStrokes(opt.strokes);
+        if (opt) {
+            const validStrokes = opt.strokes.filter(s => !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)));
+            setBackgroundStrokes(validStrokes);
+        }
     };
 
     const handleLoadToCanvas = () => {
         const opt = drawnGlyphsOptions.find(o => o.id == selectedReferenceId);
-        if (opt) setStrokes(prev => [...prev, ...opt.strokes]);
+        if (opt) {
+            // Filter out meta strokes (calligraphy/brush pen flags)
+            const validStrokes = opt.strokes.filter(s => !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)));
+            // Deep clone to prevent state mutation and bugging other characters
+            const clonedStrokes = validStrokes.map(stroke => {
+                const newStroke = stroke.map(pt => ({ ...pt }));
+                newStroke.lineCap = stroke.lineCap;
+                newStroke.isFilled = stroke.isFilled;
+                return newStroke;
+            });
+            setStrokes(prev => [...prev, ...clonedStrokes]);
+        }
     };
 
     // Redraw the canvas whenever strokes change (for Undo support)
