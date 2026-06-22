@@ -316,6 +316,7 @@ export default function ExplorePage() {
                             translitConfig.alphabetGlyphs = {};
                             translitConfig.syllabaryMap = {};
                         }
+                        
 
                         // Hanul (featural_block) uses font ligatures so it doesn't need text replacement
                         const needsTransliteration = ['logographic', 'syllabic', 'alphabetic'].includes(config?.phonologyTypes);
