@@ -5,6 +5,7 @@ import { normalizeScriptType, normalizeScriptName, repairScriptSystems, normaliz
 export const INITIAL_CONFIG = {
     projectId: null,
     parentId: null,
+    isDialect: false,
     conlangName: 'My New Conlang',
     authorName: 'Author Name',
     description: 'A brief description of your conlang.',
@@ -238,7 +239,7 @@ export const INITIAL_CONFIG = {
 const DB_NAME = 'ConlangEngineDB';
 const STORE_NAME = 'bloat';
 
-const saveLargeDataToDB = (projectId, data) => {
+export const saveLargeDataToDB = (projectId, data) => {
     return new Promise((resolve) => {
         if (!projectId) return resolve(false);
         const req = indexedDB.open(DB_NAME, 3);
@@ -280,7 +281,7 @@ const saveLargeDataToDB = (projectId, data) => {
     });
 };
 
-const loadLargeDataFromDB = (projectId) => {
+export const loadLargeDataFromDB = (projectId) => {
     return new Promise((resolve) => {
         if (!projectId) return resolve(null);
         const req = indexedDB.open(DB_NAME, 3);

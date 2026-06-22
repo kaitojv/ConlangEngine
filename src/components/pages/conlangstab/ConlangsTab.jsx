@@ -60,6 +60,12 @@ export default function ConlangsTab() {
     const [compareModalOpen, setCompareModalOpen] = useState(false);
     const [compareProject, setCompareProject] = useState(null);
 
+    // Dialect Modal State
+    const [dialectModalOpen, setDialectModalOpen] = useState(false);
+    const [dialectParent, setDialectParent] = useState(null);
+    const [dialectName, setDialectName] = useState('');
+    const [importDialectWords, setImportDialectWords] = useState(true);
+
     // Check if the user has an active Pro subscription
     useEffect(() => {
         const checkLiveStatus = async (currentSession) => {
@@ -261,7 +267,12 @@ export default function ConlangsTab() {
                     console.error("Invalid Regex rule:", pattern);
                 }
             });
-            return { ...entry, word: evolvedWord, id: `word_${Math.random().toString(36).substr(2, 9)}` };
+            return { 
+                ...entry, 
+                word: evolvedWord, 
+                id: `word_${Math.random().toString(36).substr(2, 9)}`,
+                etymology: `project:${deriveParent.id}:word:${entry.id}`
+            };
         });
 
         // Update config
@@ -272,6 +283,41 @@ export default function ConlangsTab() {
 
         saveProjectToArchive(newConfig, newDictionary);
         setDeriveModalOpen(false);
+    };
+
+    const handleOpenDialectModal = (e, project) => {
+        e.stopPropagation();
+        setDialectParent(project);
+        setDialectName(`${project.project_data?.config?.conlangName || 'Untitled'} Dialect`);
+        setImportDialectWords(true);
+        setDialectModalOpen(true);
+    };
+
+    const handleCreateDialect = () => {
+        if (!dialectParent) return;
+
+        const newId = `local_${Date.now()}`;
+        const parentData = dialectParent.project_data || {};
+        const newConfig = JSON.parse(JSON.stringify(parentData.config || { ...INITIAL_CONFIG }));
+        let newDictionary = importDialectWords ? JSON.parse(JSON.stringify(parentData.dictionary || [])) : [];
+
+        if (importDialectWords) {
+            newDictionary = newDictionary.map(entry => ({
+                ...entry,
+                id: `word_${Math.random().toString(36).substr(2, 9)}`,
+                etymology: `project:${dialectParent.id}:word:${entry.id}`
+            }));
+        }
+
+        // Make it a dialect
+        newConfig.projectId = newId;
+        newConfig.parentId = dialectParent.id;
+        newConfig.isDialect = true;
+        newConfig.conlangName = dialectName;
+        newConfig.isPublic = false;
+
+        saveProjectToArchive(newConfig, newDictionary);
+        setDialectModalOpen(false);
     };
 
     const handleOpenParentModal = (e, project) => {
@@ -508,6 +554,9 @@ export default function ConlangsTab() {
                             <button className="project-action-btn" onClick={(e) => handleOpenParentModal(e, project)} title="Set Mother Language">
                                 <ArrowUpFromLine size={16} />
                             </button>
+                            <button className="project-action-btn" onClick={(e) => handleOpenDialectModal(e, project)} title="Create Dialect">
+                                <Network size={16} />
+                            </button>
                             <button className="project-action-btn" onClick={(e) => handleOpenDeriveModal(e, project)} title="Derive Daughter Language">
                                 <GitMerge size={16} />
                             </button>
@@ -526,11 +575,18 @@ export default function ConlangsTab() {
                         <div className="project-meta" style={{ fontSize: '0.8rem' }}>
                             {project.project_data?.dictionary?.length || 0} words
                         </div>
-                        {isCurrent && (
-                            <div className="active-badge" style={{ fontSize: '0.7rem', padding: '2px 6px' }}>
-                                <CheckCircle2 size={12} /> Active
-                            </div>
-                        )}
+                        <div style={{ display: 'flex', gap: '5px', marginTop: '5px', flexWrap: 'wrap' }}>
+                            {isCurrent && (
+                                <div className="active-badge" style={{ fontSize: '0.7rem', padding: '2px 6px' }}>
+                                    <CheckCircle2 size={12} /> Active
+                                </div>
+                            )}
+                            {project.project_data?.config?.isDialect && (
+                                <div className="dialect-badge" style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'var(--acc)', color: 'white', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <Network size={12} /> Dialect
+                                </div>
+                            )}
+                        </div>
                     </div>
                     
                     {children.length > 0 && (
@@ -597,6 +653,9 @@ export default function ConlangsTab() {
                                         <button className="project-action-btn" onClick={(e) => handleOpenParentModal(e, project)} title="Set Mother Language">
                                             <ArrowUpFromLine size={16} />
                                         </button>
+                                        <button className="project-action-btn" onClick={(e) => handleOpenDialectModal(e, project)} title="Create Dialect">
+                                            <Network size={16} />
+                                        </button>
                                         <button className="project-action-btn" onClick={(e) => handleOpenDeriveModal(e, project)} title="Derive Daughter Language">
                                             <GitMerge size={16} />
                                         </button>
@@ -621,11 +680,18 @@ export default function ConlangsTab() {
                                         Last sync: <span className="date-highlight">{new Date(project.updated_at).toLocaleDateString()}</span>
                                     </div>
                                     
-                                    {isCurrent && (
-                                        <div className="active-badge">
-                                            <CheckCircle2 size={14} /> Active
-                                        </div>
-                                    )}
+                                    <div style={{ display: 'flex', gap: '5px', marginTop: '10px', flexWrap: 'wrap' }}>
+                                        {isCurrent && (
+                                            <div className="active-badge">
+                                                <CheckCircle2 size={14} /> Active
+                                            </div>
+                                        )}
+                                        {project.project_data?.config?.isDialect && (
+                                            <div className="dialect-badge" style={{ fontSize: '0.8rem', padding: '4px 8px', background: 'var(--acc)', color: 'white', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px', width: 'fit-content' }}>
+                                                <Network size={14} /> Dialect
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             );
                         })}
@@ -675,6 +741,31 @@ export default function ConlangsTab() {
                         <Button variant="default" onClick={() => setDeriveModalOpen(false)}>Cancel</Button>
                         <Button variant="imp" onClick={handleDeriveLanguage}>
                             <div className="btn-content-flex"><GitMerge size={16} /> Breed Daughter Language</div>
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal isOpen={dialectModalOpen} onClose={() => setDialectModalOpen(false)} title="Create Dialect">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <p style={{ color: 'var(--tx2)', lineHeight: '1.5' }}>
+                        This creates a dialect workspace based on <strong>{dialectParent?.project_data?.config?.conlangName || 'this language'}</strong>. Dialects appear directly under the parent language on the tree.
+                    </p>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ color: 'var(--tx)', fontWeight: 'bold' }}>Dialect Name</label>
+                        <Input value={dialectName} onChange={(e) => setDialectName(e.target.value)} placeholder="e.g. Northern Dialect" />
+                    </div>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--tx)' }}>
+                        <input type="checkbox" checked={importDialectWords} onChange={(e) => setImportDialectWords(e.target.checked)} />
+                        Import all words from the mother language
+                    </label>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                        <Button variant="default" onClick={() => setDialectModalOpen(false)}>Cancel</Button>
+                        <Button variant="imp" onClick={handleCreateDialect}>
+                            <div className="btn-content-flex"><Network size={16} /> Create Dialect</div>
                         </Button>
                     </div>
                 </div>

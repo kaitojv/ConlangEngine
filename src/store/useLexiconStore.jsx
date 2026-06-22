@@ -35,6 +35,8 @@ export const useLexiconStore = create(
                         scriptOverride: newWordData.scriptOverride || null,
                         scriptForms: (newWordData.scriptForms && typeof newWordData.scriptForms === 'object') ? newWordData.scriptForms : {},
                         scriptRole: typeof newWordData.scriptRole === 'string' ? newWordData.scriptRole : '',
+                        etymology: newWordData.etymology || null,
+                        isProtoRoot: newWordData.isProtoRoot || false,
                     };
                     return { lexicon: [...(state.lexicon || []), newEntry] };
                 }),

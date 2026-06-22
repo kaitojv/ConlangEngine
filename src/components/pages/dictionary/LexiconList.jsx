@@ -10,6 +10,7 @@ import Card from '../../UI/Card/Card.jsx';
 import Modal from '../../UI/Modal/Modal.jsx'
 import LexiconEditModal from './LexiconEditModal.jsx';
 import MatrixModal from './MatrixModal.jsx';
+import ProtoRootModal from './ProtoRootModal.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download, X, Share2, Music, Zap } from 'lucide-react';
 import { exportTextAsSVG } from '../../../utils/svgExporter.jsx';
@@ -67,12 +68,14 @@ export default function LexiconList() {
         letter: 'all',
         sort: 'newest',
         showTones: false,
-        showRelated: true
+        showRelated: true,
+        showProtoRoots: false
     });
 
     // Track which words are currently selected for our popup modals
     const [selectedWordForMatrix, setSelectedWordForMatrix] = useState(null);
     const [selectedWordForEdit, setSelectedWordForEdit] = useState(null); 
+    const [selectedWordForProto, setSelectedWordForProto] = useState(null);
     const [newSenseBase, setNewSenseBase] = useState(null);
     
     // Manage how many lexicon items are rendered at once for performance
@@ -199,6 +202,10 @@ export default function LexiconList() {
                 }).filter(e => e.searchScore > 0);
                 }
             }
+        }
+
+        if (!filters.showProtoRoots) {
+            result = result.filter(e => !e.isProtoRoot);
         }
 
         if (filters.tag !== 'all') {
@@ -399,6 +406,15 @@ export default function LexiconList() {
                         />
                         Related Words
                     </label>
+                    <label className="bound-toggle">
+                        <input 
+                            type="checkbox" 
+                            className="bound-checkbox"
+                            checked={filters.showProtoRoots}
+                            onChange={(e) => updateFilter('showProtoRoots', e.target.checked)}
+                        />
+                        Proto-Roots
+                    </label>
                 </div>
 
                 {/* Active Filters Bar */}
@@ -561,9 +577,25 @@ export default function LexiconList() {
                                             <Zap size={12} /> {displayStress} Stress{isAutoComputed && !baseEntry.stress ? ' (auto)' : ''}
                                         </span>
                                     )}
+
+                                    {(() => {
+                                        const displayEtymology = senses.find(s => s.etymology)?.etymology;
+                                        if (!displayEtymology) return null;
+                                        return (
+                                            <span className="notranslate entry-etymology-top" style={{fontSize: '0.75rem', color: 'var(--tx2)', marginLeft: '10px', display: 'inline-flex', alignItems: 'center', gap: '4px', borderLeft: '1px solid var(--bd)', paddingLeft: '10px'}}>
+                                                origin proto-root: 
+                                                <span style={{ color: 'var(--acc)', cursor: 'pointer' }} title={displayEtymology.startsWith('project:') ? 'from mother language' : 'click to edit'}>
+                                                    {displayEtymology.startsWith('project:') ? 'mother language root' : (rawLexicon.find(w => w.id === displayEtymology)?.word || 'Unknown')}
+                                                </span>
+                                            </span>
+                                        );
+                                    })()}
                                 </div>
                                 
                                 <div className="entry-actions-top">
+                                    <Button variant="default" className="btn-icon-only" onClick={() => setSelectedWordForProto(baseEntry)} title="Convert to Proto-Root">
+                                        <Hash size={16} />
+                                    </Button>
                                     <Button variant="listen" onClick={() => handleListen(baseEntry)} title="Listen" className="btn-icon-only">
                                         <Volume2 size={16} />
                                     </Button>
@@ -599,6 +631,12 @@ export default function LexiconList() {
                                                 </div>
                                                 <div className="entry-translation">{entry.translation}</div>
                                             </div>
+
+                                            {entry.isProtoRoot && (
+                                                <div style={{ marginTop: '8px', fontSize: '0.8rem', color: 'var(--tx3)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <Hash size={12} /> This is a Proto-Root (Hidden from main Lexicon)
+                                                </div>
+                                            )}
 
                                             {entry.definition && (
                                                 <div className="entry-definition">
@@ -675,13 +713,18 @@ export default function LexiconList() {
             </div>
 
             {visibleCount < groupedLexicon.length && (
-                <div className="load-more-wrap">
-                    <Button variant="edit" onClick={() => setVisibleCount(prev => prev + 50)}>
-                        Load More ({groupedLexicon.length - visibleCount} remaining)
+                <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+                    <Button variant="sec" onClick={() => setVisibleCount(prev => prev + 50)}>
+                        Load More Words
                     </Button>
                 </div>
             )}
 
+            <ProtoRootModal 
+                isOpen={!!selectedWordForProto} 
+                onClose={() => setSelectedWordForProto(null)} 
+                oldWord={selectedWordForProto} 
+            />
 
             <Modal isOpen={!!selectedWordForMatrix} onClose={() => setSelectedWordForMatrix(null)} title="Word Inflection Matrix">
                 <MatrixModal key={selectedWordForMatrix?.id} wordObj={selectedWordForMatrix} />
