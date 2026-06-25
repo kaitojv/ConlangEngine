@@ -16,7 +16,7 @@
 
 .analytics-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 15px;
     margin-bottom: 25px;
 }
@@ -288,11 +288,11 @@
 
 /* Glassmorphic Dashboard Styles */
 .glass-dashboard {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+    background: color-mix(in srgb, var(--s2) 40%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid color-mix(in srgb, var(--bd) 60%, transparent);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
     border-radius: var(--rad);
     padding: 25px;
     margin-bottom: 25px;
@@ -309,9 +309,9 @@
     height: 100%;
     background: linear-gradient(
         to right,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.05) 50%,
-        rgba(255, 255, 255, 0) 100%
+        color-mix(in srgb, var(--bg) 0%, transparent) 0%,
+        color-mix(in srgb, var(--acc) 5%, transparent) 50%,
+        color-mix(in srgb, var(--bg) 0%, transparent) 100%
     );
     transform: rotate(30deg);
     pointer-events: none;
@@ -324,17 +324,18 @@
 }
 
 .glass-card {
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: color-mix(in srgb, var(--s1) 70%, transparent);
+    border: 1px solid color-mix(in srgb, var(--bd) 50%, transparent);
     border-radius: var(--rad-sm);
     padding: 20px;
     text-align: center;
     transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    backdrop-filter: blur(5px);
 }
 
 .glass-card:hover {
     transform: translateY(-5px);
-    background: rgba(0, 0, 0, 0.3);
+    background: color-mix(in srgb, var(--s3) 90%, transparent);
     border-color: var(--acc);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
 }

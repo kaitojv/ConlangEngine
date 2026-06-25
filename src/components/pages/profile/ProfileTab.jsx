@@ -565,11 +565,11 @@ export default function ProfileTab() {
             )}
             */}
 
-            <h3 className="section-title mt-10 mb-5">📊 Language Analytics Dashboard</h3>
+            <h3 className="section-title mt-10 mb-5"><Activity /> Language Analytics Dashboard</h3>
             <div className="glass-dashboard">
                 <div className="analytics-grid" style={{ marginBottom: 0 }}>
                     <div className="glass-card"><div className="analytics-label">Total Lexicon</div><div className="analytics-value">{analytics.totalWords}</div><div className="analytics-desc">Roots & derivations</div></div>
-                    <div className="glass-card"><div className="analytics-label">Study Streak</div><div className="analytics-value val-blue">{configStreak} 🔥</div><div className="analytics-desc">Days active</div></div>
+                    <div className="glass-card"><div className="analytics-label">Study Streak</div><div className="analytics-value val-blue" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>{configStreak} <Flame size={32} color="var(--acc)" /></div><div className="analytics-desc">Days active</div></div>
                     <div className="glass-card"><div className="analytics-label">Top Word Class</div><div className="analytics-value val-green capitalize">{analytics.topClass}</div><div className="analytics-desc">Dominant POS</div></div>
                     <div className="glass-card"><div className="analytics-label">Phonetic Coverage</div><div className="analytics-value val-orange">{analytics.ipaCoverage}%</div><div className="analytics-desc">Words with IPA</div></div>
                 </div>

@@ -6,7 +6,7 @@ import Header from './components/Layout/Header/Header.jsx';
 import { useConfigStore } from './store/useConfigStore.jsx';
 import './index.css';
 import NavBar from './components/Layout/NavBar/Navbar.jsx';
-import { Routes, Route, NavLink, useLocation } from 'react-router-dom';
+import { Routes, Route, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useThemeInjector } from './hooks/useThemeInjector.jsx';
 import { useFontInjector } from './utils/useFontInjector.jsx';
 import { useGlobalHotkeys } from './hooks/useGlobalHotkeys.jsx';
@@ -40,6 +40,7 @@ const AlignerTab = lazy(() => import('./components/pages/aligner/AlignerTab.jsx'
 const OrthographyPage = lazy(() => import('./components/pages/orthography/OrthographyPage.jsx'));
 const SemanticExplorer = lazy(() => import('./components/pages/lexicon/SemanticExplorer.jsx'));
 const ExplorePage = lazy(() => import('./components/pages/explore/ExplorePage.jsx'));
+const OnboardingWizard = lazy(() => import('./components/pages/onboarding/OnboardingWizard.jsx'));
 
 // Animation wrapper for routes
 const AnimatedPage = ({ children }) => (
@@ -72,12 +73,14 @@ export const ALLOWED_REDIRECTS = [
   '/aligner',
   '/orthography',
   '/semantic',
-  '/explore'
+  '/explore',
+  '/onboarding'
 ];
 
 function App(){
 
   const location = useLocation();
+  const navigate = useNavigate();
   const isPublicView = location.pathname.startsWith('/view/');
 
   const[openMenu, setOpenMenu] = useState(false);
@@ -104,6 +107,7 @@ function App(){
   const rehydrateBloat = useConfigStore(state => state.rehydrateBloat);
   const isRehydrating = useConfigStore(state => state.isRehydrating);
   const purgeBloatedGlyphs = useConfigStore(state => state.purgeBloatedGlyphs);
+  const hasCompletedOnboarding = useConfigStore(state => state.hasCompletedOnboarding);
   
   React.useEffect(() => {
       if (!projectId) {
@@ -112,6 +116,13 @@ function App(){
           rehydrateBloat();
       }
   }, [projectId, rehydrateBloat]);
+
+  // Redirect to onboarding if they haven't completed it
+  React.useEffect(() => {
+      if (hasCompletedOnboarding === false && location.pathname === '/') {
+          navigate('/onboarding');
+      }
+  }, [hasCompletedOnboarding, location.pathname, navigate]);
 
   React.useEffect(() => {
       if (purgeBloatedGlyphs) purgeBloatedGlyphs();
@@ -238,6 +249,7 @@ function App(){
               <Route path="/" element={<AnimatedPage><Home /></AnimatedPage>} />
               <Route path="/explore" element={<AnimatedPage><ExplorePage /></AnimatedPage>} />
               <Route path="/help" element={<AnimatedPage><HelpTab /></AnimatedPage>} />
+              <Route path="/onboarding" element={<AnimatedPage><OnboardingWizard /></AnimatedPage>} />
               
               <Route path="/lexicon" element={<AnimatedPage><Lexicon /></AnimatedPage>} />
               <Route path="/conlangs" element={<AnimatedPage><ConlangsTab /></AnimatedPage>} />

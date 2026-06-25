@@ -146,11 +146,12 @@ export default function ConlangsTab() {
             isProActive,
             theme,
             colors,
-            autoReturnToLexicon
+            autoReturnToLexicon,
+            hasCompletedOnboarding: false
         });
         
-        // Send them over to the settings to start customizing
-        navigate('/settings');
+        // Send them over to the onboarding wizard to start customizing
+        navigate('/onboarding');
     };
 
     const handleOpenProject = (id) => {
