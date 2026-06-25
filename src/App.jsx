@@ -15,6 +15,9 @@ import Footer from './components/Layout/Footer/Footer.jsx';
 import FloatingKeyboard from './components/UI/FloatingKeyboard/FloatingKeyboard.jsx';
 import FloatingBackground from './components/pages/home/FloatingBackground.jsx';
 import PWAInstallPrompt from './components/UI/PWAInstallPrompt/PWAInstallPrompt.jsx';
+import CommandPalette from './components/UI/CommandPalette/CommandPalette.jsx';
+import PageSkeleton from './components/UI/PageSkeleton/PageSkeleton.jsx';
+import { AnimatePresence, motion } from 'framer-motion';
 
 import { Toaster } from 'react-hot-toast';
 
@@ -37,6 +40,19 @@ const AlignerTab = lazy(() => import('./components/pages/aligner/AlignerTab.jsx'
 const OrthographyPage = lazy(() => import('./components/pages/orthography/OrthographyPage.jsx'));
 const SemanticExplorer = lazy(() => import('./components/pages/lexicon/SemanticExplorer.jsx'));
 const ExplorePage = lazy(() => import('./components/pages/explore/ExplorePage.jsx'));
+
+// Animation wrapper for routes
+const AnimatedPage = ({ children }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 15 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -15 }}
+    transition={{ duration: 0.25, ease: "easeInOut" }}
+    style={{ height: '100%' }}
+  >
+    {children}
+  </motion.div>
+);
 
 // Define your allowlist of safe relative routes based on your actual Route paths
 export const ALLOWED_REDIRECTS = [
@@ -216,39 +232,44 @@ function App(){
       <FloatingBackground />
 
       <main className="content">
-        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', padding: '50px', color: 'var(--tx2)' }}>Loading...</div>}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/explore" element={<ExplorePage />} />
-            <Route path="/help" element={<HelpTab />} />
-            
-            <Route path="/lexicon" element={<Lexicon />} />
-            <Route path="/conlangs" element={<ConlangsTab />} />
-            <Route path="/create" element={<CreateWordTab />} />
-            <Route path="/generator" element={<GeneratorTab />} />
-            <Route path="/rootmap" element={<EtymologyTab />} />
-            <Route path="/analyzer" element={<AnalyzerTab />} />
-            <Route path="/reader" element={<GlosserTab />} />
-            <Route path="/wiki" element={<WikiTab />} />
-            <Route path="/study" element={<StudyTab />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/profile" element={<ProfileTab />} />
-            <Route path="/aligner" element={<AlignerTab />} />
-            <Route path="/orthography" element={<OrthographyPage />} />
-            <Route path="/semantic" element={<SemanticExplorer />} />
-            <Route path="*" element={
-              <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--tx2)' }}>
-                <h2 style={{ fontSize: '3rem', marginBottom: '10px', color: 'var(--tx)' }}>404</h2>
-                <p style={{ marginBottom: '20px' }}>This page doesn't exist in any language.</p>
-                <NavLink to="/" style={{ color: 'var(--acc)', textDecoration: 'underline' }}>Go Home</NavLink>
-              </div>
-            } />
-          </Routes>
+        <Suspense fallback={<PageSkeleton />}>
+          <AnimatePresence mode="wait">
+            <Routes location={location} key={location.pathname}>
+              <Route path="/" element={<AnimatedPage><Home /></AnimatedPage>} />
+              <Route path="/explore" element={<AnimatedPage><ExplorePage /></AnimatedPage>} />
+              <Route path="/help" element={<AnimatedPage><HelpTab /></AnimatedPage>} />
+              
+              <Route path="/lexicon" element={<AnimatedPage><Lexicon /></AnimatedPage>} />
+              <Route path="/conlangs" element={<AnimatedPage><ConlangsTab /></AnimatedPage>} />
+              <Route path="/create" element={<AnimatedPage><CreateWordTab /></AnimatedPage>} />
+              <Route path="/generator" element={<AnimatedPage><GeneratorTab /></AnimatedPage>} />
+              <Route path="/rootmap" element={<AnimatedPage><EtymologyTab /></AnimatedPage>} />
+              <Route path="/analyzer" element={<AnimatedPage><AnalyzerTab /></AnimatedPage>} />
+              <Route path="/reader" element={<AnimatedPage><GlosserTab /></AnimatedPage>} />
+              <Route path="/wiki" element={<AnimatedPage><WikiTab /></AnimatedPage>} />
+              <Route path="/study" element={<AnimatedPage><StudyTab /></AnimatedPage>} />
+              <Route path="/settings" element={<AnimatedPage><Settings /></AnimatedPage>} />
+              <Route path="/profile" element={<AnimatedPage><ProfileTab /></AnimatedPage>} />
+              <Route path="/aligner" element={<AnimatedPage><AlignerTab /></AnimatedPage>} />
+              <Route path="/orthography" element={<AnimatedPage><OrthographyPage /></AnimatedPage>} />
+              <Route path="/semantic" element={<AnimatedPage><SemanticExplorer /></AnimatedPage>} />
+              <Route path="*" element={
+                <AnimatedPage>
+                  <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--tx2)' }}>
+                    <h2 style={{ fontSize: '3rem', marginBottom: '10px', color: 'var(--tx)' }}>404</h2>
+                    <p style={{ marginBottom: '20px' }}>This page doesn't exist in any language.</p>
+                    <NavLink to="/" style={{ color: 'var(--acc)', textDecoration: 'underline' }}>Go Home</NavLink>
+                  </div>
+                </AnimatedPage>
+              } />
+            </Routes>
+          </AnimatePresence>
         </Suspense>
       </main>
       <Footer />
       <FloatingKeyboard />
       <PWAInstallPrompt />
+      <CommandPalette />
       <Toaster position="bottom-right" toastOptions={{
           style: {
             background: 'var(--s4)',

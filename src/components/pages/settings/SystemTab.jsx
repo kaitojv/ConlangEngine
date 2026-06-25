@@ -627,6 +627,7 @@ export default function SystemTab() {
                             <option value="nature">Nature 🌿</option>
                             <option value="magic">Magic ✨</option>
                             <option value="music">Music 🎵</option>
+                            <option value="lexicon_words">Your Custom Lexicon Words ✨</option>
                         </select>
                     </div>
                 </div>

@@ -12,7 +12,7 @@ import LexiconEditModal from './LexiconEditModal.jsx';
 import MatrixModal from './MatrixModal.jsx';
 import ProtoRootModal from './ProtoRootModal.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
-import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download, X, Share2, Music, Zap } from 'lucide-react';
+import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download, X, Share2, Music, Zap, LayoutGrid, List } from 'lucide-react';
 import { exportTextAsSVG } from '../../../utils/svgExporter.jsx';
 import { playAzureTTS } from '../../../utils/azureTTS.js';
 import toast from 'react-hot-toast';
@@ -51,6 +51,8 @@ export default function LexiconList() {
     const [showBoundMorphemes, setShowBoundMorphemes] = useState(false);
     // Toggle for showing romanized form beneath the conscript in script modes
     const [showRomanization, setShowRomanization] = useState(false);
+    // Grid vs List view mode
+    const [layoutMode, setLayoutMode] = useState('list');
     const isScriptMode = ['syllabic', 'featural_block', 'logographic', 'featural', 'block'].includes(phonologyTypes);
     const scriptSystems = useConfigStore(state => state.scriptSystems) || [];
     const scriptRules = useConfigStore(state => state.scriptRules) || {};
@@ -467,6 +469,24 @@ export default function LexiconList() {
                     <span className="list-total">
                         <span className="list-total-count">{groupedLexicon.length}</span> words <span style={{fontSize: '0.75rem', opacity: 0.7}}>({filteredLexicon.length} entries)</span>
                     </span>
+                    
+                    <div className="layout-toggle-group">
+                        <button 
+                            className={`layout-toggle-btn ${layoutMode === 'list' ? 'active' : ''}`}
+                            onClick={() => setLayoutMode('list')}
+                            title="List View"
+                        >
+                            <List size={16} />
+                        </button>
+                        <button 
+                            className={`layout-toggle-btn ${layoutMode === 'grid' ? 'active' : ''}`}
+                            onClick={() => setLayoutMode('grid')}
+                            title="Grid View"
+                        >
+                            <LayoutGrid size={16} />
+                        </button>
+                    </div>
+
                     {session && (
                         <Button variant="default" className="btn-sm" onClick={handleShareLink} disabled={isSharing}>
                             <Share2 size={14} className={isSharing ? 'animate-spin' : ''} /> 
@@ -509,7 +529,7 @@ export default function LexiconList() {
                 </div>
             )}
 
-            <div className="lexicon-cards">
+            <div className={`lexicon-cards layout-${layoutMode}`}>
                 {groupedLexicon.slice(0, visibleCount).map((group, groupIdx) => {
                     const baseEntry = group.baseEntry;
                     const senses = group.senses;

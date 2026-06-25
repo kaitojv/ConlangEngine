@@ -205,6 +205,213 @@ export const DARK_THEMES = [
             font: "#fefce8", font2: "#fde047", accent: "#ca8a04", accent2: "#eab308", accent3: "#a16207",
             border: "rgba(202, 138, 4, 0.2)", blur: "0px", glow: "rgba(234, 179, 8, 0.15)"
         }
+    },
+    {
+        name: "Cyberpunk",
+        preview: "#fce700",
+        colors: {
+            bg: "#0d0221", s1: "#1a0442", s2: "#260663", s3: "#330884", s4: "#0d0221", header: "#060110",
+            font: "#fdfcfa", font2: "#fce700", accent: "#00f0ff", accent2: "#ff003c", accent3: "#fce700",
+            border: "rgba(0, 240, 255, 0.2)", blur: "0px", glow: "rgba(255, 0, 60, 0.15)"
+        }
+    },
+    {
+        name: "Emerald City",
+        preview: "#10b981",
+        colors: {
+            bg: "#022c22", s1: "#064e3b", s2: "#065f46", s3: "#047857", s4: "#022c22", header: "#011611",
+            font: "#ecfdf5", font2: "#6ee7b7", accent: "#10b981", accent2: "#34d399", accent3: "#059669",
+            border: "rgba(16, 185, 129, 0.2)", blur: "0px", glow: "rgba(16, 185, 129, 0.15)"
+        }
+    },
+    {
+        name: "Midnight Blue",
+        preview: "#1e3a8a",
+        colors: {
+            bg: "#020617", s1: "#0f172a", s2: "#1e293b", s3: "#334155", s4: "#020617", header: "#000000",
+            font: "#f8fafc", font2: "#94a3b8", accent: "#2563eb", accent2: "#3b82f6", accent3: "#1d4ed8",
+            border: "rgba(59, 130, 246, 0.2)", blur: "0px", glow: "rgba(37, 99, 235, 0.15)"
+        }
+    },
+    {
+        name: "Vapor Dream",
+        preview: "linear-gradient(135deg, #0d0221, #ff6ec7, #00f0ff)",
+        colors: {
+            bg: "#0d0221", s1: "#1a0442", s2: "#260663", s3: "#330884", s4: "#0d0221", header: "#060110",
+            font: "#ffe4f3", font2: "#ff6ec7", accent: "#ff6ec7", accent2: "#00f0ff", accent3: "#fce700",
+            border: "rgba(255, 110, 199, 0.25)", blur: "0px", glow: "rgba(0, 240, 255, 0.2)"
+        }
+    },
+    {
+        name: "Sakura Noir",
+        preview: "linear-gradient(135deg, #1a1a2e, #ffb7c5)",
+        colors: {
+            bg: "#0f0f1a", s1: "#1a1a2e", s2: "#222240", s3: "#2a2a50", s4: "#0a0a14", header: "#08080f",
+            font: "#fff0f3", font2: "#ffb7c5", accent: "#ff69b4", accent2: "#ffd700", accent3: "#87ceeb",
+            border: "rgba(255, 183, 197, 0.2)", blur: "0px", glow: "rgba(255, 105, 180, 0.2)"
+        }
+    },
+    {
+        name: "Electric Amber",
+        preview: "linear-gradient(135deg, #0a192f, #ffa500)",
+        colors: {
+            bg: "#0a192f", s1: "#112240", s2: "#1a3356", s3: "#234568", s4: "#071320", header: "#050d1a",
+            font: "#e6f1ff", font2: "#ffa500", accent: "#ffa500", accent2: "#00d4ff", accent3: "#ff4757",
+            border: "rgba(255, 165, 0, 0.2)", blur: "0px", glow: "rgba(255, 165, 0, 0.15)"
+        }
+    },
+    {
+        name: "Toxic Wasteland",
+        preview: "linear-gradient(135deg, #1a0a00, #39ff14)",
+        colors: {
+            bg: "#1a0a00", s1: "#2d1500", s2: "#401f00", s3: "#522900", s4: "#140800", header: "#0d0500",
+            font: "#f0ffe0", font2: "#39ff14", accent: "#39ff14", accent2: "#ff073a", accent3: "#ffff00",
+            border: "rgba(57, 255, 20, 0.25)", blur: "0px", glow: "rgba(57, 255, 20, 0.2)"
+        }
+    },
+    {
+        name: "Frost & Fire",
+        preview: "linear-gradient(135deg, #001029, #ff4500, #00bfff)",
+        colors: {
+            bg: "#001029", s1: "#001a3d", s2: "#002451", s3: "#002e66", s4: "#000c1f", header: "#000814",
+            font: "#e8f4ff", font2: "#7ec8e3", accent: "#ff4500", accent2: "#00bfff", accent3: "#ff8c00",
+            border: "rgba(0, 191, 255, 0.2)", blur: "0px", glow: "rgba(255, 69, 0, 0.2)"
+        }
+    },
+    {
+        name: "Witchcraft",
+        preview: "linear-gradient(135deg, #0d1117, #9b59b6, #2ecc71)",
+        colors: {
+            bg: "#0d1117", s1: "#161b22", s2: "#1f252e", s3: "#282f3a", s4: "#090d12", header: "#060a0e",
+            font: "#e6edf3", font2: "#9b59b6", accent: "#2ecc71", accent2: "#e74c3c", accent3: "#9b59b6",
+            border: "rgba(155, 89, 182, 0.2)", blur: "0px", glow: "rgba(46, 204, 113, 0.15)"
+        }
+    },
+    {
+        name: "Candy Pop",
+        preview: "linear-gradient(135deg, #1a1a2e, #ff1493, #00ff88)",
+        colors: {
+            bg: "#1a1a2e", s1: "#25254a", s2: "#303066", s3: "#3b3b82", s4: "#141428", header: "#0f0f20",
+            font: "#fff5f9", font2: "#ff69b4", accent: "#ff1493", accent2: "#00ff88", accent3: "#ffff00",
+            border: "rgba(255, 20, 147, 0.25)", blur: "0px", glow: "rgba(0, 255, 136, 0.15)"
+        }
+    },
+    {
+        name: "Coral Reef",
+        preview: "linear-gradient(135deg, #0c1821, #ff6f61, #40e0d0)",
+        colors: {
+            bg: "#0c1821", s1: "#162430", s2: "#1f303f", s3: "#283c4e", s4: "#081018", header: "#050c12",
+            font: "#e8f4f0", font2: "#40e0d0", accent: "#ff6f61", accent2: "#40e0d0", accent3: "#ffd700",
+            border: "rgba(64, 224, 208, 0.2)", blur: "0px", glow: "rgba(255, 111, 97, 0.15)"
+        }
+    },
+    {
+        name: "Blacklight",
+        preview: "linear-gradient(135deg, #050505, #bf00ff, #00ff80)",
+        colors: {
+            bg: "#050505", s1: "#0f0f0f", s2: "#1a1a1a", s3: "#252525", s4: "#030303", header: "#000000",
+            font: "#f0f0ff", font2: "#bf00ff", accent: "#bf00ff", accent2: "#00ff80", accent3: "#ff003c",
+            border: "rgba(191, 0, 255, 0.3)", blur: "0px", glow: "rgba(0, 255, 128, 0.15)"
+        }
+    },
+    {
+        name: "Iron & Rust",
+        preview: "linear-gradient(135deg, #1c1c1c, #b87333, #4682b4)",
+        colors: {
+            bg: "#141414", s1: "#1e1e1e", s2: "#282828", s3: "#333333", s4: "#0f0f0f", header: "#0a0a0a",
+            font: "#e8e0d8", font2: "#b87333", accent: "#b87333", accent2: "#4682b4", accent3: "#c0c0c0",
+            border: "rgba(184, 115, 51, 0.25)", blur: "0px", glow: "rgba(70, 130, 180, 0.15)"
+        }
+    },
+    {
+        name: "Cosmic Horizon",
+        preview: "linear-gradient(135deg, #090312, #ff4c00, #9d00ff)",
+        colors: {
+            bg: "#090312", s1: "#120721", s2: "#190b30", s3: "#211042", s4: "#05010a", header: "#05010a",
+            font: "#ffefe5", font2: "#ff9966", accent: "#ff4c00", accent2: "#9d00ff", accent3: "#ffcc00",
+            border: "rgba(255, 76, 0, 0.2)", blur: "0px", glow: "rgba(157, 0, 255, 0.15)"
+        }
+    },
+    {
+        name: "Neon Noir",
+        preview: "linear-gradient(135deg, #050a1f, #ff007f, #00f0ff)",
+        colors: {
+            bg: "#02040d", s1: "#060d26", s2: "#0a1538", s3: "#0e1e4f", s4: "#010208", header: "#010208",
+            font: "#e6f0ff", font2: "#ff66b2", accent: "#ff007f", accent2: "#00f0ff", accent3: "#ffff00",
+            border: "rgba(255, 0, 127, 0.2)", blur: "0px", glow: "rgba(0, 240, 255, 0.15)"
+        }
+    },
+    {
+        name: "Bioluminescence",
+        preview: "linear-gradient(135deg, #001219, #00ffa6, #0088ff)",
+        colors: {
+            bg: "#00080c", s1: "#001b24", s2: "#002b38", s3: "#003e52", s4: "#000406", header: "#000406",
+            font: "#e5fffa", font2: "#00ffa6", accent: "#00ffa6", accent2: "#0088ff", accent3: "#99ff33",
+            border: "rgba(0, 255, 166, 0.2)", blur: "0px", glow: "rgba(0, 136, 255, 0.15)"
+        }
+    },
+    {
+        name: "Blood Moon",
+        preview: "linear-gradient(135deg, #120000, #ff0000, #ff5500)",
+        colors: {
+            bg: "#0a0000", s1: "#1f0000", s2: "#330000", s3: "#470000", s4: "#050000", header: "#050000",
+            font: "#ffe5e5", font2: "#ff6666", accent: "#ff0000", accent2: "#ff5500", accent3: "#800000",
+            border: "rgba(255, 0, 0, 0.2)", blur: "0px", glow: "rgba(255, 85, 0, 0.15)"
+        }
+    },
+    {
+        name: "Amethyst Cavern",
+        preview: "linear-gradient(135deg, #0d0614, #bc00ff, #5500ff)",
+        colors: {
+            bg: "#06030a", s1: "#140a21", s2: "#1e0f33", s3: "#2b1647", s4: "#030105", header: "#030105",
+            font: "#f7e5ff", font2: "#bc00ff", accent: "#bc00ff", accent2: "#5500ff", accent3: "#ff00dd",
+            border: "rgba(188, 0, 255, 0.2)", blur: "0px", glow: "rgba(85, 0, 255, 0.15)"
+        }
+    },
+    {
+        name: "Synth-City",
+        preview: "linear-gradient(135deg, #05051a, #ff00aa, #ffbb00)",
+        colors: {
+            bg: "#03030d", s1: "#0a0a29", s2: "#10103d", s3: "#18185c", s4: "#010105", header: "#010105",
+            font: "#ffebfa", font2: "#ff00aa", accent: "#ff00aa", accent2: "#ffbb00", accent3: "#00ffff",
+            border: "rgba(255, 0, 170, 0.2)", blur: "0px", glow: "rgba(255, 187, 0, 0.15)"
+        }
+    },
+    {
+        name: "Golden Obsidian",
+        preview: "linear-gradient(135deg, #000000, #ffcc00, #ffaa00)",
+        colors: {
+            bg: "#000000", s1: "#111111", s2: "#1c1c1c", s3: "#2b2b2b", s4: "#050505", header: "#050505",
+            font: "#fffdf5", font2: "#ffcc00", accent: "#ffcc00", accent2: "#ffaa00", accent3: "#555555",
+            border: "rgba(255, 204, 0, 0.2)", blur: "0px", glow: "rgba(255, 170, 0, 0.15)"
+        }
+    },
+    {
+        name: "Matrix Glitch",
+        preview: "linear-gradient(135deg, #051005, #00ff00, #009900)",
+        colors: {
+            bg: "#020802", s1: "#071a07", s2: "#0b2b0b", s3: "#104010", s4: "#010401", header: "#010401",
+            font: "#e5ffe5", font2: "#00ff00", accent: "#00ff00", accent2: "#009900", accent3: "#005500",
+            border: "rgba(0, 255, 0, 0.2)", blur: "0px", glow: "rgba(0, 153, 0, 0.15)"
+        }
+    },
+    {
+        name: "Inferno Abyss",
+        preview: "linear-gradient(135deg, #0a0100, #ff3300, #ff9900)",
+        colors: {
+            bg: "#050000", s1: "#140200", s2: "#210300", s3: "#300500", s4: "#030000", header: "#030000",
+            font: "#ffeae5", font2: "#ff3300", accent: "#ff3300", accent2: "#ff9900", accent3: "#cc0000",
+            border: "rgba(255, 51, 0, 0.2)", blur: "0px", glow: "rgba(255, 153, 0, 0.15)"
+        }
+    },
+    {
+        name: "Aurora Borealis",
+        preview: "linear-gradient(135deg, #020b14, #00ffcc, #0066ff)",
+        colors: {
+            bg: "#01050a", s1: "#041426", s2: "#061e3b", s3: "#092a52", s4: "#000305", header: "#000305",
+            font: "#e5ffff", font2: "#00ffcc", accent: "#00ffcc", accent2: "#0066ff", accent3: "#33ff99",
+            border: "rgba(0, 255, 204, 0.2)", blur: "0px", glow: "rgba(0, 102, 255, 0.15)"
+        }
     }
 ];
 
@@ -412,6 +619,213 @@ export const LIGHT_THEMES = [
             bg: "#fff1f2", s1: "#ffffff", s2: "#ffe4e6", s3: "#fecdd3", s4: "#ffffff", header: "#ffffff",
             font: "#4c0519", font2: "#881337", accent: "#f43f5e", accent2: "#fb7185", accent3: "#fda4af",
             border: "rgba(225, 29, 72, 0.15)", blur: "0px", glow: "rgba(244, 63, 94, 0.15)"
+        }
+    },
+    {
+        name: "Cotton Candy",
+        preview: "#fbcfe8",
+        colors: {
+            bg: "#fdf2f8", s1: "#ffffff", s2: "#fbcfe8", s3: "#f9a8d4", s4: "#ffffff", header: "#ffffff",
+            font: "#831843", font2: "#be185d", accent: "#ec4899", accent2: "#db2777", accent3: "#f472b6",
+            border: "rgba(236, 72, 153, 0.15)", blur: "0px", glow: "rgba(219, 39, 119, 0.15)"
+        }
+    },
+    {
+        name: "Minty Fresh",
+        preview: "#6ee7b7",
+        colors: {
+            bg: "#ecfdf5", s1: "#ffffff", s2: "#d1fae5", s3: "#a7f3d0", s4: "#ffffff", header: "#ffffff",
+            font: "#022c22", font2: "#065f46", accent: "#10b981", accent2: "#059669", accent3: "#34d399",
+            border: "rgba(16, 185, 129, 0.15)", blur: "0px", glow: "rgba(16, 185, 129, 0.15)"
+        }
+    },
+    {
+        name: "Desert Sand",
+        preview: "#fdba74",
+        colors: {
+            bg: "#fff7ed", s1: "#ffffff", s2: "#ffedd5", s3: "#fed7aa", s4: "#ffffff", header: "#ffffff",
+            font: "#431407", font2: "#9a3412", accent: "#f97316", accent2: "#ea580c", accent3: "#fdba74",
+            border: "rgba(249, 115, 22, 0.15)", blur: "0px", glow: "rgba(234, 88, 12, 0.15)"
+        }
+    },
+    {
+        name: "Blueberry Cream",
+        preview: "linear-gradient(135deg, #e0f2fe, #ff6347, #ffd700)",
+        colors: {
+            bg: "#e8f4fd", s1: "#ffffff", s2: "#dbeafe", s3: "#bfdbfe", s4: "#ffffff", header: "#ffffff",
+            font: "#1e293b", font2: "#475569", accent: "#ff6347", accent2: "#ffd700", accent3: "#ff1493",
+            border: "rgba(255, 99, 71, 0.15)", blur: "0px", glow: "rgba(255, 99, 71, 0.15)"
+        }
+    },
+    {
+        name: "Bubblegum Pop",
+        preview: "linear-gradient(135deg, #fdf2f8, #00bcd4, #ff9800)",
+        colors: {
+            bg: "#fdf2f8", s1: "#ffffff", s2: "#fce7f3", s3: "#fbcfe8", s4: "#ffffff", header: "#ffffff",
+            font: "#1a1a2e", font2: "#6b21a8", accent: "#00bcd4", accent2: "#ff9800", accent3: "#e91e63",
+            border: "rgba(0, 188, 212, 0.15)", blur: "0px", glow: "rgba(0, 188, 212, 0.2)"
+        }
+    },
+    {
+        name: "Tropical",
+        preview: "linear-gradient(135deg, #f0fff4, #ff1493, #00ced1)",
+        colors: {
+            bg: "#f0fff4", s1: "#ffffff", s2: "#dcfce7", s3: "#bbf7d0", s4: "#ffffff", header: "#ffffff",
+            font: "#14532d", font2: "#166534", accent: "#ff1493", accent2: "#00ced1", accent3: "#ffa500",
+            border: "rgba(255, 20, 147, 0.15)", blur: "0px", glow: "rgba(255, 20, 147, 0.15)"
+        }
+    },
+    {
+        name: "Sherbet",
+        preview: "linear-gradient(135deg, #fffbeb, #e040fb, #00bfa5)",
+        colors: {
+            bg: "#fffbeb", s1: "#ffffff", s2: "#fef3c7", s3: "#fde68a", s4: "#ffffff", header: "#ffffff",
+            font: "#78350f", font2: "#92400e", accent: "#e040fb", accent2: "#00bfa5", accent3: "#ff5722",
+            border: "rgba(224, 64, 251, 0.15)", blur: "0px", glow: "rgba(224, 64, 251, 0.15)"
+        }
+    },
+    {
+        name: "Ocean Sunrise",
+        preview: "linear-gradient(135deg, #ecfeff, #ff4500, #ffd700)",
+        colors: {
+            bg: "#ecfeff", s1: "#ffffff", s2: "#cffafe", s3: "#a5f3fc", s4: "#ffffff", header: "#ffffff",
+            font: "#164e63", font2: "#0e7490", accent: "#ff4500", accent2: "#ffd700", accent3: "#ff6b6b",
+            border: "rgba(255, 69, 0, 0.15)", blur: "0px", glow: "rgba(255, 69, 0, 0.15)"
+        }
+    },
+    {
+        name: "Candy Apple",
+        preview: "linear-gradient(135deg, #fff1f2, #2196f3, #4caf50)",
+        colors: {
+            bg: "#fff1f2", s1: "#ffffff", s2: "#ffe4e6", s3: "#fecdd3", s4: "#ffffff", header: "#ffffff",
+            font: "#881337", font2: "#9f1239", accent: "#2196f3", accent2: "#4caf50", accent3: "#ff9800",
+            border: "rgba(33, 150, 243, 0.15)", blur: "0px", glow: "rgba(33, 150, 243, 0.15)"
+        }
+    },
+    {
+        name: "Lilac Storm",
+        preview: "linear-gradient(135deg, #f5f3ff, #ff5722, #00e676)",
+        colors: {
+            bg: "#f5f3ff", s1: "#ffffff", s2: "#ede9fe", s3: "#ddd6fe", s4: "#ffffff", header: "#ffffff",
+            font: "#3b0764", font2: "#6d28d9", accent: "#ff5722", accent2: "#00e676", accent3: "#ff9100",
+            border: "rgba(255, 87, 34, 0.15)", blur: "0px", glow: "rgba(255, 87, 34, 0.15)"
+        }
+    },
+    {
+        name: "Spring Field",
+        preview: "linear-gradient(135deg, #f7fee7, #e91e63, #651fff)",
+        colors: {
+            bg: "#f7fee7", s1: "#ffffff", s2: "#ecfccb", s3: "#d9f99d", s4: "#ffffff", header: "#ffffff",
+            font: "#365314", font2: "#4d7c0f", accent: "#e91e63", accent2: "#651fff", accent3: "#ff6d00",
+            border: "rgba(233, 30, 99, 0.15)", blur: "0px", glow: "rgba(233, 30, 99, 0.15)"
+        }
+    },
+    {
+        name: "Coral Beach",
+        preview: "linear-gradient(135deg, #fff7ed, #6200ea, #00bcd4)",
+        colors: {
+            bg: "#fff7ed", s1: "#ffffff", s2: "#ffedd5", s3: "#fed7aa", s4: "#ffffff", header: "#ffffff",
+            font: "#7c2d12", font2: "#9a3412", accent: "#6200ea", accent2: "#00bcd4", accent3: "#ff4081",
+            border: "rgba(98, 0, 234, 0.15)", blur: "0px", glow: "rgba(98, 0, 234, 0.15)"
+        }
+    },
+    {
+        name: "Arctic Aurora",
+        preview: "linear-gradient(135deg, #f8fafc, #ff1744, #00e5ff)",
+        colors: {
+            bg: "#f0f4f8", s1: "#ffffff", s2: "#e2e8f0", s3: "#cbd5e1", s4: "#ffffff", header: "#ffffff",
+            font: "#0f172a", font2: "#334155", accent: "#ff1744", accent2: "#00e5ff", accent3: "#76ff03",
+            border: "rgba(255, 23, 68, 0.15)", blur: "0px", glow: "rgba(255, 23, 68, 0.15)"
+        }
+    },
+    {
+        name: "Sunset Bliss",
+        preview: "linear-gradient(135deg, #fff5f0, #ff7e5f, #feb47b)",
+        colors: {
+            bg: "#fff9f5", s1: "#ffffff", s2: "#ffefe5", s3: "#ffe2cc", s4: "#ffffff", header: "#ffffff",
+            font: "#5c2a15", font2: "#b8552a", accent: "#ff7e5f", accent2: "#feb47b", accent3: "#ff4d4d",
+            border: "rgba(255, 126, 95, 0.15)", blur: "0px", glow: "rgba(254, 180, 123, 0.15)"
+        }
+    },
+    {
+        name: "Cloud Nine",
+        preview: "linear-gradient(135deg, #f0f8ff, #89f7fe, #66a6ff)",
+        colors: {
+            bg: "#f4faff", s1: "#ffffff", s2: "#e6f3ff", s3: "#cce6ff", s4: "#ffffff", header: "#ffffff",
+            font: "#1a4673", font2: "#3388cc", accent: "#89f7fe", accent2: "#66a6ff", accent3: "#4da6ff",
+            border: "rgba(137, 247, 254, 0.15)", blur: "0px", glow: "rgba(102, 166, 255, 0.15)"
+        }
+    },
+    {
+        name: "Matcha Latte",
+        preview: "linear-gradient(135deg, #f5fcf5, #a8e6cf, #dcedc1)",
+        colors: {
+            bg: "#f8fdf8", s1: "#ffffff", s2: "#eef9ee", s3: "#ddf2dd", s4: "#ffffff", header: "#ffffff",
+            font: "#2b5233", font2: "#55a366", accent: "#a8e6cf", accent2: "#dcedc1", accent3: "#ffd3b6",
+            border: "rgba(168, 230, 207, 0.15)", blur: "0px", glow: "rgba(220, 237, 193, 0.15)"
+        }
+    },
+    {
+        name: "Golden Hour",
+        preview: "linear-gradient(135deg, #fffbeb, #f6d365, #fda085)",
+        colors: {
+            bg: "#fffdf5", s1: "#ffffff", s2: "#fff5cc", s3: "#ffeb99", s4: "#ffffff", header: "#ffffff",
+            font: "#664d00", font2: "#cca300", accent: "#f6d365", accent2: "#fda085", accent3: "#ffb366",
+            border: "rgba(246, 211, 101, 0.15)", blur: "0px", glow: "rgba(253, 160, 133, 0.15)"
+        }
+    },
+    {
+        name: "Candy Cotton",
+        preview: "linear-gradient(135deg, #fff0f5, #ff9a9e, #fecfef)",
+        colors: {
+            bg: "#fff5f8", s1: "#ffffff", s2: "#ffe6f0", s3: "#ffcce0", s4: "#ffffff", header: "#ffffff",
+            font: "#661a33", font2: "#cc3366", accent: "#ff9a9e", accent2: "#fecfef", accent3: "#ffb3d9",
+            border: "rgba(255, 154, 158, 0.15)", blur: "0px", glow: "rgba(254, 207, 239, 0.15)"
+        }
+    },
+    {
+        name: "Pearl Elegance",
+        preview: "linear-gradient(135deg, #f8f9fa, #e0c3fc, #8ec5fc)",
+        colors: {
+            bg: "#fcfcfd", s1: "#ffffff", s2: "#f1f3f5", s3: "#e9ecef", s4: "#ffffff", header: "#ffffff",
+            font: "#343a40", font2: "#868e96", accent: "#e0c3fc", accent2: "#8ec5fc", accent3: "#cce0ff",
+            border: "rgba(224, 195, 252, 0.15)", blur: "0px", glow: "rgba(142, 197, 252, 0.15)"
+        }
+    },
+    {
+        name: "Citrus Pop",
+        preview: "linear-gradient(135deg, #fffae6, #ffcc00, #00cc66)",
+        colors: {
+            bg: "#fffcfa", s1: "#ffffff", s2: "#fff5cc", s3: "#ffeb99", s4: "#ffffff", header: "#ffffff",
+            font: "#4d3d00", font2: "#997a00", accent: "#ffcc00", accent2: "#00cc66", accent3: "#ffaa00",
+            border: "rgba(255, 204, 0, 0.15)", blur: "0px", glow: "rgba(0, 204, 102, 0.15)"
+        }
+    },
+    {
+        name: "Crystal Clear",
+        preview: "linear-gradient(135deg, #f0ffff, #00f2fe, #4facfe)",
+        colors: {
+            bg: "#f5ffff", s1: "#ffffff", s2: "#e6ffff", s3: "#ccffff", s4: "#ffffff", header: "#ffffff",
+            font: "#004040", font2: "#008080", accent: "#00f2fe", accent2: "#4facfe", accent3: "#00cccc",
+            border: "rgba(0, 242, 254, 0.15)", blur: "0px", glow: "rgba(79, 172, 254, 0.15)"
+        }
+    },
+    {
+        name: "Berry Smoothie",
+        preview: "linear-gradient(135deg, #fff0f5, #ff0844, #ffb199)",
+        colors: {
+            bg: "#fff5f7", s1: "#ffffff", s2: "#ffe6ec", s3: "#ffccd9", s4: "#ffffff", header: "#ffffff",
+            font: "#4d0214", font2: "#b30530", accent: "#ff0844", accent2: "#ffb199", accent3: "#ff3366",
+            border: "rgba(255, 8, 68, 0.15)", blur: "0px", glow: "rgba(255, 177, 153, 0.15)"
+        }
+    },
+    {
+        name: "Vanilla Dawn",
+        preview: "linear-gradient(135deg, #fffdf2, #f5576c, #f093fb)",
+        colors: {
+            bg: "#fffef8", s1: "#ffffff", s2: "#fff9e6", s3: "#fff5cc", s4: "#ffffff", header: "#ffffff",
+            font: "#661a29", font2: "#b32d47", accent: "#f5576c", accent2: "#f093fb", accent3: "#ff6666",
+            border: "rgba(245, 87, 108, 0.15)", blur: "0px", glow: "rgba(240, 147, 251, 0.15)"
         }
     }
 ];

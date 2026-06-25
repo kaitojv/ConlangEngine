@@ -7,7 +7,8 @@ import Card from '@/components/UI/Card/Card.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import EmptyState from '@/components/UI/EmptyState/EmptyState.jsx';
-import { Network, AlertTriangle, Search, BookOpen } from 'lucide-react';
+import { Network, AlertTriangle, Search, BookOpen, ChevronRight, Layers } from 'lucide-react';
+import PanZoomContainer from '@/components/UI/PanZoomContainer/PanZoomContainer.jsx';
 import './etymologyTab.css';
 
 export default function EtymologyTab() {
@@ -69,6 +70,12 @@ export default function EtymologyTab() {
         }, []);
     }, [targetWord, grammarRules, vowels, verbMarker, cliticsRules]);
 
+    // Find actual distinct lexicon entries that derived from this root
+    const lexicalDescendants = useMemo(() => {
+        if (!targetWord) return [];
+        return lexicon.filter(w => w.etymology === targetWord.id);
+    }, [targetWord, lexicon]);
+
     // Unlock achievement when a map is generated
     React.useEffect(() => {
         if (targetWord && !unlockedBadges?.includes('etymologist')) {
@@ -113,33 +120,62 @@ export default function EtymologyTab() {
             )}
 
             {targetWord && (
-                <div className="etymology-tree-container">
-                    
-                    {/* The core root word sits at the top of the tree */}
-                    <div className="base-word-node">
-                        <div className="notranslate custom-font-text base-word-text">{transliterate(targetWord.word)}</div>
-                        <div className="base-word-class">{targetWord.wordClass}</div>
-                        <div className="base-word-translation">{targetWord.translation}</div>
-                    </div>
-
-                    {derivations.length > 0 ? (
-                        <>
-                            <div className="tree-connector"></div>
-                            <div className="derivations-grid">
-                                {derivations.map((derivation, idx) => (
-                                    <div key={idx} className="derivation-card">
-                                        <div className="notranslate custom-font-text derivation-word">{transliterate(derivation.word)}</div>
-                                        <div className="derivation-rule">{derivation.ruleName}</div>
-                                    </div>
-                                ))}
-                            </div>
-                        </>
-                    ) : (
-                        <div className="no-derivations-msg">
-                            No grammatical rules apply to this root yet. Go to Settings to add inflections!
+                <PanZoomContainer>
+                    <div className="etymology-tree-container">
+                        
+                        {/* The core root word sits at the top of the tree */}
+                        <div className="base-word-node">
+                            <div className="notranslate custom-font-text base-word-text">{transliterate(targetWord.word)}</div>
+                            <div className="base-word-class">{targetWord.wordClass}</div>
+                            <div className="base-word-translation">{targetWord.translation}</div>
                         </div>
-                    )}
-                </div>
+
+                        {/* If we have either grammar derivations or lexical descendants, draw the tree */}
+                        {(derivations.length > 0 || lexicalDescendants.length > 0) ? (
+                            <>
+                                <div className="tree-connector"></div>
+                                
+                                <div className="tree-branches" style={{ display: 'flex', gap: '40px', justifyContent: 'center' }}>
+                                    
+                                    {/* Lexical Descendants Branch (Real Etymology) */}
+                                    {lexicalDescendants.length > 0 && (
+                                        <div className="tree-branch">
+                                            <div className="branch-header"><Network size={14}/> Lexical Descendants</div>
+                                            <div className="derivations-grid branch-grid">
+                                                {lexicalDescendants.map((desc, idx) => (
+                                                    <div key={idx} className="derivation-card descendant-card">
+                                                        <div className="notranslate custom-font-text derivation-word">{transliterate(desc.word)}</div>
+                                                        <div className="derivation-rule">{desc.translation}</div>
+                                                        <div className="descendant-class">{desc.wordClass}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Grammatical Inflections Branch */}
+                                    {derivations.length > 0 && (
+                                        <div className="tree-branch">
+                                            <div className="branch-header"><Layers size={14}/> Grammatical Inflections</div>
+                                            <div className="derivations-grid branch-grid">
+                                                {derivations.map((derivation, idx) => (
+                                                    <div key={idx} className="derivation-card">
+                                                        <div className="notranslate custom-font-text derivation-word">{transliterate(derivation.word)}</div>
+                                                        <div className="derivation-rule">{derivation.ruleName}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        ) : (
+                            <div className="no-derivations-msg">
+                                No descendants or grammatical rules apply to this root yet.
+                            </div>
+                        )}
+                    </div>
+                </PanZoomContainer>
             )}
         </div>
     );

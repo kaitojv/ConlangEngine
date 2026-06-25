@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
+import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
+import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { useLocation } from 'react-router-dom';
 import './floatingBackground.css';
 import { 
@@ -30,10 +32,22 @@ export default function FloatingBackground() {
 
     const location = useLocation();
     const config = useConfigStore(state => state.floatingBackground) || { enabled: true, global: false, type: 'greetings' };
+    const lexicon = useLexiconStore(state => state.lexicon) || [];
+    const { transliterate } = useTransliterator();
 
     const bgElements = useMemo(() => {
+        if (config.type === 'lexicon_words' && lexicon.length > 0) {
+            // Pick up to 15 random words
+            const count = Math.min(15, lexicon.length);
+            const shuffled = [...lexicon].sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, count).map((entry, idx) => (
+                <span key={idx} className="notranslate custom-font-text" style={{ whiteSpace: 'nowrap' }}>
+                    {transliterate(entry.word.replace(/\*/g, ''), lexicon)}
+                </span>
+            ));
+        }
         return TYPE_MAP[config.type] || TYPE_MAP['greetings'];
-    }, [config.type]);
+    }, [config.type, lexicon, transliterate]);
 
     useEffect(() => {
         const container = containerRef.current;

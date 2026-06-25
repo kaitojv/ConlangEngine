@@ -546,3 +546,74 @@
     letter-spacing: 0.04em;
     line-height: 1.2;
 }
+
+/* Layout Toggle Styles */
+.layout-toggle-group {
+    display: flex;
+    background: var(--s2);
+    border-radius: 8px;
+    padding: 2px;
+    border: 1px solid var(--bd);
+}
+
+.layout-toggle-btn {
+    background: transparent;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    color: var(--tx2);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.layout-toggle-btn:hover {
+    color: var(--tx);
+}
+
+.layout-toggle-btn.active {
+    background: var(--s4);
+    color: var(--acc);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* Grid Layout Mode */
+.lexicon-cards.layout-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+    align-items: start;
+}
+
+.lexicon-cards.layout-grid .lexicon-entry {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.lexicon-cards.layout-grid .entry-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.lexicon-cards.layout-grid .entry-words {
+    justify-content: center;
+}
+
+.lexicon-cards.layout-grid .entry-actions-top {
+    margin-top: 1rem;
+    width: 100%;
+    justify-content: center;
+}
+
+.lexicon-cards.layout-grid .lexicon-sense-row {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.lexicon-cards.layout-grid .sense-actions {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+}
+
