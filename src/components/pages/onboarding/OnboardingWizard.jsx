@@ -7,7 +7,7 @@ import { useWordGenerator } from '@/hooks/useWordGenerator.jsx';
 import { Globe, Wand2, Type, LayoutTemplate, BoxSelect, Flame, Check, RefreshCw } from 'lucide-react';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
-import { getConlangIcon, availableIcons } from '@/utils/iconMap.jsx';
+import { getConlangIcon } from '@/utils/iconMap.jsx';
 import './onboardingWizard.css';
 
 const PHONOLOGY_PRESETS = {
