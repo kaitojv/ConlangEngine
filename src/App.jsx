@@ -84,7 +84,22 @@ function App(){
   const isPublicView = location.pathname.startsWith('/view/');
 
   const[openMenu, setOpenMenu] = useState(false);
+  const customFontBase64 = useConfigStore(state => state.customFontBase64);
   const rawWritingDirection = useConfigStore(state => state.writingDirection) || 'ltr';
+
+  // SEC-2: Validate customFontBase64 to prevent CSS injection via crafted backup files
+  const safeFontBase64 = useMemo(() => {
+    if (typeof customFontBase64 !== 'string') return null;
+    if (!customFontBase64.startsWith('data:')) return null;
+    // Only validate the base64 payload — the data URI prefix legitimately contains semicolons
+    // e.g. "data:font/truetype;charset=utf-8;base64,<payload>"
+    const payloadMatch = customFontBase64.match(/;base64,(.*)$/);
+    if (!payloadMatch) return null;
+    // Base64 payload may only contain A-Za-z0-9+/= characters
+    if (!/^[A-Za-z0-9+/=]+$/.test(payloadMatch[1])) return null;
+    return customFontBase64;
+  }, [customFontBase64]);
+
   // SEC-3: Allowlist writingDirection to prevent CSS injection
   const VALID_DIRECTIONS = ['ltr', 'rtl', 'vertical-rl', 'vertical-lr'];
   const writingDirection = VALID_DIRECTIONS.includes(rawWritingDirection) ? rawWritingDirection : 'ltr';
@@ -113,8 +128,55 @@ function App(){
       if (purgeBloatedGlyphs) purgeBloatedGlyphs();
   }, [purgeBloatedGlyphs]);
 
+  // Auto-compile the block font if missing (e.g. stripped from cloud sync payload to prevent Supabase timeouts)
+  const phonologyTypes = useConfigStore(state => state.phonologyTypes);
+  const featuralComponents = useConfigStore(state => state.featuralComponents);
   const updateConfig = useConfigStore(state => state.updateConfig);
 
+  React.useEffect(() => {
+      if (!isRehydrating && phonologyTypes === 'featural_block' && !customFontBase64) {
+          if (featuralComponents && Object.keys(featuralComponents).length > 0) {
+              const autoCompile = async () => {
+                  try {
+                      // Import useLexiconStore to extract lexicon
+                      const { useLexiconStore } = await import('./store/useLexiconStore.jsx');
+                      const fullConfig = useConfigStore.getState();
+                      const lexicon = useLexiconStore.getState().lexicon;
+                      // Use Web Worker to prevent UI locking during heavy font generation
+                      const worker = new Worker(new URL('./utils/fontWorker.js', import.meta.url), { type: 'module' });
+                      
+                      worker.onmessage = (e) => {
+                          if (e.data.success) {
+                              const newData = e.data.result;
+                              updateConfig({
+                                  syllabaryMap: newData.syllabaryMap,
+                                  customFontBase64: newData.customFontBase64,
+                                  customFont: newData.customFontBase64,
+                                  puaCounter: newData.puaCounter
+                              });
+                          } else {
+                              console.warn("Worker font compile failed:", e.data.error);
+                          }
+                          worker.terminate();
+                      };
+                      
+                      worker.onerror = (err) => {
+                          console.warn("Worker font compile error:", err);
+                          worker.terminate();
+                      };
+                      
+                      const cleanConfig = { ...fullConfig, lexicon };
+                      delete cleanConfig.customFontBase64;
+                      delete cleanConfig.customFont;
+                      worker.postMessage({ config: JSON.parse(JSON.stringify(cleanConfig)) });
+                  } catch (e) {
+                      console.warn("Local auto-compile failed to start:", e);
+                  }
+              };
+              autoCompile();
+          }
+      }
+  }, [isRehydrating, phonologyTypes, customFontBase64, featuralComponents, updateConfig]);
 
   useThemeInjector();
   useFontInjector();
@@ -171,7 +233,7 @@ function App(){
 
       <FloatingBackground />
 
-      <main className={`content ${location.pathname === '/wiki' ? 'wide-content' : ''}`}>
+      <main className="content">
         <Suspense fallback={<PageSkeleton />}>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>

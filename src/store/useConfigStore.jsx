@@ -55,7 +55,7 @@ export const INITIAL_CONFIG = {
     activity: [],
     isProActive: false,
     lastStudyDate: null,
-    conlangFontFamily: "'Outfit', sans-serif",
+    customFont: null,
     theme: 'dark',
     colors: {
         bg: '#0b0f19',
@@ -75,6 +75,7 @@ export const INITIAL_CONFIG = {
     },
     customGlyphs: {},
     puaCounter: 57344,
+    customFontBase64: null,
     isRehydrating: false,
     numeralBase: 10,
     sentenceMaps: [],
