@@ -532,7 +532,6 @@ export default function ProfileTab() {
                 </div>
             </Card>
 
-            {/* 
             {!config.isProActive && (
                 <Card>
                     <div className="free-tier-wrapper">
@@ -540,9 +539,9 @@ export default function ProfileTab() {
                             <Sparkles size={32} />
                         </div>
                         <div className="free-tier-content">
-                            <h3 className="free-tier-title">Conlang Engine LIVE</h3>
+                            <h3 className="free-tier-title">Conlang Engine LIVE (Lifetime)</h3>
                             <p className="free-tier-desc">
-                                Support the project to unlock <b>Cloud Sync</b> and <b>Multi-device backups</b>. Starting at <b>$5 USD/month</b>.
+                                Support the project to unlock <b>Cloud Sync</b> and <b>Multi-device backups</b> forever! One-time purchase of <b>$5.00 USD</b>.
                             </p>
                             <div className="free-tier-actions">
                                 <div className="paypal-integration-area">
@@ -563,7 +562,6 @@ export default function ProfileTab() {
                     </div>
                 </Card>
             )}
-            */}
 
             <h3 className="section-title mt-10 mb-5"><Activity /> Language Analytics Dashboard</h3>
             <div className="glass-dashboard">

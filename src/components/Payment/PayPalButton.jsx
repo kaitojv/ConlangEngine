@@ -10,7 +10,6 @@ import { toast } from 'react-hot-toast';
  */
 const PayPalButton = () => {
     const config = useConfigStore();
-    const PLAN_ID = import.meta.env.VITE_PAYPAL_PLAN_ID;
 
     const handleSuccess = async (data) => {
         const { session } = await supabase.auth.getSession();
@@ -48,13 +47,13 @@ const PayPalButton = () => {
         }
     };
 
-    const isPlaceholder = !PLAN_ID || PLAN_ID.includes('YOUR_PAYPAL') || import.meta.env.VITE_PAYPAL_CLIENT_ID?.includes('YOUR_PAYPAL');
+    const isPlaceholder = !import.meta.env.VITE_PAYPAL_CLIENT_ID || import.meta.env.VITE_PAYPAL_CLIENT_ID.includes('YOUR_PAYPAL');
 
     if (isPlaceholder) {
         return (
             <div className="p-4 bg-amber-900/20 border border-amber-500/50 rounded-lg text-amber-200 text-sm">
                 <p className="font-bold mb-1">PayPal Integration Pending</p>
-                <p>Please update <code>VITE_PAYPAL_CLIENT_ID</code> and <code>VITE_PAYPAL_PLAN_ID</code> in your <code>.env.local</code> file to see the checkout button.</p>
+                <p>Please update <code>VITE_PAYPAL_CLIENT_ID</code> in your <code>.env.local</code> file to see the checkout button.</p>
             </div>
         );
     }
@@ -66,15 +65,33 @@ const PayPalButton = () => {
                     shape: 'pill',
                     color: 'gold',
                     layout: 'vertical',
-                    label: 'subscribe'
+                    label: 'pay'
                 }}
-                createSubscription={(data, actions) => {
-                    return actions.subscription.create({
-                        plan_id: PLAN_ID
+                createOrder={async (data, actions) => {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const userId = session?.user?.id || 'anonymous';
+                    const userEmail = session?.user?.email || 'unknown';
+
+                    return actions.order.create({
+                        purchase_units: [{
+                            description: "Conlang Engine LIVE (Lifetime)",
+                            amount: {
+                                currency_code: "USD",
+                                value: "5.00"
+                            },
+                            custom_id: `${userId}|${userEmail}`
+                        }]
                     });
                 }}
                 onApprove={async (data, actions) => {
-                    await handleSuccess(data);
+                    try {
+                        const order = await actions.order.capture();
+                        console.log("Order captured:", order);
+                        await handleSuccess(order);
+                    } catch (err) {
+                        console.error("Capture Error:", err);
+                        toast.error("Payment failed to capture. Please try again.");
+                    }
                 }}
                 onCancel={() => {
                     toast("Payment cancelled", { icon: 'ℹ️' });

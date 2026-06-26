@@ -193,7 +193,7 @@
 .text-tx2 { color: var(--tx2); }
 .text-tx { color: var(--tx); }
 
-.free-tier-wrapper { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+.free-tier-wrapper { display: flex; align-items: flex-start; gap: 15px; flex-wrap: wrap; }
 .free-tier-icon { color: var(--acc); }
 .free-tier-content { flex: 1; }
 .free-tier-title { color: var(--tx); font-size: 1.1rem; margin-bottom: 4px; font-weight: bold; }
@@ -262,6 +262,17 @@
     margin-bottom: 20px;
     padding-bottom: 20px;
     border-bottom: 1px solid var(--bd);
+    display: flex;
+    justify-content: center;
+}
+
+.paypal-integration-area > div {
+    width: 100%;
+    max-width: 400px;
+    background: #ffffff;
+    padding: 15px 15px 0 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 .alt-support-divider {

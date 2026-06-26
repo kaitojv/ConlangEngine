@@ -9,8 +9,7 @@ import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 const initialOptions = {
     "client-id": import.meta.env.VITE_PAYPAL_CLIENT_ID || "sb",
     currency: "USD",
-    intent: "subscription",
-    vault: true,
+    intent: "capture"
 };
 
 createRoot(document.getElementById('root')).render(
