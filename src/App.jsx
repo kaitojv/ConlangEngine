@@ -233,7 +233,7 @@ function App(){
 
       <FloatingBackground />
 
-      <main className="content">
+      <main className={`content ${location.pathname === '/wiki' ? 'wide-content' : ''}`}>
         <Suspense fallback={<PageSkeleton />}>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>

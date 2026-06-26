@@ -11,6 +11,7 @@ import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { CONLANG_ICONS, getConlangIcon } from '../../../utils/iconMap.jsx';
 import opentype from 'opentype.js';
 import { DARK_THEMES, LIGHT_THEMES, PRIDE_THEMES_DARK, PRIDE_THEMES_LIGHT } from '../../../utils/themePresets.js';
+import { UI_FONTS } from '../../../utils/uiFonts.js';
 import Modal from '../../UI/Modal/Modal.jsx';
 import { Info, User } from 'lucide-react';
 import { supabase } from '../../../utils/supabaseClient.js';
@@ -454,28 +455,35 @@ export default function SystemTab() {
             </Card>
 
             <Card>
-                <h2 className='flex sg-title'><CaseLower /> Typography & Custom Font</h2>
+                <h2 className='flex sg-title'><Type /> App Typography</h2>
                 <p>
-                    Upload your custom <b>.ttf</b> or <b>.otf</b> font to render your unique characters. The font file is converted and stored locally in your browser memory. <br />
-                    <span>Note: Maximum file size is 2.5MB to respect local storage limits.</span>
+                    Choose the font family used for the application's interface. 
+                    This does not affect how your conlang dictionary words are rendered.
                 </p>
-                <div className='font-btns'>
-
-                    <label className='fontUp-btn'>
-                        <input className='file-input-hidden' type="file" accept=".ttf,.otf,.woff,.woff2" onChange={handleFontUpload} ref={fileInputRef} />
-                        <h4>Upload Font</h4>
-                    </label>
-                    <Button variant='error' onClick={handleClearFont}>Remove Font</Button>
+                <div style={{ marginTop: '1rem' }}>
+                    <select 
+                        value={useConfigStore(state => state.appUiFont) || "'Outfit', sans-serif"}
+                        onChange={(e) => updateConfig({ appUiFont: e.target.value })}
+                        style={{ 
+                            padding: '0.75rem', 
+                            borderRadius: 'var(--rad-sm)', 
+                            border: '1px solid var(--bd)', 
+                            background: 'var(--s1)', 
+                            color: 'var(--tx)',
+                            width: '100%',
+                            maxWidth: '300px',
+                            fontFamily: useConfigStore(state => state.appUiFont) || "'Outfit', sans-serif"
+                        }}
+                    >
+                        {UI_FONTS.map((font) => (
+                            <option key={font.name} value={`'${font.name}', ${font.category}`}>
+                                {font.name}
+                            </option>
+                        ))}
+                    </select>
                 </div>
-                <div className='font-status'>
-                    <p>{customFont
-                        ? "✅ Custom font is currently active!"
-                        : Object.keys(customGlyphs).length > 0
-                            ? `✅ You have ${Object.keys(customGlyphs).length} custom glyphs ready to export!`
-                            : "❌ No custom font uploaded."}</p>
-                </div>
-
             </Card>
+
             <Card>
                 <h2 className='flex sg-title'><Database /> Legacy Importer</h2>
                 <p>Import a JSON save file from the old version of Conlang Engine. This will convert your old data and overwrite your current active workspace.</p>

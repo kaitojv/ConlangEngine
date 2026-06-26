@@ -56,6 +56,7 @@ export const INITIAL_CONFIG = {
     isProActive: false,
     lastStudyDate: null,
     customFont: null,
+    appUiFont: "'Outfit', sans-serif",
     theme: 'dark',
     colors: {
         bg: '#0b0f19',

@@ -98,7 +98,7 @@
 
 html, body {
   min-height: 100vh;
-  font-family: 'Outfit', 'Inter', 'Noto Sans', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-stack, 'Outfit', 'Inter', 'Noto Sans', system-ui, -apple-system, sans-serif);
   background: var(--h-bg);
   color: var(--tx);
   overflow-x: hidden;
