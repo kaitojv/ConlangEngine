@@ -157,7 +157,7 @@ export default function PublicViewer() {
     if (loading) {
         return (
             <div className="pv-page">
-                <PageSkeleton />
+                <PageSkeleton type="lexicon" />
             </div>
         );
     }

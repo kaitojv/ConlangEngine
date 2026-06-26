@@ -564,7 +564,13 @@ export default function LexiconList() {
                     const isAutoComputed = (!baseEntry.stress && computed?.stress) || (!baseEntry.tone && computed?.tone);
                     
                     return (
-                        <Card key={`${baseEntry.id}-${groupIdx}`} className="lexicon-entry">
+                        <Card 
+                            key={`${baseEntry.id}-${groupIdx}`} 
+                            className="lexicon-entry"
+                            initial={{ opacity: 0, y: 15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3, delay: Math.min(groupIdx * 0.05, 0.5), ease: "easeOut" }}
+                        >
                             <div className="entry-header">
                                 <div className="entry-words">
                                     <div className="entry-word-with-wave" style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'stretch' }}>

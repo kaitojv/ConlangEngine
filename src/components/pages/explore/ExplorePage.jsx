@@ -256,7 +256,7 @@ export default function ExplorePage() {
     }, [conlangs, likesData, sortBy]);
 
     if (loading) {
-        return <PageSkeleton />;
+        return <PageSkeleton type="conlangs" />;
     }
 
     if (error) {

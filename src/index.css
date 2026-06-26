@@ -137,6 +137,10 @@ body {
   min-height: calc(100vh - 80px); 
 }
 
+.wide-content {
+  max-width: 1400px;
+}
+
 /* Global typography */
 
 h1, h2, h3, h4 {

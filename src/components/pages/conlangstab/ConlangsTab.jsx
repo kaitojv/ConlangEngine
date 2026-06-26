@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useConfigStore, INITIAL_CONFIG } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useProjectStore } from '@/store/useProjectStore.jsx';
@@ -634,16 +635,29 @@ export default function ConlangsTab() {
                 
                 {viewMode === 'grid' && (
                     <div className="projects-grid">
-                        <div className="project-card create-new" onClick={handleCreateNew}>
+                        <motion.div 
+                            className="project-card create-new" 
+                            onClick={handleCreateNew}
+                            initial={{ opacity: 0, y: 15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3 }}
+                        >
                             <Plus size={32} className="create-new-icon" />
                             <h3 className="create-new-text">Create New Conlang</h3>
-                        </div>
+                        </motion.div>
 
-                        {localProjects.map(project => {
+                        {localProjects.map((project, idx) => {
                             const isCurrent = project.id === config.projectId;
                             
                             return (
-                                <div key={project.id} className={`project-card ${isCurrent ? 'active-workspace' : ''}`} onClick={() => handleOpenProject(project.id)}>
+                                <motion.div 
+                                    key={project.id} 
+                                    className={`project-card ${isCurrent ? 'active-workspace' : ''}`} 
+                                    onClick={() => handleOpenProject(project.id)}
+                                    initial={{ opacity: 0, y: 15 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.3, delay: Math.min((idx + 1) * 0.05, 0.5) }}
+                                >
                                     <div className="project-card-actions">
                                         <button className="project-action-btn" onClick={(e) => { e.stopPropagation(); setTargetingMode(project.id); setViewMode('map'); }} title="Place on Map">
                                             <MapPin size={16} />
@@ -693,7 +707,7 @@ export default function ConlangsTab() {
                                             </div>
                                         )}
                                     </div>
-                                </div>
+                                </motion.div>
                             );
                         })}
                     </div>
