@@ -1,5 +1,6 @@
 // ./src/components/UI/buttons.csx
 import './buttons.css';
+import { motion } from 'framer-motion';
 
 export default function Button({ variant = 'save', children, className = '', ...props }) {
   const variantClass = 
@@ -17,8 +18,13 @@ export default function Button({ variant = 'save', children, className = '', ...
   })[variant] || 'save';
   
   return (
-    <button className={`btn-${variantClass} btn-base ${className}`.trim()} {...props}>
+    <motion.button 
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.97 }}
+      className={`btn-${variantClass} btn-base ${className}`.trim()} 
+      {...props}
+    >
       {children}
-    </button>
+    </motion.button>
   );
 }

@@ -1,9 +1,10 @@
 import './card.css'
+import { motion } from 'framer-motion';
 
 export default function Card({ children, className = '', ...props }) {
     return (
-        <div className={`${className}`.trim() + ' card' } {...props}>
+        <motion.div className={`${className}`.trim() + ' card' } {...props}>
             {children}
-        </div>
+        </motion.div>
     )
 }
