@@ -88,6 +88,8 @@ export default function SettingsGeneral() {
                     onChange={(e) => handleTypologyChange(e.target.value)}
                 >
                     <option value="alphabetic">Alphabetic / Root-based</option>
+                    <option value="abjad">Abjad (Consonant-heavy)</option>
+                    <option value="abugida">Abugida (Alpha-syllabary)</option>
                     <option value="syllabic">Syllabic (Grid-based)</option>
                     <option value="featural_block">Featural Block (Hangul-style)</option>
                     <option value="logographic">Logographic (Ideograms)</option>
@@ -112,33 +114,58 @@ export default function SettingsGeneral() {
                 </label>
             </div>
 
-            {phonologyTypes === 'alphabetic' && (
-                <>
-                    <div className="sg-input-group">
-                        <label className="form-label">Pre-existing Script Mapping</label>
-                        <select 
-                            className="fi settings-select-full" 
-                            value={alphabeticScript === 'custom' ? 'latin' : (alphabeticScript || 'latin')}
-                            onChange={(e) => {
-                                updateConfig({ alphabeticScript: e.target.value });
-                                if (defaultScriptId) updateScriptSystem(defaultScriptId, { alphabeticScript: e.target.value });
-                            }}
-                        >
-                            <option value="latin">Latin (Default)</option>
+            <div className="sg-input-group">
+                <label className="form-label">Pre-existing Script Mapping</label>
+                <select 
+                    className="fi settings-select-full" 
+                    value={alphabeticScript === 'custom' ? 'latin' : (alphabeticScript || 'latin')}
+                    onChange={(e) => {
+                        updateConfig({ alphabeticScript: e.target.value });
+                        if (defaultScriptId) updateScriptSystem(defaultScriptId, { alphabeticScript: e.target.value });
+                    }}
+                >
+                    <option value="latin">Latin (Default)</option>
+                    {['alphabetic', 'abjad', 'abugida'].includes(phonologyTypes || 'alphabetic') && (
+                        <>
                             <option value="cyrillic">Cyrillic</option>
                             <option value="greek">Greek</option>
                             <option value="runic">Runic</option>
                             <option value="georgian">Georgian</option>
-                        </select>
-                    </div>
-                    <Infobox title="Writing System Guide">
-                        • <b>Alphabetic:</b> Standard root-based system. Uses your consonants, vowels, and syllable patterns. Maps to various scripts.<br />
-                        • <b>Syllabic:</b> Unlocks the Syllabary Manager.<br />
-                        • <b>Featural Block:</b> Unlocks the Block Manager. Dynamically composes syllables into square blocks.<br />
-                        • <b>Logographic:</b> Whole words become symbols.
-                    </Infobox>
-                </>
-            )}
+                            <option value="arabic">Arabic</option>
+                            <option value="hebrew">Hebrew</option>
+                            <option value="devanagari">Devanagari</option>
+                            <option value="thai">Thai</option>
+                        </>
+                    )}
+                    {phonologyTypes === 'syllabic' && (
+                        <>
+                            <option value="hiragana">Hiragana</option>
+                            <option value="katakana">Katakana</option>
+                            <option value="cherokee">Cherokee</option>
+                            <option value="inuktitut">Inuktitut</option>
+                            <option value="hangul_syllables">Hangul Syllables</option>
+                        </>
+                    )}
+                    {phonologyTypes === 'logographic' && (
+                        <>
+                            <option value="hanzi">Hanzi / Kanji (Basic Starter)</option>
+                            <option value="hieroglyphs">Egyptian Hieroglyphs (Basic Starter)</option>
+                        </>
+                    )}
+                    {phonologyTypes === 'featural_block' && (
+                        <>
+                            <option value="hangul_jamo">Hangul Jamo</option>
+                        </>
+                    )}
+                </select>
+            </div>
+            
+            <Infobox title="Writing System Guide">
+                • <b>Alphabetic / Abjad / Abugida:</b> Linear root-based system. Uses your consonants, vowels, and syllable patterns. Maps to various scripts.<br />
+                • <b>Syllabic:</b> Unlocks the Syllabary Manager.<br />
+                • <b>Featural Block:</b> Unlocks the Block Manager. Dynamically composes syllables into square blocks.<br />
+                • <b>Logographic:</b> Whole words become symbols.
+            </Infobox>
 
         </Card>
     );

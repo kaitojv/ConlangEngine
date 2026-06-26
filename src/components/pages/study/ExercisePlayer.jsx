@@ -115,7 +115,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                 <Mascot state="correct" isSpeaking={false} />
                 <h2>Course Complete!</h2>
                 <p>You've successfully completed the {levelNode?.title} lesson.</p>
-                <Button variant="imp" onClick={onComplete}>Continue</Button>
+                <Button variant="imp" onClick={() => onComplete(levelNode?.id)}>Continue</Button>
             </Card>
         );
     }

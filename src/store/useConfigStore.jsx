@@ -197,6 +197,7 @@ export const INITIAL_CONFIG = {
     toneRules: [],
     // Array of { id, title, phrases: [{ id, conlang, english }] }
     customCourse: [],
+    courseProgress: [],
     customLabels: {}, // Customizable terminology (e.g. app title, navbar labels)
     ipaMappingRules: '', // Rules for autogenerating IPA from orthography (e.g., "oo=oʊ, uu=uː")
     typographySettings: {

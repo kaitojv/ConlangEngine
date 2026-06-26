@@ -146,9 +146,11 @@ export default function PublicViewer() {
     }[config.writingDirection] || 'Left to Right';
 
     const phonoTypeLabel = {
-        'alphabetic': 'Alphabetic',
-        'syllabic': 'Syllabic',
-        'logographic': 'Logographic'
+        syllabic: 'Syllabic',
+        logographic: 'Logographic',
+        featural_block: 'Featural Block',
+        abjad: 'Abjad',
+        abugida: 'Abugida'
     }[config.phonologyTypes] || 'Alphabetic';
 
     // --- LOADING STATE ---
@@ -185,7 +187,7 @@ export default function PublicViewer() {
     let displayName = config.conlangName || 'Untitled Conlang';
     let displayDesc = config.description;
 
-    const needsTransliteration = ['logographic', 'syllabic', 'alphabetic'].includes(config.phonologyTypes);
+    const needsTransliteration = ['logographic', 'syllabic', 'alphabetic', 'abjad', 'abugida'].includes(config.phonologyTypes);
     if (needsTransliteration) {
         displayName = (config.conlangName || 'Untitled Conlang').split(/(\s+)/).map(w => w.trim() ? transliterate(w, dictionary) : w).join('');
         if (displayDesc && displayDesc !== 'A brief description of your conlang.') {

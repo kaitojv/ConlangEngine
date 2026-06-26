@@ -6,7 +6,7 @@ import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { generateCourseExercise } from '@/utils/courseGenerator.js';
 import ExercisePlayer from './ExercisePlayer.jsx';
-import { Plus, Trash2, Save, ArrowLeft, GripVertical, Wand2, X, Play, ChevronUp, ChevronDown, Bold, Italic, Underline, Smile } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowLeft, GripVertical, Wand2, X, Play, ChevronUp, ChevronDown, Bold, Italic, Underline, Smile, Zap, Star, Crown, Book, Brain, Flame, Dumbbell, Sword, Shield } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import './courseBuilder.css';
 
@@ -61,6 +61,106 @@ const TextcardEditor = ({ value, onChange }) => {
                 placeholder="e.g. In this lesson, we will learn about... (Line breaks supported)"
                 style={{ width: '100%', height: '100px', padding: '10px', border: 'none', background: 'transparent', color: 'var(--tx)', fontFamily: 'inherit', resize: 'vertical', outline: 'none' }}
             />
+        </div>
+    );
+};
+
+const IconSelect = ({ value, onChange }) => {
+    const [isOpen, setIsOpen] = React.useState(false);
+    const ref = React.useRef(null);
+    React.useEffect(() => {
+        const handleClick = (e) => { if(ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, []);
+
+    const options = [
+        { value: 'Zap', icon: Zap },
+        { value: 'Star', icon: Star },
+        { value: 'Crown', icon: Crown },
+        { value: 'Book', icon: Book },
+        { value: 'Brain', icon: Brain },
+        { value: 'Flame', icon: Flame },
+        { value: 'Dumbbell', icon: Dumbbell },
+        { value: 'Sword', icon: Sword },
+        { value: 'Shield', icon: Shield },
+    ];
+
+    const currentOpt = options.find(o => o.value === value) || options[0];
+    const CurrentIcon = currentOpt.icon;
+
+    return (
+        <div ref={ref} style={{ position: 'relative', minWidth: '120px' }}>
+            <div 
+                onClick={() => setIsOpen(!isOpen)}
+                style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--bd)', background: 'var(--bg)', color: 'var(--tx)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', height: '100%', userSelect: 'none' }}
+                title="Node Icon"
+            >
+                <CurrentIcon size={16} color="var(--acc)" /> <span style={{flex: 1}}>{currentOpt.value}</span> <ChevronDown size={14} style={{ opacity: 0.5 }} />
+            </div>
+            {isOpen && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg)', border: '1px solid var(--bd)', borderRadius: '6px', zIndex: 10, marginTop: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', maxHeight: '200px', overflowY: 'auto' }}>
+                    {options.map(opt => {
+                        const OptIcon = opt.icon;
+                        return (
+                            <div 
+                                key={opt.value}
+                                onClick={() => { onChange(opt.value); setIsOpen(false); }}
+                                style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: value === opt.value ? 'var(--s1)' : 'transparent', userSelect: 'none' }}
+                            >
+                                <OptIcon size={16} color="var(--acc)" /> {opt.value}
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
+
+const ColorSelect = ({ value, onChange }) => {
+    const [isOpen, setIsOpen] = React.useState(false);
+    const ref = React.useRef(null);
+    React.useEffect(() => {
+        const handleClick = (e) => { if(ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, []);
+
+    const options = [
+        { value: 'var(--acc)', label: 'Default' },
+        { value: '#3b82f6', label: 'Blue' },
+        { value: '#10b981', label: 'Green' },
+        { value: '#f59e0b', label: 'Yellow' },
+        { value: '#ef4444', label: 'Red' },
+        { value: '#8b5cf6', label: 'Purple' },
+        { value: '#ec4899', label: 'Pink' },
+    ];
+
+    const currentOpt = options.find(o => o.value === value) || options[0];
+
+    return (
+        <div ref={ref} style={{ position: 'relative', minWidth: '130px' }}>
+            <div 
+                onClick={() => setIsOpen(!isOpen)}
+                style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--bd)', background: 'var(--bg)', color: 'var(--tx)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', height: '100%', userSelect: 'none' }}
+                title="Node Color"
+            >
+                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: currentOpt.value === 'var(--acc)' ? 'var(--acc)' : currentOpt.value }} /> <span style={{flex: 1}}>{currentOpt.label}</span> <ChevronDown size={14} style={{ opacity: 0.5 }} />
+            </div>
+            {isOpen && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg)', border: '1px solid var(--bd)', borderRadius: '6px', zIndex: 10, marginTop: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+                    {options.map(opt => (
+                        <div 
+                            key={opt.value}
+                            onClick={() => { onChange(opt.value); setIsOpen(false); }}
+                            style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: value === opt.value ? 'var(--s1)' : 'transparent', userSelect: 'none' }}
+                        >
+                            <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: opt.value === 'var(--acc)' ? 'var(--acc)' : opt.value }} /> {opt.label}
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };
@@ -183,6 +283,10 @@ export default function CourseBuilder({ onExit }) {
         setCourseData(courseData.map(l => l.id === id ? { ...l, lessonNotes: newNotes } : l));
     };
 
+    const updateLevelField = (id, field, value) => {
+        setCourseData(courseData.map(l => l.id === id ? { ...l, [field]: value } : l));
+    };
+
     const addPhrase = (levelId) => {
         setCourseData(courseData.map(l => {
             if (l.id === levelId) {
@@ -275,6 +379,14 @@ export default function CourseBuilder({ onExit }) {
                                 onChange={(e) => updateLevelTitle(level.id, e.target.value)}
                                 placeholder="Level Title (e.g. Basics 1)"
                                 style={{ flex: 1, margin: 0 }}
+                            />
+                            <IconSelect 
+                                value={level.icon || 'Zap'}
+                                onChange={(val) => updateLevelField(level.id, 'icon', val)}
+                            />
+                            <ColorSelect 
+                                value={level.color || 'var(--acc)'}
+                                onChange={(val) => updateLevelField(level.id, 'color', val)}
                             />
                             <Button variant="default" onClick={() => setPreviewLevel(level)} style={{ padding: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                                 <Play size={16} /> Preview

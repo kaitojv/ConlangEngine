@@ -181,13 +181,84 @@ export const generateBlockFontData = async (config) => {
     // ── Step 1: Compile blocks from Lexicon ──────────────────────────────────
     // This is the primary source of blocks. We only compile what you actually use.
     if (config.lexicon && Array.isArray(config.lexicon)) {
+        const allPhonemes = [...consList, ...vowList, ...otherList].sort((a, b) => b.length - a.length);
+        
+        const extractPhonemes = (str) => {
+            let phonemes = [];
+            let i = 0;
+            while (i < str.length) {
+                let match = null;
+                for (const p of allPhonemes) {
+                    if (str.startsWith(p, i)) {
+                        match = p;
+                        break;
+                    }
+                }
+                if (match) {
+                    phonemes.push(match);
+                    i += match.length;
+                } else {
+                    phonemes.push(str[i]);
+                    i++;
+                }
+            }
+            return phonemes;
+        };
+
         let count = 0;
         for (const entry of config.lexicon) {
             // Yield every 20 entries to prevent worker timeouts
             if (++count % 20 === 0) await new Promise(r => setTimeout(r, 0));
 
             const sourceStr = entry.ideogram || entry.word?.replace(/\*/g, '').toLowerCase() || '';
-            const blocks = sourceStr.split('.').filter(Boolean);
+            
+            let blocks = [];
+            if (sourceStr.includes('.')) {
+                blocks = sourceStr.split('.').filter(Boolean);
+            } else {
+                // Auto-chunking based on templates
+                const phonemes = extractPhonemes(sourceStr);
+                let i = 0;
+                const sortedTemplates = [...activeTemplates].sort((a, b) => (b.maxChars || 3) - (a.maxChars || 3));
+                
+                while (i < phonemes.length) {
+                    let bestMatchLen = 0;
+                    
+                    for (const template of sortedTemplates) {
+                        const len = template.maxChars || 3;
+                        if (i + len <= phonemes.length) {
+                            let isValid = true;
+                            for (let j = 0; j < len; j++) {
+                                const char = phonemes[i + j];
+                                let slot = (template.slotMapping || [])[j];
+                                let source;
+                                if (typeof slot === 'string') {
+                                    source = j === 1 ? 'vowels' : 'consonants';
+                                } else if (slot && slot.source) {
+                                    source = slot.source;
+                                } else {
+                                    source = j === 1 ? 'vowels' : 'consonants';
+                                }
+                                
+                                if (source === 'vowels' && !vowList.includes(char)) isValid = false;
+                                if (source === 'consonants' && !consList.includes(char)) isValid = false;
+                                if (source === 'otherPhonemes' && !otherList.includes(char)) isValid = false;
+                            }
+                            if (isValid) {
+                                bestMatchLen = len;
+                                break;
+                            }
+                        }
+                    }
+                    if (bestMatchLen > 0) {
+                        blocks.push(phonemes.slice(i, i + bestMatchLen).join(''));
+                        i += bestMatchLen;
+                    } else {
+                        blocks.push(phonemes[i]);
+                        i++;
+                    }
+                }
+            }
 
             for (const block of blocks) {
                 if (newSyllabaryMap[block]) continue; // Already compiled this block

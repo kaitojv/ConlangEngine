@@ -5,7 +5,7 @@ import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { renderWordInScript } from '../../../utils/scriptRendering.js';
 import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
-import { BrainCircuit, Flame, RotateCcw, Check, X, Play, Map, Zap, Volume2 } from 'lucide-react';
+import { BrainCircuit, Flame, RotateCcw, Check, X, Play, Map, Zap, Volume2, Star, Crown, Book, Brain, Dumbbell, Sword, Shield, Lock } from 'lucide-react';
 import Mascot from './Mascot.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import ExercisePlayer from './ExercisePlayer.jsx';
@@ -22,7 +22,7 @@ export default function StudyTab() {
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
     const addWord = useLexiconStore((state) => state.addWord);
     const checkDuplicate = useLexiconStore((state) => state.checkDuplicate);
-    const { streak, lastStudyDate, conlangName, customCourse } = useConfigStore();
+    const { streak, lastStudyDate, conlangName, customCourse, courseProgress = [] } = useConfigStore();
     const updateConfig = useConfigStore((state) => state.updateConfig);
     const { transliterate } = useTransliterator();
 
@@ -335,8 +335,11 @@ export default function StudyTab() {
             {studyMode === 'course' && pathLevel && (
                 <ExercisePlayer 
                     levelNode={pathLevel}
-                    onComplete={() => {
+                    onComplete={(nodeId) => {
                         recordDailyStudy();
+                        if (nodeId && !courseProgress.includes(nodeId)) {
+                            updateConfig({ courseProgress: [...courseProgress, nodeId] });
+                        }
                         setStudyMode('path');
                     }}
                     onExit={() => setStudyMode('path')}
@@ -361,6 +364,11 @@ export default function StudyTab() {
                         />
                     ) : (
                         <div className="path-track" style={{ position: 'relative' }}>
+                            <div style={{ position: 'absolute', top: '-40px', right: '0' }}>
+                                <Button variant="default" onClick={() => updateConfig({ courseProgress: [] })}>
+                                    Reset Progress
+                                </Button>
+                            </div>
                             <svg 
                                 className="path-svg" 
                                 style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: '100%', overflow: 'visible', zIndex: 0, pointerEvents: 'none' }}
@@ -371,27 +379,32 @@ export default function StudyTab() {
                                     const y1 = 80 + i * 150;
                                     const y2 = 80 + (i + 1) * 150;
                                     const midY = (y1 + y2) / 2;
-                                    // Use raw numbers for SVG coordinates, relative to left: 50%
                                     const x1 = isLeft ? -40 : 40;
                                     const x2 = isLeft ? 40 : -40;
                                     
+                                    let currentPathIdx = pathNodes.findIndex(n => !courseProgress.includes(n.id));
+                                    if (currentPathIdx === -1) currentPathIdx = pathNodes.length;
+                                    
+                                    const isNextLocked = (i + 1) > currentPathIdx;
+                                    const nextNode = pathNodes[i + 1];
+                                    const lineColor = isNextLocked ? 'var(--bd)' : (node.color || 'var(--acc)');
+                                    
                                     return (
                                         <g key={`line-${i}`}>
-                                            {/* Outer Border */}
                                             <path 
                                                 d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
-                                                stroke="var(--bd)"
+                                                stroke="var(--bg)"
                                                 strokeWidth="32"
                                                 fill="none"
                                                 strokeLinecap="round"
                                             />
-                                            {/* Inner Track */}
                                             <path 
                                                 d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
-                                                stroke="var(--s2)"
+                                                stroke={lineColor}
                                                 strokeWidth="24"
                                                 fill="none"
                                                 strokeLinecap="round"
+                                                strokeDasharray={isNextLocked ? "12, 16" : "none"}
                                             />
                                         </g>
                                     );
@@ -400,17 +413,50 @@ export default function StudyTab() {
 
                             {pathNodes.map((node, i) => {
                                 const isZigZag = i % 2 === 0;
+                                
+                                let currentPathIdx = pathNodes.findIndex(n => !courseProgress.includes(n.id));
+                                if (currentPathIdx === -1) currentPathIdx = pathNodes.length;
+                                
+                                const isCompleted = i < currentPathIdx || courseProgress.includes(node.id);
+                                const isCurrent = i === currentPathIdx;
+                                const isLocked = i > currentPathIdx;
+
+                                const nodeColor = isLocked ? 'var(--bd)' : (isCompleted ? 'var(--save)' : (node.color || 'var(--acc)'));
+                                const iconColor = isLocked ? 'var(--tx2)' : nodeColor;
+                                
+                                let IconCmp = Zap;
+                                if (isLocked) IconCmp = Lock;
+                                else if (isCompleted) IconCmp = Check;
+                                else {
+                                    switch(node.icon) {
+                                        case 'Star': IconCmp = Star; break;
+                                        case 'Crown': IconCmp = Crown; break;
+                                        case 'Book': IconCmp = Book; break;
+                                        case 'Brain': IconCmp = Brain; break;
+                                        case 'Flame': IconCmp = Flame; break;
+                                        case 'Dumbbell': IconCmp = Dumbbell; break;
+                                        case 'Sword': IconCmp = Sword; break;
+                                        case 'Shield': IconCmp = Shield; break;
+                                        default: IconCmp = Zap; break;
+                                    }
+                                }
 
                                 return (
-                                    <div key={node.id} className={`path-node-wrapper ${isZigZag ? 'left' : 'right'}`}>
+                                    <div key={node.id} className={`path-node-wrapper ${isZigZag ? 'left' : 'right'} ${isCurrent ? 'current-node' : ''} ${isLocked ? 'locked-node' : ''}`}>
                                         <div 
                                             className="path-node" 
-                                            onClick={() => startQuiz(node)}
-                                            style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--acc)', boxShadow: `0 8px 0 var(--acc)` }}
+                                            onClick={() => !isLocked && startQuiz(node)}
+                                            style={{ 
+                                                backgroundColor: isLocked ? 'var(--s1)' : 'var(--bg)', 
+                                                borderColor: nodeColor, 
+                                                boxShadow: isLocked ? 'none' : `0 8px 0 ${nodeColor}`,
+                                                transform: isLocked ? 'scale(0.95)' : 'none',
+                                                cursor: isLocked ? 'not-allowed' : 'pointer'
+                                            }}
                                         >
-                                            <div className="path-node-icon"><Zap size={32} color="var(--acc)" fill="none" /></div>
+                                            <div className="path-node-icon"><IconCmp size={32} color={iconColor} fill={isLocked ? 'none' : 'currentColor'} strokeWidth={isCompleted ? 3 : 2} /></div>
                                         </div>
-                                        <div className="path-node-label">
+                                        <div className="path-node-label" style={{ opacity: isLocked ? 0.5 : 1 }}>
                                             {node.title}
                                         </div>
                                     </div>

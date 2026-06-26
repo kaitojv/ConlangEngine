@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useConfigStore } from "@/store/useConfigStore";
-import { LayoutGrid, List, Brush, Info, Trash2 } from "lucide-react";
+import { LayoutGrid, List, Brush, Info, Trash2, Wand2 } from "lucide-react";
 import React from 'react'
 import Card from "../Card/Card.jsx";
 import Button from "../Buttons/Buttons.jsx";
@@ -8,6 +8,8 @@ import './syllabaryManager.css';
 import Modal from "../Modal/Modal.jsx";
 import FontStudioModal from "../Fontstudio/FontStudio.jsx";
 import Infobox from "../Infobox/Infobox.jsx";
+import { SCRIPT_MAPS, composeHangulSyllable } from "../../../utils/transliteration.js";
+import toast from 'react-hot-toast';
 
 
 export default function SyllabaryManager({ scriptId } = {}) {
@@ -24,6 +26,7 @@ export default function SyllabaryManager({ scriptId } = {}) {
   const legacySyllabaryMap = useConfigStore(s => s.syllabaryMap);
   const scriptDataById = useConfigStore(s => s.scriptDataById);
   const defaultScriptId = useConfigStore(s => s.scriptRules?.defaultScriptId) || 'default';
+  const legacyAlphabeticScript = useConfigStore(s => s.alphabeticScript) || 'latin';
   const updateConfig = useConfigStore(s => s.updateConfig);
   const updateScriptData = useConfigStore(s => s.updateScriptData);
 
@@ -33,6 +36,8 @@ export default function SyllabaryManager({ scriptId } = {}) {
   const syllabaryMap = scriptDataById?.[targetScriptId]?.syllabaryMap
     || (isDefault ? legacySyllabaryMap : {})
     || {};
+  const alphabeticScript = scriptDataById?.[targetScriptId]?.alphabeticScript
+    || (isDefault ? legacyAlphabeticScript : 'latin');
 
   // Route writes to the selected script. Mirror to legacy field for default so
   // transliteration / public viewer keep working.
@@ -70,6 +75,98 @@ export default function SyllabaryManager({ scriptId } = {}) {
         writeSyllabaryMap(newMap);
     };
 
+    const handleAutoMap = () => {
+        if (alphabeticScript === 'hangul_syllables') {
+            const newMap = { ...syllabaryMap };
+            let count = 0;
+            
+            const allSyls = [];
+            consList.forEach(c => {
+                vowList.forEach(v => allSyls.push(c + v));
+            });
+            otherList.forEach(p => allSyls.push(p));
+            
+            allSyls.forEach(syl => {
+                if (!newMap[syl]) {
+                    // Try to extract initial, vowel, final from the syllable string
+                    let initial = '';
+                    let vowel = '';
+                    let final = '';
+                    
+                    let vIdx = -1;
+                    for (let i = 0; i < syl.length; i++) {
+                        if (vowList.includes(syl.substring(i))) {
+                            vIdx = i;
+                            break; // Find longest matching vowel? Or just simple? Let's just use naive split since it's CV mostly
+                        }
+                    }
+                    
+                    // A better way to split CV for standard phonologies:
+                    // Try to match longest vowel in the middle
+                    let bestVowel = '';
+                    for (const v of vowList) {
+                        if (v && syl.includes(v) && v.length > bestVowel.length) {
+                            bestVowel = v;
+                        }
+                    }
+                    
+                    if (bestVowel) {
+                        const parts = syl.split(bestVowel);
+                        initial = parts[0] || '';
+                        final = parts.slice(1).join(bestVowel) || ''; // Re-join if vowel appeared twice
+                        vowel = bestVowel;
+                        
+                        const composed = composeHangulSyllable(initial, vowel, final);
+                        if (composed) {
+                            newMap[syl] = composed;
+                            count++;
+                        }
+                    }
+                }
+            });
+            
+            if (count > 0) {
+                writeSyllabaryMap(newMap);
+                toast.success(`Auto-mapped ${count} missing Hangul syllables!`);
+            } else {
+                toast('No missing Hangul syllables to map.', { icon: 'ℹ️' });
+            }
+            return;
+        }
+
+        const mappingObj = alphabeticScript !== 'custom' && SCRIPT_MAPS[alphabeticScript] ? SCRIPT_MAPS[alphabeticScript] : null;
+        if (!mappingObj) {
+             toast('No pre-existing script mapping selected for this script.', { icon: 'ℹ️' });
+             return;
+        }
+
+        const newMap = { ...syllabaryMap };
+        let count = 0;
+
+        const allSyls = [];
+        consList.forEach(c => {
+            vowList.forEach(v => allSyls.push(c + v));
+        });
+        otherList.forEach(p => allSyls.push(p));
+
+        allSyls.forEach(syl => {
+            if (!newMap[syl]) {
+                const mapped = mappingObj[syl];
+                if (mapped) {
+                    newMap[syl] = mapped;
+                    count++;
+                }
+            }
+        });
+
+        if (count > 0) {
+            writeSyllabaryMap(newMap);
+            toast.success(`Auto-mapped ${count} missing syllables!`);
+        } else {
+            toast('No missing syllables to map.', { icon: 'ℹ️' });
+        }
+    };
+
     return (
     <>
         <Card>
@@ -97,6 +194,15 @@ export default function SyllabaryManager({ scriptId } = {}) {
                 onClick={() => setViewMode('list')}
             >
                 <List size={16} /> List View (Complex)
+            </Button>
+            <Button 
+                variant="primary" 
+                className="btn-sm" 
+                style={{ marginLeft: 'auto' }}
+                onClick={handleAutoMap}
+                title={`Auto-fill missing characters using ${alphabeticScript} mapping`}
+            >
+                <Wand2 size={14} style={{ marginRight: '6px' }}/> Auto-Map Script
             </Button>
         </div>
 

@@ -9,8 +9,9 @@ import Button from '../../UI/Buttons/Buttons.jsx';
 import SyllabaryManager from '../../UI/SyllabaryManager/SyllabaryManager.jsx';
 import BlockManager from '../../UI/BlockManager/BlockManager.jsx';
 import KeyboardManager from '../../UI/KeyboardManager/KeyboardManager.jsx';
-import { Keyboard, RefreshCw } from 'lucide-react';
+import { Keyboard, RefreshCw, Wand2 } from 'lucide-react';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
+import { SCRIPT_MAPS } from '../../../utils/transliteration.js';
 import toast from 'react-hot-toast';
 import './graphismTab.css';
 
@@ -39,6 +40,7 @@ export default function TypographyStudio() {
     const legacyAlphabetNames = useConfigStore(state => state.alphabetNames) || {};
     const legacyWritingDirection = useConfigStore(state => state.writingDirection) || 'ltr';
     const legacyPhonologyTypes = useConfigStore(state => state.phonologyTypes);
+    const legacyAlphabeticScript = useConfigStore(state => state.alphabeticScript) || 'latin';
     const updateScriptData = useConfigStore(state => state.updateScriptData);
     const updateScriptSystem = useConfigStore(state => state.updateScriptSystem);
 
@@ -71,6 +73,8 @@ export default function TypographyStudio() {
         || (isDefaultSelected ? legacyWritingDirection : 'ltr');
     const scriptType = selectedScript?.type
         || (isDefaultSelected ? legacyPhonologyTypes : 'alphabetic');
+    const alphabeticScript = selectedScript?.alphabeticScript
+        || (isDefaultSelected ? legacyAlphabeticScript : 'latin');
 
     const [drawingChar, setDrawingChar] = useState(null);
     const [newMode, setNewMode] = useState('');
@@ -199,6 +203,31 @@ export default function TypographyStudio() {
         } catch (err) {
             console.error(err);
             toast.error("Failed to recompile font.", { id: tId });
+        }
+    };
+
+    const handleAutoMap = () => {
+        const mappingObj = alphabeticScript !== 'custom' && SCRIPT_MAPS[alphabeticScript] ? SCRIPT_MAPS[alphabeticScript] : null;
+        
+        const newGlyphs = { ...alphabetGlyphs };
+        let count = 0;
+
+        allChars.forEach(char => {
+            const key = editingMode === 'Base' ? char : `${char}_${editingMode.toLowerCase()}`;
+            if (!newGlyphs[key]) {
+                const mappedChar = mappingObj ? mappingObj[char] : char;
+                if (mappedChar) {
+                    newGlyphs[key] = mappedChar;
+                    count++;
+                }
+            }
+        });
+
+        if (count > 0) {
+            writeAlphabetGlyphs(newGlyphs);
+            toast.success(`Auto-mapped ${count} missing characters!`);
+        } else {
+            toast('No missing characters to map.', { icon: 'ℹ️' });
         }
     };
 
@@ -438,6 +467,15 @@ export default function TypographyStudio() {
                                 <option key={mode} value={mode}>{mode}</option>
                             ))}
                         </select>
+                        <Button 
+                            variant="primary" 
+                            className="btn-sm" 
+                            style={{ marginLeft: 'auto' }}
+                            onClick={handleAutoMap}
+                            title={`Auto-fill missing characters using ${alphabeticScript} mapping`}
+                        >
+                            <Wand2 size={14} style={{ marginRight: '6px' }}/> Auto-Map
+                        </Button>
                     </div>
 
                     {allChars.length > 0 ? (

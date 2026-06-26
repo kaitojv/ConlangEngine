@@ -330,7 +330,7 @@ export default function PhonologyTab() {
                     disabled={skipSyllableValidation}
                 />
 
-                {phonologyTypes === 'alphabetic' && (
+                {['alphabetic', 'abjad', 'abugida'].includes(phonologyTypes || 'alphabetic') && (
                     <label className="flex items-center gap-2 phonology-checkbox-label">
                         <input
                             type="checkbox"

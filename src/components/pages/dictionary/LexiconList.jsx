@@ -598,7 +598,7 @@ export default function LexiconList() {
                                     )}
 
                                     {/* Compact bracket form — shown when toggle is off */}
-                                    {phonologyTypes !== 'alphabetic' && !showRomanization && (
+                                    {(!['alphabetic', 'abjad', 'abugida'].includes(phonologyTypes || 'alphabetic')) && !showRomanization && (
                                         <span className="notranslate entry-base-word">
                                             [{safeWord}]
                                         </span>
@@ -652,7 +652,7 @@ export default function LexiconList() {
                                     <Button variant="edit" onClick={() => setNewSenseBase(baseEntry)} title="Add new definition" className="btn-icon-only">
                                         <PlusCircle size={16} />
                                     </Button>
-                                    {phonologyTypes !== 'alphabetic' && (
+                                    {(!['alphabetic', 'abjad', 'abugida'].includes(phonologyTypes || 'alphabetic')) && (
                                         <Button variant="default" onClick={() => exportTextAsSVG(displayWord, `${safeWord}.svg`)} title="Download SVG" className="btn-icon-only">
                                             <Download size={16} />
                                         </Button>

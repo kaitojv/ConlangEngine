@@ -4,6 +4,8 @@
 
 export const SCRIPT_TYPES = [
     'alphabetic',
+    'abjad',
+    'abugida',
     'syllabic',
     'logographic',
     'featural_block',
