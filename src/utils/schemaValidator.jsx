@@ -32,7 +32,9 @@ const VALID_CONFIG_KEYS = new Set([
     // Particle fields
     'morphologyMode', 'morphSlots', 'fusionRules', 'boundaryRules',
     'particleDatabase', 'compositeParticles', 'allowRecursiveComposites',
-    'usesParticles'
+    'usesParticles',
+    // UI state
+    'isDialect', 'hasCompletedOnboarding', 'floatingBackground'
 ]);
 
 /**
@@ -51,6 +53,11 @@ export function sanitizeConfig(rawConfig) {
         if (typeof rawConfig[key] === 'function') continue;
 
         clean[key] = rawConfig[key];
+    }
+
+    // Default hasCompletedOnboarding to true for older projects that lack this key
+    if (clean.hasCompletedOnboarding === undefined) {
+        clean.hasCompletedOnboarding = true;
     }
 
     // Deduplicate legacy root bloat fields to prevent doubled JSON file size

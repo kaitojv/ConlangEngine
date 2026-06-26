@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/utils/supabaseClient.js';
-import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit, FileText, Map, Zap, ArrowLeft, Loader2 } from 'lucide-react';
+import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit, FileText, Map, Zap, ArrowLeft, Loader2, Calendar, Clock } from 'lucide-react';
 import { playAzureTTS } from '@/utils/azureTTS.js';
 import DOMPurify from 'dompurify';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
@@ -11,6 +11,7 @@ import { renderWordInScript } from '../../../utils/scriptRendering.js';
 import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
 import PublicFlashcards from './PublicFlashcards.jsx';
 import ExercisePlayer from '../study/ExercisePlayer.jsx';
+import PageSkeleton from '../../UI/PageSkeleton/PageSkeleton.jsx';
 import './publicViewer.css';
 import '../study/studyTab.css'; // Required for the course map layout
 
@@ -154,10 +155,7 @@ export default function PublicViewer() {
     if (loading) {
         return (
             <div className="pv-page">
-                <div className="pv-loading">
-                    <div className="pv-loading-spinner" />
-                    <p style={{ color: '#94a3b8' }}>Loading conlang...</p>
-                </div>
+                <PageSkeleton />
             </div>
         );
     }
@@ -604,6 +602,118 @@ export default function PublicViewer() {
                                         <span className="custom-font-text notranslate">{stem}</span>
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                {/* NUMBER DERIVED RULES */}
+                {config.numberDerivedRules && (config.numberDerivedRules.ordinal || config.numberDerivedRules.fractional || config.numberDerivedRules.multiplier) && (
+                    <section className="pv-section">
+                        <div className="pv-section-header">
+                            <Hash size={20} className="pv-section-icon" />
+                            <h2 className="pv-section-title">Derived Mathematical Forms</h2>
+                        </div>
+                        <div className="pv-section-body">
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem' }}>
+                                {config.numberDerivedRules.ordinal && (
+                                    <div style={{ padding: '0.75rem', background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: '6px', textAlign: 'center' }}>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 600 }}>Ordinal</div>
+                                        <div className="custom-font-text notranslate" style={{ fontWeight: 600, color: 'var(--acc)' }}>{config.numberDerivedRules.ordinal}</div>
+                                    </div>
+                                )}
+                                {config.numberDerivedRules.fractional && (
+                                    <div style={{ padding: '0.75rem', background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: '6px', textAlign: 'center' }}>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 600 }}>Fractional</div>
+                                        <div className="custom-font-text notranslate" style={{ fontWeight: 600, color: 'var(--acc)' }}>{config.numberDerivedRules.fractional}</div>
+                                    </div>
+                                )}
+                                {config.numberDerivedRules.multiplier && (
+                                    <div style={{ padding: '0.75rem', background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: '6px', textAlign: 'center' }}>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 600 }}>Multiplier</div>
+                                        <div className="custom-font-text notranslate" style={{ fontWeight: 600, color: 'var(--acc)' }}>{config.numberDerivedRules.multiplier}</div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                {/* TIME SYSTEM VOCABULARY */}
+                {config.timeSystemVocab && Object.values(config.timeSystemVocab).some(val => val) && (
+                    <section className="pv-section">
+                        <div className="pv-section-header">
+                            <Clock size={20} className="pv-section-icon" />
+                            <h2 className="pv-section-title">Time System</h2>
+                        </div>
+                        <div className="pv-section-body">
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem' }}>
+                                {Object.entries({ second: 'Second', minute: 'Minute', hour: 'Hour', day: 'Day', week: 'Week', month: 'Month', year: 'Year' }).map(([key, label]) => {
+                                    const val = config.timeSystemVocab[key];
+                                    if (!val) return null;
+                                    return (
+                                        <div key={key} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: '6px' }}>
+                                            <span style={{ fontWeight: 600, color: 'var(--tx2)' }}>{label}</span>
+                                            <span className="custom-font-text notranslate" style={{ color: 'var(--acc)' }}>{val}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                {/* NUMBER MATRIX (CALENDAR) */}
+                {config.numberMatrix && Object.keys(config.numberMatrix).length > 0 && (
+                    <section className="pv-section">
+                        <div className="pv-section-header">
+                            <Calendar size={20} className="pv-section-icon" />
+                            <h2 className="pv-section-title">Calendar System</h2>
+                        </div>
+                        <div className="pv-section-body" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+                            <div className="matrix-table-wrapper" style={{ overflowX: 'auto', background: 'var(--s1)', borderRadius: '8px', border: '1px solid var(--bd)' }}>
+                                <table className="matrix-table" style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+                                    <thead style={{ borderBottom: '1px solid var(--bd)' }}>
+                                        <tr>
+                                            <th style={{ padding: '0.75rem 1rem', color: 'var(--tx2)', fontWeight: 600 }}>Day of the Week</th>
+                                            <th style={{ padding: '0.75rem 1rem', color: 'var(--tx2)', fontWeight: 600 }}>Word</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {[1,2,3,4,5,6,7].map(day => {
+                                            const val = config.numberMatrix[day]?.day;
+                                            if (!val) return null;
+                                            return (
+                                                <tr key={day} style={{ borderBottom: '1px solid var(--bd)' }}>
+                                                    <td style={{ padding: '0.75rem 1rem', color: 'var(--tx)' }}>Day {day}</td>
+                                                    <td className="custom-font-text notranslate" style={{ padding: '0.75rem 1rem', color: 'var(--acc)', fontWeight: 600 }}>{val}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="matrix-table-wrapper" style={{ overflowX: 'auto', background: 'var(--s1)', borderRadius: '8px', border: '1px solid var(--bd)' }}>
+                                <table className="matrix-table" style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+                                    <thead style={{ borderBottom: '1px solid var(--bd)' }}>
+                                        <tr>
+                                            <th style={{ padding: '0.75rem 1rem', color: 'var(--tx2)', fontWeight: 600 }}>Month of the Year</th>
+                                            <th style={{ padding: '0.75rem 1rem', color: 'var(--tx2)', fontWeight: 600 }}>Word</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {[1,2,3,4,5,6,7,8,9,10,11,12].map(month => {
+                                            const val = config.numberMatrix[month]?.month;
+                                            if (!val) return null;
+                                            return (
+                                                <tr key={month} style={{ borderBottom: '1px solid var(--bd)' }}>
+                                                    <td style={{ padding: '0.75rem 1rem', color: 'var(--tx)' }}>Month {month}</td>
+                                                    <td className="custom-font-text notranslate" style={{ padding: '0.75rem 1rem', color: 'var(--acc)', fontWeight: 600 }}>{val}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </section>

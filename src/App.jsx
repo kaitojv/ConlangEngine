@@ -220,19 +220,10 @@ function App(){
           left: 0,
           width: '100%',
           height: '100%',
-          background: 'rgba(11, 15, 25, 0.9)',
-          backdropFilter: 'blur(10px)',
-          zIndex: 9999,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          color: 'var(--tx)'
+          background: 'var(--bg)',
+          zIndex: 9999
         }}>
-          <div className="btn-loading" style={{ width: '40px', height: '40px', borderRadius: '50%', border: '3px solid var(--acc)', borderTopColor: 'transparent', animation: 'spin 1s linear infinite' }}></div>
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <h2 style={{ marginTop: '20px', fontWeight: '800' }}>Rehydrating Project...</h2>
-          <p style={{ color: 'var(--tx2)', fontSize: '0.9rem' }}>Loading large font and glyph data from your database.</p>
+          <PageSkeleton />
         </div>
       )}
 

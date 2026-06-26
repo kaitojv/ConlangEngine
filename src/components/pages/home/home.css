@@ -119,6 +119,10 @@
 .wiki-card h3 { color: #0ea5e9; }
 .support-card h3 { color: #f43f5e; }
 
+.stats-card {
+    grid-column: 1 / -1;
+}
+
 .support-card {
     cursor: default;
     background: linear-gradient(135deg, var(--s4), color-mix(in srgb, #f43f5e 5%, var(--s4)));

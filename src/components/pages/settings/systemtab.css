@@ -66,13 +66,17 @@
     width: 35px;
     height: 35px;
     border-radius: 50%;
-    border: 3px solid var(--bd);
+    border: none;
+    box-shadow: inset 0 0 0 3px var(--bd);
+    overflow: hidden;
+    -webkit-appearance: none;
+    appearance: none;
     transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .theme-btn:hover {
     transform: scale(1.15);
-    border-color: var(--acc);
+    box-shadow: inset 0 0 0 3px var(--acc);
 }
 
 /* Font Buttons */

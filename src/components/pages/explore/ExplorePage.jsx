@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../utils/supabaseClient.js';
-import { Globe, BookA, User, Loader2, Heart } from 'lucide-react';
+import { Globe, BookA, User, Loader2, Heart, Trash2 } from 'lucide-react';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import toast from 'react-hot-toast';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
@@ -9,6 +9,7 @@ import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { sanitizeConfig } from '../../../utils/schemaValidator.jsx';
 import { transliterateText } from '../../../utils/transliteration.js';
 import Button from '../../UI/Buttons/Buttons.jsx';
+import PageSkeleton from '../../UI/PageSkeleton/PageSkeleton.jsx';
 import './explorePage.css';
 
 export default function ExplorePage() {
@@ -38,7 +39,7 @@ export default function ExplorePage() {
                 // We use .contains on the JSONB column to match { config: { isPublic: true } }
                 const { data, error: fetchError } = await supabase
                     .from('conlang_snapshots')
-                    .select('project_id, project_data, created_at, updated_at')
+                    .select('project_id, user_id, project_data, created_at, updated_at')
                     .contains('project_data', { config: { isPublic: true } })
                     .order('created_at', { ascending: false })
                     .limit(50);
@@ -201,6 +202,29 @@ export default function ExplorePage() {
         }
     };
 
+    const handleDeletePublicConlang = async (e, projectId) => {
+        e.stopPropagation();
+
+        if (!window.confirm("Are you sure you want to delete this public conlang from Explore? This will remove it from the cloud for everyone. (Your local workspace will not be deleted)")) return;
+
+        const toastId = toast.loading("Deleting from cloud...");
+        try {
+            await supabase.from('conlangs').delete().eq('project_id', projectId);
+            await supabase.from('conlang_snapshots').delete().eq('project_id', projectId);
+
+            setConlangs(prev => prev.filter(c => c.project_id !== projectId));
+            toast.success("Conlang removed from Explore", { id: toastId });
+
+            // If this is the active project, update the local public flag to false
+            if (projectId === useConfigStore.getState().projectId) {
+                updateConfig({ isPublic: false });
+            }
+        } catch (err) {
+            console.error("Delete failed", err);
+            toast.error("Failed to delete public conlang", { id: toastId });
+        }
+    };
+
     const sortedConlangs = React.useMemo(() => {
         return [...conlangs].sort((a, b) => {
             if (sortBy === 'updated') {
@@ -232,12 +256,7 @@ export default function ExplorePage() {
     }, [conlangs, likesData, sortBy]);
 
     if (loading) {
-        return (
-            <div className="explore-loading">
-                <Loader2 size={40} className="animate-spin text-accent" />
-                <p>Discovering conlangs...</p>
-            </div>
-        );
+        return <PageSkeleton />;
     }
 
     if (error) {
@@ -304,7 +323,6 @@ export default function ExplorePage() {
                         const safeFontUrl = customFont ? customFont.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,') : '';
 
                         let displayName = name;
-                        let displayDesc = desc;
 
                         // Merge scriptData into a temporary config for transliteration
                         const translitConfig = { ...config, ...scriptData };
@@ -322,7 +340,6 @@ export default function ExplorePage() {
                         const needsTransliteration = ['logographic', 'syllabic', 'alphabetic'].includes(config?.phonologyTypes);
                         if (needsTransliteration) {
                             displayName = name.split(/(\s+)/).map(w => w.trim() ? transliterateText(w, translitConfig, dictionary || []) : w).join('');
-                            displayDesc = desc.split(/(\s+)/).map(w => w.trim() ? transliterateText(w, translitConfig, dictionary || []) : w).join('');
                         }
 
                         return (
@@ -350,8 +367,17 @@ export default function ExplorePage() {
                                             <User size={12} /> {author}
                                         </p>
                                     </div>
+                                    {sessionUser && sessionUser.id === lang.user_id && (
+                                        <button 
+                                            className="explore-delete-btn" 
+                                            onClick={(e) => handleDeletePublicConlang(e, lang.project_id)}
+                                            title="Delete from Explore"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
                                 </div>
-                                <p className="explore-desc notranslate" style={customFont ? { fontFamily: `'${fontName}', 'Inter', sans-serif` } : {}}>{displayDesc}</p>
+                                <p className="explore-desc notranslate">{desc}</p>
                                 <div className="explore-stats">
                                     <div className="explore-stat">
                                         <BookA size={14} />

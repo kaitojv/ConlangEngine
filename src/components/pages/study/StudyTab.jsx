@@ -279,7 +279,7 @@ export default function StudyTab() {
                         {studyMode === 'path' ? ' Learning Path' : studyMode === 'flashcard' ? ' Flashcard Drill' : studyMode === 'course' ? ` Course: ${pathLevel?.title}` : ' Mascot Quiz'}
                     </h2>
                     
-                    <div style={{display: 'flex', gap: '15px', alignItems: 'center'}}>
+                    <div style={{display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap'}}>
                         <div className="streak-badge">
                             <Flame size={18} /> {streak || 0} Day Streak
                         </div>

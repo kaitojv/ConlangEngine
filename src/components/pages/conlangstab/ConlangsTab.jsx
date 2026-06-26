@@ -546,8 +546,8 @@ export default function ConlangsTab() {
             const children = localProjects.filter(p => p.project_data?.config?.parentId === project.id);
             
             return (
-                <div key={project.id} className="tree-node-wrapper">
-                    <div className={`project-card tree-card ${isCurrent ? 'active-workspace' : ''}`} onClick={() => handleOpenProject(project.id)}>
+                <div key={project.id} className={`tree-node-wrapper ${project.project_data?.config?.isDialect ? 'is-dialect' : 'is-daughter'}`}>
+                    <div className={`project-card tree-card ${isCurrent ? 'active-workspace' : ''} ${children.length > 0 ? 'has-children' : ''}`} onClick={() => handleOpenProject(project.id)}>
                         <div className="project-card-actions">
                             <button className="project-action-btn" onClick={(e) => handleOpenCompareModal(e, project)} title="Compare with Relatives">
                                 <GitCompare size={16} />

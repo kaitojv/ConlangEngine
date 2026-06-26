@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
+import { useProjectStore } from '@/store/useProjectStore.jsx';
+import { sanitizeConfig, sanitizeLexicon } from '@/utils/schemaValidator.jsx';
 import { 
     Search, Command, Book, Languages, Settings, Map, 
-    Sparkles, Library, FileText, ArrowRight, Type
+    Sparkles, Library, FileText, ArrowRight, Type, Plus, FilePlus
 } from 'lucide-react';
 import { DARK_THEMES, LIGHT_THEMES } from '@/utils/themePresets.js';
 import './commandPalette.css';
@@ -34,6 +36,7 @@ export default function CommandPalette() {
     const wikiPages = useConfigStore(state => state.wikiPages) || {};
     const theme = useConfigStore(state => state.theme);
     const updateConfig = useConfigStore(state => state.updateConfig);
+    const localProjects = useProjectStore(state => state.localProjects) || [];
 
     // Toggle on Ctrl+K or Cmd+K
     useEffect(() => {
@@ -48,8 +51,14 @@ export default function CommandPalette() {
             }
         };
 
+        const handleCustomOpen = () => setIsOpen(true);
+
         window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        window.addEventListener('open-command-palette', handleCustomOpen);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('open-command-palette', handleCustomOpen);
+        };
     }, [isOpen]);
 
     // Reset state when opening/closing
@@ -127,13 +136,48 @@ export default function CommandPalette() {
                 subtitle: word.translation,
                 type: 'word',
                 path: '/lexicon',
-                icon: 'Book'
+                icon: 'Book',
+                wordEntry: word
             }));
             
         matches.push(...lexiconMatches);
 
+        // 5. Dynamic Create Actions
+        matches.push({
+            id: `create-word-${lowerQuery}`,
+            title: `Create Word: "${query}"`,
+            type: 'action',
+            subtitle: 'Add new word to lexicon',
+            icon: 'Plus',
+            action: () => navigate('/create', { state: { prefillWord: query } })
+        });
+        
+        matches.push({
+            id: `create-wiki-${lowerQuery}`,
+            title: `Create Wiki Page: "${query}"`,
+            type: 'action',
+            subtitle: 'Add new wiki document',
+            icon: 'FilePlus',
+            action: () => navigate(`/wiki`)
+        });
+
+        // 6. Search Local Workspaces
+        localProjects.forEach(project => {
+            const projectName = project.project_data?.config?.conlangName || 'Untitled Workspace';
+            if (projectName.toLowerCase().includes(lowerQuery)) {
+                matches.push({
+                    id: `workspace-${project.id}`,
+                    title: projectName,
+                    type: 'workspace',
+                    subtitle: 'Switch Workspace',
+                    icon: 'Languages',
+                    project: project
+                });
+            }
+        });
+
         return matches;
-    }, [query, lexicon, wikiPages]);
+    }, [query, lexicon, wikiPages, localProjects, navigate]);
 
     // Handle keyboard navigation inside the modal
     useEffect(() => {
@@ -169,8 +213,23 @@ export default function CommandPalette() {
     const executeResult = (result) => {
         if (result.type === 'action') {
             result.action();
-        } else if (result.type === 'route' || result.type === 'wiki' || result.type === 'word') {
+        } else if (result.type === 'word') {
+            navigate('/lexicon', { state: { searchQuery: result.wordEntry.word.replace(/\*/g, '') } });
+        } else if (result.type === 'route' || result.type === 'wiki') {
             navigate(result.path);
+        } else if (result.type === 'workspace') {
+            const project = result.project;
+            if (project) {
+                const projectStore = useProjectStore.getState();
+                projectStore.saveProjectToArchive(useConfigStore.getState(), useLexiconStore.getState().lexicon);
+                
+                const safeLexicon = sanitizeLexicon(project.project_data?.dictionary);
+                const safeConfig = sanitizeConfig(project.project_data?.config || {});
+                
+                useLexiconStore.getState().setLexicon(safeLexicon);
+                useConfigStore.getState().setFullConfig(safeConfig);
+                navigate('/');
+            }
         }
         setIsOpen(false);
     };
@@ -185,6 +244,8 @@ export default function CommandPalette() {
             case 'Library': return <Library size={18} />;
             case 'FileText': return <FileText size={18} />;
             case 'Type': return <Type size={18} />;
+            case 'Plus': return <Plus size={18} />;
+            case 'FilePlus': return <FilePlus size={18} />;
             default: return <Command size={18} />;
         }
     };

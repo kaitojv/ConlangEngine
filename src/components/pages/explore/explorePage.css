@@ -212,3 +212,22 @@
     border-color: var(--acc);
     box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
 }
+
+/* Delete Button */
+.explore-delete-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--tx2);
+    cursor: pointer;
+    padding: 0.4rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.explore-delete-btn:hover {
+    background: rgba(255, 75, 75, 0.1);
+    color: #ff4b4b;
+}

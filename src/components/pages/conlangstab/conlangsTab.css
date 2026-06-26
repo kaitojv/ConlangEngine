@@ -113,11 +113,86 @@
     margin-bottom: 10px;
 }
 
-.family-tree-container { display: flex; gap: 40px; padding: 20px; align-items: flex-start; }
-.tree-node-wrapper { display: flex; align-items: flex-start; position: relative; }
-.tree-children { display: flex; flex-direction: column; gap: 20px; margin-left: 40px; position: relative; border-left: 2px solid var(--bd); padding-left: 40px; }
-.tree-children::before { content: ''; position: absolute; left: -2px; top: 50%; width: 40px; height: 2px; background: var(--bd); z-index: 0; }
-.tree-card { min-width: 250px; z-index: 10; position: relative; }
+.family-tree-container { 
+    display: flex; 
+    gap: 40px; 
+    padding: 20px; 
+    align-items: flex-start;
+    overflow-x: auto;
+}
+
+.tree-node-wrapper { 
+    display: flex; 
+    align-items: center; /* Vertically center parent with its children block */
+    position: relative; 
+}
+
+.tree-card { 
+    min-width: 250px; 
+    z-index: 10; 
+    position: relative; 
+}
+
+/* Horizontal line from parent to the spine */
+.tree-card.has-children::after {
+    content: '';
+    position: absolute;
+    right: -20px;
+    top: 50%;
+    width: 20px;
+    height: 2px;
+    background: var(--acc);
+    opacity: 0.6;
+}
+
+.tree-children { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 20px; 
+    padding-left: 40px; 
+    position: relative; 
+}
+
+/* Horizontal line from spine to child */
+.tree-children > .tree-node-wrapper::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 50%;
+    width: 20px;
+    height: 2px;
+    background: var(--acc);
+    opacity: 0.6;
+}
+
+/* Dialects get a dashed branch line! */
+.tree-children > .tree-node-wrapper.is-dialect::before {
+    background: transparent;
+    border-top: 2px dashed var(--acc);
+    height: 0;
+}
+
+/* Vertical spine */
+.tree-children > .tree-node-wrapper::after {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: -10px;
+    bottom: -10px;
+    width: 2px;
+    background: var(--acc);
+    opacity: 0.6;
+}
+
+/* Clip the vertical spine for first and last children */
+.tree-children > .tree-node-wrapper:first-child::after {
+    top: 50%;
+}
+
+.tree-children > .tree-node-wrapper:last-child::after {
+    bottom: 50%;
+}
+
 .view-toggle-btn { background: transparent; border: none; color: var(--tx3); cursor: pointer; padding: 8px; border-radius: 4px; transition: all 0.2s ease; }
 .view-toggle-btn:hover { color: var(--tx); background: var(--s3); }
 .view-toggle-btn.active { color: var(--acc); background: var(--s4); box-shadow: var(--shadow); }

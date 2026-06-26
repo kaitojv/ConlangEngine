@@ -232,10 +232,57 @@
     display: none;
 }
 
+/* Header Search Button */
+.hdr-search-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: 10px;
+    padding: 6px 12px;
+    color: var(--tx);
+    cursor: text;
+    transition: all 0.2s;
+    font-family: inherit;
+    width: 200px;
+}
+
+.hdr-search-btn:hover {
+    background: var(--s3);
+    border-color: var(--bd);
+}
+
+.hdr-search-icon {
+    opacity: 0.5;
+}
+
+.hdr-search-placeholder {
+    flex: 1;
+    text-align: left;
+    font-size: 0.85rem;
+    font-weight: 500;
+    opacity: 0.6;
+}
+
+.hdr-search-shortcut {
+    font-size: 0.65rem;
+    background: var(--s1);
+    border: 1px solid var(--bd);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    opacity: 0.6;
+    letter-spacing: 0.5px;
+}
+
 /* Header Responsiveness */
 @media (max-width: 1024px) {
-    .hdr-btn span {
+    .hdr-btn span, .hdr-search-shortcut {
         display: none;
+    }
+    .hdr-search-btn {
+        width: 140px;
     }
     .hdr-btn {
         padding: 8px;
@@ -259,6 +306,16 @@
         background: transparent;
         border: none;
         padding: 0;
+    }
+    .hdr-search-btn {
+        width: auto;
+        padding: 8px;
+        justify-content: center;
+        background: transparent;
+        border: none;
+    }
+    .hdr-search-placeholder, .hdr-search-shortcut {
+        display: none;
     }
 }
 

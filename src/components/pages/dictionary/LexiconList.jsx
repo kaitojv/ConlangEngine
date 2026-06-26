@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
@@ -39,6 +39,7 @@ export default function LexiconList() {
     const stressRules = useConfigStore(state => state.stressRules) || [];
     const toneRules = useConfigStore(state => state.toneRules) || [];
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [session, setSession] = React.useState(null);
     React.useEffect(() => {
@@ -87,6 +88,15 @@ export default function LexiconList() {
         setFilters(prev => ({ ...prev, [key]: value }));
         setVisibleCount(50); // Reset visible count when filter changes
     };
+
+    // Auto-search if we received a query from navigation (e.g. Command Palette)
+    React.useEffect(() => {
+        if (location.state && location.state.searchQuery) {
+            updateFilter('search', location.state.searchQuery);
+            // Clear the state so it doesn't re-trigger
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+    }, [location.state, navigate, location.pathname]);
 
     // Extract all the unique first letters from the lexicon so we can build our A-Z quick jump bar
     const firstLetters = useMemo(() => {

@@ -4,9 +4,33 @@ import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 
-import { Sunrise, Sun, Moon, Sparkles, Settings2, BookA, PlusCircle, BrainCircuit, Flame, ArrowRight, Bookmark, Library, HelpCircle, Heart, Coffee } from 'lucide-react';
+import { Sunrise, Sun, Moon, Sparkles, Settings2, BookA, PlusCircle, BrainCircuit, Flame, ArrowRight, Bookmark, Library, HelpCircle, Heart, Coffee, Globe } from 'lucide-react';
 import Card from '@/components/UI/Card/Card.jsx';
+import { supabase } from '@/utils/supabaseClient.js';
 import './home.css';
+
+const RollingNumber = ({ endValue, duration = 2000 }) => {
+    const [value, setValue] = React.useState(0);
+
+    React.useEffect(() => {
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            
+            // easeOutExpo curve for smooth slow down at the end
+            const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+            
+            setValue(Math.floor(easeProgress * endValue));
+            if (progress < 1) {
+                window.requestAnimationFrame(step);
+            }
+        };
+        window.requestAnimationFrame(step);
+    }, [endValue, duration]);
+
+    return <>{value.toLocaleString()}</>;
+};
 
 
 export default function Home() {
@@ -25,6 +49,50 @@ export default function Home() {
         subtext: "Welcome to your linguistic laboratory.",
         Icon: Sparkles
     });
+
+    const [stats, setStats] = useState({ languages: 0, words: 0, conlangers: 0, loading: true });
+
+    React.useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                // Fetch profiles count for total registered conlangers
+                const { count: conlangersCount, error: err1 } = await supabase
+                    .from('profiles')
+                    .select('*', { count: 'exact', head: true });
+                
+                // Fetch snapshots data to count languages and words
+                const { data: snapshotsData, error: err2 } = await supabase
+                    .from('conlang_snapshots')
+                    .select('project_data, user_id');
+                    
+                if (err1) console.warn("Could not fetch profiles count:", err1);
+                if (err2) throw err2;
+                
+                let wordsCount = 0;
+                let languagesCount = snapshotsData ? snapshotsData.length : 0;
+                
+                if (snapshotsData) {
+                    snapshotsData.forEach(snapshot => {
+                        const dictionary = snapshot.project_data?.dictionary;
+                        if (Array.isArray(dictionary)) {
+                            wordsCount += dictionary.length;
+                        }
+                    });
+                }
+                
+                setStats({
+                    languages: languagesCount,
+                    words: wordsCount,
+                    conlangers: conlangersCount || 146, // Fallback to at least 146 if RLS blocks count
+                    loading: false
+                });
+            } catch (err) {
+                console.error("Error fetching global stats:", err);
+                setStats(prev => ({ ...prev, loading: false }));
+            }
+        };
+        fetchStats();
+    }, []);
 
     React.useEffect(() => {
         const now = new Date();
@@ -255,6 +323,34 @@ export default function Home() {
                     <div className="widget-footer">
                         Open Wiki <ArrowRight size={16} />
                     </div>
+                </Card>
+
+                {/* Global Stats */}
+                <Card className="interactive-card stats-card" style={{ cursor: 'default', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Globe size={24} /> Join ConlangEngine
+                    </h3>
+                    {stats.loading ? (
+                        <p>Counting our worldbuilders...</p>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                            <p style={{ margin: 0, color: 'var(--tx2)' }}>Join ConlangEngine, we have:</p>
+                            <div style={{ display: 'flex', justifyContent: 'space-around', padding: '15px', background: 'var(--s1)', borderRadius: 'var(--rad)', border: '1px solid var(--bd)' }}>
+                                <div style={{ textAlign: 'center' }}>
+                                    <h3 style={{ margin: '0', color: 'var(--acc)', fontSize: '1.8rem' }}><RollingNumber endValue={stats.languages} />+</h3>
+                                    <span style={{ fontSize: '0.9rem', color: 'var(--tx2)', fontWeight: 'bold' }}>Languages</span>
+                                </div>
+                                <div style={{ textAlign: 'center' }}>
+                                    <h3 style={{ margin: '0', color: 'var(--acc)', fontSize: '1.8rem' }}><RollingNumber endValue={stats.words} />+</h3>
+                                    <span style={{ fontSize: '0.9rem', color: 'var(--tx2)', fontWeight: 'bold' }}>Words</span>
+                                </div>
+                                <div style={{ textAlign: 'center' }}>
+                                    <h3 style={{ margin: '0', color: 'var(--acc)', fontSize: '1.8rem' }}><RollingNumber endValue={stats.conlangers} />+</h3>
+                                    <span style={{ fontSize: '0.9rem', color: 'var(--tx2)', fontWeight: 'bold' }}>Conlangers</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </Card>
 
                 {/* Support the Project */}

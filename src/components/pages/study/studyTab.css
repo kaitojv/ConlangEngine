@@ -222,6 +222,18 @@
     border: none !important;
 }
 
+@media (max-width: 480px) {
+    .fc-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .fc-action-btn {
+        width: 100%;
+        padding: 12px;
+    }
+}
+
 /* GAMIFIED LEARNING PATH */
 .learning-path-container {
     width: 100%;

@@ -7,7 +7,7 @@ import { Download } from 'lucide-react';
 // A simple heuristic parser to generate a syntax tree from a flat array of words
 const buildTree = (tokens, syntaxOrder = 'SVO') => {
     // 1. Clean tokens and extract primary POS tags
-    const words = tokens.filter(t => !t.isPunctuation || t.text.trim() === '').map(t => {
+    const words = tokens.filter(t => !t.isPunctuation && (t.text || '').trim() !== '').map(t => {
         let pos = 'UNK';
         let gloss = '???';
         let base = t.text;
