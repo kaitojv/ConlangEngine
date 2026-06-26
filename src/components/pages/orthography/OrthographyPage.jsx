@@ -12,6 +12,7 @@ import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { getScriptSystem, buildScriptConfig, getDefaultScriptId } from '../../../utils/scriptResolver.js';
 import ScriptManager from '../../UI/ScriptManager/ScriptManager.jsx';
 import ScriptRulesEditor from '../../UI/ScriptRulesEditor/ScriptRulesEditor.jsx';
+import GlyphDetailsModal from '../../UI/GlyphDetailsModal/GlyphDetailsModal.jsx';
 import toast from 'react-hot-toast';
 
 // --- SUB-COMPONENTS ---
@@ -688,7 +689,7 @@ const NumbersTab = () => {
     );
 };
 
-const AlphabeticShowcase = ({ scriptId } = {}) => {
+const AlphabeticShowcase = ({ scriptId, onGlyphClick } = {}) => {
     const consonants = useConfigStore(state => state.consonants) || '';
     const vowels = useConfigStore(state => state.vowels) || '';
     const otherPhonemes = useConfigStore(state => state.otherPhonemes) || '';
@@ -731,7 +732,11 @@ const AlphabeticShowcase = ({ scriptId } = {}) => {
                         const customGlyph = alphabetGlyphs[char];
                         
                         return (
-                            <div key={char} className="char-card glass" style={{ cursor: 'default' }}>
+                            <div 
+                                key={char} 
+                                className="char-card glass interactive-card" 
+                                onClick={() => onGlyphClick && onGlyphClick({ char, glyph: customGlyph, type: 'alphabetic', name: charName })}
+                            >
                                 <div className="char-display custom-font-text" style={{ fontSize: customGlyph ? '3rem' : '2rem', marginBottom: customGlyph ? '0' : '0.5rem' }}>
                                     {customGlyph || char}
                                 </div>
@@ -762,7 +767,7 @@ const AlphabeticShowcase = ({ scriptId } = {}) => {
 
 // ─── SYLLABARY SHOWCASE ───────────────────────────────────────────────────────
 
-const SyllabaryShowcase = ({ scriptId } = {}) => {
+const SyllabaryShowcase = ({ scriptId, onGlyphClick } = {}) => {
     const { syllabaryMap, customGlyphs } = useScriptScopedData(scriptId);
     const consonants   = useConfigStore(state => state.consonants) || '';
     const vowels       = useConfigStore(state => state.vowels) || '';
@@ -844,7 +849,11 @@ const SyllabaryShowcase = ({ scriptId } = {}) => {
             ) : (
                 <div className="showcase-syllabary-grid">
                     {allEntries.map(({ key, displayLabel, symbol }) => (
-                        <div key={key} className="showcase-syl-card glass">
+                        <div 
+                            key={key} 
+                            className="showcase-syl-card glass interactive-card"
+                            onClick={() => onGlyphClick && onGlyphClick({ char: displayLabel, glyph: renderSymbol(symbol), type: 'syllabic', name: displayLabel })}
+                        >
                             <div className="showcase-syl-symbol">{renderSymbol(symbol)}</div>
                             <div className="showcase-syl-label">{displayLabel}</div>
                         </div>
@@ -857,7 +866,7 @@ const SyllabaryShowcase = ({ scriptId } = {}) => {
 
 // ─── LOGOGRAPHIC SHOWCASE ─────────────────────────────────────────────────────
 
-const LogographicShowcase = ({ scriptId } = {}) => {
+const LogographicShowcase = ({ scriptId, onGlyphClick } = {}) => {
     const lexicon = useLexiconStore(state => state.lexicon) || [];
     const { customGlyphs } = useScriptScopedData(scriptId);
 
@@ -911,7 +920,11 @@ const LogographicShowcase = ({ scriptId } = {}) => {
             ) : (
                 <div className="alphabet-grid">
                     {logographicWords.map(word => (
-                        <div key={word.id} className="char-card glass" style={{ cursor: 'default' }}>
+                        <div 
+                            key={word.id} 
+                            className="char-card glass interactive-card"
+                            onClick={() => onGlyphClick && onGlyphClick({ char: word.ideogram, glyph: renderGlyph(word.ideogram), type: 'logographic', name: word.translation || word.word })}
+                        >
                             <div className="char-display" style={{ height: 'auto', marginBottom: '0.5rem' }}>
                                 {renderGlyph(word.ideogram)}
                             </div>
@@ -929,7 +942,7 @@ const LogographicShowcase = ({ scriptId } = {}) => {
 
 // ─── HELPER COMPONENTS ───────────────────────────────────────────────────────────
 
-const BlockShowcase = ({ scriptId } = {}) => {
+const BlockShowcase = ({ scriptId, onGlyphClick } = {}) => {
     const { syllabaryMap, featuralComponents, customGlyphs } = useScriptScopedData(scriptId);
     const consonants         = useConfigStore(state => state.consonants) || '';
     const vowels             = useConfigStore(state => state.vowels) || '';
@@ -1043,7 +1056,11 @@ const BlockShowcase = ({ scriptId } = {}) => {
                     </h3>
                     <div className="showcase-block-base-grid">
                         {drawnComponents.map(comp => (
-                            <div key={comp} className="showcase-block-base-card glass">
+                            <div 
+                                key={comp} 
+                                className="showcase-block-base-card glass interactive-card"
+                                onClick={() => onGlyphClick && onGlyphClick({ char: comp, glyph: <span className="custom-font-text">{phonemeToChar[comp] || comp}</span>, type: 'featural_block', name: phonemeToChar[comp] || comp })}
+                            >
                                 <svg viewBox="0 0 300 300" width="64" height="64" className="showcase-block-svg">
                                     {featuralComponents[comp].map((stroke, i) => (
                                         <path
@@ -1072,7 +1089,11 @@ const BlockShowcase = ({ scriptId } = {}) => {
                     </h3>
                     <div className="showcase-syllabary-grid">
                         {blockEntries.map(([key, val]) => (
-                            <div key={key} className="showcase-syl-card glass">
+                            <div 
+                                key={key} 
+                                className="showcase-syl-card glass interactive-card"
+                                onClick={() => onGlyphClick && onGlyphClick({ char: toMorphemeLabel(key), glyph: renderBlockSymbol(val), type: 'block', name: toMorphemeLabel(key) })}
+                            >
                                 <div className="showcase-syl-symbol">{renderBlockSymbol(val)}</div>
                                 <div className="showcase-syl-label">{toMorphemeLabel(key)}</div>
                             </div>
@@ -1102,6 +1123,7 @@ export default function OrthographyPage() {
     const scriptRules = useConfigStore(state => state.scriptRules) || {};
     const setActiveScriptSystem = useConfigStore(state => state.setActiveScriptSystem);
     const [activeTab, setActiveTab] = useState('script');
+    const [selectedGlyphDetails, setSelectedGlyphDetails] = useState(null);
 
     const defaultScriptId = scriptRules.defaultScriptId || getDefaultScriptId({ scriptSystems, scriptRules });
     const activeScript = getScriptSystem({ scriptSystems, scriptRules, phonologyTypes }, activeScriptSystemId || defaultScriptId);
@@ -1130,17 +1152,25 @@ export default function OrthographyPage() {
 
     const renderScriptShowcase = () => {
         switch (scriptType) {
-            case 'syllabic':      return <SyllabaryShowcase scriptId={activeScriptSystemId} />;
-            case 'logographic':   return <LogographicShowcase scriptId={activeScriptSystemId} />;
+            case 'syllabic':      return <SyllabaryShowcase scriptId={activeScriptSystemId} onGlyphClick={setSelectedGlyphDetails} />;
+            case 'logographic':   return <LogographicShowcase scriptId={activeScriptSystemId} onGlyphClick={setSelectedGlyphDetails} />;
             case 'featural_block':
             case 'featural':
-            case 'block':         return <BlockShowcase scriptId={activeScriptSystemId} />;
-            default:              return <AlphabeticShowcase scriptId={activeScriptSystemId} />;
+            case 'block':         return <BlockShowcase scriptId={activeScriptSystemId} onGlyphClick={setSelectedGlyphDetails} />;
+            default:              return <AlphabeticShowcase scriptId={activeScriptSystemId} onGlyphClick={setSelectedGlyphDetails} />;
         }
     };
 
     return (
         <div className="orthography-page-container">
+            {selectedGlyphDetails && (
+                <GlyphDetailsModal 
+                    isOpen={!!selectedGlyphDetails} 
+                    onClose={() => setSelectedGlyphDetails(null)} 
+                    {...selectedGlyphDetails} 
+                />
+            )}
+            
             <header className="page-header">
                 <div className="header-content">
                     <h1 className="flex gap-3 items-center">

@@ -11,6 +11,7 @@ import Modal from '../../UI/Modal/Modal.jsx'
 import LexiconEditModal from './LexiconEditModal.jsx';
 import MatrixModal from './MatrixModal.jsx';
 import ProtoRootModal from './ProtoRootModal.jsx';
+import GlyphDetailsModal from '../../UI/GlyphDetailsModal/GlyphDetailsModal.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download, X, Share2, Music, Zap, LayoutGrid, List } from 'lucide-react';
 import { exportTextAsSVG } from '../../../utils/svgExporter.jsx';
@@ -79,6 +80,7 @@ export default function LexiconList() {
     const [selectedWordForMatrix, setSelectedWordForMatrix] = useState(null);
     const [selectedWordForEdit, setSelectedWordForEdit] = useState(null); 
     const [selectedWordForProto, setSelectedWordForProto] = useState(null);
+    const [selectedGlyphDetails, setSelectedGlyphDetails] = useState(null);
     const [newSenseBase, setNewSenseBase] = useState(null);
     
     // Manage how many lexicon items are rendered at once for performance
@@ -325,6 +327,13 @@ export default function LexiconList() {
 
     return (
         <div className="lexicon-container">
+            {selectedGlyphDetails && (
+                <GlyphDetailsModal 
+                    isOpen={!!selectedGlyphDetails} 
+                    onClose={() => setSelectedGlyphDetails(null)} 
+                    {...selectedGlyphDetails} 
+                />
+            )}
             
             <Card className="lexicon-toolbar">
                 <div className="toolbar-filters">
@@ -560,7 +569,18 @@ export default function LexiconList() {
                                 <div className="entry-words">
                                     <div className="entry-word-with-wave" style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'stretch' }}>
                                         {filters.showTones && <StressWave word={safeWord} stress={displayStress} tone={displayTone} customVowelsStr={useConfigStore.getState().vowels} />}
-                                        <span className={`notranslate entry-main-word custom-font-text ${phonologyTypes === 'featural_block' ? 'featural-block-render' : ''}`} style={{ textAlign: 'center' }}>
+                                        <span 
+                                            className={`notranslate entry-main-word custom-font-text ${phonologyTypes === 'featural_block' ? 'featural-block-render' : ''}`} 
+                                            style={{ textAlign: 'center', cursor: 'pointer', transition: 'color 0.2s' }}
+                                            onClick={() => setSelectedGlyphDetails({ 
+                                                char: phonologyTypes === 'logographic' ? baseEntry.ideogram : safeWord, 
+                                                glyph: displayWord, 
+                                                type: phonologyTypes, 
+                                                name: baseEntry.translation || baseEntry.word,
+                                                isWord: true
+                                            })}
+                                            title="Click to analyze"
+                                        >
                                             {displayWord}
                                         </span>
                                         {baseEntry.scriptOverride && scriptSystems.length > 1 && (
