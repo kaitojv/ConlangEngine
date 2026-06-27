@@ -111,6 +111,7 @@ export const INITIAL_CONFIG = {
         }
     },
     azureTtsUseIpa: true,
+    azureTtsVoice: '',
     numberMatrix: {},
     numberDerivedRules: {
         ordinal: '',

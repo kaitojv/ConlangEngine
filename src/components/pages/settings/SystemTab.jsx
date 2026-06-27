@@ -120,7 +120,66 @@ export default function SystemTab() {
             toast.error("You're not logged in");
             return;
         }
+
+        const toastId = toast.loading(checked ? "Publishing conlang..." : "Making conlang private...");
+        
+        // Update local state
         updateConfig({ isPublic: checked });
+
+        const currentStore = useConfigStore.getState();
+        const currentProjectId = currentStore.projectId;
+        
+        if (!currentProjectId) {
+            toast.error("Project ID missing", { id: toastId });
+            updateConfig({ isPublic: !checked }); // revert
+            return;
+        }
+
+        const configData = sanitizeConfig({ ...currentStore, isPublic: checked });
+        const payload = {
+            dictionary: useLexiconStore.getState().lexicon || [],
+            config: configData,
+            wiki: configData.wikiPages || {},
+            last_updated: new Date().toISOString()
+        };
+
+        try {
+            if (session?.user?.id && currentProjectId) {
+                const { data: existingSnapshot } = await supabase
+                    .from('conlang_snapshots')
+                    .select('user_id')
+                    .eq('project_id', currentProjectId)
+                    .single();
+
+                if (existingSnapshot && existingSnapshot.user_id && existingSnapshot.user_id !== session.user.id) {
+                    toast.error("You cannot update a public project owned by another account.", { id: toastId });
+                    updateConfig({ isPublic: !checked }); // revert
+                    return;
+                }
+            }
+
+            const { error: err1 } = await supabase.from('conlang_snapshots').upsert({
+                user_id: session.user.id,
+                project_id: currentProjectId,
+                project_data: payload
+            }, { onConflict: 'project_id' });
+            
+            if (err1) throw err1;
+
+            const { error: err2 } = await supabase.from('conlangs').upsert({
+                user_id: session.user.id,
+                project_id: currentProjectId,
+                project_data: payload
+            }, { onConflict: 'project_id' });
+
+            if (err2) throw err2;
+
+            toast.success(checked ? "Conlang published!" : "Conlang is now private", { id: toastId });
+        } catch (err) {
+            console.error("Update failed", err);
+            toast.error("Failed to update visibility", { id: toastId });
+            updateConfig({ isPublic: !checked }); // revert
+        }
     };
 
     const handleIconChange = async (iconName) => {

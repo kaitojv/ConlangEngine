@@ -354,7 +354,7 @@ export default function CourseBuilder({ onExit }) {
     return (
         <Card className="course-builder">
             <div className="cb-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div className="cb-header-title">
                     <Button variant="default" onClick={onExit} style={{ padding: '8px' }}>
                         <ArrowLeft size={18} />
                     </Button>
@@ -400,9 +400,9 @@ export default function CourseBuilder({ onExit }) {
 
                         <div className="cb-phrases">
                             {level.phrases.map((phrase, pIdx) => (
-                                <div key={phrase.id} style={{ padding: '15px', background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: '12px', marginBottom: '15px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px solid var(--bd)' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div key={phrase.id} className="cb-phrase-card">
+                                    <div className="cb-phrase-header">
+                                        <div className="cb-phrase-type-select">
                                             <span style={{ fontWeight: 'bold', color: 'var(--tx2)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                                 {pIdx + 1}. Type:
                                             </span>
@@ -444,7 +444,7 @@ export default function CourseBuilder({ onExit }) {
                                         )}
 
                                         {phrase.type !== 'matching_pairs' && phrase.type !== 'teach' && (
-                                            <div style={{ display: 'flex', gap: '15px' }}>
+                                            <div className="cb-phrase-inputs-row">
                                                 <div style={{ flex: 1 }}>
                                                     <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>Conlang Prompt</label>
                                                     <Input 
@@ -472,7 +472,7 @@ export default function CourseBuilder({ onExit }) {
                                         {phrase.type === 'multiple_choice' && (
                                             <div>
                                                 <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>Wrong Options (Distractors)</label>
-                                                <div style={{ display: 'flex', gap: '10px' }}>
+                                                <div className="cb-distractors-row">
                                                     {[0, 1, 2].map(idx => (
                                                         <Input 
                                                             key={idx}
@@ -505,11 +505,11 @@ export default function CourseBuilder({ onExit }) {
                                         {phrase.type === 'matching_pairs' && (
                                             <div>
                                                 <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '10px' }}>Define 4 Matching Pairs</label>
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                                <div className="cb-matching-grid">
                                                     {[0, 1, 2, 3].map(idx => {
                                                         const pair = phrase.pairs?.[idx] || { conlang: '', english: '' };
                                                         return (
-                                                            <div key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'center', background: 'var(--bg)', padding: '10px', borderRadius: '8px', border: '1px solid var(--bd)' }}>
+                                                            <div key={idx} className="cb-matching-pair">
                                                                 <span style={{ color: 'var(--tx2)', fontWeight: 'bold' }}>{idx + 1}.</span>
                                                                 <Input 
                                                                     value={pair.conlang}
@@ -550,7 +550,7 @@ export default function CourseBuilder({ onExit }) {
                 ))}
             </div>
 
-            <div className="cb-add-level" style={{ display: 'flex', gap: '10px' }}>
+            <div className="cb-add-level">
                 <Button variant="imp" onClick={addLevel} style={{ flex: 1, padding: '15px' }}>
                     <Plus size={20} style={{marginRight: '8px'}} /> Create New Level
                 </Button>

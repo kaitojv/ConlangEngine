@@ -209,8 +209,11 @@ export default function ExplorePage() {
 
         const toastId = toast.loading("Deleting from cloud...");
         try {
-            await supabase.from('conlangs').delete().eq('project_id', projectId);
-            await supabase.from('conlang_snapshots').delete().eq('project_id', projectId);
+            const { error: err1 } = await supabase.from('conlangs').delete().eq('project_id', projectId);
+            if (err1) throw err1;
+            
+            const { error: err2 } = await supabase.from('conlang_snapshots').delete().eq('project_id', projectId);
+            if (err2) throw err2;
 
             setConlangs(prev => prev.filter(c => c.project_id !== projectId));
             toast.success("Conlang removed from Explore", { id: toastId });
@@ -219,6 +222,20 @@ export default function ExplorePage() {
             if (projectId === useConfigStore.getState().projectId) {
                 updateConfig({ isPublic: false });
             }
+
+            // Also update the local archive if it exists
+            const projectStore = (await import('../../../store/useProjectStore.jsx')).useProjectStore.getState();
+            const localProjects = projectStore.localProjects;
+            const existingIdx = localProjects.findIndex(p => p.id === projectId);
+            
+            if (existingIdx > -1) {
+                const project = localProjects[existingIdx];
+                if (project.project_data && project.project_data.config) {
+                    project.project_data.config.isPublic = false;
+                    projectStore.saveProjectToArchive(project.project_data.config, project.project_data.dictionary || []);
+                }
+            }
+            
         } catch (err) {
             console.error("Delete failed", err);
             toast.error("Failed to delete public conlang", { id: toastId });
