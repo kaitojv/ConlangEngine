@@ -170,8 +170,12 @@ export async function compileFont(customGlyphs, traceWidth = 30, fontScale = 1.0
             }));
         }
 
+        const upe = Math.max(10, Math.round(1000 / fontScale));
+        const asc = Math.round(800 / fontScale);
+        const desc = Math.round(-200 / fontScale);
+
         const font = new opentype.Font({
-            familyName: 'ConlangFont', styleName: 'Regular', unitsPerEm: Math.max(10, Math.round(1000 / fontScale)), ascender: 800, descender: -200, glyphs: glyphs
+            familyName: 'ConlangFont', styleName: 'Regular', unitsPerEm: upe, ascender: asc, descender: desc, glyphs: glyphs
         });
 
         const arrayBuffer = font.toArrayBuffer();

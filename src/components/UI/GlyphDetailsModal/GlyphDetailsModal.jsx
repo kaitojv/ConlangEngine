@@ -134,14 +134,20 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
         }
     };
 
+    const displayStr = glyph || char || '';
+    const dynamicFontSize = isWord ? Math.max(2, Math.min(8, 30 / displayStr.length)) + 'rem' : '8rem';
+
     if (!isOpen) return null;
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`Glyph Analysis: ${name}`}>
             <div className="glyph-modal-content">
                 <div className="glyph-display-card glass">
-                    <div className="glyph-large custom-font-text notranslate">
-                        {glyph || char}
+                    <div 
+                        className="glyph-large custom-font-text notranslate"
+                        style={{ fontSize: dynamicFontSize, wordBreak: 'break-all' }}
+                    >
+                        {displayStr}
                     </div>
                     <button 
                         className={`btn-primary audio-btn ${isPlaying ? 'playing' : ''}`}
