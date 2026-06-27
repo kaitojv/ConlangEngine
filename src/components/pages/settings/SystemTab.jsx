@@ -158,13 +158,17 @@ export default function SystemTab() {
                 }
             }
 
-            const { error: err1 } = await supabase.from('conlang_snapshots').upsert({
-                user_id: session.user.id,
-                project_id: currentProjectId,
-                project_data: payload
-            }, { onConflict: 'project_id' });
-            
-            if (err1) throw err1;
+            if (checked) {
+                const { error: err1 } = await supabase.from('conlang_snapshots').upsert({
+                    user_id: session.user.id,
+                    project_id: currentProjectId,
+                    project_data: payload
+                }, { onConflict: 'project_id' });
+                if (err1) throw err1;
+            } else {
+                const { error: err1 } = await supabase.from('conlang_snapshots').delete().eq('project_id', currentProjectId);
+                if (err1) throw err1;
+            }
 
             const { error: err2 } = await supabase.from('conlangs').upsert({
                 user_id: session.user.id,
@@ -173,6 +177,10 @@ export default function SystemTab() {
             }, { onConflict: 'project_id' });
 
             if (err2) throw err2;
+
+            // Also update the local archive so this persists across reloads/switches
+            const projectStore = (await import('../../../store/useProjectStore.jsx')).useProjectStore.getState();
+            projectStore.saveProjectToArchive(payload.config, payload.dictionary);
 
             toast.success(checked ? "Conlang published!" : "Conlang is now private", { id: toastId });
         } catch (err) {
