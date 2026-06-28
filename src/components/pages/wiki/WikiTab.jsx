@@ -8,7 +8,31 @@ import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import Modal from '@/components/UI/Modal/Modal.jsx';
-import { Book, Plus, Trash2, Bold, Italic, Underline, Link, Save, Type, Languages, FileText, Settings, ChevronDown, ChevronUp, Info, Wand2, Quote, Heading1, Heading2, Heading3, Table, Smile, icons, Folder, FolderOpen, Edit2 } from 'lucide-react';
+import { 
+    Book, Plus, Trash2, Bold, Italic, Underline as UnderlineIcon, Link, Save, Type, Languages, 
+    FileText, Settings, ChevronDown, ChevronUp, Info, Wand2, Quote, Heading1, Heading2, Heading3, 
+    Table as TableIcon, Smile, icons, Folder, FolderOpen, Edit2,
+    AlignLeft, AlignCenter, AlignRight, AlignJustify,
+    Highlighter, Subscript as SubscriptIcon, Superscript as SuperscriptIcon,
+    Strikethrough, List, ListOrdered, Undo, Redo, Eraser,
+    Rows, Columns, ArrowUpFromLine, ArrowDownFromLine, ArrowLeftFromLine, ArrowRightFromLine
+} from 'lucide-react';
+
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import { Table as TiptapTable } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
+import { Underline as TiptapUnderline } from '@tiptap/extension-underline';
+import { TextAlign } from '@tiptap/extension-text-align';
+import { Highlight } from '@tiptap/extension-highlight';
+import { Subscript } from '@tiptap/extension-subscript';
+import { Superscript } from '@tiptap/extension-superscript';
+import { Link as LinkExtension } from '@tiptap/extension-link';
+import { Color } from '@tiptap/extension-color';
+import { TextStyle } from '@tiptap/extension-text-style';
+import { CharacterCount } from '@tiptap/extension-character-count';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createGrammarAnalyzer } from '@/utils/grammarAnalyzer.js';
 import './wikiTab.css';
@@ -1781,198 +1805,188 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
 
 
 
-// The Classic Rich Text Editor
+// The Classic Rich Text Editor - Upgraded to TipTap
 function LegacyWikiEditor({ content, onSave }) {
     const { transliterate } = useTransliterator();
-    const editorRef = useRef(null);
     const [linkModalOpen, setLinkModalOpen] = useState(false);
     const [linkUrl, setLinkUrl] = useState('');
     const [iconPickerOpen, setIconPickerOpen] = useState(false);
-    
-    // Track whether the editor has been initialized with content from the store.
-    // This prevents the autosave from overwriting real content with an empty innerHTML
-    // before the editor has had a chance to populate itself.
-    const initializedRef = useRef(false);
-    const lastContentRef = useRef(content);
-
-    useEffect(() => {
-        if (!editorRef.current) return;
-
-        if (!initializedRef.current) {
-            // FIRST MOUNT: Always populate the editor with the stored content.
-            // Without this, the editor starts empty and the autosave destroys the data.
-            editorRef.current.innerHTML = DOMPurify.sanitize(content || '', {
-                ALLOWED_TAGS: [
-                    'b', 'i', 'u', 'a', 'span', 'p', 'br', 'div', 'h1', 'h2', 'h3', 'h4', 'strong', 'em', 'ul', 'ol', 'li',
-                    'table', 'tbody', 'thead', 'tr', 'td', 'th', 'svg', 'path', 'circle', 'rect', 'line', 'polyline', 'polygon', 'blockquote'
-                ],
-                ALLOWED_ATTR: [
-                    'href', 'class', 'style', 'target', 'contenteditable',
-                    'xmlns', 'viewBox', 'width', 'height', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin'
-                ]
-            });
-            lastContentRef.current = content;
-            initializedRef.current = true;
-        } else if (content !== editorRef.current.innerHTML && content !== lastContentRef.current) {
-            // Subsequent external updates (e.g. rehydration, cross-tab sync):
-            // only overwrite if the content genuinely changed from what we last synced.
-            editorRef.current.innerHTML = DOMPurify.sanitize(content || '', {
-                ALLOWED_TAGS: [
-                    'b', 'i', 'u', 'a', 'span', 'p', 'br', 'div', 'h1', 'h2', 'h3', 'h4', 'strong', 'em', 'ul', 'ol', 'li',
-                    'table', 'tbody', 'thead', 'tr', 'td', 'th', 'svg', 'path', 'circle', 'rect', 'line', 'polyline', 'polygon', 'blockquote'
-                ],
-                ALLOWED_ATTR: [
-                    'href', 'class', 'style', 'target', 'contenteditable',
-                    'xmlns', 'viewBox', 'width', 'height', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin'
-                ]
-            });
-            lastContentRef.current = content;
-        }
-    }, [content]);
-
     const onSaveRef = useRef(onSave);
     useEffect(() => {
         onSaveRef.current = onSave;
     }, [onSave]);
 
-    const handleSave = useCallback(() => {
-        // Don't save before the editor has been initialized — we'd write "" and destroy data
-        if (!initializedRef.current) return;
-        if (editorRef.current) {
-            const html = editorRef.current.innerHTML;
-            if (html !== lastContentRef.current) {
-                lastContentRef.current = html;
-                onSaveRef.current(html);
+    // TipTap Editor Setup
+    const editor = useEditor({
+        extensions: [
+            StarterKit,
+            TiptapTable.configure({ resizable: true }),
+            TableRow,
+            TableHeader,
+            TableCell,
+            TiptapUnderline,
+            TextAlign.configure({ types: ['heading', 'paragraph'] }),
+            Highlight,
+            Subscript,
+            Superscript,
+            LinkExtension.configure({ openOnClick: false }),
+            TextStyle,
+            Color,
+        ],
+        content: content || '',
+        onBlur: ({ editor }) => {
+            if (onSaveRef.current) {
+                onSaveRef.current(editor.getHTML());
             }
         }
-    }, []);
+    });
 
-    // Debounced save on every keystroke (500ms after user stops typing)
-    const inputTimerRef = useRef(null);
-    const handleInput = useCallback(() => {
-        if (inputTimerRef.current) clearTimeout(inputTimerRef.current);
-        inputTimerRef.current = setTimeout(() => handleSave(), 500);
-    }, [handleSave]);
-
+    // Update content when prop changes from outside (e.g. changing notebook)
     useEffect(() => {
-        const autoSaveTimer = setInterval(handleSave, 3000);
-        return () => clearInterval(autoSaveTimer);
-    }, [handleSave]);
+        if (editor && content !== editor.getHTML()) {
+            editor.commands.setContent(content || '');
+        }
+    }, [content, editor]);
 
+    // Cleanup on unmount (save state as a safety net)
     useEffect(() => {
         const handleBeforeUnload = () => {
-            // Force a synchronous save into Zustand state
-            handleSave();
-            // Explicitly flush Zustand state to localStorage as a safety net
-            try {
-                const state = useConfigStore.getState();
-                const { customFontBase64: _a, customFont: _b, syllabaryMap: _c, customGlyphs: _d, ...rest } = state;
-                localStorage.setItem('conlang-config', JSON.stringify({ state: rest, version: 0 }));
-            } catch (e) {
-                // best-effort
-            }
+            if (editor && onSaveRef.current) onSaveRef.current(editor.getHTML());
         };
         window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [handleSave]);
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            if (editor && onSaveRef.current) onSaveRef.current(editor.getHTML());
+        };
+    }, [editor]);
 
-    const formatText = (command, value = null) => {
-        document.execCommand(command, false, value);
-        if (editorRef.current) editorRef.current.focus();
-    };
+    if (!editor) {
+        return null;
+    }
 
-    const applyConlangFont = () => {
-        const selection = window.getSelection();
-        if (!selection.rangeCount) return;
-        
-        // Check if we are already inside a conlang span. If so, unwrap it.
-        let node = selection.anchorNode;
-        while (node && node !== editorRef.current) {
-            if (node.nodeType === 1 && node.classList && node.classList.contains('custom-font-text')) {
-                // We are inside a conlang span, so remove the span (unwrap)
-                const parent = node.parentNode;
-                while (node.firstChild) {
-                    parent.insertBefore(node.firstChild, node);
-                }
-                parent.removeChild(node);
-                handleSave();
-                return;
-            }
-            node = node.parentNode;
+    const setLink = () => {
+        if (linkUrl) {
+            editor.chain().focus().extendMarkRange('link').setLink({ href: linkUrl }).run();
         }
-
-        // If not inside, wrap the selection in the conlang span
-        const selectedText = selection.toString();
-        if (selectedText) {
-            const html = `<span class="custom-font-text notranslate" style="color: var(--acc); font-weight: bold;">${transliterate(selectedText)}</span>`;
-            document.execCommand('insertHTML', false, html);
-        }
-    };
-
-    const insertTable = () => {
-        const tableHtml = `
-            <table class="wiki-table" style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
-                <thead>
-                    <tr><th style="border: 1px solid var(--bd); padding: 8px; background: var(--s2);">Header 1</th><th style="border: 1px solid var(--bd); padding: 8px; background: var(--s2);">Header 2</th><th style="border: 1px solid var(--bd); padding: 8px; background: var(--s2);">Header 3</th></tr>
-                </thead>
-                <tbody>
-                    <tr><td style="border: 1px solid var(--bd); padding: 8px;">Data</td><td style="border: 1px solid var(--bd); padding: 8px;">Data</td><td style="border: 1px solid var(--bd); padding: 8px;">Data</td></tr>
-                    <tr><td style="border: 1px solid var(--bd); padding: 8px;">Data</td><td style="border: 1px solid var(--bd); padding: 8px;">Data</td><td style="border: 1px solid var(--bd); padding: 8px;">Data</td></tr>
-                </tbody>
-            </table><p><br></p>
-        `;
-        formatText('insertHTML', tableHtml);
+        setLinkUrl('');
+        setLinkModalOpen(false);
     };
 
     const insertIcon = (iconName) => {
         const IconComponent = icons[iconName];
         if (IconComponent) {
             const svgString = renderToStaticMarkup(<IconComponent size={20} color="currentColor" style={{ verticalAlign: 'middle', margin: '0 4px', display: 'inline-block' }} />);
-            // Ensure proper wrapping so it doesn't break text flow
             const html = `<span class="wiki-inline-icon" contenteditable="false">${svgString}</span>&#8203;`;
-            formatText('insertHTML', html);
+            editor.commands.insertContent(html);
         }
         setIconPickerOpen(false);
     };
 
+    const applyConlangFont = () => {
+        const { from, to } = editor.state.selection;
+        if (from === to) return; // No selection
+        
+        const text = editor.state.doc.textBetween(from, to, ' ');
+        if (text) {
+            const html = `<span class="custom-font-text notranslate" style="color: var(--acc); font-weight: bold;">${transliterate(text)}</span>`;
+            editor.commands.insertContent(html);
+        }
+    };
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <div className="wiki-toolbar">
-                <button className="wiki-tool-btn" title="Heading 1" onClick={() => formatText('formatBlock', 'H1')}><Heading1 size={16} /></button>
-                <button className="wiki-tool-btn" title="Heading 2" onClick={() => formatText('formatBlock', 'H2')}><Heading2 size={16} /></button>
-                <button className="wiki-tool-btn" title="Heading 3" onClick={() => formatText('formatBlock', 'H3')}><Heading3 size={16} /></button>
-                <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px' }}></div>
-                <button className="wiki-tool-btn" title="Bold" onClick={() => formatText('bold')}><Bold size={16} /></button>
-                <button className="wiki-tool-btn" title="Italic" onClick={() => formatText('italic')}><Italic size={16} /></button>
-                <button className="wiki-tool-btn" title="Underline" onClick={() => formatText('underline')}><Underline size={16} /></button>
-                <button className="wiki-tool-btn" title="Quote / Callout" onClick={() => formatText('formatBlock', 'blockquote')}><Quote size={16} /></button>
-                <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px' }}></div>
-                <button className="wiki-tool-btn" title="Insert Table" onClick={insertTable}><Table size={16} /></button>
-                <button className="wiki-tool-btn" title="Insert Icon" onClick={() => setIconPickerOpen(true)}><Smile size={16} /></button>
-                <button className="wiki-tool-btn" title="Insert Link" onClick={() => setLinkModalOpen(true)}><Link size={16} /></button>
+            <div className="wiki-toolbar" style={{ flexWrap: 'wrap', gap: '4px' }}>
+                {/* History */}
+                <button className="wiki-tool-btn" onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Undo"><Undo size={16} /></button>
+                <button className="wiki-tool-btn" onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} title="Redo"><Redo size={16} /></button>
+                <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px', height: '24px' }}></div>
+                
+                {/* Text Formatting */}
+                <button className={`wiki-tool-btn ${editor.isActive('bold') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleBold().run()} title="Bold"><Bold size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('italic') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic"><Italic size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('underline') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline"><UnderlineIcon size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('strike') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleStrike().run()} title="Strikethrough"><Strikethrough size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('highlight') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleHighlight().run()} title="Highlight"><Highlighter size={16} /></button>
+                <button className="wiki-tool-btn" onClick={() => editor.chain().focus().unsetAllMarks().run()} title="Clear Formatting"><Eraser size={16} /></button>
+                <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px', height: '24px' }}></div>
+                
+                {/* Alignment */}
+                <button className={`wiki-tool-btn ${editor.isActive({ textAlign: 'left' }) ? 'active' : ''}`} onClick={() => editor.chain().focus().setTextAlign('left').run()} title="Align Left"><AlignLeft size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive({ textAlign: 'center' }) ? 'active' : ''}`} onClick={() => editor.chain().focus().setTextAlign('center').run()} title="Align Center"><AlignCenter size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive({ textAlign: 'right' }) ? 'active' : ''}`} onClick={() => editor.chain().focus().setTextAlign('right').run()} title="Align Right"><AlignRight size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive({ textAlign: 'justify' }) ? 'active' : ''}`} onClick={() => editor.chain().focus().setTextAlign('justify').run()} title="Justify"><AlignJustify size={16} /></button>
+                <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px', height: '24px' }}></div>
+                
+                {/* Headings */}
+                <button className={`wiki-tool-btn ${editor.isActive('heading', { level: 1 }) ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} title="Heading 1"><Heading1 size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('heading', { level: 2 }) ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2"><Heading2 size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('heading', { level: 3 }) ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title="Heading 3"><Heading3 size={16} /></button>
+                
+                {/* Lists & Quotes */}
+                <button className={`wiki-tool-btn ${editor.isActive('bulletList') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleBulletList().run()} title="Bullet List"><List size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('orderedList') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Numbered List"><ListOrdered size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('blockquote') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleBlockquote().run()} title="Quote"><Quote size={16} /></button>
+                <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px', height: '24px' }}></div>
+                
+                {/* Sub/Superscript */}
+                <button className={`wiki-tool-btn ${editor.isActive('subscript') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleSubscript().run()} title="Subscript"><SubscriptIcon size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('superscript') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleSuperscript().run()} title="Superscript"><SuperscriptIcon size={16} /></button>
+                
+                {/* Inserts */}
+                <button className="wiki-tool-btn" onClick={() => setIconPickerOpen(true)} title="Insert Icon"><Smile size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('link') ? 'active' : ''}`} onClick={() => setLinkModalOpen(true)} title="Insert Link"><Link size={16} /></button>
                 <button className="wiki-tool-btn" title="Format as Conlang Font" onClick={applyConlangFont}><Type size={16} /> <span style={{fontSize: '0.7rem', marginLeft: '4px', fontWeight: 'bold'}}>CONLANG</span></button>
+                
                 <div style={{ flex: 1 }}></div>
-                <Button variant="save" onClick={handleSave}><div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}><Save size={16} /> Save Document</div></Button>
+                <Button variant="save" onClick={() => onSave(editor.getHTML())}><div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}><Save size={16} /> Save Document</div></Button>
             </div>
-            <div 
-                className="wiki-editor" 
-                contentEditable 
-                ref={editorRef} 
-                onBlur={handleSave}
-                onInput={handleInput}
-                suppressContentEditableWarning={true}
-            />
+            
+            {/* Table Toolbar (Contextual) */}
+            {editor.can().deleteTable() && (
+                <div className="wiki-toolbar" style={{ background: 'var(--s3)', borderTop: 'none', borderBottom: '1px solid var(--bd)' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--tx2)', margin: '0 8px', fontWeight: 'bold' }}>TABLE:</span>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().addColumnBefore().run()} title="Add Column Before"><ArrowLeftFromLine size={14} /></button>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().addColumnAfter().run()} title="Add Column After"><ArrowRightFromLine size={14} /></button>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().deleteColumn().run()} title="Delete Column" style={{ color: '#f87171' }}><Columns size={14} /></button>
+                    <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px', height: '20px' }}></div>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().addRowBefore().run()} title="Add Row Before"><ArrowUpFromLine size={14} /></button>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().addRowAfter().run()} title="Add Row After"><ArrowDownFromLine size={14} /></button>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().deleteRow().run()} title="Delete Row" style={{ color: '#f87171' }}><Rows size={14} /></button>
+                    <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px', height: '20px' }}></div>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().mergeCells().run()} title="Merge Cells">Merge</button>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().splitCell().run()} title="Split Cell">Split</button>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().toggleHeaderRow().run()} title="Toggle Header Row">Header Row</button>
+                    <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px', height: '20px' }}></div>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().deleteTable().run()} title="Delete Table" style={{ color: '#f87171' }}><Trash2 size={14} /></button>
+                </div>
+            )}
+            
+            {/* Only show Add Table if not in a table */}
+            {!editor.can().deleteTable() && (
+                <div className="wiki-toolbar" style={{ background: 'var(--s3)', borderTop: 'none', borderBottom: '1px solid var(--bd)', padding: '4px 10px' }}>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><TableIcon size={14} style={{ marginRight: '4px' }} /> Insert Table</button>
+                </div>
+            )}
+
+            <div className="wiki-editor-container" style={{ flex: 1, overflow: 'auto', padding: '0', display: 'flex', flexDirection: 'column' }}>
+                <EditorContent 
+                    editor={editor} 
+                    className="wiki-editor-tiptap"
+                />
+            </div>
 
             <Modal isOpen={linkModalOpen} onClose={() => setLinkModalOpen(false)} title="Insert Link">
                 <Input label="Target URL" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." autoFocus />
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}><Button variant="imp" onClick={() => { if(linkUrl) formatText('createLink', linkUrl); setLinkUrl(''); setLinkModalOpen(false); }}>Insert</Button></div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+                    <Button variant="imp" onClick={setLink}>Insert</Button>
+                </div>
             </Modal>
 
             <Modal isOpen={iconPickerOpen} onClose={() => setIconPickerOpen(false)} title="Insert Icon">
                 <div className="icon-picker-grid">
                     {PREDEFINED_ICONS.map(iconName => {
-                        const Icon = icons[iconName];
-                        if (!Icon) return null;
+                        const IconComponent = icons[iconName];
+                        if (!IconComponent) return null;
                         return (
                             <button 
                                 key={iconName} 
@@ -1980,7 +1994,7 @@ function LegacyWikiEditor({ content, onSave }) {
                                 title={iconName}
                                 onClick={() => insertIcon(iconName)}
                             >
-                                <Icon size={24} />
+                                <IconComponent size={24} />
                             </button>
                         );
                     })}

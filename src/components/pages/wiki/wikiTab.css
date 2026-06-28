@@ -1,26 +1,30 @@
-.wiki-editor { 
-    min-height: 400px; 
+.wiki-editor-container { 
     background: var(--s4); 
     color: var(--tx); 
-    padding: 20px; 
     border: 1px solid var(--bd); 
     border-radius: var(--rad-sm); 
+    flex: 1;
+}
+
+.wiki-editor-tiptap .ProseMirror { 
+    min-height: 400px; 
+    padding: 20px; 
     outline: none; 
     line-height: 1.6; 
 }
-.wiki-editor h1, .wiki-editor h2, .wiki-editor h3 { 
+.wiki-editor-tiptap .ProseMirror h1, .wiki-editor-tiptap .ProseMirror h2, .wiki-editor-tiptap .ProseMirror h3 { 
     color: var(--tx); 
     margin-top: 15px; 
     margin-bottom: 10px; 
     font-weight: 800; 
 }
-.wiki-editor h1 { 
+.wiki-editor-tiptap .ProseMirror h1 { 
     font-size: 2rem; 
     border-bottom: 1px solid var(--bd); 
     padding-bottom: 5px; 
 }
-.wiki-editor a { color: var(--acc); text-decoration: underline; cursor: pointer; }
-.wiki-editor ul, .wiki-editor ol { margin-left: 20px; margin-bottom: 15px; }
+.wiki-editor-tiptap .ProseMirror a { color: var(--acc); text-decoration: underline; cursor: pointer; }
+.wiki-editor-tiptap .ProseMirror ul, .wiki-editor-tiptap .ProseMirror ol { margin-left: 20px; margin-bottom: 15px; }
 .wiki-toolbar { 
     display: flex; 
     gap: 8px; 
@@ -42,6 +46,11 @@
     align-items: center; 
     justify-content: center; 
     transition: 0.2s; 
+}
+.wiki-tool-btn.active {
+    background: var(--acc2);
+    color: var(--bg);
+    border-color: var(--acc2);
 }
 .wiki-tool-btn:hover { background: var(--acc2); color: var(--bg); border-color: var(--acc2); }
 .wiki-page-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: var(--s1); border: 1px solid var(--bd); border-radius: var(--rad-sm); cursor: pointer; margin-bottom: 8px; transition: 0.2s; }
@@ -224,7 +233,7 @@
     font-style: italic;
 }
 /* Callout / Quote Blocks */
-.wiki-editor blockquote {
+.wiki-editor-tiptap .ProseMirror blockquote {
     margin: 15px 0;
     padding: 15px 20px;
     background: color-mix(in srgb, var(--acc) 12%, transparent);
@@ -235,35 +244,57 @@
     transition: background 0.2s ease;
 }
 
-.wiki-editor blockquote:hover {
+.wiki-editor-tiptap .ProseMirror blockquote:hover {
     background: color-mix(in srgb, var(--acc) 18%, transparent);
 }
 
 /* Nested Callouts (Darker) */
-.wiki-editor blockquote blockquote {
+.wiki-editor-tiptap .ProseMirror blockquote blockquote {
     background: var(--s2);
     border-left: 4px solid var(--bd);
     color: var(--tx2);
 }
 
-.wiki-editor blockquote blockquote:hover {
+.wiki-editor-tiptap .ProseMirror blockquote blockquote:hover {
     background: var(--s3);
 }
 
 /* Tables */
-.wiki-editor table {
+.wiki-editor-tiptap .ProseMirror table {
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 15px;
+    table-layout: fixed;
 }
-.wiki-editor th, .wiki-editor td {
+.wiki-editor-tiptap .ProseMirror th, .wiki-editor-tiptap .ProseMirror td {
     border: 1px solid var(--bd);
     padding: 8px;
+    position: relative;
+    min-width: 1em;
 }
-.wiki-editor th {
+.wiki-editor-tiptap .ProseMirror th {
     background: var(--s2);
     font-weight: bold;
 }
+/* TipTap Table selection */
+.wiki-editor-tiptap .ProseMirror .selectedCell:after {
+    z-index: 2;
+    position: absolute;
+    content: "";
+    left: 0; right: 0; top: 0; bottom: 0;
+    background: rgba(200, 200, 255, 0.4);
+    pointer-events: none;
+}
+.wiki-editor-tiptap .ProseMirror .column-resize-handle {
+    position: absolute;
+    right: -2px;
+    top: 0;
+    bottom: -2px;
+    width: 4px;
+    background-color: #adf;
+    pointer-events: none;
+}
+
 
 /* Icons */
 .wiki-inline-icon {

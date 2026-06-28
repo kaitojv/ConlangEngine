@@ -83,7 +83,7 @@ export default function Home() {
                 setStats({
                     languages: languagesCount,
                     words: wordsCount,
-                    conlangers: conlangersCount || 146, // Fallback to at least 146 if RLS blocks count
+                    conlangers: Math.max(conlangersCount || 0, 146), // Fallback to at least 146
                     loading: false
                 });
             } catch (err) {
