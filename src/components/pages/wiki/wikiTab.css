@@ -12,6 +12,10 @@
     padding: 20px; 
     outline: none; 
     line-height: 1.6; 
+    color: var(--tx);
+}
+.wiki-editor-tiptap .ProseMirror p, .wiki-editor-tiptap .ProseMirror span {
+    color: var(--tx);
 }
 .wiki-editor-tiptap .ProseMirror h1, .wiki-editor-tiptap .ProseMirror h2, .wiki-editor-tiptap .ProseMirror h3 { 
     color: var(--tx); 
