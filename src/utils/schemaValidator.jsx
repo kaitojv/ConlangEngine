@@ -34,7 +34,10 @@ const VALID_CONFIG_KEYS = new Set([
     'particleDatabase', 'compositeParticles', 'allowRecursiveComposites',
     'usesParticles',
     // UI state
-    'isDialect', 'hasCompletedOnboarding', 'floatingBackground'
+    'isDialect', 'hasCompletedOnboarding', 'floatingBackground',
+    // Study / Course gamification
+    'studyXP', 'courseLevelScores', 'dailyChallengeDate', 'dailyChallengeCompleted',
+    'studySoundEffects', 'courseProgress'
 ]);
 
 /**

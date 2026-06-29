@@ -1,7 +1,7 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import SimpleKeyboard from 'react-simple-keyboard';
 import 'react-simple-keyboard/build/css/index.css';
-import { Keyboard as KeyboardIcon, Plus, X, Book, BookPlus, Languages } from 'lucide-react';
+import { Keyboard as KeyboardIcon, Plus, X, Book, BookPlus, Languages, ArrowUp } from 'lucide-react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
@@ -13,6 +13,7 @@ const Keyboard = SimpleKeyboard.default || SimpleKeyboard;
 
 export default function FloatingKeyboard() {
     const [isFabOpen, setIsFabOpen] = useState(false);
+    const [showBackToTop, setShowBackToTop] = useState(false);
 
     const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
     const [isLexiconOpen, setIsLexiconOpen] = useState(false);
@@ -98,6 +99,23 @@ export default function FloatingKeyboard() {
 
     const handleShift = () => {
         setLayoutName(layoutName === "default" ? "shift" : "default");
+    };
+
+    useEffect(() => {
+        const handleScroll = () => {
+            if (window.scrollY > 100) {
+                setShowBackToTop(true);
+            } else {
+                setShowBackToTop(false);
+            }
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    const scrollToTop = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const closeAllPanels = () => {
@@ -322,6 +340,14 @@ export default function FloatingKeyboard() {
                     </div>
                 </div>
             )}
+
+            <button 
+                className={`back-to-top-btn ${showBackToTop ? 'visible' : ''}`}
+                onClick={scrollToTop}
+                title="Back to top"
+            >
+                <ArrowUp size={20} />
+            </button>
 
             <div className={`fab-container ${isFabOpen ? 'open' : ''}`}>
                 <button className="fab-action" title="Lexicon Search" onClick={() => togglePanel(setIsLexiconOpen, isLexiconOpen)}>

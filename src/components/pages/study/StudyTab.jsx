@@ -6,12 +6,14 @@ import { renderWordInScript } from '../../../utils/scriptRendering.js';
 import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import { BrainCircuit, Flame, RotateCcw, Check, X, Play, Map, Zap, Volume2, Star, Crown, Book, Brain, Dumbbell, Sword, Shield, Lock } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import Mascot from './Mascot.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import ExercisePlayer from './ExercisePlayer.jsx';
 import CourseBuilder from './CourseBuilder.jsx';
 import EmptyState from '@/components/UI/EmptyState/EmptyState.jsx';
 import { playAzureTTS } from '../../../utils/azureTTS.js';
+import { getLevel } from '@/utils/xpSystem.js';
 import toast from 'react-hot-toast';
 import './studyTab.css';
 
@@ -22,9 +24,28 @@ export default function StudyTab() {
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
     const addWord = useLexiconStore((state) => state.addWord);
     const checkDuplicate = useLexiconStore((state) => state.checkDuplicate);
-    const { streak, lastStudyDate, conlangName, customCourse, courseProgress = [] } = useConfigStore();
+    const { streak, lastStudyDate, conlangName, customCourse, courseProgress = [], studyXP = 0, courseLevelScores = {}, dailyChallengeDate, dailyChallengeCompleted } = useConfigStore();
     const updateConfig = useConfigStore((state) => state.updateConfig);
     const { transliterate } = useTransliterator();
+    
+    // Derived level info
+    const levelInfo = getLevel(studyXP);
+    
+    // Level up notification
+    const prevLevelRef = React.useRef(levelInfo.level);
+    React.useEffect(() => {
+        if (levelInfo.level > prevLevelRef.current) {
+            toast.success(`Level Up! You reached Level ${levelInfo.level}: ${levelInfo.title}`, {
+                duration: 5000,
+                style: {
+                    background: 'var(--s1)',
+                    color: 'var(--tx)',
+                    border: '2px solid var(--acc)'
+                }
+            });
+        }
+        prevLevelRef.current = levelInfo.level;
+    }, [levelInfo.level, levelInfo.title, levelInfo.icon]);
 
     // Keep track of what the user is currently doing with their deck
     const [deck, setDeck] = useState([]);
@@ -111,6 +132,57 @@ export default function StudyTab() {
         setStudyMode('course');
     };
 
+    const startDailyChallenge = () => {
+        if (lexicon.length < 5) return alert("You need at least 5 words in your lexicon to play the Daily Challenge!");
+        
+        const randomWords = [...lexicon].sort(() => 0.5 - Math.random()).slice(0, 10);
+        
+        const challengeNode = {
+            id: 'daily-challenge',
+            title: 'Daily Challenge',
+            phrases: randomWords.map((w, i) => {
+                const types = ['translate_to_english', 'translate_to_conlang', 'word_bank', 'multiple_choice'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                return {
+                    id: `dc-phrase-${i}`,
+                    type,
+                    conlang: w.word,
+                    english: w.translation.split(/[,(]/)[0].trim(),
+                    options: [...lexicon].filter(x => x.translation !== w.translation).sort(() => 0.5 - Math.random()).slice(0, 3).map(x => x.translation.split(/[,(]/)[0].trim()),
+                    distractors: [...lexicon].filter(x => x.word !== w.word).sort(() => 0.5 - Math.random()).slice(0, 2).map(x => x.word).join(', ')
+                };
+            })
+        };
+        
+        setPathLevel(challengeNode);
+        setStudyMode('course');
+    };
+
+    const startTimedMode = () => {
+        if (lexicon.length < 10) return alert("You need at least 10 words in your lexicon to play Timed Mode!");
+        
+        const randomWords = [...lexicon].sort(() => 0.5 - Math.random()).slice(0, 50); // 50 words is plenty for 60s
+        
+        const timedNode = {
+            id: 'timed-mode',
+            title: 'Timed Sprint',
+            isTimed: true,
+            phrases: randomWords.map((w, i) => {
+                const type = Math.random() > 0.5 ? 'translate_to_english' : 'multiple_choice';
+                return {
+                    id: `tm-phrase-${i}`,
+                    type,
+                    conlang: w.word,
+                    english: w.translation.split(/[,(]/)[0].trim(),
+                    options: [...lexicon].filter(x => x.translation !== w.translation).sort(() => 0.5 - Math.random()).slice(0, 3).map(x => x.translation.split(/[,(]/)[0].trim())
+                };
+            })
+        };
+        
+        setPathLevel(timedNode);
+        setStudyMode('course');
+    };
+
     const handleFlip = () => {
         if (!hasFinished) setIsFlipped(!isFlipped);
     };
@@ -175,6 +247,27 @@ export default function StudyTab() {
             }
         }, 300); // Matches the CSS transition time
     };
+
+    // Keyboard shortcuts for Flashcards
+    React.useEffect(() => {
+        if (studyMode !== 'flashcard' || !deckStarted || hasFinished) return;
+        const handleKeyDown = (e) => {
+            // Only trigger if focus is not in an input field (just in case)
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+            
+            if (e.key === ' ' || e.code === 'Space') {
+                e.preventDefault(); // Prevent page scroll
+                handleFlip();
+            } else if (isFlipped) {
+                if (e.key === '1') handleSRSGrade(0); // Fail
+                if (e.key === '2') handleSRSGrade(3); // Hard
+                if (e.key === '3') handleSRSGrade(4); // Good
+                if (e.key === '4') handleSRSGrade(5); // Easy
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [studyMode, deckStarted, hasFinished, isFlipped, handleFlip, handleSRSGrade]);
 
     const handleQuizSubmit = (e) => {
         e.preventDefault();
@@ -283,6 +376,22 @@ export default function StudyTab() {
                         <div className="streak-badge">
                             <Flame size={18} /> {streak || 0} Day Streak
                         </div>
+                        <div className="xp-badge" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--s2)', padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--bd)' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', color: 'var(--acc)' }}>
+                                {(() => {
+                                    const IconCmp = LucideIcons[levelInfo.icon] || LucideIcons.Award;
+                                    return <IconCmp size={20} />;
+                                })()}
+                            </span>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--tx)' }}>
+                                    Lvl {levelInfo.level}: {levelInfo.title}
+                                </div>
+                                <div style={{ width: '80px', height: '4px', background: 'var(--s1)', borderRadius: '2px', overflow: 'hidden' }}>
+                                    <div style={{ width: `${levelInfo.progress}%`, height: '100%', background: 'var(--acc)' }} />
+                                </div>
+                            </div>
+                        </div>
                         
                         {studyMode === 'path' ? (
                             <>
@@ -304,6 +413,38 @@ export default function StudyTab() {
                         ) : null}
                     </div>
                 </div>
+
+                {studyMode === 'path' && (
+                    <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+                        <Card style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '15px 20px', border: '1px solid var(--acc)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                <Flame size={24} color="var(--acc)" />
+                                <div>
+                                    <h4 style={{ margin: 0 }}>Daily Challenge</h4>
+                                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--tx2)' }}>Earn 50 bonus XP!</p>
+                                </div>
+                            </div>
+                            {(dailyChallengeDate === new Date().toDateString() && dailyChallengeCompleted) ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--save)', fontWeight: 'bold' }}>
+                                    <Check size={16} /> Completed
+                                </div>
+                            ) : (
+                                <Button variant="imp" onClick={startDailyChallenge}>Start</Button>
+                            )}
+                        </Card>
+                        
+                        <Card style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '15px 20px', border: '1px solid var(--bd)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                <Zap size={24} color="#f59e0b" />
+                                <div>
+                                    <h4 style={{ margin: 0 }}>Timed Mode</h4>
+                                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--tx2)' }}>60 seconds sprint</p>
+                                </div>
+                            </div>
+                            <Button variant="default" onClick={startTimedMode}>Play</Button>
+                        </Card>
+                    </div>
+                )}
 
                 {studyMode === 'flashcard' && !deckStarted && (
                     <div className="filter-section">
@@ -335,11 +476,39 @@ export default function StudyTab() {
             {studyMode === 'course' && pathLevel && (
                 <ExercisePlayer 
                     levelNode={pathLevel}
-                    onComplete={(nodeId) => {
+                    onComplete={(nodeId, stats) => {
                         recordDailyStudy();
-                        if (nodeId && !courseProgress.includes(nodeId)) {
-                            updateConfig({ courseProgress: [...courseProgress, nodeId] });
+                        
+                        let newConfig = {};
+
+                        if (nodeId === 'daily-challenge') {
+                            newConfig.dailyChallengeDate = new Date().toDateString();
+                            newConfig.dailyChallengeCompleted = true;
+                            newConfig.studyXP = (studyXP || 0) + (stats.correct * 10) + 50; // 50 XP bonus
+                        } else if (nodeId === 'timed-mode') {
+                            newConfig.studyXP = (studyXP || 0) + (stats.correct * 2); // 2 XP per correct word
+                        } else {
+                            if (nodeId && !courseProgress.includes(nodeId)) {
+                                newConfig.courseProgress = [...courseProgress, nodeId];
+                            }
+                            
+                            if (nodeId && stats) {
+                                const currentScore = courseLevelScores?.[nodeId]?.stars || 0;
+                                if (stats.stars > currentScore) {
+                                    newConfig.courseLevelScores = { 
+                                        ...courseLevelScores, 
+                                        [nodeId]: { stars: stats.stars, correct: stats.correct, total: stats.total } 
+                                    };
+                                    const xpGained = (stats.stars - currentScore) * 15; // 15 XP per new star
+                                    newConfig.studyXP = (studyXP || 0) + xpGained;
+                                }
+                            }
                         }
+
+                        if (Object.keys(newConfig).length > 0) {
+                            updateConfig(newConfig);
+                        }
+
                         setStudyMode('path');
                     }}
                     onExit={() => setStudyMode('path')}
@@ -362,108 +531,261 @@ export default function StudyTab() {
                                 </Button>
                             ) : null}
                         />
-                    ) : (
-                        <div className="path-track" style={{ position: 'relative' }}>
-                            <div style={{ position: 'absolute', top: '-40px', right: '0' }}>
-                                <Button variant="default" onClick={() => updateConfig({ courseProgress: [] })}>
-                                    Reset Progress
-                                </Button>
-                            </div>
-                            <svg 
-                                className="path-svg" 
-                                style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: '100%', overflow: 'visible', zIndex: 0, pointerEvents: 'none' }}
-                            >
-                                {pathNodes.map((node, i) => {
-                                    if (i === pathNodes.length - 1) return null;
-                                    const isLeft = i % 2 === 0;
-                                    const y1 = 80 + i * 150;
-                                    const y2 = 80 + (i + 1) * 150;
-                                    const midY = (y1 + y2) / 2;
-                                    const x1 = isLeft ? -40 : 40;
-                                    const x2 = isLeft ? 40 : -40;
+                    ) : (() => {
+                        // Check if we use the DAG layout or the classic linear layout
+                        const hasCustomDAG = pathNodes.some(n => n.prerequisites !== undefined);
+                        
+                        if (!hasCustomDAG) {
+                            return (
+                                <div className="path-track" style={{ position: 'relative' }}>
+                                    <div style={{ position: 'absolute', top: '-40px', right: '0' }}>
+                                        <Button variant="default" onClick={() => updateConfig({ courseProgress: [] })}>
+                                            Reset Progress
+                                        </Button>
+                                    </div>
+                                    <svg 
+                                        className="path-svg" 
+                                        style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: '100%', overflow: 'visible', zIndex: 0, pointerEvents: 'none' }}
+                                    >
+                                        {pathNodes.map((node, i) => {
+                                            if (i === pathNodes.length - 1) return null;
+                                            const isLeft = i % 2 === 0;
+                                            const y1 = 80 + i * 150;
+                                            const y2 = 80 + (i + 1) * 150;
+                                            const midY = (y1 + y2) / 2;
+                                            const x1 = isLeft ? -40 : 40;
+                                            const x2 = isLeft ? 40 : -40;
+                                            
+                                            let currentPathIdx = pathNodes.findIndex(n => !courseProgress.includes(n.id));
+                                            if (currentPathIdx === -1) currentPathIdx = pathNodes.length;
+                                            
+                                            const isNextLocked = (i + 1) > currentPathIdx;
+                                            const lineColor = isNextLocked ? 'var(--bd)' : (node.color || 'var(--acc)');
+                                            
+                                            return (
+                                                <g key={`line-${i}`}>
+                                                    <path 
+                                                        d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
+                                                        stroke="var(--bg)"
+                                                        strokeWidth="32"
+                                                        fill="none"
+                                                        strokeLinecap="round"
+                                                    />
+                                                    <path 
+                                                        d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
+                                                        stroke={lineColor}
+                                                        strokeWidth="24"
+                                                        fill="none"
+                                                        strokeLinecap="round"
+                                                        strokeDasharray={isNextLocked ? "12, 16" : "none"}
+                                                    />
+                                                </g>
+                                            );
+                                        })}
+                                    </svg>
+
+                                    {pathNodes.map((node, i) => {
+                                        const isZigZag = i % 2 === 0;
+                                        
+                                        let currentPathIdx = pathNodes.findIndex(n => !courseProgress.includes(n.id));
+                                        if (currentPathIdx === -1) currentPathIdx = pathNodes.length;
+                                        
+                                        const isCompleted = i < currentPathIdx || courseProgress.includes(node.id);
+                                        const isCurrent = i === currentPathIdx;
+                                        const isLocked = i > currentPathIdx;
+
+                                        const nodeColor = isLocked ? 'var(--bd)' : (isCompleted ? 'var(--save)' : (node.color || 'var(--acc)'));
+                                        const iconColor = isLocked ? 'var(--tx2)' : nodeColor;
+                                        
+                                        let IconCmp = Zap;
+                                        if (isLocked) IconCmp = Lock;
+                                        else if (isCompleted) IconCmp = Check;
+                                        else {
+                                            switch(node.icon) {
+                                                case 'Star': IconCmp = Star; break;
+                                                case 'Crown': IconCmp = Crown; break;
+                                                case 'Book': IconCmp = Book; break;
+                                                case 'Brain': IconCmp = Brain; break;
+                                                case 'Flame': IconCmp = Flame; break;
+                                                case 'Dumbbell': IconCmp = Dumbbell; break;
+                                                case 'Sword': IconCmp = Sword; break;
+                                                case 'Shield': IconCmp = Shield; break;
+                                                default: IconCmp = Zap; break;
+                                            }
+                                        }
+
+                                        const nodeScore = courseLevelScores[node.id];
+                                        const starCount = nodeScore ? nodeScore.stars : 0;
+
+                                        return (
+                                            <div key={node.id} className={`path-node-wrapper ${isZigZag ? 'left' : 'right'} ${isCurrent ? 'current-node' : ''} ${isLocked ? 'locked-node' : ''}`}>
+                                                <div 
+                                                    className="path-node" 
+                                                    onClick={() => !isLocked && startQuiz(node)}
+                                                    style={{ 
+                                                        backgroundColor: isLocked ? 'var(--s1)' : 'var(--bg)', 
+                                                        borderColor: nodeColor, 
+                                                        boxShadow: isLocked ? 'none' : `0 8px 0 ${nodeColor}`,
+                                                        transform: isLocked ? 'scale(0.95)' : 'none',
+                                                        cursor: isLocked ? 'not-allowed' : 'pointer'
+                                                    }}
+                                                >
+                                                    <div className="path-node-icon"><IconCmp size={32} color={iconColor} fill={isLocked ? 'none' : 'currentColor'} strokeWidth={isCompleted ? 3 : 2} /></div>
+                                                    {!isLocked && (
+                                                        <div style={{ position: 'absolute', bottom: '-25px', display: 'flex', gap: '2px', background: 'var(--bg)', padding: '2px 6px', borderRadius: '12px', border: '1px solid var(--bd)', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                                                            {[1, 2, 3].map(s => (
+                                                                <Star key={s} size={12} color={s <= starCount ? '#f59e0b' : 'var(--bd)'} fill={s <= starCount ? '#f59e0b' : 'none'} />
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="path-node-label" style={{ opacity: isLocked ? 0.5 : 1 }}>
+                                                    {node.title}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        }
+                        // --- DAG LAYOUT ---
+                        const nodeDepths = {};
+                        pathNodes.forEach(n => { nodeDepths[n.id] = 0; });
+                        let changed = true;
+                        while (changed) {
+                            changed = false;
+                            pathNodes.forEach(n => {
+                                if (!n.prerequisites || n.prerequisites.length === 0) return;
+                                const maxPrereqDepth = Math.max(...n.prerequisites.map(pId => nodeDepths[pId] !== undefined ? nodeDepths[pId] : -1));
+                                if (maxPrereqDepth >= 0 && nodeDepths[n.id] <= maxPrereqDepth) {
+                                    nodeDepths[n.id] = maxPrereqDepth + 1;
+                                    changed = true;
+                                }
+                            });
+                        }
+                        
+                        const maxDepth = Math.max(0, ...Object.values(nodeDepths));
+                        const pathRows = Array.from({ length: maxDepth + 1 }, () => []);
+                        pathNodes.forEach(n => pathRows[nodeDepths[n.id]].push(n));
+                        
+                        const nodePositions = {};
+                        pathRows.forEach((row, rIdx) => {
+                            const y = 80 + rIdx * 150;
+                            const numNodes = row.length;
+                            row.forEach((n, colIdx) => {
+                                const xOffset = (colIdx - (numNodes - 1) / 2) * 140; // 140px spacing between siblings
+                                nodePositions[n.id] = { x: xOffset, y };
+                            });
+                        });
+
+                        return (
+                            <div className="path-track" style={{ position: 'relative', minHeight: `${(maxDepth + 1) * 150 + 100}px` }}>
+                                <div style={{ position: 'absolute', top: '-40px', right: '0' }}>
+                                    <Button variant="default" onClick={() => updateConfig({ courseProgress: [] })}>
+                                        Reset Progress
+                                    </Button>
+                                </div>
+                                
+                                <svg 
+                                    className="path-svg" 
+                                    style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: '100%', overflow: 'visible', zIndex: 0, pointerEvents: 'none' }}
+                                >
+                                    {pathNodes.flatMap((node) => {
+                                        if (!node.prerequisites || node.prerequisites.length === 0) return [];
+                                        return node.prerequisites.map((pId) => {
+                                            const prereqPos = nodePositions[pId];
+                                            const currentPos = nodePositions[node.id];
+                                            if (!prereqPos || !currentPos) return null;
+                                            
+                                            // Is this line unlocked? A line is unlocked if the prerequisite is completed.
+                                            const isPrereqCompleted = courseProgress.includes(pId);
+                                            const lineColor = isPrereqCompleted ? (node.color || 'var(--acc)') : 'var(--bd)';
+
+                                            return (
+                                                <g key={`edge-${pId}-${node.id}`}>
+                                                    <path 
+                                                        d={`M ${prereqPos.x} ${prereqPos.y} C ${prereqPos.x} ${(prereqPos.y + currentPos.y)/2}, ${currentPos.x} ${(prereqPos.y + currentPos.y)/2}, ${currentPos.x} ${currentPos.y}`}
+                                                        stroke="var(--bg)"
+                                                        strokeWidth="32"
+                                                        fill="none"
+                                                        strokeLinecap="round"
+                                                    />
+                                                    <path 
+                                                        d={`M ${prereqPos.x} ${prereqPos.y} C ${prereqPos.x} ${(prereqPos.y + currentPos.y)/2}, ${currentPos.x} ${(prereqPos.y + currentPos.y)/2}, ${currentPos.x} ${currentPos.y}`}
+                                                        stroke={lineColor}
+                                                        strokeWidth="24"
+                                                        fill="none"
+                                                        strokeLinecap="round"
+                                                        strokeDasharray={isPrereqCompleted ? "none" : "12, 16"}
+                                                    />
+                                                </g>
+                                            );
+                                        });
+                                    })}
+                                </svg>
+
+                                {pathNodes.map((node) => {
+                                    const pos = nodePositions[node.id];
+                                    if (!pos) return null;
                                     
-                                    let currentPathIdx = pathNodes.findIndex(n => !courseProgress.includes(n.id));
-                                    if (currentPathIdx === -1) currentPathIdx = pathNodes.length;
+                                    const isLocked = node.prerequisites && node.prerequisites.length > 0 && !node.prerequisites.every(pId => courseProgress.includes(pId));
+                                    const isCompleted = courseProgress.includes(node.id);
+                                    const isCurrent = !isLocked && !isCompleted;
+
+                                    const nodeColor = isLocked ? 'var(--bd)' : (isCompleted ? 'var(--save)' : (node.color || 'var(--acc)'));
+                                    const iconColor = isLocked ? 'var(--tx2)' : nodeColor;
                                     
-                                    const isNextLocked = (i + 1) > currentPathIdx;
-                                    const nextNode = pathNodes[i + 1];
-                                    const lineColor = isNextLocked ? 'var(--bd)' : (node.color || 'var(--acc)');
-                                    
+                                    let IconCmp = Zap;
+                                    if (isLocked) IconCmp = Lock;
+                                    else if (isCompleted) IconCmp = Check;
+                                    else {
+                                        switch(node.icon) {
+                                            case 'Star': IconCmp = Star; break;
+                                            case 'Crown': IconCmp = Crown; break;
+                                            case 'Book': IconCmp = Book; break;
+                                            case 'Brain': IconCmp = Brain; break;
+                                            case 'Flame': IconCmp = Flame; break;
+                                            case 'Dumbbell': IconCmp = Dumbbell; break;
+                                            case 'Sword': IconCmp = Sword; break;
+                                            case 'Shield': IconCmp = Shield; break;
+                                            default: IconCmp = Zap; break;
+                                        }
+                                    }
+
+                                    const nodeScore = courseLevelScores[node.id];
+                                    const starCount = nodeScore ? nodeScore.stars : 0;
+
                                     return (
-                                        <g key={`line-${i}`}>
-                                            <path 
-                                                d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
-                                                stroke="var(--bg)"
-                                                strokeWidth="32"
-                                                fill="none"
-                                                strokeLinecap="round"
-                                            />
-                                            <path 
-                                                d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
-                                                stroke={lineColor}
-                                                strokeWidth="24"
-                                                fill="none"
-                                                strokeLinecap="round"
-                                                strokeDasharray={isNextLocked ? "12, 16" : "none"}
-                                            />
-                                        </g>
+                                        <div key={node.id} className={`path-node-wrapper center ${isCurrent ? 'current-node' : ''} ${isLocked ? 'locked-node' : ''}`} style={{ transform: `translateX(${pos.x}px)`, top: `${pos.y}px`, left: '50%', marginLeft: '-40px' }}>
+                                            <div 
+                                                className="path-node" 
+                                                onClick={() => !isLocked && startQuiz(node)}
+                                                style={{ 
+                                                    backgroundColor: isLocked ? 'var(--s1)' : 'var(--bg)', 
+                                                    borderColor: nodeColor, 
+                                                    boxShadow: isLocked ? 'none' : `0 8px 0 ${nodeColor}`,
+                                                    transform: isLocked ? 'scale(0.95)' : 'none',
+                                                    cursor: isLocked ? 'not-allowed' : 'pointer'
+                                                }}
+                                            >
+                                                <div className="path-node-icon"><IconCmp size={32} color={iconColor} fill={isLocked ? 'none' : 'currentColor'} strokeWidth={isCompleted ? 3 : 2} /></div>
+                                                {!isLocked && (
+                                                    <div style={{ position: 'absolute', bottom: '-25px', display: 'flex', gap: '2px', background: 'var(--bg)', padding: '2px 6px', borderRadius: '12px', border: '1px solid var(--bd)', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                                                        {[1, 2, 3].map(s => (
+                                                            <Star key={s} size={12} color={s <= starCount ? '#f59e0b' : 'var(--bd)'} fill={s <= starCount ? '#f59e0b' : 'none'} />
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="path-node-label" style={{ opacity: isLocked ? 0.5 : 1 }}>
+                                                {node.title}
+                                            </div>
+                                        </div>
                                     );
                                 })}
-                            </svg>
-
-                            {pathNodes.map((node, i) => {
-                                const isZigZag = i % 2 === 0;
-                                
-                                let currentPathIdx = pathNodes.findIndex(n => !courseProgress.includes(n.id));
-                                if (currentPathIdx === -1) currentPathIdx = pathNodes.length;
-                                
-                                const isCompleted = i < currentPathIdx || courseProgress.includes(node.id);
-                                const isCurrent = i === currentPathIdx;
-                                const isLocked = i > currentPathIdx;
-
-                                const nodeColor = isLocked ? 'var(--bd)' : (isCompleted ? 'var(--save)' : (node.color || 'var(--acc)'));
-                                const iconColor = isLocked ? 'var(--tx2)' : nodeColor;
-                                
-                                let IconCmp = Zap;
-                                if (isLocked) IconCmp = Lock;
-                                else if (isCompleted) IconCmp = Check;
-                                else {
-                                    switch(node.icon) {
-                                        case 'Star': IconCmp = Star; break;
-                                        case 'Crown': IconCmp = Crown; break;
-                                        case 'Book': IconCmp = Book; break;
-                                        case 'Brain': IconCmp = Brain; break;
-                                        case 'Flame': IconCmp = Flame; break;
-                                        case 'Dumbbell': IconCmp = Dumbbell; break;
-                                        case 'Sword': IconCmp = Sword; break;
-                                        case 'Shield': IconCmp = Shield; break;
-                                        default: IconCmp = Zap; break;
-                                    }
-                                }
-
-                                return (
-                                    <div key={node.id} className={`path-node-wrapper ${isZigZag ? 'left' : 'right'} ${isCurrent ? 'current-node' : ''} ${isLocked ? 'locked-node' : ''}`}>
-                                        <div 
-                                            className="path-node" 
-                                            onClick={() => !isLocked && startQuiz(node)}
-                                            style={{ 
-                                                backgroundColor: isLocked ? 'var(--s1)' : 'var(--bg)', 
-                                                borderColor: nodeColor, 
-                                                boxShadow: isLocked ? 'none' : `0 8px 0 ${nodeColor}`,
-                                                transform: isLocked ? 'scale(0.95)' : 'none',
-                                                cursor: isLocked ? 'not-allowed' : 'pointer'
-                                            }}
-                                        >
-                                            <div className="path-node-icon"><IconCmp size={32} color={iconColor} fill={isLocked ? 'none' : 'currentColor'} strokeWidth={isCompleted ? 3 : 2} /></div>
-                                        </div>
-                                        <div className="path-node-label" style={{ opacity: isLocked ? 0.5 : 1 }}>
-                                            {node.title}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
+                            </div>
+                        );
+                    })()}
                 </div>
             )}
 

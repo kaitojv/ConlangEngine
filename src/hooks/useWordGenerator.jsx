@@ -30,7 +30,19 @@ export function useWordGenerator() {
     }, []);
 
     // 3. The main generation function
-    const generateWord = useCallback((numSyllables = 2, targetClass = 'random') => {
+    const generateWord = useCallback((allowedLengths = [2], targetClass = 'random') => {
+        // Fallback for older calls that pass minSyllables, maxSyllables
+        let lengths = Array.isArray(allowedLengths) ? allowedLengths : [];
+        if (!Array.isArray(allowedLengths)) {
+            // If it's a number, assume it's minSyllables
+            const min = allowedLengths;
+            const max = typeof targetClass === 'number' ? targetClass : min;
+            for (let i = min; i <= max; i++) lengths.push(i);
+            targetClass = typeof arguments[2] === 'string' ? arguments[2] : 'random';
+        }
+        if (lengths.length === 0) lengths = [2];
+
+        const numSyllables = lengths[Math.floor(Math.random() * lengths.length)];
         const classFinal = targetClass === 'random' 
             ? ['noun', 'verb', 'adjective'][Math.floor(Math.random() * 3)] 
             : targetClass;

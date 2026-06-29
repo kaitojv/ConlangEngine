@@ -19,7 +19,7 @@ import './generatorTab.css';
 export default function GeneratorTab() {
     const { transliterate } = useTransliterator();
     const { generatedWord, generatedIpa, generatedClass, generateWord } = useWordGenerator();
-    const [numSyllables, setNumSyllables] = useState(2);
+    const [selectedLengths, setSelectedLengths] = useState([2, 3]);
     const [targetClass, setTargetClass] = useState('random');
     const navigate = useNavigate();
 
@@ -71,7 +71,8 @@ export default function GeneratorTab() {
     const [isListFillMode, setIsListFillMode] = useState(false);
 
     const handleGenerate = () => {
-        generateWord(numSyllables, targetClass);
+        if (selectedLengths.length === 0) return toast.error("Please select at least one syllable length.");
+        generateWord(selectedLengths, targetClass);
     };
 
     const handleSendToCreateWord = () => {
@@ -155,12 +156,38 @@ export default function GeneratorTab() {
                 
                 <div className="generator-input-row">
                     <div className="generator-input-group">
-                        <label className="generator-label">Syllable Count</label>
-                        <input 
-                            type="number" min="1" max="10"
-                            className="generator-input"
-                            value={numSyllables} onChange={(e) => setNumSyllables(Number(e.target.value))} 
-                        />
+                        <label className="generator-label">Syllable Length(s) (Select multiple)</label>
+                        <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                            {[1, 2, 3, 4, 5, 6, 7].map(len => (
+                                <button
+                                    key={len}
+                                    onClick={() => {
+                                        if (selectedLengths.includes(len)) {
+                                            if (selectedLengths.length > 1) {
+                                                setSelectedLengths(selectedLengths.filter(l => l !== len));
+                                            }
+                                        } else {
+                                            setSelectedLengths([...selectedLengths, len].sort());
+                                        }
+                                    }}
+                                    style={{
+                                        padding: '8px 12px',
+                                        borderRadius: '4px',
+                                        border: `1px solid ${selectedLengths.includes(len) ? 'var(--acc)' : 'var(--bd)'}`,
+                                        background: selectedLengths.includes(len) ? 'var(--acc)' : 'var(--s1)',
+                                        color: selectedLengths.includes(len) ? '#fff' : 'var(--tx)',
+                                        cursor: 'pointer',
+                                        fontWeight: 'bold',
+                                        minWidth: '40px',
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    {len}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                     <div className="generator-input-group">
                         <label className="generator-label">Word Class</label>
@@ -447,7 +474,7 @@ function BatchMode({ onExit }) {
     const addWord = useLexiconStore((state) => state.addWord);
     
     const [batchSize, setBatchSize] = useState(20);
-    const [numSyllables, setNumSyllables] = useState(2);
+    const [selectedLengths, setSelectedLengths] = useState([2, 3]);
     const [generatedBatch, setGeneratedBatch] = useState([]);
     const [selectedWords, setSelectedWords] = useState(new Set());
     const [translations, setTranslations] = useState({});
@@ -457,10 +484,11 @@ function BatchMode({ onExit }) {
     const PAGE_SIZE = 50;
 
     const handleGenerateBatch = () => {
+        if (selectedLengths.length === 0) return toast.error("Select at least one syllable length");
         const newBatch = [];
         const seenWords = new Set();
         for (let i = 0; i < batchSize; i++) {
-            const result = generateWord(numSyllables, 'random');
+            const result = generateWord(selectedLengths, 'random');
             if (result && !seenWords.has(result.word)) {
                 seenWords.add(result.word);
                 newBatch.push({ ...result, id: crypto.randomUUID() });
@@ -539,12 +567,38 @@ function BatchMode({ onExit }) {
                         />
                     </div>
                     <div className="generator-input-group">
-                        <label className="generator-label">Syllables per Word</label>
-                        <input 
-                            type="number" min="1" max="10"
-                            className="generator-input"
-                            value={numSyllables} onChange={(e) => setNumSyllables(Number(e.target.value))} 
-                        />
+                        <label className="generator-label">Syllable Length(s)</label>
+                        <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                            {[1, 2, 3, 4, 5, 6, 7].map(len => (
+                                <button
+                                    key={len}
+                                    onClick={() => {
+                                        if (selectedLengths.includes(len)) {
+                                            if (selectedLengths.length > 1) {
+                                                setSelectedLengths(selectedLengths.filter(l => l !== len));
+                                            }
+                                        } else {
+                                            setSelectedLengths([...selectedLengths, len].sort());
+                                        }
+                                    }}
+                                    style={{
+                                        padding: '6px 10px',
+                                        borderRadius: '4px',
+                                        border: `1px solid ${selectedLengths.includes(len) ? 'var(--acc)' : 'var(--bd)'}`,
+                                        background: selectedLengths.includes(len) ? 'var(--acc)' : 'var(--s1)',
+                                        color: selectedLengths.includes(len) ? '#fff' : 'var(--tx)',
+                                        cursor: 'pointer',
+                                        fontWeight: 'bold',
+                                        minWidth: '35px',
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    {len}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
                 
@@ -644,7 +698,8 @@ function ListFillMode({ onExit }) {
     const { normalizeToBase } = useTransliterator();
     
     const [batchSize, setBatchSize] = useState(15);
-    const [numSyllables, setNumSyllables] = useState(2);
+    const [minSyllables, setMinSyllables] = useState(2);
+    const [maxSyllables, setMaxSyllables] = useState(2);
     const [autoFetchSemantics, setAutoFetchSemantics] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     
@@ -738,7 +793,7 @@ function ListFillMode({ onExit }) {
     };
 
     const rollDice = (id, wordClass) => {
-        const result = generateWord(numSyllables, wordClass);
+        const result = generateWord(minSyllables, maxSyllables, wordClass);
         if (result) {
             updateRow(id, 'conlangWord', result.word);
             updateRow(id, 'wordClass', result.wordClass || wordClass);
@@ -858,12 +913,22 @@ function ListFillMode({ onExit }) {
                         />
                     </div>
                     <div className="generator-input-group">
-                        <label className="generator-label">Syllables (for Auto-gen)</label>
-                        <input 
-                            type="number" min="1" max="10"
-                            className="generator-input"
-                            value={numSyllables} onChange={(e) => setNumSyllables(Number(e.target.value))} 
-                        />
+                        <label className="generator-label">Syllable Length (Auto-gen)</label>
+                        <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                            <input 
+                                type="number" min="1" max="10"
+                                className="generator-input"
+                                value={minSyllables} onChange={(e) => { const v = Number(e.target.value); setMinSyllables(v); if (v > maxSyllables) setMaxSyllables(v); }}
+                                style={{ flex: 1, margin: 0 }}
+                            />
+                            <span style={{ color: 'var(--tx2)', fontSize: '0.8rem' }}>to</span>
+                            <input 
+                                type="number" min={minSyllables} max="10"
+                                className="generator-input"
+                                value={maxSyllables} onChange={(e) => { const v = Number(e.target.value); if (v >= minSyllables) setMaxSyllables(v); }}
+                                style={{ flex: 1, margin: 0 }}
+                            />
+                        </div>
                     </div>
                     <Button variant="imp" onClick={() => loadMore(true)} disabled={isLoading}>
                         {isLoading ? <Loader2 size={16} className="spinner" /> : 'Search / Reset'}

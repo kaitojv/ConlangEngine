@@ -176,6 +176,64 @@ export default function CourseBuilder({ onExit }) {
     const [numLevelsToGen, setNumLevelsToGen] = useState(5);
     const [isGenerating, setIsGenerating] = useState(false);
     const [previewLevel, setPreviewLevel] = useState(null);
+    const [genMode, setGenMode] = useState('theme');
+
+    const duplicateLevel = (id) => {
+        const levelToCopy = courseData.find(l => l.id === id);
+        if (levelToCopy) {
+            const newLevel = {
+                ...levelToCopy,
+                id: `level-${Date.now()}`,
+                title: `${levelToCopy.title} (Copy)`,
+                phrases: levelToCopy.phrases.map((p, i) => ({ ...p, id: `phrase-${Date.now()}-${i}` }))
+            };
+            const idx = courseData.findIndex(l => l.id === id);
+            const newData = [...courseData];
+            newData.splice(idx + 1, 0, newLevel);
+            setCourseData(newData);
+        }
+    };
+
+    const moveLevel = (id, direction) => {
+        const idx = courseData.findIndex(l => l.id === id);
+        if (idx === -1) return;
+        const newData = [...courseData];
+        if (direction === 'up' && idx > 0) {
+            [newData[idx - 1], newData[idx]] = [newData[idx], newData[idx - 1]];
+            setCourseData(newData);
+        } else if (direction === 'down' && idx < newData.length - 1) {
+            [newData[idx + 1], newData[idx]] = [newData[idx], newData[idx + 1]];
+            setCourseData(newData);
+        }
+    };
+
+    const exportCourse = () => {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(courseData, null, 2));
+        const a = document.createElement('a');
+        a.href = dataStr;
+        a.download = "conlang_course.json";
+        a.click();
+    };
+
+    const importCourse = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const parsed = JSON.parse(event.target.result);
+                if (Array.isArray(parsed)) {
+                    setCourseData(parsed);
+                } else {
+                    alert("Invalid course format");
+                }
+            } catch (err) {
+                alert("Invalid JSON file");
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+    };
 
     const addLevel = () => {
         const newLevel = {
@@ -192,12 +250,14 @@ export default function CourseBuilder({ onExit }) {
         await new Promise(r => setTimeout(r, 100)); // UI update delay
 
         const THEMES = ['Basics', 'Animals', 'Family', 'People', 'Food', 'Colors', 'Feelings', 'Size', 'Misc'];
+        const allTags = [...new Set(lexicon.flatMap(w => w.tags || []))].filter(Boolean);
+        const SOURCES = (genMode === 'tag' && allTags.length > 0) ? allTags : THEMES;
         
         const newLevels = [];
         let currentId = Date.now();
 
         for (let i = 0; i < numLevelsToGen; i++) {
-            const theme = THEMES[i % THEMES.length];
+            const theme = SOURCES[i % SOURCES.length];
             const phrases = [];
             
             for(let p = 0; p < 5; p++) {
@@ -373,7 +433,14 @@ export default function CourseBuilder({ onExit }) {
                 {courseData.map((level) => (
                     <div key={level.id} className="cb-level-card">
                         <div className="cb-level-header">
-                            <GripVertical className="drag-handle" size={20} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <button onClick={() => moveLevel(level.id, 'up')} style={{ background: 'none', border: 'none', color: 'var(--tx2)', cursor: 'pointer', padding: '5px', display: 'flex' }} title="Move Up">
+                                    <ChevronUp size={18} />
+                                </button>
+                                <button onClick={() => moveLevel(level.id, 'down')} style={{ background: 'none', border: 'none', color: 'var(--tx2)', cursor: 'pointer', padding: '5px', display: 'flex' }} title="Move Down">
+                                    <ChevronDown size={18} />
+                                </button>
+                            </div>
                             <Input 
                                 value={level.title}
                                 onChange={(e) => updateLevelTitle(level.id, e.target.value)}
@@ -388,6 +455,9 @@ export default function CourseBuilder({ onExit }) {
                                 value={level.color || 'var(--acc)'}
                                 onChange={(val) => updateLevelField(level.id, 'color', val)}
                             />
+                            <Button variant="default" onClick={() => duplicateLevel(level.id)} style={{ padding: '8px' }} title="Duplicate Level">
+                                <Plus size={16} />
+                            </Button>
                             <Button variant="default" onClick={() => setPreviewLevel(level)} style={{ padding: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                                 <Play size={16} /> Preview
                             </Button>
@@ -396,6 +466,34 @@ export default function CourseBuilder({ onExit }) {
                             </Button>
                         </div>
                         
+                        <div style={{ padding: '10px 15px', background: 'var(--s1)', borderBottom: '1px solid var(--bd)' }}>
+                            <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '8px' }}>
+                                Prerequisites (Used for branching paths)
+                            </label>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                {courseData.filter(l => l.id !== level.id).length === 0 ? (
+                                    <span style={{ color: 'var(--tx2)', fontSize: '0.85rem' }}>No other levels available.</span>
+                                ) : (
+                                    courseData.filter(l => l.id !== level.id).map(l => (
+                                        <label key={l.id} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--bg)', padding: '6px 12px', borderRadius: '20px', border: '1px solid var(--bd)', cursor: 'pointer', fontSize: '0.85rem', color: (level.prerequisites || []).includes(l.id) ? 'var(--acc)' : 'var(--tx)', userSelect: 'none' }}>
+                                            <input 
+                                                type="checkbox" 
+                                                checked={(level.prerequisites || []).includes(l.id)}
+                                                onChange={(e) => {
+                                                    const current = level.prerequisites || [];
+                                                    const newPrereqs = e.target.checked ? [...current, l.id] : current.filter(id => id !== l.id);
+                                                    updateLevelField(level.id, 'prerequisites', newPrereqs.length > 0 ? newPrereqs : undefined);
+                                                }}
+                                                style={{ display: 'none' }}
+                                            />
+                                            {(level.prerequisites || []).includes(l.id) ? <Check size={14} /> : null}
+                                            {l.title || 'Untitled Level'}
+                                        </label>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
                         {/* Removed lesson notes textbox as per user request to use teaching cards instead */}
 
                         <div className="cb-phrases">
@@ -417,6 +515,12 @@ export default function CourseBuilder({ onExit }) {
                                                 <option value="multiple_choice">Multiple Choice</option>
                                                 <option value="matching_pairs">Matching Pairs</option>
                                                 <option value="teach">Teaching Card (Info)</option>
+                                                <option value="listening">Listening Exercise</option>
+                                                <option value="fill_blank">Fill-in-the-Blank</option>
+                                                <option value="sentence_reorder">Sentence Reorder</option>
+                                                <option value="picture_match">Picture Match</option>
+                                                <option value="true_false">True or False</option>
+                                                <option value="conjugation_drill">Conjugation Drill</option>
                                             </select>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -446,26 +550,61 @@ export default function CourseBuilder({ onExit }) {
                                         {phrase.type !== 'matching_pairs' && phrase.type !== 'teach' && (
                                             <div className="cb-phrase-inputs-row">
                                                 <div style={{ flex: 1 }}>
-                                                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>Conlang Prompt</label>
+                                                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>
+                                                        {phrase.type === 'picture_match' ? 'Emoji / Image URL' : 
+                                                         phrase.type === 'conjugation_drill' ? 'Instruction / English Prompt' :
+                                                         phrase.type === 'fill_blank' ? 'Conlang Sentence (use ____ for blank)' :
+                                                         phrase.type === 'listening' ? 'Conlang Audio Text' :
+                                                         'Conlang Sentence'}
+                                                    </label>
                                                     <Input 
                                                         value={phrase.conlang || ''}
                                                         onChange={(e) => updatePhrase(level.id, phrase.id, 'conlang', e.target.value)}
-                                                        placeholder="e.g. nuvir'lo zikrifi"
-                                                        className="custom-font-text notranslate"
+                                                        placeholder={
+                                                            phrase.type === 'picture_match' ? "e.g. 🍎" :
+                                                            phrase.type === 'conjugation_drill' ? "e.g. Past tense of 'run'" :
+                                                            phrase.type === 'fill_blank' ? "e.g. The ____ pays" :
+                                                            "e.g. nuvir'lo zikrifi"
+                                                        }
+                                                        className={phrase.type !== 'picture_match' && phrase.type !== 'conjugation_drill' ? "custom-font-text notranslate" : ""}
                                                         style={{ width: '100%' }}
                                                     />
                                                 </div>
                                                 <div style={{ flex: 1 }}>
                                                     <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>
-                                                        {phrase.type === 'multiple_choice' ? "Correct Answer" : "Target Translation"}
+                                                        {phrase.type === 'multiple_choice' ? "Correct Answer" : 
+                                                         phrase.type === 'fill_blank' ? "Missing Word (Conlang)" :
+                                                         phrase.type === 'true_false' ? "Displayed Translation (to judge)" :
+                                                         phrase.type === 'conjugation_drill' ? "Conlang Answer" :
+                                                         phrase.type === 'listening' ? "Reference English (Optional)" :
+                                                         "Target English Translation"}
                                                     </label>
                                                     <Input 
                                                         value={phrase.english || ''}
                                                         onChange={(e) => updatePhrase(level.id, phrase.id, 'english', e.target.value)}
-                                                        placeholder={phrase.type === 'multiple_choice' ? "e.g. The garlic pays" : "e.g. Hi, Hello (comma separated)"}
+                                                        placeholder={
+                                                            phrase.type === 'multiple_choice' ? "e.g. The garlic pays" : 
+                                                            phrase.type === 'fill_blank' ? "e.g. garlic" :
+                                                            phrase.type === 'conjugation_drill' ? "e.g. ran" :
+                                                            "e.g. Hi, Hello (comma separated)"
+                                                        }
                                                         style={{ width: '100%' }}
                                                     />
                                                 </div>
+                                            </div>
+                                        )}
+
+                                        {phrase.type === 'true_false' && (
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>Is the translation Correct?</label>
+                                                <select 
+                                                    value={phrase.isTrue ? 'true' : 'false'}
+                                                    onChange={(e) => updatePhrase(level.id, phrase.id, 'isTrue', e.target.value === 'true')}
+                                                    style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--bd)', background: 'var(--bg)', color: 'var(--tx)', width: '100%', outline: 'none' }}
+                                                >
+                                                    <option value="true">True (Matches)</option>
+                                                    <option value="false">False (Doesn't match)</option>
+                                                </select>
                                             </div>
                                         )}
 
@@ -557,6 +696,15 @@ export default function CourseBuilder({ onExit }) {
                 <Button variant="accent" onClick={() => setShowAutoModal(true)} style={{ flex: 1, padding: '15px' }}>
                     <Wand2 size={20} style={{marginRight: '8px'}} /> Auto-Generate
                 </Button>
+                <Button variant="default" onClick={exportCourse} style={{ padding: '15px' }} title="Export Course">
+                    <ArrowLeft size={20} style={{ transform: 'rotate(90deg)' }} />
+                </Button>
+                <label style={{ cursor: 'pointer', display: 'flex' }}>
+                    <input type="file" accept=".json" onChange={importCourse} style={{ display: 'none' }} />
+                    <Button variant="default" style={{ padding: '15px', pointerEvents: 'none' }} title="Import Course">
+                        <ArrowLeft size={20} style={{ transform: 'rotate(-90deg)' }} />
+                    </Button>
+                </label>
             </div>
 
             {showAutoModal && (
@@ -576,6 +724,13 @@ export default function CourseBuilder({ onExit }) {
                         <p style={{ color: 'var(--tx2)', marginBottom: '15px', fontSize: '0.9rem' }}>
                             Automatically construct levels based on your lexicon. These will be appended to your current course. You can edit them before saving.
                         </p>
+                        <div style={{ marginBottom: '15px' }}>
+                            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: 'var(--tx)' }}>Generation Source</label>
+                            <select value={genMode} onChange={(e) => setGenMode(e.target.value)} style={{ padding: '8px', width: '100%', borderRadius: '6px', background: 'var(--s1)', border: '1px solid var(--bd)', color: 'var(--tx)' }}>
+                                <option value="theme">Preset Themes (Animals, Food, etc.)</option>
+                                <option value="tag">My Custom Semantic Tags</option>
+                            </select>
+                        </div>
                         <div style={{ marginBottom: '20px' }}>
                             <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: 'var(--tx)' }}>Number of Levels</label>
                             <Input 

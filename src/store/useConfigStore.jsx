@@ -237,6 +237,13 @@ export const INITIAL_CONFIG = {
 
     // Feature flags
     usesParticles: false, // Enable the particle system for isolating/particle-based languages
+
+    // Study / Course gamification
+    studyXP: 0,                    // Total XP earned across all study activities
+    courseLevelScores: {},          // { [levelId]: { bestScore, bestTotal, stars, completionCount } }
+    dailyChallengeDate: null,       // ISO date string of last completed daily challenge
+    dailyChallengeCompleted: false, // Whether today's daily challenge is done
+    studySoundEffects: true,        // Toggle sound effects on/off
 };
 
 // IndexedDB Helper for handling massive data without breaking local storage quotas
