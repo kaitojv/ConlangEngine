@@ -202,6 +202,7 @@ export default function PublicViewer() {
                     .custom-font-text {
                         writing-mode: ${writingDirection.startsWith('vertical') ? writingDirection : 'horizontal-tb'};
                         direction: ${writingDirection === 'rtl' ? 'rtl' : 'ltr'};
+                        ${writingDirection.startsWith('vertical') ? 'text-orientation: upright;' : ''}
                     }
                     input.custom-font-text, 
                     textarea.custom-font-text,

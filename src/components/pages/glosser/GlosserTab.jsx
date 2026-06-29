@@ -299,7 +299,24 @@ export default function GlosserTab() {
         }
     };
 
-    const filteredLexicon = builderSearch.trim() ? lexicon.filter(w => w.word.toLowerCase().includes(builderSearch.toLowerCase()) || (w.translation && w.translation.toLowerCase().includes(builderSearch.toLowerCase()))).slice(0, 10) : [];
+    const filteredLexicon = React.useMemo(() => {
+        const query = builderSearch.trim().toLowerCase();
+        if (!query) return [];
+        
+        return lexicon
+            .filter(w => (w.word && w.word.toLowerCase().includes(query)) || (w.translation && w.translation.toLowerCase().includes(query)))
+            .map(w => {
+                const wordRaw = (w.word || '').toLowerCase();
+                const transRaw = (w.translation || '').toLowerCase();
+                let score = 0;
+                if (wordRaw === query || transRaw === query) score = 100;
+                else if (wordRaw.startsWith(query) || transRaw.startsWith(query)) score = 80;
+                else score = 50;
+                return { ...w, searchScore: score };
+            })
+            .sort((a, b) => b.searchScore - a.searchScore)
+            .slice(0, 10);
+    }, [builderSearch, lexicon]);
 
     const renderBuilderUI = () => (
         <div style={{ marginTop: '10px', padding: '15px', background: 'var(--s2)', borderRadius: 'var(--rad)', border: '1px solid var(--bd)' }}>

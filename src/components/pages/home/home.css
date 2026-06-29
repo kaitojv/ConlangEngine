@@ -28,12 +28,18 @@
 }
 
 .interactive-card {
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
+    border: 1px solid var(--bd);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s;
 }
 
 .interactive-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
     border-color: var(--acc) !important;
 }
 
@@ -81,14 +87,6 @@
     gap: 20px;
 }
 
-.interactive-card {
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin: 0;
-    border: 1px solid var(--bd);
-}
 
 .interactive-card h3 {
     display: flex;
@@ -100,17 +98,25 @@
 .interactive-card p {
     margin: 0;
     color: var(--tx2);
+    margin-left: 32px;
+    line-height: 1.5;
 }
 
 .interactive-card .widget-footer {
     margin-top: auto;
     display: flex;
     align-items: center;
-    gap: 5px;
-    color: var(--tx);
-    font-weight: bold;
+    gap: 6px;
+    color: var(--acc, #3b82f6);
+    font-weight: 600;
     font-size: 0.9rem;
     padding-top: 10px;
+    margin-left: 32px;
+    transition: gap 0.2s ease;
+}
+
+.interactive-card:hover .widget-footer {
+    gap: 10px; /* Gently pushes the arrow to the right */
 }
 
 .lexicon-card h3 { color: var(--acc); }
@@ -167,31 +173,6 @@
 .wotd-word { font-size: 1.8rem; display: block; color: var(--tx); font-weight: bold; }
 .wotd-translation { color: var(--tx2); font-style: italic; font-size: 0.95rem; }
 
-
-/* Smooth hover state for interactive widget cards */
-.interactive-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    cursor: pointer;
-}
-
-.interactive-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15); /* Adjust opacity based on your dark/light theme */
-}
-
-/* Make the arrow icon pop slightly on hover */
-.interactive-card .widget-footer {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 600;
-    color: var(--acc, #3b82f6);
-    transition: gap 0.2s ease;
-}
-
-.interactive-card:hover .widget-footer {
-    gap: 10px; /* Gently pushes the arrow to the right */
-}
 
 
 /* Mobile Responsiveness */

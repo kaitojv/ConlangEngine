@@ -327,10 +327,13 @@ export default function LexiconList() {
     };
 
     // Try to pronounce the word using custom audio if available, Azure TTS if configured, or fallback to the browser's built-in text-to-speech
-    const handleListen = async (wordObj) => {
-        if (wordObj.customAudioBase64) {
+    const handleListen = async (wordData) => {
+        const senses = Array.isArray(wordData) ? wordData : [wordData];
+        const senseWithAudio = senses.find(s => s.customAudioBase64);
+
+        if (senseWithAudio) {
             try {
-                const audio = new Audio(wordObj.customAudioBase64);
+                const audio = new Audio(senseWithAudio.customAudioBase64);
                 audio.play();
                 return;
             } catch (err) {
@@ -338,6 +341,7 @@ export default function LexiconList() {
             }
         }
 
+        const wordObj = senses[0];
         const text = wordObj.word;
         if (!text) {
             return toast.error("This word is empty and cannot be pronounced.");
@@ -701,7 +705,7 @@ export default function LexiconList() {
                                     <Button variant="default" className="btn-icon-only" onClick={() => setSelectedWordForProto(baseEntry)} title="Convert to Proto-Root">
                                         <Hash size={16} />
                                     </Button>
-                                    <Button variant="listen" onClick={() => handleListen(baseEntry)} title="Listen" className="btn-icon-only">
+                                    <Button variant="listen" onClick={() => handleListen(senses)} title="Listen" className="btn-icon-only">
                                         <Volume2 size={16} />
                                     </Button>
                                     <Button variant="edit" onClick={() => setNewSenseBase(baseEntry)} title="Add new definition" className="btn-icon-only">
