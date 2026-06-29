@@ -8,18 +8,24 @@ import Card from '@/components/UI/Card/Card.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Modal from '@/components/UI/Modal/Modal.jsx';
-import { BookOpen, List, Wand2, Copy, Check } from 'lucide-react';
+import { BookOpen, List, Wand2, Copy, Check, Plus, Volume2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import * as HoverCard from '@radix-ui/react-hover-card';
 import SyntaxTreeRenderer from './SyntaxTreeRenderer.jsx';
+import { playAzureTTS } from '@/utils/azureTTS.js';
+import toast from 'react-hot-toast';
 import './glosserTab.css';
 
 export default function GlosserTab() {
     const [inputText, setInputText] = useState('');
-    const [readerMode, setReaderMode] = useState('read'); // 'read' or 'gloss'
+    const [readerMode, setReaderMode] = useState('read'); // 'read', 'gloss', 'tree', 'build'
     const [processedWords, setProcessedWords] = useState([]);
     const [freeTranslation, setFreeTranslation] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [copied, setCopied] = useState(false);
+    
+    // Builder Mode State
+    const [builderSearch, setBuilderSearch] = useState('');
+    const [builderTokens, setBuilderTokens] = useState([]);
 
     // Store Data
     const rawLexicon = useLexiconStore((state) => state.lexicon);
@@ -251,21 +257,112 @@ export default function GlosserTab() {
         );
     };
 
+    // --- BUILDER HELPERS ---
+    const appendToBuilder = (entry) => {
+        const newTokens = [...builderTokens, { id: Math.random().toString(), word: entry.word, entry }];
+        setBuilderTokens(newTokens);
+        setInputText(newTokens.map(t => t.word).join(' '));
+    };
+
+    const removeBuilderToken = (id) => {
+        const newTokens = builderTokens.filter(t => t.id !== id);
+        setBuilderTokens(newTokens);
+        setInputText(newTokens.map(t => t.word).join(' '));
+    };
+    
+    const moveToken = (index, dir) => {
+        if (index + dir < 0 || index + dir >= builderTokens.length) return;
+        const newTokens = [...builderTokens];
+        const temp = newTokens[index];
+        newTokens[index] = newTokens[index + dir];
+        newTokens[index + dir] = temp;
+        setBuilderTokens(newTokens);
+        setInputText(newTokens.map(t => t.word).join(' '));
+    };
+
+    const handleReadAloud = async () => {
+        if (!inputText.trim()) return toast.error("Nothing to read.");
+        if (!config.azureTtsVoice) return toast.error("Please configure Azure TTS voice in Settings first.");
+        
+        const toastId = toast.loading("Generating audio...");
+        try {
+            const cleanText = inputText.replace(/[.\-*]/g, '');
+            await playAzureTTS({
+                text: cleanText,
+                voice: config.azureTtsVoice,
+                useIpa: config.azureTtsUseIpa
+            });
+            toast.dismiss(toastId);
+        } catch(err) {
+            toast.dismiss(toastId);
+            toast.error("Failed to play audio.");
+        }
+    };
+
+    const filteredLexicon = builderSearch.trim() ? lexicon.filter(w => w.word.toLowerCase().includes(builderSearch.toLowerCase()) || (w.translation && w.translation.toLowerCase().includes(builderSearch.toLowerCase()))).slice(0, 10) : [];
+
+    const renderBuilderUI = () => (
+        <div style={{ marginTop: '10px', padding: '15px', background: 'var(--s2)', borderRadius: 'var(--rad)', border: '1px solid var(--bd)' }}>
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '15px', color: 'var(--tx)' }}>Sentence Builder</h3>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '15px', minHeight: '50px', padding: '10px', background: 'var(--s1)', borderRadius: 'var(--rad)', border: '1px dashed var(--bd)' }}>
+                {builderTokens.length === 0 && <span style={{ color: 'var(--tx3)', fontStyle: 'italic', alignSelf: 'center' }}>Search and add words to build a sentence...</span>}
+                {builderTokens.map((t, idx) => (
+                    <div key={t.id} style={{ display: 'flex', alignItems: 'center', background: 'var(--acc)', color: 'white', padding: '6px 10px', borderRadius: '6px', gap: '8px', boxShadow: 'var(--shadow)' }}>
+                        <ChevronLeft size={16} style={{ cursor: 'pointer', opacity: 0.8 }} onClick={() => moveToken(idx, -1)} />
+                        <span className="custom-font-text notranslate" style={{ fontWeight: 'bold' }}>{transliterate(t.word)}</span>
+                        <ChevronRight size={16} style={{ cursor: 'pointer', opacity: 0.8 }} onClick={() => moveToken(idx, 1)} />
+                        <div style={{ width: '1px', height: '14px', background: 'rgba(255,255,255,0.3)', margin: '0 4px' }}></div>
+                        <X size={16} style={{ cursor: 'pointer' }} onClick={() => removeBuilderToken(t.id)} />
+                    </div>
+                ))}
+            </div>
+            
+            <div style={{ position: 'relative' }}>
+                <Input value={builderSearch} onChange={(e) => setBuilderSearch(e.target.value)} placeholder="Search lexicon to add word..." />
+                {builderSearch && filteredLexicon.length > 0 && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--card)', border: '1px solid var(--bd)', borderRadius: 'var(--rad)', zIndex: 100, maxHeight: '200px', overflowY: 'auto', boxShadow: 'var(--shadow)' }}>
+                        {filteredLexicon.map(entry => (
+                            <div key={entry.id} style={{ padding: '10px 12px', cursor: 'pointer', borderBottom: '1px solid var(--bd)', display: 'flex', justifyContent: 'space-between' }} onClick={() => { appendToBuilder(entry); setBuilderSearch(''); }}>
+                                <span className="custom-font-text notranslate" style={{ color: 'var(--acc)', fontWeight: 'bold' }}>{transliterate(entry.word)}</span>
+                                <span style={{ color: 'var(--tx2)', fontSize: '0.9rem' }}>{entry.translation}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+            
+            <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
+                <Button variant="imp" onClick={handleProcess} style={{ flex: 1 }}><div className="btn-content-flex"><Wand2 size={16} /> Process Built Sentence</div></Button>
+                <Button variant="default" onClick={handleReadAloud}><div className="btn-content-flex"><Volume2 size={16} /> Read Aloud</div></Button>
+            </div>
+        </div>
+    );
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <Card>
                 <h2 className='flex sg-title' style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><BookOpen /> Interactive Reader & Glosser</h2>
                 <p style={{ color: 'var(--tx2)', marginBottom: '20px' }}>Paste text in your conlang to generate an interactive reading interface or an Interlinear Glossed Text (IGT) breakdown.</p>
                 
-                <Input value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="Enter conlang text here..." className="custom-font-text notranslate" />
+                {readerMode !== 'build' ? (
+                    <Input value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="Enter conlang text here..." className="custom-font-text notranslate" />
+                ) : (
+                    renderBuilderUI()
+                )}
                 
-                <div className="glosser-controls">
+                <div className="glosser-controls" style={{ marginTop: '20px' }}>
                     <div className="glosser-mode-toggles">
                         <Button variant={readerMode === 'read' ? 'imp' : 'default'} onClick={() => setReaderMode('read')}><div className="btn-content-flex"><BookOpen size={16} /> Reading Mode</div></Button>
                         <Button variant={readerMode === 'gloss' ? 'imp' : 'default'} onClick={() => setReaderMode('gloss')}><div className="btn-content-flex"><List size={16} /> IGT Gloss Mode</div></Button>
                         <Button variant={readerMode === 'tree' ? 'imp' : 'default'} onClick={() => setReaderMode('tree')}><div className="btn-content-flex"><Wand2 size={16} /> Syntax Tree</div></Button>
+                        <Button variant={readerMode === 'build' ? 'imp' : 'default'} onClick={() => setReaderMode('build')}><div className="btn-content-flex"><Plus size={16} /> Builder Mode</div></Button>
                     </div>
-                    <Button onClick={handleProcess} className="glosser-process-btn"><div className="btn-content-flex"><Wand2 size={18} /> Process Text</div></Button>
+                    {readerMode !== 'build' && (
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <Button onClick={handleProcess} className="glosser-process-btn"><div className="btn-content-flex"><Wand2 size={18} /> Process Text</div></Button>
+                            <Button variant="default" onClick={handleReadAloud} title="Read Aloud"><div className="btn-content-flex"><Volume2 size={18} /></div></Button>
+                        </div>
+                    )}
                 </div>
             </Card>
 

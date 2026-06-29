@@ -8,7 +8,7 @@ import { fetchSynonymOptions } from '../../../utils/semanticUtils.js';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
-import { Search, Volume2, Save, Trash2, X, Link as LinkIcon, GitBranch, Plus, Wand2 } from 'lucide-react';
+import { Search, Volume2, Save, Trash2, X, Link as LinkIcon, GitBranch, Plus, Wand2, Mic, Square, Play } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ToneStressSelector from './ToneStressSelector.jsx';
 import './lexiconEditModal.css';
@@ -62,15 +62,20 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
     const setWordScriptOverride = useLexiconStore((state) => state.setWordScriptOverride);
 
     const [activeField, setActiveField] = useState('word');
+    
+    // Audio recording state
+    const [isRecording, setIsRecording] = useState(false);
+    const mediaRecorderRef = useRef(null);
+    const audioChunksRef = useRef([]);
 
     // Bundle all the form fields into one neat state object
     const [formData, setFormData] = useState({
-        word: '', ipa: '', wordClass: '', translation: '', definition: '', tags: [], relatedWords: [], ideogram: '', personCategory: '', tone: '', stress: '', scriptOverride: null
+        word: '', ipa: '', wordClass: '', translation: '', definition: '', tags: [], relatedWords: [], ideogram: '', personCategory: '', tone: '', stress: '', scriptOverride: null, customAudioBase64: null
     });
     const [tagInput, setTagInput] = useState('');
     const [relatedInput, setRelatedInput] = useState('');
     const [isFetchingRelated, setIsFetchingRelated] = useState(false);
-    const { word, ipa, wordClass, translation, tags, relatedWords, ideogram, personCategory, tone, stress } = formData;
+    const { word, ipa, wordClass, translation, tags, relatedWords, ideogram, personCategory, tone, stress, customAudioBase64 } = formData;
 
     const parentWord = useMemo(() => {
         if (!wordObj.parentRootId) return null;
@@ -227,7 +232,8 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                 personCategory: wordObj.personCategory || '',
                 tone: wordObj.tone || '',
                 stress: wordObj.stress || '',
-                scriptOverride: wordObj.scriptOverride || null
+                scriptOverride: wordObj.scriptOverride || null,
+                customAudioBase64: wordObj.customAudioBase64 || null
             });
         }
         return () => toast.dismiss();
@@ -321,6 +327,49 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
         toast.custom(content, { duration: Infinity, id: 'validation-toast' });
     };
 
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) audioChunksRef.current.push(event.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+                reader.onloadend = () => {
+                    const base64data = reader.result;
+                    updateField('customAudioBase64', base64data);
+                };
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            mediaRecorder.start();
+            setIsRecording(true);
+        } catch (err) {
+            toast.error("Could not access microphone. Check permissions.");
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+        }
+    };
+
+    const playCustomAudio = () => {
+        if (customAudioBase64) {
+            const audio = new Audio(customAudioBase64);
+            audio.play();
+        }
+    };
+
     const doSave = (sWord, cTrans, pTags) => {
         updateWord(wordObj.id, {
             word: sWord,
@@ -335,6 +384,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
             tone: tone.trim(),
             stress: stress.trim(),
             scriptOverride: formData.scriptOverride,
+            customAudioBase64: customAudioBase64
         });
 
         if (wordClass && !STANDARD_WORD_CLASSES.includes(wordClass.trim().toLowerCase())) {
@@ -358,7 +408,8 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
             ideogram: ideogram.trim(),
             personCategory: personCategory.trim(),
             tone: tone.trim(),
-            stress: stress.trim()
+            stress: stress.trim(),
+            customAudioBase64: customAudioBase64
         });
 
         if (wordClass && !STANDARD_WORD_CLASSES.includes(wordClass.trim().toLowerCase())) {
@@ -846,6 +897,35 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                     />
                 </div>
             </details>
+
+            <div className="edit-modal-section audio-section" style={{ padding: '15px', background: 'var(--bg2)', borderRadius: 'var(--rad)', marginBottom: '20px' }}>
+                <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                    <Volume2 size={16} /> Custom Pronunciation Audio
+                </label>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    {!isRecording ? (
+                        <button className="btn-v btn-sec-v" onClick={startRecording} style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                            <Mic size={16} /> Record Voice
+                        </button>
+                    ) : (
+                        <button className="btn-v btn-err-v" onClick={stopRecording} style={{ display: 'flex', gap: '5px', alignItems: 'center', animation: 'pulse 1.5s infinite' }}>
+                            <Square size={16} /> Stop Recording
+                        </button>
+                    )}
+                    
+                    {customAudioBase64 && !isRecording && (
+                        <>
+                            <button className="btn-v btn-acc-v" onClick={playCustomAudio} style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                                <Play size={16} /> Play
+                            </button>
+                            <button className="btn-v btn-err-v" onClick={() => updateField('customAudioBase64', null)} style={{ padding: '8px' }} title="Delete Recording">
+                                <Trash2 size={16} />
+                            </button>
+                        </>
+                    )}
+                </div>
+                {customAudioBase64 && !isRecording && <div style={{ marginTop: '8px', fontSize: '0.8rem', color: 'var(--tx2)' }}>Custom audio saved. This will play instead of the Azure TTS.</div>}
+            </div>
 
             <div>
             <div className="edit-modal-grid trans-def-grid">

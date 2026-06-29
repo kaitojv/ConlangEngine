@@ -22,6 +22,7 @@ import { useSharing } from '../../../hooks/useSharing.jsx';
 import { computeProsody } from '../../../utils/prosodyEngine.jsx';
 import { createPhonoMatcher } from '../../../utils/phonoSearch.js';
 import { reverseDictScore } from '../../../utils/reverseDictionary.js';
+import { createCustomAlphabetCollator, extractFirstCustomLetter } from '../../../utils/customSort.js';
 import StressWave from '../../UI/StressWave/StressWave.jsx';
 import './lexiconList.css';
 
@@ -36,6 +37,7 @@ export default function LexiconList() {
     const consonants = useConfigStore(state => state.consonants) || '';
     const vowels = useConfigStore(state => state.vowels) || '';
     const otherPhonemes = useConfigStore(state => state.otherPhonemes) || '';
+    const customAlphabet = useConfigStore(state => state.customAlphabet) || '';
     const grammarRules = useConfigStore(state => state.grammarRules) || [];
     const stressRules = useConfigStore(state => state.stressRules) || [];
     const toneRules = useConfigStore(state => state.toneRules) || [];
@@ -104,6 +106,22 @@ export default function LexiconList() {
     const firstLetters = useMemo(() => {
         const letters = new Set();
         
+        if (customAlphabet && customAlphabet.trim()) {
+            const customTokens = customAlphabet.split(',').map(t => t.trim()).filter(Boolean);
+            customTokens.forEach(token => {
+                letters.add(token.charAt(0).toUpperCase() + token.slice(1).toLowerCase());
+            });
+            lexicon.forEach(w => {
+                const cleanWord = w.word.replace(/\*/g, '');
+                const displayWord = transliterate(cleanWord, lexicon);
+                if (displayWord) {
+                    letters.add(extractFirstCustomLetter(displayWord, customAlphabet));
+                }
+            });
+            const collator = createCustomAlphabetCollator(customAlphabet);
+            return [...letters].sort((a, b) => collator(a.toLowerCase(), b.toLowerCase()));
+        }
+
         // 1. Add letters defined by the user in Phonology settings
         const parseChars = (str) => {
             if (!str) return [];
@@ -136,7 +154,7 @@ export default function LexiconList() {
         });
         
         return [...letters].sort();
-    }, [lexicon, transliterate, consonants, vowels, otherPhonemes]);
+    }, [lexicon, transliterate, consonants, vowels, otherPhonemes, customAlphabet]);
 
     // Do the same for word classes (Noun, Verb, etc.) to populate the dropdown
     const uniqueClasses = useMemo(() => {
@@ -239,8 +257,13 @@ export default function LexiconList() {
         if (filters.letter !== 'all') {
             result = result.filter(e => {
                 const cleanWord = e.word.replace(/[*-]/g, '');
-                const displayWord = transliterate(cleanWord, lexicon).toUpperCase();
-                return displayWord.startsWith(filters.letter.toUpperCase());
+                const displayWord = transliterate(cleanWord, lexicon);
+                if (customAlphabet && customAlphabet.trim()) {
+                    const firstLetter = extractFirstCustomLetter(displayWord, customAlphabet);
+                    return firstLetter.toLowerCase() === filters.letter.toLowerCase();
+                } else {
+                    return displayWord.toUpperCase().startsWith(filters.letter.toUpperCase());
+                }
             });
         }
 
@@ -248,11 +271,27 @@ export default function LexiconList() {
             result.sort((a, b) => b.searchScore - a.searchScore);
         } else if (filters.sort === 'newest') result.sort((a, b) => b.createdAt - a.createdAt);
         else if (filters.sort === 'oldest') result.sort((a, b) => a.createdAt - b.createdAt);
-        else if (filters.sort === 'az') result.sort((a, b) => a.word.replace(/\*/g, '').localeCompare(b.word.replace(/\*/g, '')));
-        else if (filters.sort === 'za') result.sort((a, b) => b.word.replace(/\*/g, '').localeCompare(a.word.replace(/\*/g, '')));
+        else if (filters.sort === 'az' || filters.sort === 'za') {
+            const collator = createCustomAlphabetCollator(customAlphabet);
+            if (collator) {
+                result.sort((a, b) => {
+                    const strA = a.word.replace(/\*/g, '').toLowerCase();
+                    const strB = b.word.replace(/\*/g, '').toLowerCase();
+                    const cmp = collator(strA, strB);
+                    return filters.sort === 'az' ? cmp : -cmp;
+                });
+            } else {
+                result.sort((a, b) => {
+                    const strA = a.word.replace(/\*/g, '');
+                    const strB = b.word.replace(/\*/g, '');
+                    const cmp = strA.localeCompare(strB);
+                    return filters.sort === 'az' ? cmp : -cmp;
+                });
+            }
+        }
 
         return result;
-    }, [lexicon, filters, transliterate, showBoundMorphemes, grammarRules, normalizeToBase, consonants, vowels, otherPhonemes]);
+    }, [lexicon, filters, transliterate, showBoundMorphemes, grammarRules, normalizeToBase, consonants, vowels, otherPhonemes, customAlphabet]);
 
     // Group identical conlang words visually so the user can see multiple senses under 1 dictionary entry
     const groupedLexicon = useMemo(() => {
@@ -287,8 +326,18 @@ export default function LexiconList() {
         ), { duration: Infinity });
     };
 
-    // Try to pronounce the word using Azure TTS if configured, or fallback to the browser's built-in text-to-speech
+    // Try to pronounce the word using custom audio if available, Azure TTS if configured, or fallback to the browser's built-in text-to-speech
     const handleListen = async (wordObj) => {
+        if (wordObj.customAudioBase64) {
+            try {
+                const audio = new Audio(wordObj.customAudioBase64);
+                audio.play();
+                return;
+            } catch (err) {
+                toast.error("Could not play custom audio.");
+            }
+        }
+
         const text = wordObj.word;
         if (!text) {
             return toast.error("This word is empty and cannot be pronounced.");

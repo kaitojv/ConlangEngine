@@ -9,8 +9,10 @@ export const useLexiconStore = create(
             (set, get) => ({
 
                 lexicon: [],
+                phrases: [],
 
                 setLexicon: (newLexicon) => set({ lexicon: newLexicon }),
+                setPhrases: (newPhrases) => set({ phrases: newPhrases }),
 
                 addWord: (newWordData) => set((state) => {
                     const newEntry = {
@@ -58,6 +60,33 @@ export const useLexiconStore = create(
 
                 deleteWord: (id) => set((state) => ({
                     lexicon: (state.lexicon || []).filter(word => word.id !== id)
+                })),
+
+                // ── Phrases Actions ─────────────────────────────────────────
+
+                addPhrase: (newPhraseData) => set((state) => {
+                    const newPhrase = {
+                        id: newPhraseData.id || (Date.now() + Math.random()),
+                        phrase: newPhraseData.phrase,
+                        literalTranslation: newPhraseData.literalTranslation || '',
+                        idiomaticTranslation: newPhraseData.idiomaticTranslation,
+                        register: newPhraseData.register || 'casual',
+                        category: newPhraseData.category || 'general',
+                        tags: newPhraseData.tags || [],
+                        componentWords: newPhraseData.componentWords || [], // Array of word IDs
+                        createdAt: Date.now(),
+                    };
+                    return { phrases: [...(state.phrases || []), newPhrase] };
+                }),
+
+                updatePhrase: (id, updatedFields) => set((state) => ({
+                    phrases: (state.phrases || []).map(p =>
+                        p.id === id ? { ...p, ...updatedFields } : p
+                    )
+                })),
+
+                deletePhrase: (id) => set((state) => ({
+                    phrases: (state.phrases || []).filter(p => p.id !== id)
                 })),
 
                 // ── Script Actions ─────────────────────────────────────────

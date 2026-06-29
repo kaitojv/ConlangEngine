@@ -472,6 +472,7 @@ function BatchMode({ onExit }) {
     const { transliterate } = useTransliterator();
     const { generateWord } = useWordGenerator();
     const addWord = useLexiconStore((state) => state.addWord);
+    const checkDuplicate = useLexiconStore((state) => state.checkDuplicate);
     
     const [batchSize, setBatchSize] = useState(20);
     const [selectedLengths, setSelectedLengths] = useState([2, 3]);
@@ -518,23 +519,38 @@ function BatchMode({ onExit }) {
 
     const handleSaveSelected = () => {
         let savedCount = 0;
+        let duplicateCount = 0;
+        const savedIds = new Set();
+        
         selectedWords.forEach(id => {
             const entry = generatedBatch.find(w => w.id === id);
             if (entry) {
-                addWord({
-                    word: entry.word,
-                    wordClass: entry.wordClass,
-                    translation: translations[id] || 'Unknown',
-                });
-                savedCount++;
+                const translation = translations[id] || 'Unknown';
+                const { isDuplicateWord, isDuplicateTranslation } = checkDuplicate(entry.word, translation);
+                
+                if (isDuplicateWord || isDuplicateTranslation) {
+                    duplicateCount++;
+                } else {
+                    addWord({
+                        word: entry.word,
+                        wordClass: entry.wordClass,
+                        translation: translation,
+                    });
+                    savedCount++;
+                    savedIds.add(id);
+                }
             }
         });
         
-        alert(`Successfully saved ${savedCount} words to the lexicon!`);
+        if (duplicateCount > 0) {
+            alert(`Saved ${savedCount} words. Skipped ${duplicateCount} words because they (or their translations) already exist in your lexicon.`);
+        } else {
+            alert(`Successfully saved ${savedCount} words to the lexicon!`);
+        }
         
         // Remove saved words from the batch
         setGeneratedBatch(prev => {
-            const newBatch = prev.filter(w => !selectedWords.has(w.id));
+            const newBatch = prev.filter(w => !savedIds.has(w.id));
             // Adjust page if we deleted the last items on current page
             const newTotalPages = Math.ceil(newBatch.length / PAGE_SIZE);
             if (currentPage > newTotalPages && newTotalPages > 0) {
@@ -694,6 +710,7 @@ function BatchMode({ onExit }) {
 function ListFillMode({ onExit }) {
     const { generateWord } = useWordGenerator();
     const addWord = useLexiconStore((state) => state.addWord);
+    const checkDuplicate = useLexiconStore((state) => state.checkDuplicate);
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
     const { normalizeToBase } = useTransliterator();
     
@@ -810,11 +827,20 @@ function ListFillMode({ onExit }) {
     const handleSaveSelected = async () => {
         setIsSaving(true);
         let savedCount = 0;
+        let duplicateCount = 0;
+        const savedIds = new Set();
         
         const selectedRows = rows.filter(r => selectedWords.has(r.id) && r.conlangWord.trim());
         
         for (const row of selectedRows) {
             const safeWord = normalizeToBase(row.conlangWord.trim());
+            const { isDuplicateWord, isDuplicateTranslation } = checkDuplicate(safeWord, row.englishWord);
+            
+            if (isDuplicateWord || isDuplicateTranslation) {
+                duplicateCount++;
+                continue;
+            }
+
             let finalDesc = row.description.trim();
             let finalRelated = [];
             let finalTags = row.tags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
@@ -844,13 +870,18 @@ function ListFillMode({ onExit }) {
                 relatedWords: finalRelated
             });
             savedCount++;
+            savedIds.add(row.id);
         }
         
         setIsSaving(false);
-        toast.success(`Successfully saved ${savedCount} words!`);
+        if (duplicateCount > 0) {
+            toast.error(`Saved ${savedCount} words. Skipped ${duplicateCount} duplicates.`);
+        } else {
+            toast.success(`Successfully saved ${savedCount} words!`);
+        }
         
         // Remove saved from list
-        setRows(prev => prev.filter(r => !selectedWords.has(r.id) || !r.conlangWord.trim()));
+        setRows(prev => prev.filter(r => !savedIds.has(r.id)));
         setSelectedWords(new Set());
     };
 

@@ -4,9 +4,10 @@ import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 
-import { Sunrise, Sun, Moon, Sparkles, Settings2, BookA, PlusCircle, BrainCircuit, Flame, ArrowRight, Bookmark, Library, HelpCircle, Heart, Coffee, Globe } from 'lucide-react';
+import { Sunrise, Sun, Moon, Sparkles, Settings2, BookA, PlusCircle, BrainCircuit, Flame, ArrowRight, Bookmark, Library, HelpCircle, Heart, Coffee, Globe, Activity } from 'lucide-react';
 import Card from '@/components/UI/Card/Card.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
+import HealthCheckModal from './HealthCheckModal.jsx';
 import './home.css';
 
 const RollingNumber = ({ endValue, duration = 2000 }) => {
@@ -51,6 +52,7 @@ export default function Home() {
     });
 
     const [stats, setStats] = useState({ languages: 0, words: 0, conlangers: 0, loading: true });
+    const [isHealthCheckOpen, setIsHealthCheckOpen] = useState(false);
 
     React.useEffect(() => {
         const fetchStats = async () => {
@@ -325,6 +327,20 @@ export default function Home() {
                     </div>
                 </Card>
 
+                {/* Conlang Health Check */}
+                <Card 
+                    className="interactive-card health-card"
+                    onClick={() => setIsHealthCheckOpen(true)} 
+                >
+                    <h3>
+                        <Activity size={24} /> Health Check
+                    </h3>
+                    <p>Evaluate your conlang's completeness, phonology, and core vocabulary.</p>
+                    <div className="widget-footer">
+                        Run Diagnostics <ArrowRight size={16} />
+                    </div>
+                </Card>
+
                 {/* Global Stats */}
                 <Card className="interactive-card stats-card" style={{ cursor: 'default', display: 'flex', flexDirection: 'column', gap: '15px' }}>
                     <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -368,6 +384,11 @@ export default function Home() {
 
             </div>
         </div>
+        
+        <HealthCheckModal 
+            isOpen={isHealthCheckOpen} 
+            onClose={() => setIsHealthCheckOpen(false)} 
+        />
         </>
     );
 }

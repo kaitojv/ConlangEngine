@@ -12,6 +12,7 @@ import { Languages, Plus, Trash2, CheckCircle2, Lock, Copy, GitMerge, Network, L
 import { supabase } from '@/utils/supabaseClient.js';
 import { sanitizeConfig, sanitizeLexicon } from '@/utils/schemaValidator.jsx';
 import { getConlangIcon } from '@/utils/iconMap.jsx';
+import applySoundChanges from '@/utils/applysoundchanges.jsx';
 import LanguageCompareModal from './LanguageCompareModal.jsx';
 import './conlangsTab.css';
 
@@ -66,6 +67,7 @@ export default function ConlangsTab() {
     const [dialectParent, setDialectParent] = useState(null);
     const [dialectName, setDialectName] = useState('');
     const [importDialectWords, setImportDialectWords] = useState(true);
+    const [dialectSoundChanges, setDialectSoundChanges] = useState('');
 
     // Check if the user has an active Pro subscription
     useEffect(() => {
@@ -292,6 +294,7 @@ export default function ConlangsTab() {
         setDialectParent(project);
         setDialectName(`${project.project_data?.config?.conlangName || 'Untitled'} Dialect`);
         setImportDialectWords(true);
+        setDialectSoundChanges('');
         setDialectModalOpen(true);
     };
 
@@ -304,11 +307,21 @@ export default function ConlangsTab() {
         let newDictionary = importDialectWords ? JSON.parse(JSON.stringify(parentData.dictionary || [])) : [];
 
         if (importDialectWords) {
-            newDictionary = newDictionary.map(entry => ({
-                ...entry,
-                id: `word_${Math.random().toString(36).substr(2, 9)}`,
-                etymology: `project:${dialectParent.id}:word:${entry.id}`
-            }));
+            newDictionary = newDictionary.map(entry => {
+                let evolvedWord = entry.word;
+                if (dialectSoundChanges && dialectSoundChanges.trim()) {
+                    const results = applySoundChanges(evolvedWord, dialectSoundChanges);
+                    if (results.length > 0) {
+                        evolvedWord = results[0].evolved;
+                    }
+                }
+                return {
+                    ...entry,
+                    word: evolvedWord,
+                    id: `word_${Math.random().toString(36).substr(2, 9)}`,
+                    etymology: `project:${dialectParent.id}:word:${entry.id}`
+                };
+            });
         }
 
         // Make it a dialect
@@ -776,6 +789,23 @@ export default function ConlangsTab() {
                         <input type="checkbox" checked={importDialectWords} onChange={(e) => setImportDialectWords(e.target.checked)} />
                         Import all words from the mother language
                     </label>
+
+                    {importDialectWords && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <label style={{ color: 'var(--tx)', fontWeight: 'bold' }}>Sound Changes (Optional)</label>
+                            <p style={{ color: 'var(--tx3)', fontSize: '0.85rem' }}>Apply rules during import. Format: <code>pattern =&gt; replacement</code></p>
+                            <textarea 
+                                style={{ 
+                                    width: '100%', height: '100px', background: 'var(--s1)', 
+                                    border: '1px solid var(--bd)', borderRadius: 'var(--rad-sm)', 
+                                    color: 'var(--tx)', padding: '12px', fontFamily: 'monospace' 
+                                }}
+                                value={dialectSoundChanges}
+                                onChange={(e) => setDialectSoundChanges(e.target.value)}
+                                placeholder="p=>f&#10;a$=>o"
+                            />
+                        </div>
+                    )}
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
                         <Button variant="default" onClick={() => setDialectModalOpen(false)}>Cancel</Button>

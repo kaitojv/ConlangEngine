@@ -323,6 +323,13 @@ export default function PhonologyTab() {
                 </div>
 
                 <Input
+                    label="Custom Alphabet Sort Order (Optional)"
+                    placeholder="e.g., a, á, b, c, ch, d... (Comma separated)"
+                    value={useConfigStore((state) => state.customAlphabet) || ''}
+                    onChange={(e) => updateConfig({ customAlphabet: e.target.value })}
+                />
+
+                <Input
                     label="Syllable Pattern"
                     placeholder="e.g., CV, CVC, VCV..."
                     value={syllablePattern}
