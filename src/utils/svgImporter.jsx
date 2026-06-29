@@ -41,23 +41,63 @@ export const parseSVGToStrokes = (svgString) => {
         }
     });
     
-    if (allStrokes.length > 0 && minX !== Infinity) {
-        const width = maxX - minX;
-        const height = maxY - minY;
-        
-        // Target canvas size is 300x300. We want a 20px padding, so max size 260.
-        const scale = (width === 0 && height === 0) ? 1 : Math.min(260 / (width || 1), 260 / (height || 1));
-        
-        // Center the scaled bounding box inside the 300x300 canvas
-        const offsetX = (300 - width * scale) / 2 - minX * scale;
-        const offsetY = (300 - height * scale) / 2 - minY * scale;
-        
-        allStrokes.forEach(stroke => {
-            stroke.forEach(pt => {
-                pt.x = pt.x * scale + offsetX;
-                pt.y = pt.y * scale + offsetY;
+    if (allStrokes.length > 0) {
+        let useViewBoxMapping = false;
+        let scaleX = 1;
+        let scaleY = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        const svgTag = doc.querySelector('svg');
+        if (svgTag) {
+            const viewBox = svgTag.getAttribute('viewBox');
+            if (viewBox) {
+                const parts = viewBox.split(/[\s,]+/).map(parseFloat);
+                if (parts.length === 4) {
+                    const [vx, vy, vw, vh] = parts;
+                    if (vw > 0 && vh > 0) {
+                        scaleX = 300 / vw;
+                        scaleY = 300 / vh;
+                        offsetX = -vx * scaleX;
+                        offsetY = -vy * scaleY;
+                        useViewBoxMapping = true;
+                    }
+                }
+            } else {
+                const w = parseFloat(svgTag.getAttribute('width'));
+                const h = parseFloat(svgTag.getAttribute('height'));
+                if (w > 0 && h > 0) {
+                    scaleX = 300 / w;
+                    scaleY = 300 / h;
+                    useViewBoxMapping = true;
+                }
+            }
+        }
+
+        if (useViewBoxMapping) {
+            // Map coordinates precisely from the SVG viewBox to our 300x300 canvas
+            allStrokes.forEach(stroke => {
+                stroke.forEach(pt => {
+                    pt.x = pt.x * scaleX + offsetX;
+                    pt.y = pt.y * scaleY + offsetY;
+                });
             });
-        });
+        } else if (minX !== Infinity) {
+            // Fallback: auto-scale and center if no viewBox or dimensions are present
+            const width = maxX - minX;
+            const height = maxY - minY;
+            
+            const scale = (width === 0 && height === 0) ? 1 : Math.min(260 / (width || 1), 260 / (height || 1));
+            const centerOffsetX = (300 - width * scale) / 2 - minX * scale;
+            const centerOffsetY = (300 - height * scale) / 2 - minY * scale;
+            
+            allStrokes.forEach(stroke => {
+                stroke.forEach(pt => {
+                    pt.x = pt.x * scale + centerOffsetX;
+                    pt.y = pt.y * scale + centerOffsetY;
+                });
+            });
+        }
     }
     
     return allStrokes;

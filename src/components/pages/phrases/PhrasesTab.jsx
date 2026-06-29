@@ -86,7 +86,7 @@ export default function PhrasesTab() {
                 </div>
 
                 {filteredPhrases.length === 0 ? (
-                    <EmptyState icon={<MessageSquare size={48} />} title="No phrases found">
+                    <EmptyState icon={MessageSquare} title="No phrases found">
                         {searchQuery ? "Try a different search term." : "Click 'Add Phrase' to create your first multi-word expression."}
                     </EmptyState>
                 ) : (
