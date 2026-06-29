@@ -34,7 +34,34 @@ import { Color } from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { CharacterCount } from '@tiptap/extension-character-count';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { Mark, mergeAttributes } from '@tiptap/core';
 import { createGrammarAnalyzer } from '@/utils/grammarAnalyzer.js';
+
+const ConlangSpan = Mark.create({
+    name: 'conlangSpan',
+    parseHTML() {
+        return [{
+            tag: 'span[class]',
+            getAttrs: element => element.hasAttribute('class') ? {} : false
+        }];
+    },
+    renderHTML({ HTMLAttributes }) {
+        return ['span', mergeAttributes(HTMLAttributes), 0];
+    },
+    addAttributes() {
+        return {
+            class: {
+                default: null,
+                parseHTML: element => element.getAttribute('class'),
+            },
+            style: {
+                default: null,
+                parseHTML: element => element.getAttribute('style'),
+            }
+        };
+    }
+});
+
 import './wikiTab.css';
 
 const PREDEFINED_ICONS = [
@@ -1832,6 +1859,7 @@ function LegacyWikiEditor({ content, onSave }) {
             LinkExtension.configure({ openOnClick: false }),
             TextStyle,
             Color,
+            ConlangSpan,
         ],
         content: content || '',
         onBlur: ({ editor }) => {

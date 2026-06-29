@@ -652,7 +652,8 @@ export default function StudyTab() {
                         const nodeDepths = {};
                         pathNodes.forEach(n => { nodeDepths[n.id] = 0; });
                         let changed = true;
-                        while (changed) {
+                        let loopCount = 0;
+                        while (changed && loopCount < 1000) {
                             changed = false;
                             pathNodes.forEach(n => {
                                 if (!n.prerequisites || n.prerequisites.length === 0) return;
@@ -662,6 +663,7 @@ export default function StudyTab() {
                                     changed = true;
                                 }
                             });
+                            loopCount++;
                         }
                         
                         const maxDepth = Math.max(0, ...Object.values(nodeDepths));
