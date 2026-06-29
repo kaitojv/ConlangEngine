@@ -60,6 +60,7 @@ export default function StudyTab() {
     // Gamification state
     const [studyMode, setStudyMode] = useState('path'); // 'path', 'flashcard', 'quiz', 'course', 'builder'
     const [pathLevel, setPathLevel] = useState(null); 
+    const [savedScroll, setSavedScroll] = useState(0);
     const [quizInput, setQuizInput] = useState('');
     const [mascotState, setMascotState] = useState('idle');
     const [quizFeedback, setQuizFeedback] = useState('');
@@ -128,8 +129,10 @@ export default function StudyTab() {
     };
 
     const startQuiz = (levelNode) => {
+        setSavedScroll(window.scrollY);
         setPathLevel(levelNode);
         setStudyMode('course');
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
     };
 
     const startDailyChallenge = () => {
@@ -154,8 +157,10 @@ export default function StudyTab() {
             })
         };
         
+        setSavedScroll(window.scrollY);
         setPathLevel(challengeNode);
         setStudyMode('course');
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
     };
 
     const startTimedMode = () => {
@@ -179,8 +184,10 @@ export default function StudyTab() {
             })
         };
         
+        setSavedScroll(window.scrollY);
         setPathLevel(timedNode);
         setStudyMode('course');
+        setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
     };
 
     const handleFlip = () => {
@@ -510,8 +517,12 @@ export default function StudyTab() {
                         }
 
                         setStudyMode('path');
+                        setTimeout(() => window.scrollTo({ top: savedScroll, behavior: 'auto' }), 50);
                     }}
-                    onExit={() => setStudyMode('path')}
+                    onExit={() => {
+                        setStudyMode('path');
+                        setTimeout(() => window.scrollTo({ top: savedScroll, behavior: 'auto' }), 50);
+                    }}
                 />
             )}
 

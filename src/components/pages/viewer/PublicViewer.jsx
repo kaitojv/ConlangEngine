@@ -24,6 +24,7 @@ export default function PublicViewer() {
     const [visibleCount, setVisibleCount] = useState(50);
     const [activeTab, setActiveTab] = useState('overview'); // overview, course, flashcards
     const [activeLevel, setActiveLevel] = useState(null);
+    const [savedScroll, setSavedScroll] = useState(0);
     const [playingWordId, setPlayingWordId] = useState(null);
 
     const handlePlayIpa = useCallback(async (entry) => {
@@ -796,7 +797,11 @@ export default function PublicViewer() {
                                         <div key={node.id} className={`pv-path-node-wrapper ${isZigZag ? 'left' : 'right'}`}>
                                             <div 
                                                 className="pv-path-node" 
-                                                onClick={() => setActiveLevel(node)}
+                                                onClick={() => {
+                                                    setSavedScroll(window.scrollY);
+                                                    setActiveLevel(node);
+                                                    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
+                                                }}
                                                 style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--acc)', boxShadow: `0 8px 0 var(--acc)`, cursor: 'pointer' }}
                                             >
                                                 <div className="pv-path-node-icon"><Zap size={32} color="var(--acc)" fill="none" /></div>
@@ -816,8 +821,14 @@ export default function PublicViewer() {
                     <div style={{ marginTop: '2rem' }}>
                         <ExercisePlayer 
                             levelNode={activeLevel} 
-                            onComplete={() => setActiveLevel(null)} 
-                            onExit={() => setActiveLevel(null)} 
+                            onComplete={() => {
+                                setActiveLevel(null);
+                                setTimeout(() => window.scrollTo({ top: savedScroll, behavior: 'auto' }), 50);
+                            }} 
+                            onExit={() => {
+                                setActiveLevel(null);
+                                setTimeout(() => window.scrollTo({ top: savedScroll, behavior: 'auto' }), 50);
+                            }} 
                             customLexicon={dictionary} 
                             customConfig={config} 
                         />
