@@ -167,8 +167,20 @@ export default function SystemTab() {
                 }, { onConflict: 'project_id' });
                 if (err1) throw err1;
             } else {
-                const { error: err1 } = await supabase.from('conlang_snapshots').delete().eq('project_id', currentProjectId);
-                if (err1) throw err1;
+                const { data: dDel, error: errDel } = await supabase.from('conlang_snapshots').delete().eq('project_id', currentProjectId).select();
+                if (errDel) throw errDel;
+                // If deletion fails due to missing DELETE RLS policy, fallback to an update setting isPublic to false
+                if (!dDel || dDel.length === 0) {
+                    await supabase.from('conlang_snapshots').update({
+                        project_data: {
+                            ...payload,
+                            config: {
+                                ...payload.config,
+                                isPublic: false
+                            }
+                        }
+                    }).eq('project_id', currentProjectId);
+                }
             }
 
             const { error: err2 } = await supabase.from('conlangs').upsert({

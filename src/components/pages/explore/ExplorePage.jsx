@@ -136,7 +136,20 @@ export default function ExplorePage() {
                     project_data: payload
                 }, { onConflict: 'project_id' });
             } else {
-                await supabase.from('conlang_snapshots').delete().eq('project_id', currentProjectId);
+                const { data: dDel, error: errDel } = await supabase.from('conlang_snapshots').delete().eq('project_id', currentProjectId).select();
+                if (errDel) throw errDel;
+                // If deletion fails due to missing DELETE RLS policy, fallback to an update setting isPublic to false
+                if (!dDel || dDel.length === 0) {
+                    await supabase.from('conlang_snapshots').update({
+                        project_data: {
+                            ...payload,
+                            config: {
+                                ...payload.config,
+                                isPublic: false
+                            }
+                        }
+                    }).eq('project_id', currentProjectId);
+                }
             }
             
             await supabase.from('conlangs').upsert({
@@ -217,11 +230,19 @@ export default function ExplorePage() {
 
         const toastId = toast.loading("Deleting from cloud...");
         try {
-            const { error: err1 } = await supabase.from('conlangs').delete().eq('project_id', projectId);
+            const { data: d1, error: err1 } = await supabase.from('conlangs').delete().eq('project_id', projectId).select();
             if (err1) throw err1;
             
-            const { error: err2 } = await supabase.from('conlang_snapshots').delete().eq('project_id', projectId);
+            const { data: d2, error: err2 } = await supabase.from('conlang_snapshots').delete().eq('project_id', projectId).select();
             if (err2) throw err2;
+
+            // If deletions fail due to missing DELETE RLS policies, fallback to updates setting deleted = true
+            if (!d1 || d1.length === 0) {
+                await supabase.from('conlangs').update({ project_data: { deleted: true } }).eq('project_id', projectId);
+            }
+            if (!d2 || d2.length === 0) {
+                await supabase.from('conlang_snapshots').update({ project_data: { deleted: true } }).eq('project_id', projectId);
+            }
 
             setConlangs(prev => prev.filter(c => c.project_id !== projectId));
             toast.success("Conlang removed from Explore", { id: toastId });
