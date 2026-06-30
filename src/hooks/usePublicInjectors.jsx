@@ -100,7 +100,7 @@ export function usePublicFontInjector(config) {
             if (node) node.remove();
             // Remove all FontFace objects we added so they don't leak into the next conlang
             loadedFontsRef.current.forEach(f => {
-                try { document.fonts.delete(f); } catch (_) { /* ignore */ }
+                try { document.fonts.delete(f); } catch { /* ignore */ }
             });
             loadedFontsRef.current = [];
         };

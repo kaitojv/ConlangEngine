@@ -35,6 +35,7 @@ export default function SystemTab() {
     const floatingBackground = useConfigStore((state) => state.floatingBackground) || { enabled: true, global: false, type: 'greetings' };
     const setFullConfig = useConfigStore((state) => state.setFullConfig);
     const updateConfig = useConfigStore((state) => state.updateConfig);
+    const customLabels = useConfigStore((state) => state.customLabels) || {};
     const setLexicon = useLexiconStore((state) => state.setLexicon);
     const fileInputRef = useRef(null);
     const legacyInputRef = useRef(null);
@@ -717,7 +718,7 @@ export default function SystemTab() {
                     <Input 
                         label="App Title"
                         placeholder="ConlangEngine" 
-                        value={useConfigStore(state => state.customLabels?.appTitle) || ''}
+                        value={customLabels.appTitle || ''}
                         onChange={(e) => updateConfig({ customLabels: { ...(useConfigStore.getState().customLabels || {}), appTitle: e.target.value } })}
                     />
 
@@ -731,7 +732,7 @@ export default function SystemTab() {
                             key={label}
                             label={label}
                             placeholder={label} 
-                            value={useConfigStore(state => state.customLabels?.[label]) || ''}
+                            value={customLabels[label] || ''}
                             onChange={(e) => updateConfig({ customLabels: { ...(useConfigStore.getState().customLabels || {}), [label]: e.target.value } })}
                         />
                     ))}

@@ -174,7 +174,7 @@ export function useBackupManager() {
                     const res = await updateBackup(endpoint, pid, reuseTarget, payload);
                     timestamp = res?.timestamp || timestamp;
                     savedVersion = res?.version || reuseTarget;
-                } catch (err) {
+                } catch {
                     // Version may have been deleted server-side — fall back to a new one.
                     const res = await createBackup(endpoint, pid, payload);
                     timestamp = res?.timestamp || timestamp;
