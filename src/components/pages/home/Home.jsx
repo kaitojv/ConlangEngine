@@ -66,9 +66,15 @@ export default function Home() {
                 const { data: snapshotsData, error: err2 } = await supabase
                     .from('conlang_snapshots')
                     .select('project_data, user_id');
+
+                // Fetch active conlangers count as a fallback (since profiles has RLS restriction)
+                const { data: conlangsData, error: err3 } = await supabase
+                    .from('conlangs')
+                    .select('user_id');
                     
                 if (err1) console.warn("Could not fetch profiles count:", err1);
                 if (err2) throw err2;
+                if (err3) console.warn("Could not fetch conlangs for user count:", err3);
                 
                 let wordsCount = 0;
                 let languagesCount = snapshotsData ? snapshotsData.length : 0;
@@ -81,11 +87,18 @@ export default function Home() {
                         }
                     });
                 }
+
+                let uniqueUsersCount = 0;
+                if (conlangsData) {
+                    uniqueUsersCount = new Set(conlangsData.map(c => c.user_id)).size;
+                } else if (snapshotsData) {
+                    uniqueUsersCount = new Set(snapshotsData.map(s => s.user_id)).size;
+                }
                 
                 setStats({
                     languages: languagesCount,
                     words: wordsCount,
-                    conlangers: Math.max(conlangersCount || 0, 146), // Fallback to at least 146
+                    conlangers: Math.max(conlangersCount || 0, uniqueUsersCount, 1),
                     loading: false
                 });
             } catch (err) {

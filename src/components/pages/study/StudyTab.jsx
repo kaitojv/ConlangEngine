@@ -556,7 +556,7 @@ export default function StudyTab() {
                                     </div>
                                     <svg 
                                         className="path-svg" 
-                                        style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: '100%', overflow: 'visible', zIndex: 0, pointerEvents: 'none' }}
+                                        style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: `${80 + (pathNodes.length - 1) * 150}px`, overflow: 'visible', zIndex: 0, pointerEvents: 'none' }}
                                     >
                                         {pathNodes.map((node, i) => {
                                             if (i === pathNodes.length - 1) return null;

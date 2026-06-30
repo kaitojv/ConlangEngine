@@ -760,7 +760,7 @@ export default function PublicViewer() {
                             <div className="pv-path-track" style={{ position: 'relative' }}>
                                 <svg 
                                     className="path-svg" 
-                                    style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: '100%', overflow: 'visible', zIndex: 0, pointerEvents: 'none' }}
+                                    style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: `${80 + (config.customCourse.length - 1) * 150}px`, overflow: 'visible', zIndex: 0, pointerEvents: 'none' }}
                                 >
                                     {config.customCourse.map((node, i) => {
                                         if (i === config.customCourse.length - 1) return null;
@@ -801,7 +801,7 @@ export default function PublicViewer() {
                                                 onClick={() => {
                                                     setSavedScroll(window.scrollY);
                                                     setActiveLevel(node);
-                                                    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
+                                                    setTimeout(() => window.scrollTo(0, 0), 50);
                                                 }}
                                                 style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--acc)', boxShadow: `0 8px 0 var(--acc)`, cursor: 'pointer' }}
                                             >
@@ -824,11 +824,11 @@ export default function PublicViewer() {
                             levelNode={activeLevel} 
                             onComplete={() => {
                                 setActiveLevel(null);
-                                setTimeout(() => window.scrollTo({ top: savedScroll, behavior: 'auto' }), 50);
+                                setTimeout(() => window.scrollTo(0, savedScroll), 50);
                             }} 
                             onExit={() => {
                                 setActiveLevel(null);
-                                setTimeout(() => window.scrollTo({ top: savedScroll, behavior: 'auto' }), 50);
+                                setTimeout(() => window.scrollTo(0, savedScroll), 50);
                             }} 
                             customLexicon={dictionary} 
                             customConfig={config} 

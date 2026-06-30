@@ -128,132 +128,8 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
         return () => clearInterval(timer);
     }, [timeLeft, isFinished]);
 
-    if (exercises.length === 0) {
-        return (
-            <Card className="exercise-player">
-                <div style={{ textAlign: 'center', padding: '2rem' }}>
-                    <h2>No phrases found!</h2>
-                    <p>You need to add phrases to this level using the Course Builder.</p>
-                    <Button variant="default" onClick={onExit}>Return to Map</Button>
-                </div>
-            </Card>
-        );
-    }
-
-    const handleShareScore = () => {
-        const stars = calculateStars(sessionStats.correct, sessionStats.total);
-        const xp = calculateXP(sessionStats.correct, sessionStats.total, { isTimed: levelNode?.isTimed });
-        const isPerfect = sessionStats.correct === sessionStats.total && sessionStats.total > 0;
-        
-        const canvas = document.createElement('canvas');
-        canvas.width = 600;
-        canvas.height = 400;
-        const ctx = canvas.getContext('2d');
-        
-        // Background
-        ctx.fillStyle = '#0b0f19';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Border
-        ctx.strokeStyle = '#7c3aed';
-        ctx.lineWidth = 10;
-        ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
-        
-        // Title
-        ctx.fillStyle = '#f8fafc';
-        ctx.font = 'bold 36px "Inter", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('Conlang Learning Progress', canvas.width / 2, 60);
-        
-        // Subtitle
-        ctx.fillStyle = '#a78bfa';
-        ctx.font = 'bold 24px "Inter", sans-serif';
-        ctx.fillText(`Lesson: ${levelNode?.title || 'Practice'}`, canvas.width / 2, 110);
-        
-        // Stats
-        ctx.fillStyle = '#f8fafc';
-        ctx.font = '30px "Inter", sans-serif';
-        ctx.fillText(`Score: ${sessionStats.correct} / ${sessionStats.total}`, canvas.width / 2, 170);
-        ctx.fillText(`XP Earned: +${xp}`, canvas.width / 2, 220);
-        
-        // Stars
-        let starText = '';
-        for (let i = 0; i < 3; i++) {
-            starText += (i < stars) ? '⭐ ' : '☆ ';
-        }
-        ctx.font = '40px "Inter", sans-serif';
-        ctx.fillText(starText, canvas.width / 2, 280);
-        
-        // Footer message
-        ctx.fillStyle = '#10b981';
-        ctx.font = 'bold 28px "Inter", sans-serif';
-        if (isPerfect) ctx.fillText('Perfect Score!', canvas.width / 2, 340);
-        else ctx.fillText('Great Job!', canvas.width / 2, 340);
-        
-        // Convert and download
-        const dataUrl = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.download = `conlang-score-${Date.now()}.png`;
-        link.href = dataUrl;
-        link.click();
-    };
-
-    if (isFinished) {
-        const stars = calculateStars(sessionStats.correct, sessionStats.total);
-        const xp = calculateXP(sessionStats.correct, sessionStats.total, { isTimed: levelNode?.isTimed });
-        const timeTaken = levelNode?.isTimed ? (60 - timeLeft) : null;
-        const failedExercises = exercises.filter(e => e.failed);
-
-        return (
-            <Card className="exercise-player finished-screen" style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
-                <Mascot state="correct" isSpeaking={false} />
-                <h2 style={{ fontSize: '2.5rem', margin: '20px 0 10px 0', color: 'var(--acc)' }}>Lesson Complete!</h2>
-                
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', margin: '15px 0' }}>
-                    {[1, 2, 3].map(s => (
-                        <Star key={s} size={48} color={s <= stars ? '#f59e0b' : 'var(--bd)'} fill={s <= stars ? '#f59e0b' : 'none'} style={{ filter: s <= stars ? 'drop-shadow(0 0 10px rgba(245,158,11,0.5))' : 'none' }} />
-                    ))}
-                </div>
-
-                <div className="ep-summary-stats" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', background: 'var(--s1)', padding: '20px', borderRadius: '12px', marginBottom: '20px' }}>
-                    <div className="stat-box">
-                        <div style={{ color: 'var(--tx2)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Score</div>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{sessionStats.correct} / {sessionStats.total}</div>
-                        <div style={{ color: 'var(--tx2)' }}>{Math.round((sessionStats.correct / sessionStats.total) * 100) || 0}% Accuracy</div>
-                    </div>
-                    <div className="stat-box">
-                        <div style={{ color: 'var(--tx2)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>XP Earned</div>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--ok)' }}>+{xp} XP</div>
-                        {timeTaken && <div style={{ color: 'var(--tx2)' }}>Time: {timeTaken}s</div>}
-                    </div>
-                </div>
-
-                {failedExercises.length > 0 && (
-                    <div className="ep-missed-words" style={{ textAlign: 'left', background: 'var(--s1)', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid var(--bd2)' }}>
-                        <h4 style={{ margin: '0 0 10px 0', color: 'var(--tx)' }}>Needs more practice:</h4>
-                        <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--tx2)' }}>
-                            {failedExercises.slice(0, 5).map((e, i) => (
-                                <li key={i}>{e.englishSentence || e.type}</li>
-                            ))}
-                            {failedExercises.length > 5 && <li>...and {failedExercises.length - 5} more</li>}
-                        </ul>
-                    </div>
-                )}
-
-                <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
-                    <Button variant="imp" onClick={() => {
-                        onComplete(levelNode?.id, { ...sessionStats, stars });
-                    }} style={{ padding: '15px', fontSize: '1.2rem', fontWeight: 'bold' }}>Continue to Path</Button>
-                    <Button variant="default" onClick={handleShareScore} style={{ padding: '12px' }}>
-                        <Share2 size={18} style={{ marginRight: '8px' }} /> Share Score
-                    </Button>
-                </div>
-            </Card>
-        );
-    }
-
     const currentEx = exercises[currentIndex];
-    const progressPercent = (currentIndex / exercises.length) * 100;
+    const progressPercent = exercises.length > 0 ? (currentIndex / exercises.length) * 100 : 0;
 
     const advanceToNext = () => {
         const nextIdx = currentIndex + 1;
@@ -341,6 +217,64 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
         }
     };
 
+    const handleShareScore = () => {
+        const stars = calculateStars(sessionStats.correct, sessionStats.total);
+        const xp = calculateXP(sessionStats.correct, sessionStats.total, { isTimed: levelNode?.isTimed });
+        const isPerfect = sessionStats.correct === sessionStats.total && sessionStats.total > 0;
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = 600;
+        canvas.height = 400;
+        const ctx = canvas.getContext('2d');
+        
+        // Background
+        ctx.fillStyle = '#0b0f19';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Border
+        ctx.strokeStyle = '#7c3aed';
+        ctx.lineWidth = 10;
+        ctx.strokeRect(5, 5, canvas.width - 10, canvas.height - 10);
+        
+        // Title
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 36px "Inter", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Conlang Learning Progress', canvas.width / 2, 60);
+        
+        // Subtitle
+        ctx.fillStyle = '#a78bfa';
+        ctx.font = 'bold 24px "Inter", sans-serif';
+        ctx.fillText(`Lesson: ${levelNode?.title || 'Practice'}`, canvas.width / 2, 110);
+        
+        // Stats
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = '30px "Inter", sans-serif';
+        ctx.fillText(`Score: ${sessionStats.correct} / ${sessionStats.total}`, canvas.width / 2, 170);
+        ctx.fillText(`XP Earned: +${xp}`, canvas.width / 2, 220);
+        
+        // Stars
+        let starText = '';
+        for (let i = 0; i < 3; i++) {
+            starText += (i < stars) ? '⭐ ' : '☆ ';
+        }
+        ctx.font = '40px "Inter", sans-serif';
+        ctx.fillText(starText, canvas.width / 2, 280);
+        
+        // Footer message
+        ctx.fillStyle = '#10b981';
+        ctx.font = 'bold 28px "Inter", sans-serif';
+        if (isPerfect) ctx.fillText('Perfect Score!', canvas.width / 2, 340);
+        else ctx.fillText('Great Job!', canvas.width / 2, 340);
+        
+        // Convert and download
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `conlang-score-${Date.now()}.png`;
+        link.href = dataUrl;
+        link.click();
+    };
+
     React.useEffect(() => {
         if (isFinished || currentIndex === -1) return;
         const handleKeyDown = (e) => {
@@ -349,8 +283,6 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                 return;
             }
             if (e.key === 'Enter') {
-                // If it's a text input field, the form onSubmit already handles Enter.
-                // For multiple choice, matching pairs, etc., we can trigger it manually.
                 const isInputActive = document.activeElement.tagName === 'INPUT';
                 if (!isInputActive) {
                     if (currentEx?.type === 'teach') advanceToNext();
@@ -370,6 +302,73 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isFinished, currentIndex, currentEx, feedback, checkAnswer, advanceToNext, onExit]);
+
+    // EARLY RETURNS - Render at the bottom, after all hooks are evaluated
+    if (exercises.length === 0) {
+        return (
+            <Card className="exercise-player">
+                <div style={{ textAlign: 'center', padding: '2rem' }}>
+                    <h2>No phrases found!</h2>
+                    <p>You need to add phrases to this level using the Course Builder.</p>
+                    <Button variant="default" onClick={onExit}>Return to Map</Button>
+                </div>
+            </Card>
+        );
+    }
+
+    if (isFinished) {
+        const stars = calculateStars(sessionStats.correct, sessionStats.total);
+        const xp = calculateXP(sessionStats.correct, sessionStats.total, { isTimed: levelNode?.isTimed });
+        const timeTaken = levelNode?.isTimed ? (60 - timeLeft) : null;
+        const failedExercises = exercises.filter(e => e.failed);
+
+        return (
+            <Card className="exercise-player finished-screen" style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
+                <Mascot state="correct" isSpeaking={false} />
+                <h2 style={{ fontSize: '2.5rem', margin: '20px 0 10px 0', color: 'var(--acc)' }}>Lesson Complete!</h2>
+                
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', margin: '15px 0' }}>
+                    {[1, 2, 3].map(s => (
+                        <Star key={s} size={48} color={s <= stars ? '#f59e0b' : 'var(--bd)'} fill={s <= stars ? '#f59e0b' : 'none'} style={{ filter: s <= stars ? 'drop-shadow(0 0 10px rgba(245,158,11,0.5))' : 'none' }} />
+                    ))}
+                </div>
+
+                <div className="ep-summary-stats" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', background: 'var(--s1)', padding: '20px', borderRadius: '12px', marginBottom: '20px' }}>
+                    <div className="stat-box">
+                        <div style={{ color: 'var(--tx2)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Score</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{sessionStats.correct} / {sessionStats.total}</div>
+                        <div style={{ color: 'var(--tx2)' }}>{Math.round((sessionStats.correct / sessionStats.total) * 100) || 0}% Accuracy</div>
+                    </div>
+                    <div className="stat-box">
+                        <div style={{ color: 'var(--tx2)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>XP Earned</div>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--ok)' }}>+{xp} XP</div>
+                        {timeTaken && <div style={{ color: 'var(--tx2)' }}>Time: {timeTaken}s</div>}
+                    </div>
+                </div>
+
+                {failedExercises.length > 0 && (
+                    <div className="ep-missed-words" style={{ textAlign: 'left', background: 'var(--s1)', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid var(--bd2)' }}>
+                        <h4 style={{ margin: '0 0 10px 0', color: 'var(--tx)' }}>Needs more practice:</h4>
+                        <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--tx2)' }}>
+                            {failedExercises.slice(0, 5).map((e, i) => (
+                                <li key={i}>{e.englishSentence || e.type}</li>
+                            ))}
+                            {failedExercises.length > 5 && <li>...and {failedExercises.length - 5} more</li>}
+                        </ul>
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
+                    <Button variant="imp" onClick={() => {
+                        onComplete(levelNode?.id, { ...sessionStats, stars });
+                    }} style={{ padding: '15px', fontSize: '1.2rem', fontWeight: 'bold' }}>Continue to Path</Button>
+                    <Button variant="default" onClick={handleShareScore} style={{ padding: '12px' }}>
+                        <Share2 size={18} style={{ marginRight: '8px' }} /> Share Score
+                    </Button>
+                </div>
+            </Card>
+        );
+    }
 
     if (currentIndex === -1) {
         return (
@@ -445,7 +444,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
 
                 {currentEx.type === 'listening' && (
                     <div className="ep-prompt" style={{ display: 'flex', justifyContent: 'center' }}>
-                         <Button variant="imp" style={{ width: '80px', height: '80px', borderRadius: '50%' }} onClick={(e) => {
+                         <Button variant="imp" style={{ width: '80px', height: '80px', borderRadius: '50%' }} onClick={() => {
                              const text = currentEx.conlangSentence.replace(/[.\-*]/g, '');
                              if (config.azureTtsVoice) {
                                  import('../../../utils/azureTTS.js').then(({playAzureTTS}) => {
