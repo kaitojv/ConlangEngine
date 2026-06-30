@@ -226,22 +226,42 @@ export default function ExplorePage() {
     const handleDeletePublicConlang = async (e, projectId) => {
         e.stopPropagation();
 
-        if (!window.confirm("Are you sure you want to delete this public conlang from Explore? This will remove it from the cloud for everyone. (Your local workspace will not be deleted)")) return;
+        if (!window.confirm("Are you sure you want to unpublish this conlang? It will be removed from the Explore page, but your private cloud sync backup will not be deleted.")) return;
 
-        const toastId = toast.loading("Deleting from cloud...");
+        const toastId = toast.loading("Removing from Explore...");
         try {
-            const { data: d1, error: err1 } = await supabase.from('conlangs').delete().eq('project_id', projectId).select();
-            if (err1) throw err1;
-            
             const { data: d2, error: err2 } = await supabase.from('conlang_snapshots').delete().eq('project_id', projectId).select();
             if (err2) throw err2;
 
-            // If deletions fail due to missing DELETE RLS policies, fallback to updates setting deleted = true
-            if (!d1 || d1.length === 0) {
-                await supabase.from('conlangs').update({ project_data: { deleted: true } }).eq('project_id', projectId);
-            }
+            // If snapshot deletion fails due to missing DELETE RLS policy, fallback to an update setting isPublic to false
             if (!d2 || d2.length === 0) {
-                await supabase.from('conlang_snapshots').update({ project_data: { deleted: true } }).eq('project_id', projectId);
+                const { data: existing } = await supabase.from('conlang_snapshots').select('project_data').eq('project_id', projectId).single();
+                if (existing && existing.project_data) {
+                    await supabase.from('conlang_snapshots').update({
+                        project_data: {
+                            ...existing.project_data,
+                            config: {
+                                ...existing.project_data.config,
+                                isPublic: false
+                            }
+                        }
+                    }).eq('project_id', projectId);
+                }
+            }
+
+            // Update the main conlangs table to make it private (DO NOT delete the user's private backup!)
+            const { data: existingConlang } = await supabase.from('conlangs').select('project_data').eq('project_id', projectId).single();
+            if (existingConlang && existingConlang.project_data) {
+                const updatedPayload = {
+                    ...existingConlang.project_data,
+                    config: {
+                        ...existingConlang.project_data.config,
+                        isPublic: false
+                    }
+                };
+                await supabase.from('conlangs').update({
+                    project_data: updatedPayload
+                }).eq('project_id', projectId);
             }
 
             setConlangs(prev => prev.filter(c => c.project_id !== projectId));
