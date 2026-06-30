@@ -23,7 +23,7 @@ export function useSharing(session) {
             config.updateConfig({ projectId: currentProjectId });
         }
 
-        const configData = sanitizeConfig(useConfigStore.getState());
+        const configData = sanitizeConfig(useConfigStore.getState(), true);
         
         // SEC/PERF: Strip massive base64 font from cloud payload to prevent Supabase statement timeouts
         delete configData.customFontBase64;

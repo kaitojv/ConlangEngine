@@ -498,6 +498,33 @@ export const useConfigStore = create(
 
             setFullConfig: (newConfig) => {
                 const projectId = newConfig.projectId || useConfigStore.getState().projectId;
+                
+                // When loading configs that have been deduplicated (e.g. from cloud/backup),
+                // root bloat fields might be missing. We need to restore them from the default script
+                // so the app has them immediately in memory.
+                const scriptRules = newConfig.scriptRules || INITIAL_CONFIG.scriptRules;
+                const defaultScriptId = scriptRules?.defaultScriptId || 'default';
+                const defaultScriptData = newConfig.scriptDataById?.[defaultScriptId] || {};
+                
+                if (!newConfig.customGlyphs && defaultScriptData.customGlyphs) {
+                    newConfig.customGlyphs = defaultScriptData.customGlyphs;
+                }
+                if (!newConfig.alphabetGlyphs && defaultScriptData.alphabetGlyphs) {
+                    newConfig.alphabetGlyphs = defaultScriptData.alphabetGlyphs;
+                }
+                if (!newConfig.syllabaryMap && defaultScriptData.syllabaryMap) {
+                    newConfig.syllabaryMap = defaultScriptData.syllabaryMap;
+                }
+                if (!newConfig.featuralComponents && defaultScriptData.featuralComponents) {
+                    newConfig.featuralComponents = defaultScriptData.featuralComponents;
+                }
+                if (!newConfig.customFont && defaultScriptData.customFont) {
+                    newConfig.customFont = defaultScriptData.customFont;
+                }
+                if (!newConfig.customFontBase64 && defaultScriptData.customFontBase64) {
+                    newConfig.customFontBase64 = defaultScriptData.customFontBase64;
+                }
+
                 if (projectId) {
                     const bloat = {};
                     if (newConfig.customFontBase64) bloat.customFontBase64 = newConfig.customFontBase64;

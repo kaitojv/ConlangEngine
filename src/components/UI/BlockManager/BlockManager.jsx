@@ -312,9 +312,12 @@ export default function BlockManager({ scriptId } = {}) {
                                 {/* Preview drawn strokes if available, else placeholder */}
                                 {featuralComponents[comp] ? (
                                     <svg viewBox="0 0 300 300" width="40" height="40" className="bm-svg-preview">
-                                        {featuralComponents[comp].map((stroke, i) => (
-                                            <path key={i} d={`M ${stroke.map(p => `${p.x} ${p.y}`).join(' L ')}`} />
-                                        ))}
+                                        {featuralComponents[comp]
+                                            .filter(s => Array.isArray(s) && !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)))
+                                            .map((stroke, i) => (
+                                                <path key={i} d={`M ${stroke.map(p => `${p.x} ${p.y}`).join(' L ')}`} />
+                                            ))
+                                        }
                                     </svg>
                                 ) : '∅'}
                             </div>

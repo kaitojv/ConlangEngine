@@ -101,13 +101,16 @@ export default function PublicViewer() {
         }
     }, [projectData]);
 
-    // Extract data from the fetched project
-    const rawConfig = projectData?.config || {};
-    const defaultScriptId = rawConfig.scriptRules?.defaultScriptId || 'default';
-    const scriptData = rawConfig.scriptDataById?.[defaultScriptId] || {};
-    const config = { ...rawConfig, ...scriptData };
+    // Extract data from the fetched project — memoize to prevent re-running
+    // expensive hooks (font injection, theme injection) on unrelated re-renders
+    const config = useMemo(() => {
+        const rawConfig = projectData?.config || {};
+        const defaultScriptId = rawConfig.scriptRules?.defaultScriptId || 'default';
+        const scriptData = rawConfig.scriptDataById?.[defaultScriptId] || {};
+        return { ...rawConfig, ...scriptData };
+    }, [projectData]);
     
-    const dictionary = projectData?.dictionary || [];
+    const dictionary = useMemo(() => projectData?.dictionary || [], [projectData]);
     const grammarRules = config.grammarRules || [];
     const wikiPages = config.wikiPages || {};
 
@@ -191,9 +194,7 @@ export default function PublicViewer() {
     const needsTransliteration = ['logographic', 'syllabic', 'alphabetic', 'abjad', 'abugida'].includes(config.phonologyTypes);
     if (needsTransliteration) {
         displayName = (config.conlangName || 'Untitled Conlang').split(/(\s+)/).map(w => w.trim() ? transliterate(w, dictionary) : w).join('');
-        if (displayDesc && displayDesc !== 'A brief description of your conlang.') {
-            displayDesc = displayDesc.split(/(\s+)/).map(w => w.trim() ? transliterate(w, dictionary) : w).join('');
-        }
+        // Description is intentionally NOT transliterated — it should remain readable
     }
 
     return (
@@ -254,7 +255,7 @@ export default function PublicViewer() {
                         <span>Created by {config.authorName || 'Anonymous'}</span>
                     </div>
                     {displayDesc && displayDesc !== 'A brief description of your conlang.' && (
-                        <p className="pv-description custom-font-text notranslate" style={{ writingMode: 'horizontal-tb' }}>{displayDesc}</p>
+                        <p className="pv-description notranslate" style={{ writingMode: 'horizontal-tb' }}>{displayDesc}</p>
                     )}
                     <div className="pv-badges">
                         <span className="pv-badge"><Globe size={12} /> {directionLabel}</span>

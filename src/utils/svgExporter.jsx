@@ -9,7 +9,8 @@ import { blockLayoutMatrices } from './blockFontGenerator.jsx';
  * Base logic to convert strokes to SVG path elements
  */
 const strokesToPaths = (strokes, xOffset = 0) => {
-    return strokes.map(stroke => {
+    const cleanStrokes = (strokes || []).filter(s => Array.isArray(s) && !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)));
+    return cleanStrokes.map(stroke => {
         if (stroke.length < 2) return '';
         let pathD = `M ${stroke[0].x + xOffset} ${stroke[0].y}`;
         for (let i = 1; i < stroke.length; i++) {
@@ -64,7 +65,8 @@ export const exportTextAsSVG = (transliteratedText, fileName = 'conlang_script.s
                 const strokes = featuralComponents[radical];
                 const transform = matrix[i];
                 if (strokes && transform) {
-                    const transformed = strokes.map(stroke => 
+                    const cleanStrokes = strokes.filter(s => Array.isArray(s) && !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)));
+                    const transformed = cleanStrokes.map(stroke => 
                         stroke.map(point => ({
                             x: Number(((point.x * transform.scale) + transform.tx).toFixed(1)),
                             y: Number(((point.y * transform.scale) + transform.ty).toFixed(1))

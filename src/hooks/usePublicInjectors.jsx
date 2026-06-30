@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 /**
  * Safely injects the theme colors into the document body for the Public Viewer,
@@ -40,15 +40,23 @@ export function usePublicThemeInjector(config) {
     }, [config]);
 }
 
+// Incrementing counter ensures each mount gets a unique font name,
+// preventing stale cached fonts from a previously viewed conlang.
+let fontInstanceCounter = 0;
+
 /**
  * Safely injects the custom font for the Public Viewer.
  * Mirrors the main useFontInjector approach: handles array fonts and uses FontFace API.
+ * Uses a unique font name per mount and properly cleans up FontFace objects from document.fonts.
  */
 export function usePublicFontInjector(config) {
+    const loadedFontsRef = useRef([]);
+
     useEffect(() => {
         if (!config || !config.customFontBase64) return;
 
-        const fontName = 'PublicCustomFont';
+        fontInstanceCounter++;
+        const fontName = `PublicCustomFont_${fontInstanceCounter}`;
         const styleId = 'public-custom-font';
 
         // Ensure the style tag for font-family assignment exists
@@ -70,6 +78,7 @@ export function usePublicFontInjector(config) {
             return face.load();
         })).then(loadedFonts => {
             loadedFonts.forEach(f => document.fonts.add(f));
+            loadedFontsRef.current = loadedFonts;
             styleNode.innerHTML = `
                 .custom-font-text, .conlang-word, .dict-ipa {
                     font-family: '${fontName}', 'Inter', sans-serif !important;
@@ -86,8 +95,14 @@ export function usePublicFontInjector(config) {
         });
 
         return () => {
+            // Remove the style tag
             const node = document.getElementById(styleId);
             if (node) node.remove();
+            // Remove all FontFace objects we added so they don't leak into the next conlang
+            loadedFontsRef.current.forEach(f => {
+                try { document.fonts.delete(f); } catch (_) { /* ignore */ }
+            });
+            loadedFontsRef.current = [];
         };
     }, [config]);
 }

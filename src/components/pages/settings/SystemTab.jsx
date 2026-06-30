@@ -72,7 +72,7 @@ export default function SystemTab() {
             return;
         }
 
-        const configData = sanitizeConfig(currentStore);
+        const configData = sanitizeConfig(currentStore, true);
         const payload = {
             dictionary: useLexiconStore.getState().lexicon || [],
             config: configData,
@@ -135,7 +135,7 @@ export default function SystemTab() {
             return;
         }
 
-        const configData = sanitizeConfig({ ...currentStore, isPublic: checked });
+        const configData = sanitizeConfig({ ...currentStore, isPublic: checked }, true);
         const payload = {
             dictionary: useLexiconStore.getState().lexicon || [],
             config: configData,

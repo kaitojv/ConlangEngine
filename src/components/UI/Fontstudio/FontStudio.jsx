@@ -112,7 +112,13 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     const handleSetBackground = () => {
         const opt = drawnGlyphsOptions.find(o => o.id == selectedReferenceId);
         if (opt) {
-            const validStrokes = opt.strokes.filter(s => !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)));
+            const validStrokes = opt.strokes.filter(s => {
+                // Filter out new-format metadata objects
+                if (!Array.isArray(s) && s.isMeta) return false;
+                // Filter out legacy calligraphy/brush pen markers
+                if (s.length === 1 && (s[0].x === -999 || s[0].x === -998)) return false;
+                return true;
+            });
             setBackgroundStrokes(validStrokes);
         }
     };
@@ -120,8 +126,12 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     const handleLoadToCanvas = () => {
         const opt = drawnGlyphsOptions.find(o => o.id == selectedReferenceId);
         if (opt) {
-            // Filter out meta strokes (calligraphy/brush pen flags)
-            const validStrokes = opt.strokes.filter(s => !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)));
+            // Filter out meta objects and legacy calligraphy/brush pen markers
+            const validStrokes = opt.strokes.filter(s => {
+                if (!Array.isArray(s) && s.isMeta) return false;
+                if (s.length === 1 && (s[0].x === -999 || s[0].x === -998)) return false;
+                return true;
+            });
             // Deep clone to prevent state mutation and bugging other characters
             const clonedStrokes = validStrokes.map(stroke => {
                 const newStroke = stroke.map(pt => ({ ...pt }));

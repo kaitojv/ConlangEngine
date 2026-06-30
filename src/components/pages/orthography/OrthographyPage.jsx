@@ -817,9 +817,10 @@ const SyllabaryShowcase = ({ scriptId, onGlyphClick } = {}) => {
         const codePoint = symbol.codePointAt(0);
         const strokes = customGlyphs[codePoint];
         if (strokes && strokes.length > 0) {
+            const cleanStrokes = strokes.filter(s => Array.isArray(s) && !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)));
             return (
                 <svg viewBox="0 0 300 300" width="52" height="52">
-                    {strokes.map((stroke, i) => (
+                    {cleanStrokes.map((stroke, i) => (
                         <path
                             key={i}
                             d={`M ${stroke.map(p => `${p.x} ${p.y}`).join(' L ')}`}
@@ -879,9 +880,10 @@ const LogographicShowcase = ({ scriptId, onGlyphClick } = {}) => {
         const codePoint = ideogram.codePointAt(0);
         const strokes = customGlyphs[codePoint];
         if (strokes && strokes.length > 0) {
+            const cleanStrokes = strokes.filter(s => Array.isArray(s) && !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)));
             return (
                 <svg viewBox="0 0 300 300" width="80" height="80">
-                    {strokes.map((stroke, i) => (
+                    {cleanStrokes.map((stroke, i) => (
                         <path
                             key={i}
                             d={`M ${stroke.map(p => `${p.x} ${p.y}`).join(' L ')}`}
@@ -1062,17 +1064,20 @@ const BlockShowcase = ({ scriptId, onGlyphClick } = {}) => {
                                 onClick={() => onGlyphClick && onGlyphClick({ char: comp, glyph: <span className="custom-font-text">{phonemeToChar[comp] || comp}</span>, type: 'featural_block', name: phonemeToChar[comp] || comp })}
                             >
                                 <svg viewBox="0 0 300 300" width="64" height="64" className="showcase-block-svg">
-                                    {featuralComponents[comp].map((stroke, i) => (
-                                        <path
-                                            key={i}
-                                            d={`M ${stroke.map(p => `${p.x} ${p.y}`).join(' L ')}`}
-                                            stroke="var(--acc)"
-                                            strokeWidth="10"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            fill="none"
-                                        />
-                                    ))}
+                                    {featuralComponents[comp]
+                                        .filter(s => Array.isArray(s) && !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)))
+                                        .map((stroke, i) => (
+                                            <path
+                                                key={i}
+                                                d={`M ${stroke.map(p => `${p.x} ${p.y}`).join(' L ')}`}
+                                                stroke="var(--acc)"
+                                                strokeWidth="10"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                fill="none"
+                                            />
+                                        ))
+                                    }
                                 </svg>
                                 <div className="showcase-syl-label">{phonemeToChar[comp] || comp}</div>
                             </div>

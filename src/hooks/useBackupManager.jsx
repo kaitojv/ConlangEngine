@@ -35,7 +35,7 @@ const HEALTH_POLL_MS = 30000;
 
 // Build the full BackupPayload from the live stores.
 function buildPayload() {
-    const config = sanitizeConfig(useConfigStore.getState());
+    const config = sanitizeConfig(useConfigStore.getState(), true);
     const project = { localProjects: useProjectStore.getState().localProjects || [] };
     const lexicon = { lexicon: useLexiconStore.getState().lexicon || [] };
     return { config, project, lexicon };

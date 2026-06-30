@@ -106,7 +106,7 @@ export default function ExplorePage() {
 
         updateConfig({ isPublic: newIsPublic });
         
-        const configData = sanitizeConfig({ ...currentStore, isPublic: newIsPublic });
+        const configData = sanitizeConfig({ ...currentStore, isPublic: newIsPublic }, true);
         const payload = {
             dictionary: useLexiconStore.getState().lexicon || [],
             config: configData,

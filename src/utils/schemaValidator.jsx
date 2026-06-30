@@ -44,7 +44,7 @@ const VALID_CONFIG_KEYS = new Set([
  * Strips unknown keys from a config object, keeping only those
  * present in INITIAL_CONFIG. Also does basic type sanitization.
  */
-export function sanitizeConfig(rawConfig) {
+export function sanitizeConfig(rawConfig, isSave = false) {
     if (!rawConfig || typeof rawConfig !== 'object') return {};
 
     const clean = {};
@@ -66,7 +66,7 @@ export function sanitizeConfig(rawConfig) {
     // Deduplicate legacy root bloat fields to prevent doubled JSON file size
     // when scriptDataById is present (as of PR 7). rehydrateBloat handles
     // reconstructing these into the root during startup.
-    if (clean.scriptDataById && Object.keys(clean.scriptDataById).length > 0) {
+    if (isSave && clean.scriptDataById && Object.keys(clean.scriptDataById).length > 0) {
         delete clean.customGlyphs;
         delete clean.alphabetGlyphs;
         delete clean.syllabaryMap;
