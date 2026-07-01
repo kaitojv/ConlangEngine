@@ -1863,7 +1863,7 @@ function LegacyWikiEditor({ content, onSave }) {
         ],
         content: content || '',
         onBlur: ({ editor }) => {
-            if (onSaveRef.current) {
+            if (editor && !editor.isDestroyed && onSaveRef.current) {
                 onSaveRef.current(editor.getHTML());
             }
         }
@@ -1871,7 +1871,7 @@ function LegacyWikiEditor({ content, onSave }) {
 
     // Update content when prop changes from outside (e.g. changing notebook)
     useEffect(() => {
-        if (editor && content !== editor.getHTML()) {
+        if (editor && !editor.isDestroyed && content !== editor.getHTML()) {
             editor.commands.setContent(content || '');
         }
     }, [content, editor]);
@@ -1879,12 +1879,12 @@ function LegacyWikiEditor({ content, onSave }) {
     // Cleanup on unmount (save state as a safety net)
     useEffect(() => {
         const handleBeforeUnload = () => {
-            if (editor && onSaveRef.current) onSaveRef.current(editor.getHTML());
+            if (editor && !editor.isDestroyed && onSaveRef.current) onSaveRef.current(editor.getHTML());
         };
         window.addEventListener('beforeunload', handleBeforeUnload);
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
-            if (editor && onSaveRef.current) onSaveRef.current(editor.getHTML());
+            if (editor && !editor.isDestroyed && onSaveRef.current) onSaveRef.current(editor.getHTML());
         };
     }, [editor]);
 
