@@ -25,6 +25,7 @@
   --bd2: rgba(255, 255, 255, 0.12); /* Border 2 */
   --bd3: rgba(255, 255, 255, 0.2); /* Border 3 */
   --ok: #10b981;
+  --warn: #f59e0b;
   --err: #ef4444;
   /*UI Metrics*/
   --rad: 16px;

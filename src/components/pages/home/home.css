@@ -129,6 +129,14 @@
     grid-column: 1 / -1;
 }
 
+.health-card {
+    grid-column: 1 / -1;
+}
+
+.health-card h3 {
+    color: var(--ok);
+}
+
 .support-card {
     cursor: default;
     background: linear-gradient(135deg, var(--s4), color-mix(in srgb, #f43f5e 5%, var(--s4)));

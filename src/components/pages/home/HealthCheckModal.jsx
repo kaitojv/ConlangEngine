@@ -93,7 +93,7 @@ export default function HealthCheckModal({ isOpen, onClose }) {
     }, [lexicon, consonants, vowels, grammarRules]);
 
     const getGrade = (s) => {
-        if (s >= 90) return { label: 'S (Excellent)', color: 'var(--success)' };
+        if (s >= 90) return { label: 'S (Excellent)', color: 'var(--ok)' };
         if (s >= 75) return { label: 'A (Great)', color: 'var(--acc)' };
         if (s >= 50) return { label: 'B (Good)', color: 'var(--warn)' };
         if (s >= 25) return { label: 'C (Developing)', color: 'var(--err)' };
@@ -118,7 +118,7 @@ export default function HealthCheckModal({ isOpen, onClose }) {
                             <span style={{ fontWeight: 'bold', color: 'var(--acc)' }}>{m.pts} / {m.max} pts</span>
                         </div>
                         <div style={{ color: 'var(--tx2)', fontSize: '0.95rem', marginBottom: '8px' }}>Current: {m.value}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: m.pts === m.max ? 'var(--success)' : m.pts === 0 ? 'var(--err)' : 'var(--warn)', fontSize: '0.9rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: m.pts === m.max ? 'var(--ok)' : m.pts === 0 ? 'var(--err)' : 'var(--warn)', fontSize: '0.9rem' }}>
                             {m.pts === m.max ? <CheckCircle size={14} /> : m.pts === 0 ? <XCircle size={14} /> : <AlertTriangle size={14} />}
                             {m.msg}
                         </div>
