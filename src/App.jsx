@@ -43,6 +43,7 @@ const ExplorePage = lazy(() => import('./components/pages/explore/ExplorePage.js
 const OnboardingWizard = lazy(() => import('./components/pages/onboarding/OnboardingWizard.jsx'));
 const PhrasesTab = lazy(() => import('./components/pages/phrases/PhrasesTab.jsx'));
 const HowToStart = lazy(() => import('./components/pages/howtostart/HowToStart.jsx'));
+const TypologyTab = lazy(() => import('./components/pages/typology/TypologyTab.jsx'));
 
 // Animation wrapper for routes
 const AnimatedPage = ({ children }) => (
@@ -78,7 +79,8 @@ export const ALLOWED_REDIRECTS = [
   '/explore',
   '/onboarding',
   '/phrases',
-  '/howtostart'
+  '/howtostart',
+  '/typology'
 ];
 
 function App(){
@@ -112,7 +114,7 @@ function App(){
   const isRehydrating = useConfigStore(state => state.isRehydrating);
   const purgeBloatedGlyphs = useConfigStore(state => state.purgeBloatedGlyphs);
   const hasCompletedOnboarding = useConfigStore(state => state.hasCompletedOnboarding);
-  
+
   React.useEffect(() => {
       if (!projectId) {
           useConfigStore.getState().updateConfig({ projectId: `local_${Date.now()}` });
@@ -148,7 +150,7 @@ function App(){
                       const lexicon = useLexiconStore.getState().lexicon;
                       // Use Web Worker to prevent UI locking during heavy font generation
                       const worker = new Worker(new URL('./utils/fontWorker.js', import.meta.url), { type: 'module' });
-                      
+
                       worker.onmessage = (e) => {
                           if (e.data.success) {
                               const newData = e.data.result;
@@ -163,12 +165,12 @@ function App(){
                           }
                           worker.terminate();
                       };
-                      
+
                       worker.onerror = (err) => {
                           console.warn("Worker font compile error:", err);
                           worker.terminate();
                       };
-                      
+
                       const cleanConfig = { ...fullConfig, lexicon };
                       delete cleanConfig.customFontBase64;
                       delete cleanConfig.customFont;
@@ -199,15 +201,15 @@ function App(){
                   direction: ${writingDirection === 'rtl' ? 'rtl' : 'ltr'};
                   ${writingDirection.startsWith('vertical') ? 'text-orientation: upright;' : ''}
               }
-              input.custom-font-text, 
+              input.custom-font-text,
               textarea.custom-font-text {
                   writing-mode: horizontal-tb !important;
               }
           `}
       </style>
     )}
-      
-    
+
+
 
     {/* PUBLIC VIEWER — standalone route with no app shell */}
     {isPublicView ? (
@@ -246,7 +248,7 @@ function App(){
               <Route path="/explore" element={<AnimatedPage><ExplorePage /></AnimatedPage>} />
               <Route path="/help" element={<AnimatedPage><HelpTab /></AnimatedPage>} />
               <Route path="/onboarding" element={<AnimatedPage><OnboardingWizard /></AnimatedPage>} />
-              
+
               <Route path="/lexicon" element={<AnimatedPage><Lexicon /></AnimatedPage>} />
               <Route path="/conlangs" element={<AnimatedPage><ConlangsTab /></AnimatedPage>} />
               <Route path="/create" element={<AnimatedPage><CreateWordTab /></AnimatedPage>} />
@@ -255,6 +257,7 @@ function App(){
               <Route path="/phrases" element={<AnimatedPage><PhrasesTab /></AnimatedPage>} />
               <Route path="/howtostart" element={<AnimatedPage><HowToStart /></AnimatedPage>} />
               <Route path="/analyzer" element={<AnimatedPage><AnalyzerTab /></AnimatedPage>} />
+              <Route path="/typology" element={<AnimatedPage><TypologyTab /></AnimatedPage>} />
               <Route path="/reader" element={<AnimatedPage><GlosserTab /></AnimatedPage>} />
               <Route path="/wiki" element={<AnimatedPage><WikiTab /></AnimatedPage>} />
               <Route path="/study" element={<AnimatedPage><StudyTab /></AnimatedPage>} />
@@ -287,8 +290,8 @@ function App(){
             border: '1px solid var(--bd)'
           }
       }} />
-    </div> 
-    
+    </div>
+
       </>
     )}
     </>
