@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { 
     Home, Languages, Settings, PlusCircle, Book, 
     Sparkles, Activity, Map, BookOpen, Library, Layers,
-    Lock, HelpCircle, Sun, Moon, Link2, Compass, MessageSquare
+    Lock, HelpCircle, Sun, Moon, Link2, Compass, MessageSquare, GraduationCap
 } from 'lucide-react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
@@ -50,6 +50,7 @@ const NAV_GROUPS = [
     {
         title: 'Help',
         items: [
+            { id: '/howtostart', label: 'How to Start', Icon: GraduationCap },
             { id: '/help', label: 'Help & Info', Icon: HelpCircle },
         ]
     }
