@@ -121,15 +121,15 @@ export const useLexiconStore = create(
                 checkDuplicate: (word, translation) => {
                     const state = get();
                     const currentLexicon = state?.lexicon || [];
-                    const cleanInputWord = word.replace(/\*/g, '').toLowerCase();
-                    const cleanInputTrans = translation.toLowerCase();
+                    const cleanInputWord = (word || '').replace(/\*/g, '').toLowerCase();
+                    const cleanInputTrans = (translation || '').toLowerCase();
 
                     let isDuplicateWord = false;
                     let isDuplicateTranslation = false;
 
                     currentLexicon.forEach(entry => {
-                        const cleanDbWord = entry.word.replace(/\*/g, '').toLowerCase();
-                        const cleanDbTrans = entry.translation.toLowerCase();
+                        const cleanDbWord = (entry.word || '').replace(/\*/g, '').toLowerCase();
+                        const cleanDbTrans = (entry.translation || '').toLowerCase();
                         if (word && cleanDbWord === cleanInputWord) isDuplicateWord = true;
                         if (translation && cleanDbTrans === cleanInputTrans) isDuplicateTranslation = true;
                     });
