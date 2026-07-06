@@ -65,6 +65,9 @@ export default function MatrixModal({ wordObj }) {
         return expandWildcardDependencies(rules, grammarRules);
     }, [liveWord, grammarRules]);
 
+    const inflectionalRules = useMemo(() => applicableRules.filter(r => !r.isDerivational), [applicableRules]);
+    const derivationalRules = useMemo(() => applicableRules.filter(r => r.isDerivational), [applicableRules]);
+
     const personRules = useMemo(() => {
         const parsedPersons = getPersonRules(personsConfig);
         const liveClasses = liveWord.wordClass ? liveWord.wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
@@ -93,8 +96,8 @@ export default function MatrixModal({ wordObj }) {
         return [{ name: 'BASE', affix: '', freeForm: '', appliesTo: 'all' }, ...filtered];
     }, [personsConfig, liveWord]);
 
-    const hasNonStandaloneRules = applicableRules.some(rule => !rule.standalone); // Rules that need person/class
-    const hasStandaloneRules = applicableRules.some(rule => rule.standalone); // Rules that don't need person/class
+    const hasNonStandaloneRules = inflectionalRules.some(rule => !rule.standalone); // Rules that need person/class
+    const hasStandaloneRules = inflectionalRules.some(rule => rule.standalone); // Rules that don't need person/class
     const hasDualConjugation = personRules.some(p => p.affix && p.freeForm); // Check if any person rule has both affix and free form
 
     // Scan for existing derivations in the lexicon to prevent duplicates
@@ -291,7 +294,7 @@ export default function MatrixModal({ wordObj }) {
                             {showPersonColumn && (
                                 <th className="matrix-th">PERSON/CLASS</th>
                             )}
-                            {applicableRules.map(rule => (
+                            {inflectionalRules.map(rule => (
                                 <th key={`header_${rule.name}`} className="matrix-th">
                                     {rule.name}
                                 </th>
@@ -312,7 +315,7 @@ export default function MatrixModal({ wordObj }) {
                                     </td>
                                 )}
 
-                                {applicableRules.map(rule => {
+                                {inflectionalRules.map(rule => {
                                     if (person.name !== 'BASE' && rule.standalone) {
                                         return (
                                             <td key={`cell_empty_${person.name}_${rule.name}`} className="matrix-td-empty">
@@ -403,6 +406,105 @@ export default function MatrixModal({ wordObj }) {
                 </tbody>
                 </table>
             </div>
+
+            {derivationalRules.length > 0 && (
+                <>
+                    <h3 className="matrix-derivation-title">Derivations</h3>
+                    <div className="matrix-table-container">
+                        <table className="matrix-table">
+                            <thead>
+                                <tr className="matrix-th-row">
+                                    {derivationalRules.map(rule => (
+                                        <th key={`header_deriv_${rule.name}`} className="matrix-th">
+                                            {rule.name}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr className="matrix-tr-row">
+                                    {derivationalRules.map(rule => {
+                                        // Derivational rules only generate from the BASE form
+                                        const person = personRules.find(p => p.name === 'BASE') || { name: 'BASE', affix: '', freeForm: '' };
+                                        
+                                        const overrideKey = `${person.name}_${rule.name}`;
+                                        const manualValue = liveWord.inflectionOverrides?.[overrideKey] || '';
+
+                                        const generatedResult = generateInflection(rule, person);
+                                        const finalWordToDisplay = manualValue || generatedResult;
+
+                                        return (
+                                            <td key={`cell_deriv_${overrideKey}`} className="matrix-td">
+                                                {isEditMode ? (
+                                                    <input 
+                                                        id={`input_${overrideKey}`}
+                                                        type="text"
+                                                        className={`notranslate matrix-input custom-font-text ${manualValue ? 'overridden' : ''}`}
+                                                        placeholder={generatedResult ? transliterate(generatedResult) : 'Invalid'}
+                                                        value={manualValue}
+                                                        onChange={(e) => handleOverrideChange(overrideKey, e.target.value)}
+                                                    />
+                                                ) : (
+                                                    <div className="matrix-cell-content">
+                                                        <span className={`notranslate matrix-output custom-font-text ${manualValue ? 'overridden' : ''} ${phonologyTypes === 'featural_block' ? 'featural-block-render' : ''} ${existingDerivationsMap[rule.id] ? 'existing-derivation' : ''}`}>
+                                                            {finalWordToDisplay ? transliterate(finalWordToDisplay) : <span className="matrix-invalid">Invalid</span>}
+                                                        </span>
+                                                        {existingDerivationsMap[rule.id] && !manualValue && (
+                                                            <span className="existing-badge" title="Already in Lexicon">✓</span>
+                                                        )}
+                                                        {finalWordToDisplay && (
+                                                            <div className="matrix-cell-actions">
+                                                                {phonologyTypes !== 'alphabetic' && (
+                                                                    <button 
+                                                                        className="matrix-quick-save-btn"
+                                                                        onClick={() => exportTextAsSVG(transliterate(finalWordToDisplay), `${finalWordToDisplay}.svg`)}
+                                                                        title="Download SVG"
+                                                                    >
+                                                                        <Download size={14} />
+                                                                    </button>
+                                                                )}
+                                                                <button 
+                                                                    className="matrix-quick-save-btn"
+                                                                    onClick={() => {
+                                                                        if (existingDerivationsMap[rule.id]) {
+                                                                            return toast.error(`This derivation (${finalWordToDisplay}) is already in your Lexicon.`);
+                                                                        }
+                                                                        setDerivationToSave({ 
+                                                                            word: finalWordToDisplay, 
+                                                                            ruleName: rule.name, 
+                                                                            ruleId: rule.id,
+                                                                            personName: person.name 
+                                                                        });
+                                                                        setDerivationTranslation('');
+                                                                        
+                                                                        if (rule.targetPOS) {
+                                                                            setDerivationClass(rule.targetPOS);
+                                                                        } else {
+                                                                            const ruleClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
+                                                                            if (ruleClasses.includes('all')) {
+                                                                                setDerivationClass(liveWord.wordClass ? liveWord.wordClass.split(',')[0].trim().toLowerCase() : 'noun');
+                                                                            } else {
+                                                                                setDerivationClass(ruleClasses[0]);
+                                                                            }
+                                                                        }
+                                                                    }}
+                                                                    title="Save to Lexicon"
+                                                                >
+                                                                    +
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </>
+            )}
 
             {applicableRules.length === 0 && (
                 <div className="matrix-empty-state">

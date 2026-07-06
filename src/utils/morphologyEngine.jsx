@@ -196,7 +196,7 @@ export const getPersonRules = (personRulesStr) => {
             if (!line.includes(':')) return null;
             const parts = line.split(':');
             const pg = parts[0].trim();
-            let person = null, number = 'S', gender = null;
+            let person = null, number = 'S', gender = null, clusivity = null;
             
             if (pg.includes('1')) person = '1st';
             else if (pg.includes('2')) person = '2nd';
@@ -215,9 +215,12 @@ export const getPersonRules = (personRulesStr) => {
             else if (/neut/i.test(pg)) gender = 'Neut';
             else if (/anim/i.test(pg)) gender = 'Anim';
             else if (/inan/i.test(pg)) gender = 'Inan';
+
+            if (/incl/i.test(pg)) clusivity = 'Incl';
+            else if (/excl/i.test(pg)) clusivity = 'Excl';
             
             const fap = parts[1].trim().split('/');
-            return { id: `pr-${pg}`, person, number, gender, freeForm: fap[0]?.trim() || '', affix: fap[1]?.trim() || '', appliesTo: 'all' };
+            return { id: `pr-${pg}`, person, number, gender, clusivity, freeForm: fap[0]?.trim() || '', affix: fap[1]?.trim() || '', appliesTo: 'all' };
         }).filter(Boolean);
     }
 
@@ -226,11 +229,11 @@ export const getPersonRules = (personRulesStr) => {
     }
 
     return personRulesArray.map(rule => {
-        // If standard '1st', '2nd', '3rd', abbreviate to '1', '2', '3'. Otherwise, keep user's custom text intact.
-        const person = rule.person ? (rule.person.match(/^[123]/) ? rule.person.charAt(0).toUpperCase() : rule.person) : '';
+        const person = rule.person ? (rule.person.match(/^[1234]/) ? rule.person.charAt(0).toUpperCase() : rule.person) : '';
         const number = rule.number ? rule.number.toUpperCase() : '';
         const gender = rule.gender ? `.${rule.gender}` : '';
-        const name = `${person}${number}${gender}`;
+        const clusivity = rule.clusivity ? `.${rule.clusivity}` : '';
+        const name = `${person}${number}${gender}${clusivity}`;
 
         return {
             ...rule,

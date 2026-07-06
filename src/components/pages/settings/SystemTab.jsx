@@ -30,6 +30,7 @@ export default function SystemTab() {
     const customFont = useConfigStore((state) => state.customFont);
     const customGlyphs = useConfigStore((state) => state.customGlyphs) || {};
     const autoReturnToLexicon = useConfigStore((state) => state.autoReturnToLexicon);
+    const suppressDuplicateWarnings = useConfigStore((state) => state.suppressDuplicateWarnings);
     const isPublic = useConfigStore((state) => state.isPublic) || false;
     const conlangIcon = useConfigStore((state) => state.conlangIcon) || 'Globe';
     const floatingBackground = useConfigStore((state) => state.floatingBackground) || { enabled: true, global: false, type: 'greetings' };
@@ -765,6 +766,20 @@ export default function SystemTab() {
                     </label>
                     <p style={{ color: 'var(--tx2)', fontSize: '0.9rem', marginLeft: '26px' }}>
                         If enabled, the app will automatically navigate back to the dictionary view after you successfully save a new root in the Create Word tab.
+                    </p>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '1rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600 }}>
+                        <input 
+                            type="checkbox" 
+                            style={{ width: '18px', height: '18px', accentColor: 'var(--acc)', cursor: 'pointer' }}
+                            checked={!!suppressDuplicateWarnings}
+                            onChange={(e) => updateConfig({ suppressDuplicateWarnings: e.target.checked })}
+                        />
+                        Suppress duplicate word/translation warnings during creation
+                    </label>
+                    <p style={{ color: 'var(--tx2)', fontSize: '0.9rem', marginLeft: '26px' }}>
+                        If enabled, the app will skip the blocking toast warning when creating duplicate words or translations (homophones/synonyms).
                     </p>
                 </div>
             </Card>

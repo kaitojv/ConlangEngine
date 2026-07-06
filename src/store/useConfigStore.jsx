@@ -97,6 +97,7 @@ export const INITIAL_CONFIG = {
     autoReturnToLexicon: false,
     // Per-pattern weight for the word generator (e.g. { 'CV': 60, 'CVC': 30, 'V': 10 })
     syllablePatternWeights: {},
+    suppressDuplicateWarnings: false,
     alphabetNames: {},
     numberSystem: {
         zero: '',

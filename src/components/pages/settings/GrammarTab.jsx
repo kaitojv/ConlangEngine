@@ -36,6 +36,7 @@ export default function GrammarTab(){
                     • <b>Applies To (Constraint):</b> Filters which words are allowed to use this rule (e.g., "This rule only applies to <b>Nouns</b>").<br />
                     • <b>Target POS (Transformation):</b> Defines what the word becomes after the rule is applied (e.g., "This rule turns a Verb into a <b>Noun</b>").<br />
                     • <b>Rule Scoping:</b> Use Person Categories or Root Tags to restrict rules to specific dictionary words.<br />
+                    • <b>Repair Rules & Sandhi:</b> Use Rules with an empty <b>"add"</b> field to perform pure Regex replacements on the root. Ideal for fixing illegal consonant clusters or enforcing sandhi (e.g., <code>n(?=[pb]) =&gt; m</code>).<br />
                     • <b>Genealogy:</b> Use "Target POS" in grammar rules to automatically categorize derived words (e.g., Noun to Adjective).
                 </Infobox>
                 

@@ -30,15 +30,41 @@ const validateSyllabic = (word, syllabaryMap) => {
     return { valid: true };
 };
 
+const extractIpaMappingAliases = (ipaMappingRules, cList, vList, oList) => {
+    if (!ipaMappingRules) return { extraChars: [], aliasTypeMap: {} };
+    const extraChars = [];
+    const aliasTypeMap = {}; // alias → 'C' | 'V' | 'X'
+    
+    ipaMappingRules.split(',').forEach(rule => {
+        const parts = rule.split('=').map(s => s.trim().toLowerCase());
+        if (parts.length !== 2 || !parts[0] || !parts[1]) return;
+        const alias = parts[0];  // shorthand (e.g. "c")
+        const target = parts[1]; // IPA target (e.g. "ç")
+        
+        // Only add if the alias isn't already in the inventory
+        if (!cList.includes(alias) && !vList.includes(alias) && !oList.includes(alias)) {
+            extraChars.push(alias);
+            // Determine its CV type based on what it maps to
+            if (cList.includes(target)) aliasTypeMap[alias] = 'C';
+            else if (vList.includes(target)) aliasTypeMap[alias] = 'V';
+            else aliasTypeMap[alias] = 'X';
+        }
+    });
+    
+    return { extraChars, aliasTypeMap };
+};
+
 /**
  * Validates inventory and CV structure for Alphabetic languages.
  */
-const validateAlphabetic = (word, consonants, vowels, syllablePattern, otherPhonemes, otherPhonemeMapping, skipSyllableValidation) => {
+const validateAlphabetic = (word, consonants, vowels, syllablePattern, otherPhonemes, otherPhonemeMapping, skipSyllableValidation, ipaMappingRules) => {
     const cList = extractInventory(consonants);
     const vList = extractInventory(vowels);
     const oList = extractInventory(otherPhonemes);
 
     if (cList.length === 0 && vList.length === 0 && oList.length === 0) return { valid: true }; // No rules set yet
+    
+    const { extraChars, aliasTypeMap } = extractIpaMappingAliases(ipaMappingRules, cList, vList, oList);
 
     // 1. CHARACTER INVENTORY VALIDATION
     // Remove allowed universal characters (spaces, hyphens, apostrophes)
@@ -46,7 +72,7 @@ const validateAlphabetic = (word, consonants, vowels, syllablePattern, otherPhon
     let tempWord = checkWord;
 
     // Remove valid vowels, consonants, and others to see if any alien characters remain
-    const inventoryList = [...vList, ...cList, ...oList].sort((a, b) => b.length - a.length);
+    const inventoryList = [...vList, ...cList, ...oList, ...extraChars].sort((a, b) => b.length - a.length);
     const invPattern = inventoryList.map(i => i.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
     if (invPattern) {
         tempWord = tempWord.replace(new RegExp(invPattern, 'gi'), '');
@@ -74,7 +100,8 @@ const validateAlphabetic = (word, consonants, vowels, syllablePattern, otherPhon
     const allTokens = [
         ...vList.map(v => ({ text: v, type: 'V' })),
         ...cList.map(c => ({ text: c, type: 'C' })),
-        ...oList.map(o => ({ text: o, type: mappingChar }))
+        ...oList.map(o => ({ text: o, type: mappingChar })),
+        ...extraChars.map(e => ({ text: e, type: aliasTypeMap[e] }))
     ].sort((a, b) => b.text.length - a.text.length);
 
     const pattern = allTokens
@@ -287,7 +314,8 @@ export function validateNewWord(word, configStoreData, wordClass = '', tags = []
         syllabaryMap,
         otherPhonemes,
         otherPhonemeMapping,
-        skipSyllableValidation
+        skipSyllableValidation,
+        ipaMappingRules
     } = configStoreData;
 
     // Logographic languages bypass phonetic structure validation for the ideogram itself,
@@ -304,7 +332,8 @@ export function validateNewWord(word, configStoreData, wordClass = '', tags = []
         syllablePattern,
         otherPhonemes,
         otherPhonemeMapping,
-        skipSyllableValidation
+        skipSyllableValidation,
+        ipaMappingRules
     );
 
     if (!result.valid) return result;

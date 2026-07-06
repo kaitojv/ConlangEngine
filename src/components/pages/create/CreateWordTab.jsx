@@ -71,6 +71,7 @@ export default function CreateWordTab() {
         addCustomWordClass: state.addCustomWordClass,
         addCustomTag: state.addCustomTag,
         autoReturnToLexicon: state.autoReturnToLexicon,
+        suppressDuplicateWarnings: state.suppressDuplicateWarnings,
         vowelHarmonyMode: state.vowelHarmonyMode || 'complete',
         vowelHarmonySets: state.vowelHarmonySets || [],
         vowelHarmonyOverrideWordClasses: state.vowelHarmonyOverrideWordClasses || [],
@@ -95,9 +96,10 @@ export default function CreateWordTab() {
         tone: '',
         stress: '',
         scriptOverride: null,
+        personCategory: '',
     });
 
-    const { word, ipa, wordClass, translation, definition, tags, relatedWords, ideogram, tone, stress, scriptOverride } = formData;
+    const { word, ipa, wordClass, translation, definition, tags, relatedWords, ideogram, tone, stress, scriptOverride, personCategory } = formData;
     const [isFontStudioOpen, setIsFontStudioOpen] = useState(false);
     const [selectedDerivs, setSelectedDerivs] = useState({});
     const [customTranslations, setCustomTranslations] = useState({});
@@ -349,6 +351,7 @@ export default function CreateWordTab() {
             tone: tone.trim(),
             stress: stress.trim(),
             scriptOverride: scriptOverride,
+            personCategory: personCategory.trim(),
         });
 
         // 2. Save any selected derivations
@@ -479,6 +482,10 @@ export default function CreateWordTab() {
 
         // 1. DUPLICATE CHECK (Warnings, not blocks)
         if (isDuplicate) {
+            if (useConfigStore.getState().suppressDuplicateWarnings) {
+                return proceedToHarmonyValidation(safeWord, cleanTrans, processedTags, 0, keepRoot);
+            }
+
             let warningMsg = "";
             if (isDuplicateWord && isDuplicateTranslation) {
                 warningMsg = "This exact word and translation already exist in your lexicon.";
@@ -707,7 +714,7 @@ export default function CreateWordTab() {
 
         const currentClasses = wordClass ? wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
 
-        grammarRules.forEach(rule => {
+        grammarRules.filter(r => r.isDerivational).forEach(rule => {
             const ruleClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
 
             if (ruleClasses.includes('all') || currentClasses.some(cc => ruleClasses.includes(cc))) {
@@ -721,7 +728,7 @@ export default function CreateWordTab() {
                     results.push({
                         derivedWord: result,
                         ruleName: rule.name,
-                        translationText: `${translation} (${rule.name.toLowerCase()})`
+                        translationText: `${translation} (${(rule.name || 'Unnamed Rule').toLowerCase()})`
                     });
                 }
             }
@@ -987,6 +994,24 @@ export default function CreateWordTab() {
                         />
                     </div>
                 </div>
+
+                {wordClass.includes('pronoun') && (
+                    <div style={{ marginTop: '1rem' }}>
+                        <Input
+                            label="Person Category"
+                            value={personCategory}
+                            onChange={(e) => updateField('personCategory', e.target.value)}
+                            list="create-person-cat-options"
+                            placeholder="e.g. 1st, 2nd, 3rd"
+                        />
+                        <datalist id="create-person-cat-options">
+                            <option value="1st" />
+                            <option value="2nd" />
+                            <option value="3rd" />
+                            <option value="4th" />
+                        </datalist>
+                    </div>
+                )}
 
                 {isDuplicate && (
                     <div className="warning-box">

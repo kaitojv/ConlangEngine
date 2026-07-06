@@ -475,6 +475,10 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
         }, { isDuplicateWord: false, isDuplicateTranslation: false });
 
         if (isDuplicateWord || isDuplicateTranslation) {
+            if (useConfigStore.getState().suppressDuplicateWarnings) {
+                return proceedToHarmonyValidation(safeWord, cleanInputTrans, processedTags, () => saveFn(safeWord, cleanInputTrans, processedTags));
+            }
+
             let warningMsg = "";
             if (isDuplicateWord && isDuplicateTranslation) {
                 warningMsg = "This exact word and translation already exist in another lexicon entry.";

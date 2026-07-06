@@ -145,6 +145,11 @@ export const RuleRow = ({ rule, onUpdate, onDelete, allWordClasses }) => {
               <input className="check-rule" type="checkbox" name="applyToPersons" checked={!!rule.applyToPersons} onChange={handleChange} />
               <span>Apply to Persons</span>
             </label>
+            <div className="divider"></div>
+            <label className="cb-wrap nl-cb" title="Mark this rule as a derivational rule">
+              <input className="check-rule" type="checkbox" name="isDerivational" checked={!!rule.isDerivational} onChange={handleChange} />
+              <span>Derivational</span>
+            </label>
           </div>
         </div>
       </div>

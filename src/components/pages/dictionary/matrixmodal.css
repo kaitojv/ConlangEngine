@@ -49,6 +49,14 @@
     width: 100%;
 }
 
+.matrix-derivation-title {
+    margin-top: 2rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--acc);
+}
+
 .matrix-table {
     width: 100%;
     border-collapse: collapse;
