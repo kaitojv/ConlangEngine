@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Modal from '@/components/UI/Modal/Modal.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
-import { Activity, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { Activity, CheckCircle, AlertTriangle, XCircle, FlaskConical } from 'lucide-react';
 
 const SWADESH_100 = [
     "I", "you", "we", "this", "that", "who", "what", "not", "all", "many",
@@ -19,6 +20,7 @@ const SWADESH_100 = [
 ];
 
 export default function HealthCheckModal({ isOpen, onClose }) {
+    const navigate = useNavigate();
     const lexicon = useLexiconStore(state => state.lexicon || []);
     const consonants = useConfigStore(state => state.consonants || []);
     const vowels = useConfigStore(state => state.vowels || []);
@@ -126,7 +128,11 @@ export default function HealthCheckModal({ isOpen, onClose }) {
                 ))}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '20px', flexWrap: 'wrap' }}>
+                <Button variant="save" onClick={() => { onClose(); navigate('/typology'); }}>
+                    <FlaskConical size={16} style={{ marginBottom: '-3px', marginRight: '6px' }} />
+                    Naturalness Report
+                </Button>
                 <Button variant="imp" onClick={onClose}>Close Report</Button>
             </div>
         </Modal>

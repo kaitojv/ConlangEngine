@@ -1,0 +1,334 @@
+/* Naturalness & Typology report page */
+
+.typ-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.typ-header-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 6px 0;
+    color: var(--tx);
+}
+
+.typ-description {
+    color: var(--tx2);
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* ── Score hero ─────────────────────────────────────────────── */
+.typ-hero {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    padding: 24px;
+    flex-wrap: wrap;
+}
+
+.typ-ring-wrap {
+    position: relative;
+    width: 128px;
+    height: 128px;
+    flex-shrink: 0;
+}
+
+.typ-ring {
+    width: 128px;
+    height: 128px;
+    transform: rotate(-90deg);
+}
+
+.typ-ring-track {
+    fill: none;
+    stroke: var(--s3);
+    stroke-width: 10;
+}
+
+.typ-ring-value {
+    fill: none;
+    stroke-width: 10;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.typ-ring-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.typ-ring-score {
+    font-size: 2.4rem;
+    font-weight: 800;
+}
+
+.typ-ring-max {
+    font-size: 0.8rem;
+    color: var(--tx2);
+    margin-top: 4px;
+}
+
+.typ-hero-body {
+    flex: 1;
+    min-width: 220px;
+}
+
+.typ-grade {
+    font-size: 1.6rem;
+    font-weight: 800;
+    display: block;
+}
+
+.typ-blurb {
+    color: var(--tx2);
+    margin: 6px 0 14px 0;
+}
+
+.typ-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.typ-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--tx2);
+    background: var(--s1);
+    border: 1px solid var(--bd);
+    border-radius: 999px;
+    padding: 4px 12px;
+}
+
+.typ-chip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+/* ── Inventory snapshot ─────────────────────────────────────── */
+.typ-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.typ-stat {
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+}
+
+.typ-stat-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--acc);
+}
+
+.typ-stat-value.typ-stat-text {
+    font-size: 1.15rem;
+    text-transform: capitalize;
+    padding-top: 8px;
+}
+
+.typ-stat-label {
+    font-size: 0.82rem;
+    color: var(--tx2);
+    font-weight: 600;
+}
+
+.typ-stat-label em {
+    color: var(--tx3);
+    font-style: normal;
+}
+
+/* ── Toolbar ────────────────────────────────────────────────── */
+.typ-toolbar {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.typ-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: var(--tx2);
+    cursor: pointer;
+    user-select: none;
+}
+
+.typ-toggle input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--acc);
+    cursor: pointer;
+}
+
+/* ── Observation groups ─────────────────────────────────────── */
+.typ-group {
+    padding: 20px;
+}
+
+.typ-group-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 16px 0;
+    color: var(--tx);
+    font-size: 1.15rem;
+}
+
+.typ-group-count {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--tx2);
+    background: var(--s1);
+    border: 1px solid var(--bd);
+    border-radius: 999px;
+    padding: 2px 9px;
+}
+
+.typ-obs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.typ-obs {
+    display: flex;
+    gap: 12px;
+    background: var(--s1);
+    border: 1px solid var(--bd);
+    border-left: 3px solid var(--obs-color);
+    border-radius: var(--rad-sm);
+    padding: 14px 16px;
+}
+
+.typ-obs-icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.typ-obs-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.typ-obs-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.typ-obs-title {
+    font-weight: 700;
+    color: var(--tx);
+}
+
+.typ-obs-tag {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+}
+
+.typ-obs-detail {
+    color: var(--tx2);
+    font-size: 0.92rem;
+    line-height: 1.55;
+    margin: 6px 0 0 0;
+}
+
+.typ-obs-universal {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: var(--s3);
+    border-radius: var(--rad-sm);
+    color: var(--tx3);
+    font-size: 0.82rem;
+    font-style: italic;
+    line-height: 1.5;
+}
+
+.typ-obs-universal svg {
+    flex-shrink: 0;
+    margin-top: 3px;
+    opacity: 0.7;
+}
+
+/* ── Empty state ────────────────────────────────────────────── */
+.typ-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    text-align: center;
+    padding: 40px 24px;
+    color: var(--tx2);
+}
+
+/* ── Footnote ───────────────────────────────────────────────── */
+.typ-footnote {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    color: var(--tx3);
+    font-size: 0.82rem;
+    line-height: 1.6;
+    margin: 4px 0 20px 0;
+    padding-top: 16px;
+    border-top: 1px solid var(--bd);
+}
+
+.typ-footnote svg {
+    flex-shrink: 0;
+}
+
+.typ-footnote-arrow {
+    opacity: 0.5;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 640px) {
+    .typ-stat-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .typ-hero {
+        justify-content: center;
+        text-align: center;
+    }
+
+    .typ-hero-body {
+        text-align: center;
+    }
+
+    .typ-chips {
+        justify-content: center;
+    }
+}

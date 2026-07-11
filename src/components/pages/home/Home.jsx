@@ -4,7 +4,7 @@ import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 
-import { Sunrise, Sun, Moon, Sparkles, Settings2, BookA, PlusCircle, BrainCircuit, Flame, ArrowRight, Bookmark, Library, HelpCircle, Heart, Coffee, Globe, Activity } from 'lucide-react';
+import { Sunrise, Sun, Moon, Sparkles, Settings2, BookA, PlusCircle, BrainCircuit, Flame, ArrowRight, Bookmark, Library, HelpCircle, Heart, Coffee, Globe, Activity, FlaskConical } from 'lucide-react';
 import Card from '@/components/UI/Card/Card.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
 import HealthCheckModal from './HealthCheckModal.jsx';
@@ -351,6 +351,20 @@ export default function Home() {
                     <p>Evaluate your conlang's completeness, phonology, and core vocabulary.</p>
                     <div className="widget-footer">
                         Run Diagnostics <ArrowRight size={16} />
+                    </div>
+                </Card>
+
+                {/* Naturalness & Typology */}
+                <Card
+                    className="interactive-card health-card"
+                    onClick={() => navigate('/typology')}
+                >
+                    <h3>
+                        <FlaskConical size={24} /> Naturalness
+                    </h3>
+                    <p>Score your conlang against real-world linguistic tendencies and spot unusual combinations.</p>
+                    <div className="widget-footer">
+                        View Report <ArrowRight size={16} />
                     </div>
                 </Card>
 
