@@ -26,6 +26,7 @@ export default function PublicViewer() {
     const [activeLevel, setActiveLevel] = useState(null);
     const [savedScroll, setSavedScroll] = useState(0);
     const [playingWordId, setPlayingWordId] = useState(null);
+    const [collapsedFolders, setCollapsedFolders] = useState({});
 
     const handlePlayIpa = useCallback(async (entry) => {
         if (playingWordId) return; // prevent overlapping
@@ -522,10 +523,25 @@ export default function PublicViewer() {
                                                 if (children.length === 0) return null;
                                                 return (
                                                     <div key={itemId} className="pv-wiki-notebook" style={{ marginBottom: '1rem' }}>
-                                                        <h3 style={{ color: 'var(--tx)', borderBottom: '1px solid var(--bd)', paddingBottom: '0.5rem', marginBottom: '1.5rem', marginTop: '1rem' }}>
+                                                        <h3 
+                                                            onClick={() => setCollapsedFolders(prev => ({...prev, [itemId]: !prev[itemId]}))}
+                                                            style={{ 
+                                                                color: 'var(--tx)', 
+                                                                borderBottom: '1px solid var(--bd)', 
+                                                                paddingBottom: '0.5rem', 
+                                                                marginBottom: collapsedFolders[itemId] ? '0' : '1.5rem', 
+                                                                marginTop: '1rem',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                justifyContent: 'space-between',
+                                                                alignItems: 'center',
+                                                                userSelect: 'none'
+                                                            }}
+                                                        >
                                                             {p.title}
+                                                            <ChevronDown size={18} style={{ transform: collapsedFolders[itemId] ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: 'var(--tx2)' }} />
                                                         </h3>
-                                                        {children.map(childId => {
+                                                        {!collapsedFolders[itemId] && children.map(childId => {
                                                             const pageData = wikiPages[childId];
                                                             const title = pageData.title;
                                                             const content = pageData.content;

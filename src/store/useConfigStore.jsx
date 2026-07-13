@@ -737,12 +737,14 @@ export const useConfigStore = create(
                 const targetPage = pages[pageId];
                 if (!targetPage) return {};
                 
-                const parentId = typeof targetPage === 'object' ? targetPage.parentId : null;
+                let parentId = typeof targetPage === 'object' ? targetPage.parentId : null;
+                if (parentId === 'root' || parentId === undefined) parentId = null;
                 
                 const siblings = Object.keys(pages)
                     .filter(k => {
                         const p = pages[k];
-                        const pId = typeof p === 'object' ? p.parentId : null;
+                        let pId = typeof p === 'object' ? p.parentId : null;
+                        if (pId === 'root' || pId === undefined) pId = null;
                         return pId === parentId;
                     })
                     .sort((a, b) => {

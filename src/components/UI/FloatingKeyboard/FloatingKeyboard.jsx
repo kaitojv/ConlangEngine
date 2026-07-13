@@ -7,6 +7,8 @@ import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
 import toast from 'react-hot-toast';
 import IpaChart from '../IpaChart/Ipachart.jsx';
+import { useTransliterator } from '@/hooks/useTransliterator.jsx';
+import { renderWordInScript } from '@/utils/scriptRendering.js';
 import './floatingKeyboard.css';
 
 const Keyboard = SimpleKeyboard.default || SimpleKeyboard;
@@ -30,8 +32,12 @@ export default function FloatingKeyboard() {
     const consonants = useConfigStore(state => state.consonants) || "";
     const vowelHarmonyMode = useConfigStore(state => state.vowelHarmonyMode) || 'complete';
     const vowelHarmonySets = useConfigStore(state => state.vowelHarmonySets) || [];
+    const config = useConfigStore(state => state);
     const lexicon = useLexiconStore(state => state.lexicon) || [];
     const setLexicon = useLexiconStore(state => state.setLexicon);
+
+    const { transliterate } = useTransliterator(config);
+    const isLogographic = ['logographic', 'syllabic', 'featural_block'].includes(config.phonologyTypes);
 
     // Standard IPA character grid
     // Standard IPA character grid is now handled by the IpaChart component
@@ -301,11 +307,19 @@ export default function FloatingKeyboard() {
                     <div style={{ padding: '15px' }}>
                         <input autoFocus type="text" placeholder="Search word or translation..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={panelInputStyle} />
                         <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
-                            {lexicon.filter(w => w.word.toLowerCase().includes(searchQuery.toLowerCase()) || w.translation.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 15).map(w => (
-                                <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--bd)' }}>
-                                    <strong>{w.word}</strong> <span style={{ opacity: 0.7, fontSize: '0.9em' }}>{w.translation}</span>
-                                </div>
-                            ))}
+                            {lexicon.filter(w => w.word.toLowerCase().includes(searchQuery.toLowerCase()) || w.translation.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 15).map(w => {
+                                let displayedText = w.word;
+                                if (w.scriptOverride) {
+                                    displayedText = renderWordInScript(w, config, lexicon).text;
+                                } else {
+                                    displayedText = config.phonologyTypes === 'logographic' && w.ideogram ? w.ideogram : transliterate(w.word, lexicon);
+                                }
+                                return (
+                                    <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--bd)' }}>
+                                        <strong className="custom-font-text notranslate">{displayedText}</strong> <span style={{ opacity: 0.7, fontSize: '0.9em' }}>{w.translation}</span>
+                                    </div>
+                                );
+                            })}
                             {lexicon.length === 0 && <p style={{ opacity: 0.5, textAlign: 'center', fontSize: '0.9em' }}>No words in lexicon.</p>}
                         </div>
                     </div>

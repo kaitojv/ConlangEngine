@@ -26,6 +26,9 @@
     visibility: hidden;
     transform: translateY(20px) scale(0.8);
     z-index: 1;
+    position: absolute;
+    right: 75px;
+    bottom: 4px;
 }
 
 .back-to-top-btn.visible {

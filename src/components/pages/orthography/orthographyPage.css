@@ -72,7 +72,7 @@
 /* ─── Syllabary / Block Showcase ─── */
 .showcase-syllabary-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    grid-template-columns: var(--grid-cols, repeat(auto-fill, minmax(90px, 1fr)));
     gap: 1rem;
     margin-top: 1.5rem;
 }
@@ -114,7 +114,7 @@
 /* ─── Block Base Grid ─── */
 .showcase-block-base-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    grid-template-columns: var(--grid-cols, repeat(auto-fill, minmax(110px, 1fr)));
     gap: 1rem;
     margin-top: 0.5rem;
 }
@@ -149,7 +149,7 @@
 /* ─── Alphabet & Logographic Grids ─── */
 .alphabet-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    grid-template-columns: var(--grid-cols, repeat(auto-fill, minmax(130px, 1fr)));
     gap: 1rem;
     margin-top: 1.5rem;
 }
@@ -224,9 +224,9 @@
 
 
 .digits-grid-wide {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+    display: grid;
+    grid-template-columns: var(--grid-cols, 1fr);
+    gap: 0.5rem 1rem;
     max-height: 500px;
     overflow-y: auto;
     padding-right: 0.5rem;

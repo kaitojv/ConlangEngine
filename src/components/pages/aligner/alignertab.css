@@ -117,13 +117,19 @@
     transform: scale(1.2);
 }
 
+.aligner-workspace-scroll {
+    overflow-x: auto;
+    padding-bottom: 15px; /* Space for scrollbar */
+}
+
 .aligner-workspace {
     position: relative;
-    padding: 40px 0;
+    padding: 40px 20px;
     min-height: 350px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    min-width: max-content; /* Allows it to stretch inside the scroll container */
 }
 
 .svg-overlay {
@@ -142,7 +148,7 @@
 
 .word-row {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap; /* No wrapping, forces horizontal layout */
     justify-content: center;
     gap: 15px;
     z-index: 20;

@@ -257,8 +257,6 @@ const NumberDerivationView = ({ generateNumberName, numeralBase }) => {
     );
 };
 
-
-
 const NumbersTab = () => {
     const numeralBase = useConfigStore(state => state.numeralBase) || 10;
     const numberSystem = useConfigStore(state => state.numberSystem) || {
@@ -281,6 +279,7 @@ const NumbersTab = () => {
     const { transliterate } = useTransliterator();
     const [testNumber, setTestNumber] = useState('');
     const [matrixMode, setMatrixMode] = useState(false);
+    const [listCols, setListCols] = useState(1);
     
     const newIrrValRef = useRef(null);
     const newIrrNameRef = useRef(null);
@@ -458,16 +457,31 @@ const NumbersTab = () => {
             <div className="numbers-layout">
                 <div className="numbers-main">
                     <Card>
-                        <h2 className="flex sg-title items-center gap-2">
-                            <Settings size={20} />
-                            Base Digits (1-{numeralBase - 1})
-                        </h2>
-                        <div className="digits-grid-wide">
-                            <div className="digit-entry-header">
-                                <span>Num</span>
-                                <span>Full Name</span>
-                                <span>Stem (for fusion)</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+                            <h2 className="flex sg-title items-center gap-2" style={{ margin: 0 }}>
+                                <Settings size={20} />
+                                Base Digits (1-{numeralBase - 1})
+                            </h2>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--tx2)', fontWeight: 600 }}>Columns</span>
+                                <input 
+                                    type="range" 
+                                    min="1" max="4" 
+                                    value={listCols} 
+                                    onChange={(e) => setListCols(parseInt(e.target.value))}
+                                    style={{ width: '80px', accentColor: 'var(--acc)' }}
+                                />
+                                <span style={{ fontSize: '0.85rem', color: 'var(--tx)', width: '12px', textAlign: 'center', fontWeight: 600 }}>{listCols}</span>
                             </div>
+                        </div>
+                        <div className="digits-grid-wide" style={{ '--grid-cols': `repeat(${listCols}, 1fr)` }}>
+                            {Array.from({ length: listCols }).map((_, i) => (
+                                <div key={`header-${i}`} className="digit-entry-header">
+                                    <span>Num</span>
+                                    <span>Full Name</span>
+                                    <span>Stem (for fusion)</span>
+                                </div>
+                            ))}
                             <div className="digit-row-entry">
                                 <span className="digit-label">0</span>
                                 <input 
@@ -689,7 +703,7 @@ const NumbersTab = () => {
     );
 };
 
-const AlphabeticShowcase = ({ scriptId, onGlyphClick } = {}) => {
+const AlphabeticShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
     const consonants = useConfigStore(state => state.consonants) || '';
     const vowels = useConfigStore(state => state.vowels) || '';
     const otherPhonemes = useConfigStore(state => state.otherPhonemes) || '';
@@ -725,7 +739,7 @@ const AlphabeticShowcase = ({ scriptId, onGlyphClick } = {}) => {
                 This is the complete register of your language's alphabet. You can manage the names and draw the custom glyphs for these characters in the <b>System &rarr; Phonology</b> tab.
             </Infobox>
 
-            <div className="alphabet-grid">
+            <div className="alphabet-grid" style={registerCols > 0 ? { '--grid-cols': `repeat(${registerCols}, 1fr)` } : {}}>
                 {allChars.length > 0 ? (
                     allChars.map((char) => {
                         const charName = alphabetNames[char] || 'unnamed';
@@ -767,7 +781,7 @@ const AlphabeticShowcase = ({ scriptId, onGlyphClick } = {}) => {
 
 // ─── SYLLABARY SHOWCASE ───────────────────────────────────────────────────────
 
-const SyllabaryShowcase = ({ scriptId, onGlyphClick } = {}) => {
+const SyllabaryShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
     const { syllabaryMap, customGlyphs } = useScriptScopedData(scriptId);
     const consonants   = useConfigStore(state => state.consonants) || '';
     const vowels       = useConfigStore(state => state.vowels) || '';
@@ -848,7 +862,7 @@ const SyllabaryShowcase = ({ scriptId, onGlyphClick } = {}) => {
                     <p>No syllables mapped yet. Add them in Phonology Settings.</p>
                 </div>
             ) : (
-                <div className="showcase-syllabary-grid">
+                <div className="showcase-syllabary-grid" style={registerCols > 0 ? { '--grid-cols': `repeat(${registerCols}, 1fr)` } : {}}>
                     {allEntries.map(({ key, displayLabel, symbol }) => (
                         <div 
                             key={key} 
@@ -867,12 +881,29 @@ const SyllabaryShowcase = ({ scriptId, onGlyphClick } = {}) => {
 
 // ─── LOGOGRAPHIC SHOWCASE ─────────────────────────────────────────────────────
 
-const LogographicShowcase = ({ scriptId, onGlyphClick } = {}) => {
+const LogographicShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
     const lexicon = useLexiconStore(state => state.lexicon) || [];
     const { customGlyphs } = useScriptScopedData(scriptId);
 
     const logographicWords = useMemo(() => {
-        return lexicon.filter(w => w.ideogram && w.ideogram.trim() !== '');
+        const charMap = new Map();
+        for (const w of lexicon) {
+            if (w.ideogram && w.ideogram.trim() !== '') {
+                const chars = Array.from(w.ideogram.trim());
+                for (const char of chars) {
+                    if (char.trim() === '') continue;
+                    if (!charMap.has(char)) {
+                        charMap.set(char, {
+                            id: `${w.id}-${char}`,
+                            ideogram: char,
+                            word: w.word,
+                            translation: w.translation
+                        });
+                    }
+                }
+            }
+        }
+        return Array.from(charMap.values());
     }, [lexicon]);
 
     // Render strokes as crisp inline SVG instead of font character
@@ -920,7 +951,7 @@ const LogographicShowcase = ({ scriptId, onGlyphClick } = {}) => {
                     <p>No logographic entries found. Add ideograms to words in your Lexicon.</p>
                 </div>
             ) : (
-                <div className="alphabet-grid">
+                <div className="alphabet-grid" style={registerCols > 0 ? { '--grid-cols': `repeat(${registerCols}, 1fr)` } : {}}>
                     {logographicWords.map(word => (
                         <div 
                             key={word.id} 
@@ -944,7 +975,7 @@ const LogographicShowcase = ({ scriptId, onGlyphClick } = {}) => {
 
 // ─── HELPER COMPONENTS ───────────────────────────────────────────────────────────
 
-const BlockShowcase = ({ scriptId, onGlyphClick } = {}) => {
+const BlockShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
     const { syllabaryMap, featuralComponents, customGlyphs } = useScriptScopedData(scriptId);
     const consonants         = useConfigStore(state => state.consonants) || '';
     const vowels             = useConfigStore(state => state.vowels) || '';
@@ -1056,7 +1087,7 @@ const BlockShowcase = ({ scriptId, onGlyphClick } = {}) => {
                     <h3 style={{ marginBottom: '1rem', color: 'var(--tx2)', fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         Base Characters ({drawnComponents.length})
                     </h3>
-                    <div className="showcase-block-base-grid">
+                    <div className="showcase-block-base-grid" style={registerCols > 0 ? { '--grid-cols': `repeat(${registerCols}, 1fr)` } : {}}>
                         {drawnComponents.map(comp => (
                             <div 
                                 key={comp} 
@@ -1092,7 +1123,7 @@ const BlockShowcase = ({ scriptId, onGlyphClick } = {}) => {
                     <h3 style={{ margin: '2rem 0 1rem', color: 'var(--tx2)', fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                         Compiled Blocks ({blockEntries.length})
                     </h3>
-                    <div className="showcase-syllabary-grid">
+                    <div className="showcase-syllabary-grid" style={registerCols > 0 ? { '--grid-cols': `repeat(${registerCols}, 1fr)` } : {}}>
                         {blockEntries.map(([key, val]) => (
                             <div 
                                 key={key} 
@@ -1129,6 +1160,7 @@ export default function OrthographyPage() {
     const setActiveScriptSystem = useConfigStore(state => state.setActiveScriptSystem);
     const [activeTab, setActiveTab] = useState('script');
     const [selectedGlyphDetails, setSelectedGlyphDetails] = useState(null);
+    const [registerCols, setRegisterCols] = useState(0); // 0 = Auto
 
     const defaultScriptId = scriptRules.defaultScriptId || getDefaultScriptId({ scriptSystems, scriptRules });
     const activeScript = getScriptSystem({ scriptSystems, scriptRules, phonologyTypes }, activeScriptSystemId || defaultScriptId);
@@ -1157,12 +1189,12 @@ export default function OrthographyPage() {
 
     const renderScriptShowcase = () => {
         switch (scriptType) {
-            case 'syllabic':      return <SyllabaryShowcase scriptId={activeScriptSystemId} onGlyphClick={setSelectedGlyphDetails} />;
-            case 'logographic':   return <LogographicShowcase scriptId={activeScriptSystemId} onGlyphClick={setSelectedGlyphDetails} />;
+            case 'syllabic':      return <SyllabaryShowcase scriptId={activeScriptSystemId} onGlyphClick={setSelectedGlyphDetails} registerCols={registerCols} />;
+            case 'logographic':   return <LogographicShowcase scriptId={activeScriptSystemId} onGlyphClick={setSelectedGlyphDetails} registerCols={registerCols} />;
             case 'featural_block':
             case 'featural':
-            case 'block':         return <BlockShowcase scriptId={activeScriptSystemId} onGlyphClick={setSelectedGlyphDetails} />;
-            default:              return <AlphabeticShowcase scriptId={activeScriptSystemId} onGlyphClick={setSelectedGlyphDetails} />;
+            case 'block':         return <BlockShowcase scriptId={activeScriptSystemId} onGlyphClick={setSelectedGlyphDetails} registerCols={registerCols} />;
+            default:              return <AlphabeticShowcase scriptId={activeScriptSystemId} onGlyphClick={setSelectedGlyphDetails} registerCols={registerCols} />;
         }
     };
 
@@ -1229,7 +1261,28 @@ export default function OrthographyPage() {
                 )}
                 {activeTab === 'script'  && (
                     <div className="tab-pane-container">
-                        {renderActiveScriptDropdown()}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', background: 'var(--s2)', padding: '0.75rem 1rem', borderRadius: '1rem', border: '1px solid var(--bd)', flexWrap: 'wrap', gap: '1rem' }}>
+                            {renderActiveScriptDropdown() || <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tx)' }}>Script Register</div>}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <span style={{ fontSize: '0.85rem', color: 'var(--tx2)', fontWeight: 600, whiteSpace: 'nowrap' }}>Grid Columns</span>
+                                <select 
+                                    className="select select-bordered" 
+                                    style={{ height: '40px', minHeight: '40px' }}
+                                    value={registerCols} 
+                                    onChange={e => setRegisterCols(parseInt(e.target.value))}
+                                >
+                                    <option value={0}>Auto Layout</option>
+                                    <option value={1}>1 Column</option>
+                                    <option value={2}>2 Columns</option>
+                                    <option value={3}>3 Columns</option>
+                                    <option value={4}>4 Columns</option>
+                                    <option value={5}>5 Columns</option>
+                                    <option value={6}>6 Columns</option>
+                                    <option value={8}>8 Columns</option>
+                                    <option value={10}>10 Columns</option>
+                                </select>
+                            </div>
+                        </div>
                         {renderScriptShowcase()}
                     </div>
                 )}
