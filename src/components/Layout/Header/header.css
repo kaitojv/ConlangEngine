@@ -297,15 +297,27 @@
     .hdr {
         padding: 8px 12px;
     }
-    
+    .hdr-flex {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .hdr-left {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .hdr-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
     .app-dinamic-title {
         font-size: 1.4rem;
     }
-
     .hdr-right {
         background: transparent;
         border: none;
         padding: 0;
+        gap: 2px;
+        overflow-x: auto;
     }
     .hdr-search-btn {
         width: auto;
@@ -325,6 +337,7 @@
     }
     .hdr-left {
         gap: 8px;
+        justify-content: flex-start;
     }
     .hdr-badge {
         padding: 4px 8px;
