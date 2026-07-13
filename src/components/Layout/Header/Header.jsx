@@ -105,7 +105,9 @@ export default function Header({ openMenu, onBackupNow }) {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        
+        // BUG-FIX: Defer revoking the object URL to allow large downloads to complete
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
     };
 
     // Read a JSON backup file, validate it, and safely inject into our global stores

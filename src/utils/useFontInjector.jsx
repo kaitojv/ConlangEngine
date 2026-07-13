@@ -5,13 +5,34 @@ import { useConfigStore } from "../store/useConfigStore.jsx";
 export function useFontInjector(){
 
     const customFont = useConfigStore((state) => state.customFont);
+    const scriptDataById = useConfigStore((state) => state.scriptDataById);
     const isRehydrating = useConfigStore((state) => state.isRehydrating);
     const projectId = useConfigStore((state) => state.projectId);
     const typographySettings = useConfigStore((state) => state.typographySettings);
 
     useEffect(() => {
         let styleNode = document.getElementById('custom-font');
-        if (!customFont){
+        // Collect fonts from root AND all scripts
+        const allFonts = new Set();
+        
+        if (customFont) {
+            const rootFonts = Array.isArray(customFont) ? customFont : [customFont];
+            rootFonts.forEach(f => f && allFonts.add(f));
+        }
+        
+        if (scriptDataById) {
+            Object.values(scriptDataById).forEach(scriptData => {
+                const font = scriptData?.customFontBase64 || scriptData?.customFont;
+                if (font) {
+                    const fonts = Array.isArray(font) ? font : [font];
+                    fonts.forEach(f => f && allFonts.add(f));
+                }
+            });
+        }
+
+        const fontStrings = Array.from(allFonts);
+
+        if (fontStrings.length === 0){
             // If we are currently rehydrating a project, don't clear the font yet!
             // This prevents a "flash" of empty characters during page refresh.
             if (isRehydrating || projectId) return;
@@ -33,12 +54,12 @@ export function useFontInjector(){
         }
 
         const fontName = 'ConlangCustomFont';
-        const fontStrings = Array.isArray(customFont) ? customFont : [customFont];
         
         // Use the modern FontFace API to load massive base64 strings in parallel
-        Promise.all(fontStrings.map(fontStr => {
+        Promise.all(fontStrings.filter(Boolean).map(fontStr => {
             // Remove 'charset=utf-8' as it corrupts binary font decoding!
-            let safeFontUrl = fontStr.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,');
+            const safeFontStr = typeof fontStr === 'string' ? fontStr : String(fontStr);
+            let safeFontUrl = safeFontStr.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,');
             const newFont = new FontFace(fontName, `url('${safeFontUrl}')`);
             return newFont.load();
         })).then((loadedFonts) => {
@@ -87,5 +108,5 @@ export function useFontInjector(){
         }).catch(err => {
             console.error("Browser failed to decode custom font arrays:", err);
         });
-    }, [customFont, isRehydrating, projectId, typographySettings]);    
+    }, [customFont, scriptDataById, isRehydrating, projectId, typographySettings]);    
 }
