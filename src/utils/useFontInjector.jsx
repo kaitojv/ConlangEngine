@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useConfigStore } from "../store/useConfigStore.jsx";
+import { getDefaultScriptId } from "./scriptResolver.js";
 
 
 export function useFontInjector(){
@@ -9,30 +10,40 @@ export function useFontInjector(){
     const isRehydrating = useConfigStore((state) => state.isRehydrating);
     const projectId = useConfigStore((state) => state.projectId);
     const typographySettings = useConfigStore((state) => state.typographySettings);
+    const scriptRules = useConfigStore((state) => state.scriptRules);
+    const scriptSystems = useConfigStore((state) => state.scriptSystems);
 
     useEffect(() => {
         let styleNode = document.getElementById('custom-font');
-        // Collect fonts from root AND all scripts
-        const allFonts = new Set();
-        
-        if (customFont) {
-            const rootFonts = Array.isArray(customFont) ? customFont : [customFont];
-            rootFonts.forEach(f => f && allFonts.add(f));
-        }
-        
+
+        // Build a map of scriptId → font base64 string(s)
+        const scriptFontMap = {};
+
+        // Resolve default script ID using the same logic as the rest of the app
+        const config = { scriptRules, scriptSystems };
+        const defaultScriptId = getDefaultScriptId(config);
+
+        // Collect fonts from scriptDataById (the primary source)
         if (scriptDataById) {
-            Object.values(scriptDataById).forEach(scriptData => {
+            Object.entries(scriptDataById).forEach(([scriptId, scriptData]) => {
                 const font = scriptData?.customFontBase64 || scriptData?.customFont;
                 if (font) {
-                    const fonts = Array.isArray(font) ? font : [font];
-                    fonts.forEach(f => f && allFonts.add(f));
+                    scriptFontMap[scriptId] = Array.isArray(font) ? font.filter(Boolean) : [font];
                 }
             });
         }
 
-        const fontStrings = Array.from(allFonts);
+        // Legacy fallback: root-level customFont for projects that predate multi-script
+        if (customFont && !scriptFontMap[defaultScriptId]) {
+            const rootFonts = Array.isArray(customFont) ? customFont.filter(Boolean) : [customFont];
+            if (rootFonts.length > 0) {
+                scriptFontMap[defaultScriptId] = rootFonts;
+            }
+        }
 
-        if (fontStrings.length === 0){
+        const scriptIds = Object.keys(scriptFontMap);
+
+        if (scriptIds.length === 0) {
             // If we are currently rehydrating a project, don't clear the font yet!
             // This prevents a "flash" of empty characters during page refresh.
             if (isRehydrating || projectId) return;
@@ -50,29 +61,73 @@ export function useFontInjector(){
             styleNode = document.createElement('style');
             styleNode.id = 'custom-font';
             document.head.appendChild(styleNode);
-        
         }
 
-        const fontName = 'ConlangCustomFont';
-        
-        // Use the modern FontFace API to load massive base64 strings in parallel
-        Promise.all(fontStrings.filter(Boolean).map(fontStr => {
-            // Remove 'charset=utf-8' as it corrupts binary font decoding!
-            const safeFontStr = typeof fontStr === 'string' ? fontStr : String(fontStr);
-            let safeFontUrl = safeFontStr.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,');
-            const newFont = new FontFace(fontName, `url('${safeFontUrl}')`);
-            return newFont.load();
-        })).then((loadedFonts) => {
-            if (document.fonts) {
-                // Clear existing font faces with the same name to force a repaint when the font updates
-                document.fonts.forEach(f => {
-                    if (f.family === fontName || f.family === `'${fontName}'`) {
-                        document.fonts.delete(f);
-                    }
-                });
+        // Clear ALL previously-registered ConlangScript_* fonts to avoid stale leftovers
+        if (document.fonts) {
+            document.fonts.forEach(f => {
+                if (typeof f.family === 'string' && (
+                    f.family.startsWith('ConlangScript_') ||
+                    f.family.startsWith("'ConlangScript_") ||
+                    f.family === 'ConlangCustomFont' ||
+                    f.family === "'ConlangCustomFont'"
+                )) {
+                    document.fonts.delete(f);
+                }
+            });
+        }
+
+        // Load each script's font under a unique font family name
+        const loadPromises = [];
+        const loadedByScript = {};
+
+        for (const scriptId of scriptIds) {
+            const fontFamily = `ConlangScript_${scriptId}`;
+            const fontStrings = scriptFontMap[scriptId];
+
+            const scriptPromises = fontStrings.map(fontStr => {
+                const safeFontStr = typeof fontStr === 'string' ? fontStr : String(fontStr);
+                // Remove 'charset=utf-8' as it corrupts binary font decoding!
+                const safeFontUrl = safeFontStr.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,');
+                const newFont = new FontFace(fontFamily, `url('${safeFontUrl}')`);
+                return newFont.load();
+            });
+
+            loadPromises.push(
+                Promise.all(scriptPromises).then(loaded => {
+                    loadedByScript[scriptId] = loaded;
+                })
+            );
+        }
+
+        Promise.all(loadPromises).then(() => {
+            // Add all loaded font faces to the document
+            for (const scriptId of Object.keys(loadedByScript)) {
+                loadedByScript[scriptId].forEach(face => document.fonts.add(face));
             }
-            loadedFonts.forEach(loadedFont => document.fonts.add(loadedFont));
-            
+
+            const letterSpacingCSS = typographySettings?.letterSpacing
+                ? typographySettings.letterSpacing + 'em'
+                : 'normal';
+
+            // The default script's font family — used by the broad .custom-font-text selector
+            // so all existing class-based rendering continues to work for the main script
+            const defaultFontFamily = `ConlangScript_${defaultScriptId}`;
+
+            // Build per-script CSS classes: .conlang-script-{scriptId}
+            let perScriptCSS = '';
+            for (const scriptId of Object.keys(loadedByScript)) {
+                const family = `ConlangScript_${scriptId}`;
+                perScriptCSS += `
+                .conlang-script-${CSS.escape(scriptId)} {
+                    font-family: '${family}', sans-serif !important;
+                    font-weight: normal;
+                    font-style: normal;
+                    letter-spacing: ${letterSpacingCSS} !important;
+                }
+                `;
+            }
+
             // Apply styles only after fonts are successfully added to the browser's font cache
             styleNode.innerHTML = `
                 .custom-font-text,
@@ -87,10 +142,10 @@ export function useFontInjector(){
                 #f-ideogram, 
                 #edit-ideogram,
                 #alphabet-render-area div {
-                    font-family: '${fontName}', sans-serif;
+                    font-family: '${defaultFontFamily}', sans-serif;
                     font-weight: normal;
                     font-style: normal;
-                    letter-spacing: ${typographySettings?.letterSpacing ? typographySettings.letterSpacing + 'em' : 'normal'} !important;
+                    letter-spacing: ${letterSpacingCSS} !important;
                 }
 
                 .custom-font-text::placeholder,
@@ -104,9 +159,11 @@ export function useFontInjector(){
                     font-family: 'Inter', sans-serif !important;
                     letter-spacing: normal !important;
                 }
+
+                ${perScriptCSS}
             `;
         }).catch(err => {
             console.error("Browser failed to decode custom font arrays:", err);
         });
-    }, [customFont, scriptDataById, isRehydrating, projectId, typographySettings]);    
-}
+    }, [customFont, scriptDataById, isRehydrating, projectId, typographySettings, scriptRules, scriptSystems]);    
+}

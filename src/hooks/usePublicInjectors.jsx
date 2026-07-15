@@ -46,17 +46,47 @@ let fontInstanceCounter = 0;
 
 /**
  * Safely injects the custom font for the Public Viewer.
- * Mirrors the main useFontInjector approach: handles array fonts and uses FontFace API.
+ * Handles multi-script configs: registers each script's font under a unique
+ * family name and generates per-script CSS classes (.conlang-script-{scriptId}).
+ * The default script's font is applied to the broad .custom-font-text selector.
  * Uses a unique font name per mount and properly cleans up FontFace objects from document.fonts.
  */
 export function usePublicFontInjector(config) {
     const loadedFontsRef = useRef([]);
 
     useEffect(() => {
-        if (!config || !config.customFontBase64) return;
+        if (!config) return;
+
+        // Build a map of scriptId → font base64 string(s)
+        // The public viewer's config has scriptDataById from the raw snapshot
+        const scriptFontMap = {};
+        const defaultScriptId = config.scriptRules?.defaultScriptId || 'default';
+
+        // Collect from scriptDataById (multi-script)
+        if (config.scriptDataById) {
+            Object.entries(config.scriptDataById).forEach(([scriptId, scriptData]) => {
+                const font = scriptData?.customFontBase64 || scriptData?.customFont;
+                if (font) {
+                    scriptFontMap[scriptId] = Array.isArray(font) ? font.filter(Boolean) : [font];
+                }
+            });
+        }
+
+        // Legacy/merged fallback: root-level customFontBase64
+        if (config.customFontBase64 && !scriptFontMap[defaultScriptId]) {
+            const fonts = Array.isArray(config.customFontBase64)
+                ? config.customFontBase64.filter(Boolean)
+                : [config.customFontBase64];
+            if (fonts.length > 0) {
+                scriptFontMap[defaultScriptId] = fonts;
+            }
+        }
+
+        const scriptIds = Object.keys(scriptFontMap);
+        if (scriptIds.length === 0) return;
 
         fontInstanceCounter++;
-        const fontName = `PublicCustomFont_${fontInstanceCounter}`;
+        const instanceId = fontInstanceCounter;
         const styleId = 'public-custom-font';
 
         // Ensure the style tag for font-family assignment exists
@@ -67,21 +97,53 @@ export function usePublicFontInjector(config) {
             document.head.appendChild(styleNode);
         }
 
-        const fontStrings = Array.isArray(config.customFontBase64)
-            ? config.customFontBase64
-            : [config.customFontBase64];
+        const loadPromises = [];
+        const loadedByScript = {};
 
-        // Use the FontFace API (same as main useFontInjector) so large base64 fonts decode correctly
-        Promise.all(fontStrings.map(fontStr => {
-            const safeFontUrl = fontStr.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,');
-            const face = new FontFace(fontName, `url('${safeFontUrl}')`);
-            return face.load();
-        })).then(loadedFonts => {
-            loadedFonts.forEach(f => document.fonts.add(f));
-            loadedFontsRef.current = loadedFonts;
+        for (const scriptId of scriptIds) {
+            const fontFamily = `PublicScript_${instanceId}_${scriptId}`;
+            const fontStrings = scriptFontMap[scriptId];
+
+            const scriptPromises = fontStrings.map(fontStr => {
+                const safeFontUrl = fontStr.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,');
+                const face = new FontFace(fontFamily, `url('${safeFontUrl}')`);
+                return face.load();
+            });
+
+            loadPromises.push(
+                Promise.all(scriptPromises).then(loaded => {
+                    loadedByScript[scriptId] = loaded;
+                })
+            );
+        }
+
+        Promise.all(loadPromises).then(() => {
+            const allFaces = [];
+            for (const scriptId of Object.keys(loadedByScript)) {
+                loadedByScript[scriptId].forEach(f => {
+                    document.fonts.add(f);
+                    allFaces.push(f);
+                });
+            }
+            loadedFontsRef.current = allFaces;
+
+            // The default script's font family
+            const defaultFontFamily = `PublicScript_${instanceId}_${defaultScriptId}`;
+
+            // Build per-script CSS classes
+            let perScriptCSS = '';
+            for (const scriptId of Object.keys(loadedByScript)) {
+                const family = `PublicScript_${instanceId}_${scriptId}`;
+                perScriptCSS += `
+                .conlang-script-${CSS.escape(scriptId)} {
+                    font-family: '${family}', 'Inter', sans-serif !important;
+                }
+                `;
+            }
+
             styleNode.innerHTML = `
                 .custom-font-text, .conlang-word, .dict-ipa {
-                    font-family: '${fontName}', 'Inter', sans-serif !important;
+                    font-family: '${defaultFontFamily}', 'Inter', sans-serif !important;
                 }
 
                 .custom-font-text::placeholder,
@@ -89,6 +151,8 @@ export function usePublicFontInjector(config) {
                     font-family: 'Inter', sans-serif !important;
                     letter-spacing: normal !important;
                 }
+
+                ${perScriptCSS}
             `;
         }).catch(err => {
             console.error('PublicViewer: failed to load custom font', err);

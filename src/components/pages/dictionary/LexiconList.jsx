@@ -4,7 +4,7 @@ import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { renderWordInScript } from '../../../utils/scriptRendering.js';
-import { getScriptSystem, getDefaultScriptId } from '../../../utils/scriptResolver.js';
+import { getScriptSystem, getDefaultScriptId, resolveWordScriptId } from '../../../utils/scriptResolver.js';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import Card from '../../UI/Card/Card.jsx';
 import Modal from '../../UI/Modal/Modal.jsx'
@@ -607,6 +607,7 @@ export default function LexiconList() {
                     const senses = group.senses;
                     const safeWord = baseEntry.word.replace(/\*/g, '');
                     const displayWord = transliterate(safeWord, lexicon);
+                    const wordScriptId = resolveWordScriptId(baseEntry, configFull);
 
                     // Auto-compute prosody from rules if no manual values set
                     const computed = (filters.showTones && (!baseEntry.stress || !baseEntry.tone) && (stressRules.length > 0 || toneRules.length > 0))
@@ -629,7 +630,7 @@ export default function LexiconList() {
                                     <div className="entry-word-with-wave" style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'stretch' }}>
                                         {filters.showTones && <StressWave word={safeWord} stress={displayStress} tone={displayTone} customVowelsStr={useConfigStore.getState().vowels} />}
                                         <span 
-                                            className={`notranslate entry-main-word custom-font-text ${phonologyTypes === 'featural_block' ? 'featural-block-render' : ''}`} 
+                                            className={`notranslate entry-main-word custom-font-text conlang-script-${wordScriptId} ${phonologyTypes === 'featural_block' ? 'featural-block-render' : ''}`} 
                                             style={{ textAlign: 'center', cursor: 'pointer', transition: 'color 0.2s' }}
                                             onClick={() => setSelectedGlyphDetails({ 
                                                 char: phonologyTypes === 'logographic' ? baseEntry.ideogram : safeWord, 

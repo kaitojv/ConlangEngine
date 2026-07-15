@@ -40,7 +40,7 @@ Never use hardcoded colors. Always use the following CSS variables which are dyn
 ## 4. UI Components & UX
 - **Theme Injector & Presets**: Everything must follow the `themeInjector` and `themePresets` logic. **Never redefine theme arrays locally** in components; always import from `src/utils/themePresets.js`.
 - Use existing UI components from `src/components/UI` (Card, Button, etc.) for consistency.
-- Follow the "Premium Design" aesthetic: vibrant colors, glassmorphism, smooth animations, and curated typography.
+- **NO SLOP UI Rule**: Follow the "No Slop UI" aesthetic: functional, honest, clean, and normal. DO NOT USE glassmorphism, floating panels, gradient backgrounds as decoration, or oversized rounded corners. Opt for 1px solid borders, subtle drop shadows, and linear/stripe-like data density. Reference `NO_SLOP_UI_SKILL` for the banned patterns.
 
 ## 5. Development Workflow
 - **Verify Persistence**: Always check if a new feature needs to be saved in the config store.

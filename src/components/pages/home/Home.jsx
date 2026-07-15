@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
+import { resolveWordScriptId } from '@/utils/scriptResolver.js';
 
 import { Sunrise, Sun, Moon, Sparkles, Settings2, BookA, PlusCircle, BrainCircuit, Flame, ArrowRight, Bookmark, Library, HelpCircle, Heart, Coffee, Globe, Activity, FlaskConical } from 'lucide-react';
 import Card from '@/components/UI/Card/Card.jsx';
@@ -307,7 +308,7 @@ export default function Home() {
                     {wordOfTheDay ? (
                         <div className="wotd-content">
                             <div className="wotd-display">
-                                <span className={`notranslate wotd-word${isFeaturalBlock ? '' : ' custom-font-text'}`}>
+                                <span className={`notranslate wotd-word${isFeaturalBlock ? '' : ` custom-font-text conlang-script-${resolveWordScriptId(wordOfTheDay, useConfigStore.getState())}`}`}>
                                     {isFeaturalBlock
                                         ? wordOfTheDay.word.replace(/\*/g, '')
                                         : transliterate(wordOfTheDay.word.replace(/\*/g, ''), lexicon)
