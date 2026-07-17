@@ -244,7 +244,17 @@ export function transliterateText(word, config, lexicon = []) {
         const effectiveSyllabaryMap = { ...fallbackMap, ...syllabaryMap };
         const syllables = Object.keys(effectiveSyllabaryMap).sort((a, b) => b.length - a.length);
         const dictEntry = lexicon.find(e => e.word.replace(/\*/g, '').toLowerCase() === cleanWord);
-        const sourceStr = (dictEntry && dictEntry.ideogram) ? dictEntry.ideogram : cleanWord;
+        let sourceStr = (dictEntry && dictEntry.ideogram) ? dictEntry.ideogram : cleanWord;
+
+        // Apply Tone Mapping preprocessing so the text matches the generated blocks
+        const toneMap = config.blockSettings?.toneMap || [];
+        for (const mapping of toneMap) {
+            const replacement = mapping.output !== undefined ? mapping.output : ((mapping.base || '') + (mapping.tone || ''));
+            if (mapping.toned && replacement) {
+                sourceStr = sourceStr.split(mapping.toned.toLowerCase()).join(replacement.toLowerCase());
+            }
+        }
+
         const blocks = sourceStr.split('.');
         let finalOut = '';
 
