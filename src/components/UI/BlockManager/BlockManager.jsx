@@ -380,6 +380,15 @@ export default function BlockManager({ scriptId } = {}) {
                             <Button variant="edit" className="btn-icon" onClick={() => setDrawingForComp(comp)}>
                                 <Brush size={16} />
                             </Button>
+                            {featuralComponents[comp] && (
+                                <Button variant="error" className="btn-icon" onClick={() => {
+                                    const newMap = { ...featuralComponents };
+                                    delete newMap[comp];
+                                    writeScriptData({ featuralComponents: newMap });
+                                }}>
+                                    <Trash2 size={16} />
+                                </Button>
+                            )}
                         </div>
                     ))}
                 </div>
