@@ -159,6 +159,12 @@ export default function BlockManager({ scriptId } = {}) {
             const cleanConfig = { ...config, lexicon };
             delete cleanConfig.customFontBase64;
             delete cleanConfig.customFont;
+            
+            // Inject script-scoped data for the worker
+            cleanConfig.featuralComponents = featuralComponents;
+            cleanConfig.blockSettings = blockSettings;
+            cleanConfig.blockTemplates = blockTemplates;
+
             worker.postMessage({ config: JSON.parse(JSON.stringify(cleanConfig)) });
             
         } catch (e) {
