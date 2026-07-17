@@ -207,12 +207,21 @@ export const generateBlockFontData = async (config) => {
             return phonemes;
         };
 
+        const toneMap = blockSettings?.toneMap || [];
+
         let count = 0;
         for (const entry of config.lexicon) {
             // Yield every 20 entries to prevent worker timeouts
             if (++count % 20 === 0) await new Promise(r => setTimeout(r, 0));
 
-            const sourceStr = entry.ideogram || entry.word?.replace(/\*/g, '').toLowerCase() || '';
+            let sourceStr = entry.ideogram || entry.word?.replace(/\*/g, '').toLowerCase() || '';
+            
+            // Preprocess toned vowels into base + tone if mappings exist
+            for (const mapping of toneMap) {
+                if (mapping.toned && mapping.base && mapping.tone) {
+                    sourceStr = sourceStr.split(mapping.toned.toLowerCase()).join(mapping.base.toLowerCase() + mapping.tone.toLowerCase());
+                }
+            }
             
             let blocks = [];
             if (sourceStr.includes('.')) {

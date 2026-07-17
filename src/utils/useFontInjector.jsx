@@ -57,29 +57,10 @@ export function useFontInjector(){
             return;
         }
 
-        if(!styleNode){
-            styleNode = document.createElement('style');
-            styleNode.id = 'custom-font';
-            document.head.appendChild(styleNode);
-        }
-
-        // Clear ALL previously-registered ConlangScript_* fonts to avoid stale leftovers
-        if (document.fonts) {
-            document.fonts.forEach(f => {
-                if (typeof f.family === 'string' && (
-                    f.family.startsWith('ConlangScript_') ||
-                    f.family.startsWith("'ConlangScript_") ||
-                    f.family === 'ConlangCustomFont' ||
-                    f.family === "'ConlangCustomFont'"
-                )) {
-                    document.fonts.delete(f);
-                }
-            });
-        }
-
         // Load each script's font under a unique font family name
         const loadPromises = [];
         const loadedByScript = {};
+        const newFontFaces = new Set();
 
         for (const scriptId of scriptIds) {
             const fontFamily = `ConlangScript_${scriptId}`;
@@ -96,14 +77,36 @@ export function useFontInjector(){
             loadPromises.push(
                 Promise.all(scriptPromises).then(loaded => {
                     loadedByScript[scriptId] = loaded;
+                    loaded.forEach(f => newFontFaces.add(f));
                 })
             );
         }
 
         Promise.all(loadPromises).then(() => {
-            // Add all loaded font faces to the document
+            // Add all newly loaded font faces to the document FIRST
             for (const scriptId of Object.keys(loadedByScript)) {
                 loadedByScript[scriptId].forEach(face => document.fonts.add(face));
+            }
+
+            // THEN clear old fonts to prevent flashing. Collect them in an array first to avoid mutating during iteration.
+            if (document.fonts) {
+                const fontsToDelete = [];
+                document.fonts.forEach(f => {
+                    if (typeof f.family === 'string' && (
+                        f.family.startsWith('ConlangScript_') ||
+                        f.family.startsWith("'ConlangScript_") ||
+                        f.family === 'ConlangCustomFont' ||
+                        f.family === "'ConlangCustomFont'"
+                    )) {
+                        // Don't delete the ones we just added!
+                        if (!newFontFaces.has(f)) {
+                            fontsToDelete.push(f);
+                        }
+                    }
+                });
+                fontsToDelete.forEach(f => {
+                    try { document.fonts.delete(f); } catch (e) { /* ignore */ }
+                });
             }
 
             const letterSpacingCSS = typographySettings?.letterSpacing
@@ -129,6 +132,12 @@ export function useFontInjector(){
             }
 
             // Apply styles only after fonts are successfully added to the browser's font cache
+            if (!styleNode) {
+                styleNode = document.createElement('style');
+                styleNode.id = 'custom-font';
+                document.head.appendChild(styleNode);
+            }
+
             styleNode.innerHTML = `
                 .custom-font-text,
                 .conlang-word,

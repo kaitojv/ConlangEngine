@@ -108,6 +108,23 @@ export default function BlockManager({ scriptId } = {}) {
         });
     };
 
+    const handleAddToneMapping = () => {
+        const currentToneMap = blockSettings?.toneMap || [];
+        writeScriptSettings({ blockSettings: { ...blockSettings, toneMap: [...currentToneMap, { toned: '', base: '', tone: '' }] } });
+    };
+
+    const handleUpdateToneMapping = (index, field, val) => {
+        const currentToneMap = blockSettings?.toneMap || [];
+        const newMap = [...currentToneMap];
+        newMap[index] = { ...newMap[index], [field]: val };
+        writeScriptSettings({ blockSettings: { ...blockSettings, toneMap: newMap } });
+    };
+
+    const handleRemoveToneMapping = (index) => {
+        const currentToneMap = blockSettings?.toneMap || [];
+        writeScriptSettings({ blockSettings: { ...blockSettings, toneMap: currentToneMap.filter((_, i) => i !== index) } });
+    };
+
     const generateBlockFont = async () => {
 
         setIsGenerating(true);
@@ -294,6 +311,54 @@ export default function BlockManager({ scriptId } = {}) {
                         </div>
                     </div>
                 ))}
+
+                <div className="bm-global-settings" style={{ marginTop: '30px', padding: '15px', background: 'var(--s2)', borderRadius: 'var(--rad)' }}>
+                    <h4 className="bm-template-title" style={{ marginBottom: '10px' }}>Tone Vowel Mapping</h4>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '15px' }}>
+                        If your romanization uses tone diacritics (e.g. ō, à) but your block templates require tone to be a separate slot, define the mapping here. The compiler will automatically split them during generation.
+                    </p>
+                    
+                    {(blockSettings?.toneMap || []).map((mapping, index) => (
+                        <div key={index} className="bm-settings-row" style={{ alignItems: 'flex-end', marginBottom: '10px', background: 'var(--s1)', padding: '10px', borderRadius: '4px' }}>
+                            <div className="bm-input-group">
+                                <label className="form-label">Toned Vowel (e.g. ō)</label>
+                                <input 
+                                    className="bm-slot-input"
+                                    placeholder="ō"
+                                    value={mapping.toned || ''}
+                                    onChange={(e) => handleUpdateToneMapping(index, 'toned', e.target.value)}
+                                />
+                            </div>
+                            <div style={{ paddingBottom: '10px', color: 'var(--tx2)' }}>=</div>
+                            <div className="bm-input-group">
+                                <label className="form-label">Base Vowel (e.g. o)</label>
+                                <input 
+                                    className="bm-slot-input"
+                                    placeholder="o"
+                                    value={mapping.base || ''}
+                                    onChange={(e) => handleUpdateToneMapping(index, 'base', e.target.value)}
+                                />
+                            </div>
+                            <div style={{ paddingBottom: '10px', color: 'var(--tx2)' }}>+</div>
+                            <div className="bm-input-group">
+                                <label className="form-label">Tone Symbol (e.g. ˧)</label>
+                                <input 
+                                    className="bm-slot-input"
+                                    placeholder="˧"
+                                    value={mapping.tone || ''}
+                                    onChange={(e) => handleUpdateToneMapping(index, 'tone', e.target.value)}
+                                />
+                            </div>
+                            <Button variant="error" className="btn-icon" onClick={() => handleRemoveToneMapping(index)} style={{ padding: '8px' }}>
+                                <Trash2 size={16} />
+                            </Button>
+                        </div>
+                    ))}
+                    
+                    <Button variant="outline" onClick={handleAddToneMapping} style={{ marginTop: '10px' }}>
+                        + Add Mapping
+                    </Button>
+                </div>
             </Card>
 
             <Card>

@@ -606,8 +606,16 @@ export default function LexiconList() {
                     const baseEntry = group.baseEntry;
                     const senses = group.senses;
                     const safeWord = baseEntry.word.replace(/\*/g, '');
-                    const displayWord = transliterate(safeWord, lexicon);
                     const wordScriptId = resolveWordScriptId(baseEntry, configFull);
+
+                    // Use script-aware rendering for words assigned to a non-default script,
+                    // otherwise fall back to the default transliterator (matches Quick Lexicon logic)
+                    let displayWord;
+                    if (baseEntry.scriptOverride) {
+                        displayWord = renderWordInScript(baseEntry, configFull, lexicon).text;
+                    } else {
+                        displayWord = transliterate(safeWord, lexicon);
+                    }
 
                     // Auto-compute prosody from rules if no manual values set
                     const computed = (filters.showTones && (!baseEntry.stress || !baseEntry.tone) && (stressRules.length > 0 || toneRules.length > 0))

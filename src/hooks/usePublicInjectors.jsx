@@ -118,6 +118,11 @@ export function usePublicFontInjector(config) {
         }
 
         Promise.all(loadPromises).then(() => {
+            // Remove OLD fonts before registering new ones, but after loading is complete, to avoid flashing
+            loadedFontsRef.current.forEach(f => {
+                try { document.fonts.delete(f); } catch { /* ignore */ }
+            });
+
             const allFaces = [];
             for (const scriptId of Object.keys(loadedByScript)) {
                 loadedByScript[scriptId].forEach(f => {
@@ -159,14 +164,12 @@ export function usePublicFontInjector(config) {
         });
 
         return () => {
-            // Remove the style tag
+            // Remove the style tag, but DO NOT synchronously delete fonts here on config change.
+            // The next effect run will clean them up after loading.
+            // When the component truly unmounts, this might leave fonts in document.fonts,
+            // but they won't be used since the style tag is removed.
             const node = document.getElementById(styleId);
             if (node) node.remove();
-            // Remove all FontFace objects we added so they don't leak into the next conlang
-            loadedFontsRef.current.forEach(f => {
-                try { document.fonts.delete(f); } catch { /* ignore */ }
-            });
-            loadedFontsRef.current = [];
         };
     }, [config]);
 }
