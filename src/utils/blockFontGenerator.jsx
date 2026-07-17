@@ -218,8 +218,9 @@ export const generateBlockFontData = async (config) => {
             
             // Preprocess toned vowels into base + tone if mappings exist
             for (const mapping of toneMap) {
-                if (mapping.toned && mapping.base && mapping.tone) {
-                    sourceStr = sourceStr.split(mapping.toned.toLowerCase()).join(mapping.base.toLowerCase() + mapping.tone.toLowerCase());
+                const replacement = mapping.output !== undefined ? mapping.output : ((mapping.base || '') + (mapping.tone || ''));
+                if (mapping.toned && replacement) {
+                    sourceStr = sourceStr.split(mapping.toned.toLowerCase()).join(replacement.toLowerCase());
                 }
             }
             

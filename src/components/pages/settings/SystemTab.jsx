@@ -744,6 +744,7 @@ export default function SystemTab() {
                         <Input 
                             key={label}
                             label={label}
+                            className="custom-font-text notranslate"
                             placeholder={label} 
                             value={customLabels[label] || ''}
                             onChange={(e) => updateConfig({ customLabels: { ...(useConfigStore.getState().customLabels || {}), [label]: e.target.value } })}

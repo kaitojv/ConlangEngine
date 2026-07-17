@@ -323,30 +323,21 @@ export default function BlockManager({ scriptId } = {}) {
                             <div className="bm-input-group">
                                 <label className="form-label">Toned Vowel (e.g. ō)</label>
                                 <input 
-                                    className="bm-slot-input"
+                                    className="bm-slot-input custom-font-text notranslate"
                                     placeholder="ō"
                                     value={mapping.toned || ''}
                                     onChange={(e) => handleUpdateToneMapping(index, 'toned', e.target.value)}
                                 />
                             </div>
                             <div style={{ paddingBottom: '10px', color: 'var(--tx2)' }}>=</div>
-                            <div className="bm-input-group">
-                                <label className="form-label">Base Vowel (e.g. o)</label>
+                            <div className="bm-input-group" style={{ flex: 1 }}>
+                                <label className="form-label">Replacement Sequence (e.g. o˧ or ˧o)</label>
                                 <input 
-                                    className="bm-slot-input"
-                                    placeholder="o"
-                                    value={mapping.base || ''}
-                                    onChange={(e) => handleUpdateToneMapping(index, 'base', e.target.value)}
-                                />
-                            </div>
-                            <div style={{ paddingBottom: '10px', color: 'var(--tx2)' }}>+</div>
-                            <div className="bm-input-group">
-                                <label className="form-label">Tone Symbol (e.g. ˧)</label>
-                                <input 
-                                    className="bm-slot-input"
-                                    placeholder="˧"
-                                    value={mapping.tone || ''}
-                                    onChange={(e) => handleUpdateToneMapping(index, 'tone', e.target.value)}
+                                    className="bm-slot-input custom-font-text notranslate"
+                                    placeholder="e.g. o˧"
+                                    title="IMPORTANT: The order of characters here must exactly match the order of slots in your template!"
+                                    value={mapping.output !== undefined ? mapping.output : ((mapping.base || '') + (mapping.tone || ''))}
+                                    onChange={(e) => handleUpdateToneMapping(index, 'output', e.target.value)}
                                 />
                             </div>
                             <Button variant="error" className="btn-icon" onClick={() => handleRemoveToneMapping(index)} style={{ padding: '8px' }}>
@@ -372,8 +363,8 @@ export default function BlockManager({ scriptId } = {}) {
                 <div className="bm-components-list">
                     {allComponents.map(comp => (
                         <div key={comp} className="bm-component-card">
-                            <div className="bm-component-key">{comp}</div>
-                            <div className="bm-component-symbol custom-font-text">
+                            <div className="bm-component-key custom-font-text">{comp}</div>
+                            <div className="bm-component-symbol">
                                 {/* Preview drawn strokes if available, else placeholder */}
                                 {featuralComponents[comp] ? (
                                     <svg viewBox="0 0 300 300" width="40" height="40" className="bm-svg-preview">

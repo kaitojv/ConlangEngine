@@ -151,7 +151,7 @@ export function useFontInjector(){
                 #f-ideogram, 
                 #edit-ideogram,
                 #alphabet-render-area div {
-                    font-family: '${defaultFontFamily}', sans-serif;
+                    font-family: '${defaultFontFamily}', 'Inter', sans-serif;
                     font-weight: normal;
                     font-style: normal;
                     letter-spacing: ${letterSpacingCSS} !important;
