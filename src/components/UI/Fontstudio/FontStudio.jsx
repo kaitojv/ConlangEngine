@@ -3,7 +3,7 @@ import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
 import Button from '../Buttons/Buttons.jsx';
-import { RotateCcw, RotateCw, Trash2, Download, Pencil, Minus, Spline, Eraser, Feather, FlipHorizontal, FlipVertical, Grid, Square, Circle, Triangle, SquareDashed, PenTool } from 'lucide-react';
+import { RotateCcw, RotateCw, Trash2, Download, Pencil, Minus, Spline, Eraser, Feather, FlipHorizontal, FlipVertical, Grid, Square, Circle, Triangle, SquareDashed, PenTool, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ZoomIn, ZoomOut } from 'lucide-react';
 import { exportStrokesAsSVG } from '../../../utils/svgExporter.jsx';
 import { parseSVGToStrokes } from '../../../utils/svgImporter.jsx';
 import './fontStudio.css';
@@ -582,6 +582,38 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         }));
     };
 
+    const handleMove = (dx, dy) => {
+        setStrokes(prev => prev.map(stroke => {
+            if (!Array.isArray(stroke) && stroke.isMeta) return stroke;
+            if (Array.isArray(stroke) && stroke.length === 1 && (stroke[0].x === -999 || stroke[0].x === -998)) return stroke;
+
+            const newStroke = stroke.map(pt => ({
+                x: pt.x + dx,
+                y: pt.y + dy
+            }));
+            newStroke.lineCap = stroke.lineCap;
+            newStroke.isFilled = stroke.isFilled;
+            return newStroke;
+        }));
+    };
+
+    const handleScaleStrokes = (factor) => {
+        const cx = 150;
+        const cy = 150;
+        setStrokes(prev => prev.map(stroke => {
+            if (!Array.isArray(stroke) && stroke.isMeta) return stroke;
+            if (Array.isArray(stroke) && stroke.length === 1 && (stroke[0].x === -999 || stroke[0].x === -998)) return stroke;
+
+            const newStroke = stroke.map(pt => ({
+                x: cx + (pt.x - cx) * factor,
+                y: cy + (pt.y - cy) * factor
+            }));
+            newStroke.lineCap = stroke.lineCap;
+            newStroke.isFilled = stroke.isFilled;
+            return newStroke;
+        }));
+    };
+
     const handleSave = async () => {
         if (strokes.length === 0) return alert("Draw something before saving!");
 
@@ -848,6 +880,12 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                     <Button variant="default" className="btn-sm" onClick={handleRotate} title="Rotate 90° Clockwise">
                         <RotateCw size={16} />
                     </Button>
+                    <Button variant="default" className="btn-sm" onClick={() => handleMove(0, -10)} title="Move Up"><ArrowUp size={16} /></Button>
+                    <Button variant="default" className="btn-sm" onClick={() => handleMove(0, 10)} title="Move Down"><ArrowDown size={16} /></Button>
+                    <Button variant="default" className="btn-sm" onClick={() => handleMove(-10, 0)} title="Move Left"><ArrowLeft size={16} /></Button>
+                    <Button variant="default" className="btn-sm" onClick={() => handleMove(10, 0)} title="Move Right"><ArrowRight size={16} /></Button>
+                    <Button variant="default" className="btn-sm" onClick={() => handleScaleStrokes(1.1)} title="Scale Up"><ZoomIn size={16} /></Button>
+                    <Button variant="default" className="btn-sm" onClick={() => handleScaleStrokes(0.9)} title="Scale Down"><ZoomOut size={16} /></Button>
                     <Button variant="default" className="btn-sm" onClick={handleUndo} title="Undo">
                         <RotateCcw size={16} />
                     </Button>
