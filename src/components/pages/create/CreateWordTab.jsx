@@ -430,7 +430,7 @@ export default function CreateWordTab() {
             try {
                 const fullConfig = useConfigStore.getState();
                 const currentLexicon = useLexiconStore.getState().lexicon;
-                const worker = new Worker(new URL('../../../utils/fontWorker.js', import.meta.url), { type: 'module' });
+                const worker = new Worker(new URL('../../../utils/block-compiler-thread.js', import.meta.url), { type: 'module' });
                 
                 worker.onmessage = (e) => {
                     if (e.data.success) {

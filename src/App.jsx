@@ -149,7 +149,7 @@ function App(){
                       const fullConfig = useConfigStore.getState();
                       const lexicon = useLexiconStore.getState().lexicon;
                       // Use Web Worker to prevent UI locking during heavy font generation
-                      const worker = new Worker(new URL('./utils/fontWorker.js', import.meta.url), { type: 'module' });
+                      const worker = new Worker(new URL('./utils/block-compiler-thread.js', import.meta.url), { type: 'module' });
                       
                       worker.onmessage = (e) => {
                           if (e.data.success) {
