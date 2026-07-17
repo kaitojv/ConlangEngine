@@ -71,15 +71,36 @@ const compileBlockStrokes = (blockStr, activeTemplates, featuralComponents, cons
     let template = null;
     let layoutKey = overrideLayout;
     
+    // Re-extract phonemes to support multigraphs (e.g. "ea")
+    const allPhonemes = [...consList, ...vowList, ...otherList].sort((a, b) => b.length - a.length);
+    let blockTokens = [];
+    let _i = 0;
+    while (_i < blockStr.length) {
+        let match = null;
+        for (const p of allPhonemes) {
+            if (blockStr.startsWith(p, _i)) {
+                match = p;
+                break;
+            }
+        }
+        if (match) {
+            blockTokens.push(match);
+            _i += match.length;
+        } else {
+            blockTokens.push(blockStr[_i]);
+            _i++;
+        }
+    }
+    
     // Only search for a template if we don't have an explicit override
     if (!layoutKey) {
         // First: try to find a template that exactly matches the block length AND slot mapping
         template = activeTemplates.find(t => {
-            if (t.maxChars !== blockStr.length) return false;
+            if (t.maxChars !== blockTokens.length) return false;
             
             // Check slot mapping to distinguish between multiple templates of the same length
-            for (let i = 0; i < blockStr.length; i++) {
-                const char = blockStr[i];
+            for (let i = 0; i < blockTokens.length; i++) {
+                const char = blockTokens[i];
                 let slot = (t.slotMapping || [])[i];
                 let source;
                 if (typeof slot === 'string') {
@@ -99,7 +120,7 @@ const compileBlockStrokes = (blockStr, activeTemplates, featuralComponents, cons
 
         // Fallback: if no strict slot match, find the first template with the same length
         if (!template) {
-            template = activeTemplates.find(t => t.maxChars === blockStr.length);
+            template = activeTemplates.find(t => t.maxChars === blockTokens.length);
         }
         
         if (template) {
@@ -111,16 +132,16 @@ const compileBlockStrokes = (blockStr, activeTemplates, featuralComponents, cons
     let matrix = layoutKey ? blockLayoutMatrices[layoutKey] : null;
     
     // Fallback: if layout key invalid or wrong size, or no template found at all
-    if (!matrix || matrix.length !== blockStr.length) {
-        layoutKey = Object.keys(blockLayoutMatrices).find(k => blockLayoutMatrices[k].length === blockStr.length);
+    if (!matrix || matrix.length !== blockTokens.length) {
+        layoutKey = Object.keys(blockLayoutMatrices).find(k => blockLayoutMatrices[k].length === blockTokens.length);
         matrix = layoutKey ? blockLayoutMatrices[layoutKey] : null;
     }
     
     if (!matrix) return null;
 
     const combinedStrokes = [];
-    for (let i = 0; i < blockStr.length; i++) {
-        const char = blockStr[i];
+    for (let i = 0; i < blockTokens.length; i++) {
+        const char = blockTokens[i];
         const strokes = featuralComponents[char];
         if (!strokes || strokes.length === 0) return null; // Missing drawing for this char, skip block
         
