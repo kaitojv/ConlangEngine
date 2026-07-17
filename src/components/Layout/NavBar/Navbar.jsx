@@ -120,7 +120,7 @@ export default function NavBar({ isMenuOpen, closeMenu }) {
                                     return (
                                         <div key={id} className="nb locked" title="Upgrade to LIVE to unlock multiple workspaces.">
                                             <Lock className="nav-icon" size={18} />
-                                            <span className="nav-label custom-font-text notranslate">{displayLabel}</span>
+                                            <span className="nav-label">{displayLabel}</span>
                                         </div>
                                     );
                                 }
@@ -133,7 +133,7 @@ export default function NavBar({ isMenuOpen, closeMenu }) {
                                         onClick={closeMenu} 
                                     >
                                         <Icon className="nav-icon" size={18} />
-                                        <span className="nav-label custom-font-text notranslate">{displayLabel}</span>
+                                        <span className="nav-label">{displayLabel}</span>
                                     </NavLink>
                                 );
                             })}
