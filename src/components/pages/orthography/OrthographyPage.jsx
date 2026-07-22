@@ -887,7 +887,16 @@ const LogographicShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
 
     const logographicWords = useMemo(() => {
         const charMap = new Map();
-        for (const w of lexicon) {
+        
+        // Sort lexicon by ideogram length ascending, so that "singular" words claim characters 
+        // before words that use "multiple" characters.
+        const sortedLexicon = [...lexicon].sort((a, b) => {
+            const lenA = (a.ideogram && a.ideogram.trim() !== '') ? Array.from(a.ideogram.trim()).length : 999;
+            const lenB = (b.ideogram && b.ideogram.trim() !== '') ? Array.from(b.ideogram.trim()).length : 999;
+            return lenA - lenB;
+        });
+
+        for (const w of sortedLexicon) {
             if (w.ideogram && w.ideogram.trim() !== '') {
                 const chars = Array.from(w.ideogram.trim());
                 for (const char of chars) {

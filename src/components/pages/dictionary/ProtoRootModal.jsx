@@ -32,7 +32,10 @@ export default function ProtoRootModal({ isOpen, onClose, oldWord }) {
             id: `word_${Math.random().toString(36).substr(2, 9)}`,
             word: newWord.trim(),
             translation: newTranslation.trim() || oldWord.translation,
-            isProtoRoot: false
+            isProtoRoot: false,
+            ideogram: '',
+            customAudioBase64: null,
+            audio: ''
         };
 
         if (destinationId === 'current') {

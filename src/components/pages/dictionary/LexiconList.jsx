@@ -702,8 +702,8 @@ export default function LexiconList() {
                                         return (
                                             <span className="notranslate entry-etymology-top" style={{fontSize: '0.75rem', color: 'var(--tx2)', marginLeft: '10px', display: 'inline-flex', alignItems: 'center', gap: '4px', borderLeft: '1px solid var(--bd)', paddingLeft: '10px'}}>
                                                 origin proto-root: 
-                                                <span style={{ color: 'var(--acc)', cursor: 'pointer' }} title={displayEtymology.startsWith('project:') ? 'from mother language' : 'click to edit'}>
-                                                    {displayEtymology.startsWith('project:') ? 'mother language root' : (rawLexicon.find(w => w.id === displayEtymology)?.word || 'Unknown')}
+                                                <span style={{ color: 'var(--acc)', cursor: 'pointer' }} title={String(displayEtymology).startsWith('project:') ? 'from mother language' : 'click to edit'}>
+                                                    {String(displayEtymology).startsWith('project:') ? 'mother language root' : (rawLexicon.find(w => w.id === displayEtymology)?.word || 'Unknown')}
                                                 </span>
                                             </span>
                                         );
