@@ -341,17 +341,17 @@ export default function CreateWordTab() {
         addWord({
             id: rootId,
             word: safeWord,
-            ipa: ipa.trim(),
+            ipa: (ipa || '').trim(),
             wordClass: wordClass,
             translation: cleanTrans,
-            definition: definition.trim(),
+            definition: (definition || '').trim(),
             tags: processedTags,
             relatedWords: relatedWords || [],
-            ideogram: ideogram.trim(),
-            tone: tone.trim(),
-            stress: stress.trim(),
+            ideogram: (ideogram || '').trim(),
+            tone: (tone || '').trim(),
+            stress: (stress || '').trim(),
             scriptOverride: scriptOverride,
-            personCategory: personCategory.trim(),
+            personCategory: (personCategory || '').trim(),
         });
 
         // 2. Save any selected derivations
@@ -399,7 +399,7 @@ export default function CreateWordTab() {
         if (keepRoot) {
             setFormData(prev => ({ ...prev, translation: '', definition: '', tags: [], relatedWords: [] }));
         } else {
-            setFormData({ word: '', ipa: '', wordClass: 'noun', translation: '', definition: '', tags: [], relatedWords: [], ideogram: '', tone: '', stress: '' });
+            setFormData({ word: '', ipa: '', wordClass: 'noun', translation: '', definition: '', tags: [], relatedWords: [], ideogram: '', tone: '', stress: '', scriptOverride: null, personCategory: '' });
         }
 
         setSelectedDerivs({});
