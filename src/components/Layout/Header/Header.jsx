@@ -108,6 +108,9 @@ export default function Header({ openMenu, onBackupNow }) {
         
         // BUG-FIX: Defer revoking the object URL to allow large downloads to complete
         setTimeout(() => URL.revokeObjectURL(url), 10000);
+        
+        // Unlock Archivist badge
+        useConfigStore.getState().unlockBadge('archivist', 'Archivist');
     };
 
     // Read a JSON backup file, validate it, and safely inject into our global stores
@@ -217,6 +220,7 @@ export default function Header({ openMenu, onBackupNow }) {
 
         if (exportType === 'pdf') {
             generateConlangPDF(config, transliteratedLexicon, template, options);
+            useConfigStore.getState().unlockBadge('archivist', 'Archivist');
         } else if (exportType === 'docx') {
             generateDocxExport(config, lexicon, template, options);
         } else if (exportType === 'obsidian') {

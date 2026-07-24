@@ -438,7 +438,7 @@ export default function ProfileTab() {
         try {
             const { data, error } = await supabase
                 .from('conlang_versions')
-                .select('id, created_at, version_name, project_data')
+                .select('id, created_at, version_name')
                 .eq('user_id', session.user.id)
                 .eq('project_id', config.projectId)
                 .order('created_at', { ascending: false });
@@ -453,22 +453,37 @@ export default function ProfileTab() {
         }
     };
 
-    const handleRestoreVersion = (version) => {
+    const handleRestoreVersion = async (version) => {
         if (!confirm(`Are you sure you want to restore "${version.version_name}"? This will overwrite your current local workspace.`)) return;
         
-        const safeConfig = sanitizeConfig(version.project_data.config || {});
-        const safeLexicon = sanitizeLexicon(version.project_data.dictionary || []);
+        toast.loading("Fetching version data...", { id: 'restore-toast' });
         
-        setLexicon(safeLexicon);
-        config.setFullConfig({ ...safeConfig, projectId: config.projectId });
-        
-        if (version.project_data.wiki) {
-            config.updateConfig({ wikiPages: version.project_data.wiki });
+        try {
+            const { data, error } = await supabase
+                .from('conlang_versions')
+                .select('project_data')
+                .eq('id', version.id)
+                .single();
+                
+            if (error || !data) throw error;
+            
+            const safeConfig = sanitizeConfig(data.project_data.config || {});
+            const safeLexicon = sanitizeLexicon(data.project_data.dictionary || []);
+            
+            setLexicon(safeLexicon);
+            config.setFullConfig({ ...safeConfig, projectId: config.projectId });
+            
+            if (data.project_data.wiki) {
+                config.updateConfig({ wikiPages: data.project_data.wiki });
+            }
+            
+            setVersionHistoryOpen(false);
+            config.logActivity(`Restored past version: ${version.version_name}`);
+            toast.success("Version restored successfully!", { id: 'restore-toast' });
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to restore version data.", { id: 'restore-toast' });
         }
-        
-        setVersionHistoryOpen(false);
-        config.logActivity(`Restored past version: ${version.version_name}`);
-        toast.success("Version restored successfully!");
     };
 
     return (

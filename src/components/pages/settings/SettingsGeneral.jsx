@@ -34,6 +34,7 @@ export default function SettingsGeneral() {
                             if (defaultScriptId) {
                                 updateScriptSystem(defaultScriptId, { type: newType });
                             }
+                            useConfigStore.getState().unlockBadge('typologist', 'Typologist');
                             toast.dismiss(t.id);
                         }}
                         style={{ background: 'var(--acc)', color: 'white', border: 'none', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer' }}

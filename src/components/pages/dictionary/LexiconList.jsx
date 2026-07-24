@@ -376,6 +376,7 @@ export default function LexiconList() {
         // Interrupt any ongoing speech so it doesn't queue up a dozen words if the user spams the button
         window.speechSynthesis.cancel();
         window.speechSynthesis.speak(new SpeechSynthesisUtterance(cleanText));
+        useConfigStore.getState().unlockBadge('vocalist', 'Vocalist');
     };
 
     return (
