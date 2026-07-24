@@ -4,6 +4,7 @@ import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
 import { sanitizeConfig } from '@/utils/schemaValidator.jsx';
 import toast from 'react-hot-toast';
+import LZString from 'lz-string';
 
 export function useSharing(session) {
     const [isSharing, setIsSharing] = useState(false);
@@ -36,12 +37,32 @@ export function useSharing(session) {
             last_updated: new Date().toISOString()
         };
         
-        // SEC/PERF: Hard limit payload to ~8MB to prevent database exhaustion, but allow massive logographic languages
+        // SEC/PERF: Compress massive payloads to prevent database exhaustion
         const payloadSizeStr = JSON.stringify(payload);
-        const isMassivePayload = payloadSizeStr.length > 3000000; // > 3MB
+        let finalPayload = payload;
         
-        if (payloadSizeStr.length > 8000000) {
-            if (isManualSync) toast.error("Project is too large to sync to the cloud! Please remove large images from your wiki (Limit: 8MB).");
+        if (payloadSizeStr.length > 1000000) {
+            try {
+                const compressedString = LZString.compressToBase64(JSON.stringify({
+                    dictionary: lexicon,
+                    wiki: config.wikiPages || {}
+                }));
+                finalPayload = { 
+                    compressed_payload: compressedString,
+                    config: configData, 
+                    wordCount: lexicon.length,
+                    last_updated: payload.last_updated
+                };
+            } catch (e) {
+                console.warn("Failed to compress payload:", e);
+            }
+        }
+        
+        const finalPayloadSize = JSON.stringify(finalPayload).length;
+        const isMassivePayload = finalPayloadSize > 3000000; // > 3MB after compression
+        
+        if (finalPayloadSize > 8000000) {
+            if (isManualSync) toast.error("Project is too large to sync to the cloud! Please remove large images from your wiki.");
             return false;
         }
         
@@ -67,7 +88,7 @@ export function useSharing(session) {
             const { error } = await supabase.from('conlang_snapshots').upsert({ 
                 user_id: session?.user?.id || null, 
                 project_id: currentProjectId, 
-                project_data: payload 
+                project_data: finalPayload 
             }, { onConflict: 'project_id' });
 
             if (error) throw error;
@@ -79,7 +100,7 @@ export function useSharing(session) {
                     user_id: session.user.id,
                     project_id: currentProjectId,
                     version_name: autoVersionName,
-                    project_data: payload
+                    project_data: finalPayload
                 });
                 if (versionError) console.warn("Failed to save version history:", versionError);
 
@@ -108,7 +129,7 @@ export function useSharing(session) {
                 const { error: conlangError } = await supabase.from('conlangs').upsert({ 
                     user_id: session.user.id, 
                     project_id: currentProjectId, 
-                    project_data: payload 
+                    project_data: finalPayload 
                 }, { onConflict: 'project_id' });
 
                 if (conlangError) throw conlangError;

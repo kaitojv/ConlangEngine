@@ -2,6 +2,7 @@
 // SEC-4: Schema validator for imported JSON backups and cloud data.
 // Only allows known keys to be merged into stores,
 // preventing injection of arbitrary keys or XSS payloads.
+import LZString from 'lz-string';
 
 // Static allowlist of valid config keys (mirrors INITIAL_CONFIG in useConfigStore).
 // Kept as a flat set to avoid importing the store and bloating the bundle.
@@ -136,4 +137,41 @@ export function sanitizeBackup(data) {
         lexicon: data.lexicon ? sanitizeLexicon(data.lexicon) : null,
         project: data.project && typeof data.project === 'object' ? data.project : null
     };
+}
+
+/** 
+ * Automatically decompresses cloud payloads if they were zipped by the client 
+ * to bypass Supabase size limits. Returns the raw payload if uncompressed.
+ */
+export function decompressPayload(payload) {
+    if (!payload) return payload;
+
+    // Handle new partial compression (dictionary & wiki compressed, config left intact for querying)
+    if (payload.compressed_payload && typeof payload.compressed_payload === 'string') {
+        try {
+            const decompressedString = LZString.decompressFromBase64(payload.compressed_payload);
+            const decompressed = JSON.parse(decompressedString);
+            return {
+                ...payload,
+                dictionary: decompressed.dictionary,
+                wiki: decompressed.wiki
+            };
+        } catch (e) {
+            console.error("Failed to decompress partial cloud payload:", e);
+            return null;
+        }
+    }
+
+    // Handle full compression (legacy if any were pushed before the change)
+    if (payload.compressed && typeof payload.compressed === 'string') {
+        try {
+            const decompressedString = LZString.decompressFromBase64(payload.compressed);
+            return JSON.parse(decompressedString);
+        } catch (e) {
+            console.error("Failed to decompress full cloud payload:", e);
+            return null;
+        }
+    }
+    
+    return payload;
 }

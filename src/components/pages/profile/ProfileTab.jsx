@@ -12,7 +12,7 @@ import './profileTab.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ALLOWED_REDIRECTS } from '../../../App.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
-import { sanitizeConfig, sanitizeLexicon } from '@/utils/schemaValidator.jsx';
+import { sanitizeConfig, sanitizeLexicon, decompressPayload } from '@/utils/schemaValidator.jsx';
 import { useSharing } from '@/hooks/useSharing.jsx';
 import PayPalButton from '@/components/Payment/PayPalButton.jsx';
 
@@ -272,8 +272,9 @@ export default function ProfileTab() {
     const handleSelectProject = (project) => {
         if (project && project.project_data) {
             // SEC-5: Sanitize cloud data before injecting into stores
-            const safeConfig = sanitizeConfig(project.project_data.config || {});
-            const safeLexicon = sanitizeLexicon(project.project_data.dictionary || []);
+            const projectData = decompressPayload(project.project_data);
+            const safeConfig = sanitizeConfig(projectData.config || {});
+            const safeLexicon = sanitizeLexicon(projectData.dictionary || []);
             
             // Save to local project archive so it persists in the Workspaces tab
             const saveProjectToArchive = useProjectStore.getState().saveProjectToArchive;
@@ -289,8 +290,8 @@ export default function ProfileTab() {
                 lastCloudSync: new Date().toISOString()
             });
             
-            if (project.project_data.wiki) {
-                config.updateConfig({ wikiPages: project.project_data.wiki });
+            if (projectData.wiki) {
+                config.updateConfig({ wikiPages: projectData.wiki });
             }
             setProjectSelectorOpen(false);
             const projectName = safeConfig.conlangName || 'Untitled Project';
@@ -386,9 +387,10 @@ export default function ProfileTab() {
             const saveProjectToArchive = useProjectStore.getState().saveProjectToArchive;
             for (const project of projects) {
                 // Ignore projects that were soft-deleted
-                if (project.project_data && !project.project_data.deleted) {
-                    const safeConfig = sanitizeConfig(project.project_data.config || {});
-                    const safeLexicon = sanitizeLexicon(project.project_data.dictionary || []);
+                const projectData = decompressPayload(project.project_data);
+                if (projectData && !projectData.deleted) {
+                    const safeConfig = sanitizeConfig(projectData.config || {});
+                    const safeLexicon = sanitizeLexicon(projectData.dictionary || []);
                     saveProjectToArchive(
                         { ...safeConfig, projectId: project.project_id },
                         safeLexicon
@@ -397,7 +399,10 @@ export default function ProfileTab() {
             }
 
             // Filter the final list shown in the selector
-            const activeProjects = projects.filter(p => p.project_data && !p.project_data.deleted);
+            const activeProjects = projects.filter(p => {
+                const pd = decompressPayload(p.project_data);
+                return pd && !pd.deleted;
+            });
 
             if (activeProjects.length === 0) {
                 setSyncStatus('ℹ️ No active projects found in the cloud for your account.');
@@ -471,14 +476,15 @@ export default function ProfileTab() {
                 
             if (error || !data) throw error;
             
-            const safeConfig = sanitizeConfig(data.project_data.config || {});
-            const safeLexicon = sanitizeLexicon(data.project_data.dictionary || []);
+            const projectData = decompressPayload(data.project_data);
+            const safeConfig = sanitizeConfig(projectData.config || {});
+            const safeLexicon = sanitizeLexicon(projectData.dictionary || []);
             
             setLexicon(safeLexicon);
             config.setFullConfig({ ...safeConfig, projectId: config.projectId });
             
-            if (data.project_data.wiki) {
-                config.updateConfig({ wikiPages: data.project_data.wiki });
+            if (projectData.wiki) {
+                config.updateConfig({ wikiPages: projectData.wiki });
             }
             
             setVersionHistoryOpen(false);
@@ -513,17 +519,18 @@ export default function ProfileTab() {
                                         {isSharing ? ' Generating...' : ' Share Link'}
                                     </div>
                                 </Button>
-                                
-                                <Button variant="default" className="push-btn" onClick={handlePushToCloud}>
-                                    <div className="btn-content"><CloudUpload size={16}/> Push to Cloud</div>
-                                </Button>
-                                <Button variant="default" className="pull-btn" onClick={handlePullFromCloud}>
-                                    <div className="btn-content"><CloudDownload size={16}/> Pull from Cloud</div>
-                                </Button>
                                 {config.isProActive && (
-                                    <Button variant="default" onClick={loadVersionHistory}>
-                                        <div className="btn-content"><History size={16}/> Version History</div>
-                                    </Button>
+                                    <>
+                                        <Button variant="default" className="push-btn" onClick={handlePushToCloud}>
+                                            <div className="btn-content"><CloudUpload size={16}/> Push to Cloud</div>
+                                        </Button>
+                                        <Button variant="default" className="pull-btn" onClick={handlePullFromCloud}>
+                                            <div className="btn-content"><CloudDownload size={16}/> Pull from Cloud</div>
+                                        </Button>
+                                        <Button variant="default" onClick={loadVersionHistory}>
+                                            <div className="btn-content"><History size={16}/> Version History</div>
+                                        </Button>
+                                    </>
                                 )}
 
                                 <Button variant="error" className="signout-btn" onClick={handleLogout}>
@@ -729,7 +736,7 @@ export default function ProfileTab() {
                     {cloudProjects.map(p => (
                         <div key={p.project_id} className="project-selector-item" onClick={() => handleSelectProject(p)}>
                             <h4>{p.project_data.config?.conlangName || 'Untitled Project'}</h4>
-                            <p>{(p.project_data.dictionary || []).length} words</p>
+                            <p>{p.project_data.wordCount !== undefined ? p.project_data.wordCount : (p.project_data.dictionary || []).length} words</p>
                             <span className="project-selector-id">ID: {p.project_id}</span>
                         </div>
                     ))}
@@ -750,7 +757,7 @@ export default function ProfileTab() {
                                     <div>
                                         <h4 style={{ margin: '0 0 4px 0', color: 'var(--tx)' }}>{v.version_name}</h4>
                                         <div style={{ fontSize: '0.8rem', color: 'var(--tx2)' }}>
-                                            {new Date(v.created_at).toLocaleString()} • {(v.project_data?.dictionary || []).length} words
+                                            {new Date(v.created_at).toLocaleString()} • {v.project_data?.wordCount !== undefined ? v.project_data.wordCount : (v.project_data?.dictionary || []).length} words
                                         </div>
                                     </div>
                                     <Button variant="default" onClick={() => handleRestoreVersion(v)} style={{ padding: '6px 12px' }}>

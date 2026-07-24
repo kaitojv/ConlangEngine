@@ -82,9 +82,13 @@ export default function Home() {
                 
                 if (snapshotsData) {
                     snapshotsData.forEach(snapshot => {
-                        const dictionary = snapshot.project_data?.dictionary;
-                        if (Array.isArray(dictionary)) {
-                            wordsCount += dictionary.length;
+                        if (snapshot.project_data?.wordCount !== undefined) {
+                            wordsCount += snapshot.project_data.wordCount;
+                        } else {
+                            const dictionary = snapshot.project_data?.dictionary;
+                            if (Array.isArray(dictionary)) {
+                                wordsCount += dictionary.length;
+                            }
                         }
                     });
                 }

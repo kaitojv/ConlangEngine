@@ -5,7 +5,7 @@ import { useSharing } from '@/hooks/useSharing.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
 import Modal from '@/components/UI/Modal/Modal.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
-import { sanitizeConfig, sanitizeLexicon } from '@/utils/schemaValidator.jsx';
+import { sanitizeConfig, sanitizeLexicon, decompressPayload } from '@/utils/schemaValidator.jsx';
 import toast from 'react-hot-toast';
 import { CloudDownload, HardDriveUpload, AlertTriangle } from 'lucide-react';
 
@@ -45,12 +45,13 @@ export default function SyncConflictManager() {
 
             if (!config.lastCloudSync) return; // Do not show conflict for users who have never synced on this device
 
-            const cloudTimestamp = data.project_data?.last_updated ? new Date(data.project_data.last_updated).getTime() : new Date(data.created_at).getTime();
+            const projectData = decompressPayload(data.project_data);
+            const cloudTimestamp = projectData?.last_updated ? new Date(projectData.last_updated).getTime() : new Date(data.created_at).getTime();
             const localTimestamp = new Date(config.lastCloudSync).getTime();
 
             // Give a 5-second buffer to account for minor clock desyncs during the actual push
             if (cloudTimestamp > localTimestamp + 5000) {
-                setCloudPayload(data.project_data);
+                setCloudPayload(projectData);
                 config.updateConfig({ syncConflictStatus: 'conflict' });
             }
         } catch (err) {
@@ -93,7 +94,7 @@ export default function SyncConflictManager() {
 
     const handleKeepLocal = async () => {
         // Pushing to cloud will naturally update `lastCloudSync`
-        const success = await handlePushToCloud(false, `Conflict Resolution: Overwrite`);
+        const success = await handlePushToCloud(true, `Conflict Resolution: Overwrite`);
         if (success) {
             config.updateConfig({ syncConflictStatus: 'resolved' });
             setCloudPayload(null);

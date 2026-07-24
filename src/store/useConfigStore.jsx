@@ -502,6 +502,7 @@ export const useConfigStore = create(
 
             setFullConfig: (newConfig) => {
                 const projectId = newConfig.projectId || useConfigStore.getState().projectId;
+                newConfig.projectId = projectId; // Prevent projectId from being lost during switch
                 
                 // When loading configs that have been deduplicated (e.g. from cloud/backup),
                 // root bloat fields might be missing. We need to restore them from the default script
