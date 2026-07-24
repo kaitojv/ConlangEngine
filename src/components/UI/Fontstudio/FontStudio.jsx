@@ -1231,24 +1231,24 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                             />
                         </div>
                         <div className="fs-brush-control">
-                            <span className="fs-brush-label">Grid ({gridDivisions}x{gridDivisions}):</span>
+                            <span className="fs-brush-label">Grid:</span>
                             <input 
-                                type="range" 
-                                min="2" max="30" step="2"
+                                type="number" 
+                                min="2" max="50" step="1"
                                 value={gridDivisions} 
-                                onChange={(e) => setGridDivisions(parseInt(e.target.value))} 
-                                className="fs-brush-slider"
-                                title="Grid Fineness (Block Size)"
+                                onChange={(e) => setGridDivisions(parseInt(e.target.value) || 2)} 
+                                style={{ width: '50px', background: 'var(--s2)', color: 'var(--tx)', border: '1px solid var(--bd)', borderRadius: '4px', padding: '2px 4px', textAlign: 'center' }}
+                                title="Number of Grid Blocks"
                             />
                         </div>
                         <div className="fs-controls-group">
                             <Button variant="default" className="btn-sm" onClick={handleRotate} title="Rotate 90° Clockwise">
                                 <RotateCw size={16} />
                             </Button>
-                            <Button variant="default" className="btn-sm" onClick={() => handleMove(0, -10)} title="Move Up"><ArrowUp size={16} /></Button>
-                            <Button variant="default" className="btn-sm" onClick={() => handleMove(0, 10)} title="Move Down"><ArrowDown size={16} /></Button>
-                            <Button variant="default" className="btn-sm" onClick={() => handleMove(-10, 0)} title="Move Left"><ArrowLeft size={16} /></Button>
-                            <Button variant="default" className="btn-sm" onClick={() => handleMove(10, 0)} title="Move Right"><ArrowRight size={16} /></Button>
+                            <Button variant="default" className="btn-sm" onClick={() => handleMove(0, -gridSize)} title="Move Up"><ArrowUp size={16} /></Button>
+                            <Button variant="default" className="btn-sm" onClick={() => handleMove(0, gridSize)} title="Move Down"><ArrowDown size={16} /></Button>
+                            <Button variant="default" className="btn-sm" onClick={() => handleMove(-gridSize, 0)} title="Move Left"><ArrowLeft size={16} /></Button>
+                            <Button variant="default" className="btn-sm" onClick={() => handleMove(gridSize, 0)} title="Move Right"><ArrowRight size={16} /></Button>
                             <Button variant="default" className="btn-sm" onClick={() => setZoom(prev => Math.min(3.0, prev + 0.25))} title="Zoom Viewport In"><ZoomIn size={16} /></Button>
                             <Button variant="default" className="btn-sm" onClick={() => setZoom(prev => Math.max(1.0, prev - 0.25))} title="Zoom Viewport Out"><ZoomOut size={16} /></Button>
                             <Button variant="default" className="btn-sm" onClick={handleUndo} title="Undo">
@@ -1270,7 +1270,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                         <div className="fs-canvas-grid" style={{ 
                             backgroundSize: `${zoom * (340/300) * gridSize}px ${zoom * (340/300) * gridSize}px`, 
                             opacity: isSnapToGrid ? 0.3 : 0.1,
-                            backgroundPosition: '50% 50%'
+                            backgroundPosition: '0px 0px'
                         }}></div>
                         
                         {isSnapToMetrics && (
