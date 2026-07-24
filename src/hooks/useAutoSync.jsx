@@ -47,7 +47,7 @@ export function useAutoSync() {
     }, [session]);
 
     const triggerAutoSync = (config, lexicon) => {
-        if (!config.isAutoSyncEnabled) {
+        if (!config.isAutoSyncEnabled || config.syncConflictStatus === 'conflict') {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
             return;
         }

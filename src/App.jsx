@@ -12,6 +12,7 @@ import { useFontInjector } from './utils/useFontInjector.jsx';
 import { useGlobalHotkeys } from './hooks/useGlobalHotkeys.jsx';
 import { useBackupManager } from './hooks/useBackupManager.jsx';
 import { useAutoSync } from './hooks/useAutoSync.jsx';
+import SyncConflictManager from './components/pages/home/SyncConflictManager.jsx';
 import Footer from './components/Layout/Footer/Footer.jsx';
 import FloatingKeyboard from './components/UI/FloatingKeyboard/FloatingKeyboard.jsx';
 import FloatingBackground from './components/pages/home/FloatingBackground.jsx';
@@ -285,6 +286,7 @@ function App(){
       <FloatingKeyboard />
       <PWAInstallPrompt />
       <CommandPalette />
+      <SyncConflictManager />
       <Toaster position="bottom-right" toastOptions={{
           style: {
             background: 'var(--s4)',

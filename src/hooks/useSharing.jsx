@@ -90,6 +90,8 @@ export function useSharing(session) {
                 toast.success('Cloud Sync Complete!');
                 config.logActivity('Pushed dictionary to the cloud.');
             }
+            
+            config.updateConfig({ lastCloudSync: new Date().toISOString() });
             return true;
         } catch (err) {
             console.error("Supabase Error Context:", { 

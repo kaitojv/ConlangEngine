@@ -56,6 +56,8 @@ export const INITIAL_CONFIG = {
     activity: [],
     isProActive: false,
     isAutoSyncEnabled: false,
+    lastCloudSync: null,
+    syncConflictStatus: 'resolved',
     lastStudyDate: null,
     customFont: null,
     appUiFont: "'Outfit', sans-serif",
