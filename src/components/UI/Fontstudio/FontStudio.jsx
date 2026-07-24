@@ -99,7 +99,8 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     const [symmetryMode, setSymmetryMode] = useState('none'); // 'none', 'horizontal', 'vertical'
     const [isSnapToGrid, setIsSnapToGrid] = useState(false);
     const [isSnapToMetrics, setIsSnapToMetrics] = useState(false);
-    const [gridSize, setGridSize] = useState(15);
+    const [gridDivisions, setGridDivisions] = useState(20);
+    const gridSize = gridDivisions > 0 ? 300 / gridDivisions : 0;
     const [zoom, setZoom] = useState(1.0);
     const [lineCap, setLineCap] = useState('round'); // 'round', 'butt'
     const [isFillMode, setIsFillMode] = useState(false);
@@ -1230,12 +1231,12 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                             />
                         </div>
                         <div className="fs-brush-control">
-                            <span className="fs-brush-label">Grid:</span>
+                            <span className="fs-brush-label">Grid ({gridDivisions}x{gridDivisions}):</span>
                             <input 
                                 type="range" 
-                                min="5" max="30" step="1"
-                                value={gridSize} 
-                                onChange={(e) => setGridSize(parseInt(e.target.value))} 
+                                min="2" max="30" step="2"
+                                value={gridDivisions} 
+                                onChange={(e) => setGridDivisions(parseInt(e.target.value))} 
                                 className="fs-brush-slider"
                                 title="Grid Fineness (Block Size)"
                             />
