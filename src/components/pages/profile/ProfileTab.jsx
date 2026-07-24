@@ -283,7 +283,11 @@ export default function ProfileTab() {
             );
 
             setLexicon(safeLexicon);
-            config.setFullConfig(safeConfig);
+            config.setFullConfig({
+                ...safeConfig, 
+                projectId: project.project_id,
+                lastCloudSync: new Date().toISOString()
+            });
             
             if (project.project_data.wiki) {
                 config.updateConfig({ wikiPages: project.project_data.wiki });
@@ -510,18 +514,16 @@ export default function ProfileTab() {
                                     </div>
                                 </Button>
                                 
+                                <Button variant="default" className="push-btn" onClick={handlePushToCloud}>
+                                    <div className="btn-content"><CloudUpload size={16}/> Push to Cloud</div>
+                                </Button>
+                                <Button variant="default" className="pull-btn" onClick={handlePullFromCloud}>
+                                    <div className="btn-content"><CloudDownload size={16}/> Pull from Cloud</div>
+                                </Button>
                                 {config.isProActive && (
-                                    <>
-                                        <Button variant="default" className="push-btn" onClick={handlePushToCloud}>
-                                            <div className="btn-content"><CloudUpload size={16}/> Push to Cloud</div>
-                                        </Button>
-                                        <Button variant="default" className="pull-btn" onClick={handlePullFromCloud}>
-                                            <div className="btn-content"><CloudDownload size={16}/> Pull from Cloud</div>
-                                        </Button>
-                                        <Button variant="default" onClick={loadVersionHistory}>
-                                            <div className="btn-content"><History size={16}/> Version History</div>
-                                        </Button>
-                                    </>
+                                    <Button variant="default" onClick={loadVersionHistory}>
+                                        <div className="btn-content"><History size={16}/> Version History</div>
+                                    </Button>
                                 )}
 
                                 <Button variant="error" className="signout-btn" onClick={handleLogout}>
@@ -581,7 +583,7 @@ export default function ProfileTab() {
                         />
                         <p className="profile-settings-hint">This name appears on the homepage greeting and exported PDFs.</p>
                     </div>
-                    {session && (
+                    {session && config.isProActive && (
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                                 <label style={{ fontSize: '0.9rem', color: 'var(--tx)', fontWeight: 'bold' }}><RefreshCw size={14} style={{ marginRight: '6px', position: 'relative', top: '2px' }}/> Auto-Sync to Cloud</label>

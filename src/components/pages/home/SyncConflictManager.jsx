@@ -43,8 +43,10 @@ export default function SyncConflictManager() {
 
             if (error || !data) return;
 
-            const cloudTimestamp = new Date(data.created_at).getTime();
-            const localTimestamp = config.lastCloudSync ? new Date(config.lastCloudSync).getTime() : 0;
+            if (!config.lastCloudSync) return; // Do not show conflict for users who have never synced on this device
+
+            const cloudTimestamp = data.project_data?.last_updated ? new Date(data.project_data.last_updated).getTime() : new Date(data.created_at).getTime();
+            const localTimestamp = new Date(config.lastCloudSync).getTime();
 
             // Give a 5-second buffer to account for minor clock desyncs during the actual push
             if (cloudTimestamp > localTimestamp + 5000) {

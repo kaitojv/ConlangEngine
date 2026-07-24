@@ -36,6 +36,15 @@ export function useSharing(session) {
             last_updated: new Date().toISOString()
         };
         
+        // SEC/PERF: Hard limit payload to ~8MB to prevent database exhaustion, but allow massive logographic languages
+        const payloadSizeStr = JSON.stringify(payload);
+        const isMassivePayload = payloadSizeStr.length > 3000000; // > 3MB
+        
+        if (payloadSizeStr.length > 8000000) {
+            if (isManualSync) toast.error("Project is too large to sync to the cloud! Please remove large images from your wiki (Limit: 8MB).");
+            return false;
+        }
+        
         try {
             // SEC: Before upserting, verify that this project_id doesn't belong to another user
             if (session?.user?.id && currentProjectId) {
@@ -73,6 +82,25 @@ export function useSharing(session) {
                     project_data: payload
                 });
                 if (versionError) console.warn("Failed to save version history:", versionError);
+
+                // --- NEW CODE: CLEANUP OLD VERSIONS ---
+                // We don't want the database to blow up. Keep fewer versions for massive projects.
+                try {
+                    const keepCount = isMassivePayload ? 3 : 10;
+                    const { data: oldVersions } = await supabase
+                        .from('conlang_versions')
+                        .select('id')
+                        .eq('project_id', currentProjectId)
+                        .order('created_at', { ascending: false })
+                        .range(keepCount, 100); // Fetch versions beyond the keep limit
+
+                    if (oldVersions && oldVersions.length > 0) {
+                        const idsToDelete = oldVersions.map(v => v.id);
+                        await supabase.from('conlang_versions').delete().in('id', idsToDelete);
+                    }
+                } catch (cleanupErr) {
+                    console.warn("Failed to cleanup old versions:", cleanupErr);
+                }
             }
 
             // If logged in, also push to the conlangs table for syncing across devices
