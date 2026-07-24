@@ -99,7 +99,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     const [symmetryMode, setSymmetryMode] = useState('none'); // 'none', 'horizontal', 'vertical'
     const [isSnapToGrid, setIsSnapToGrid] = useState(false);
     const [isSnapToMetrics, setIsSnapToMetrics] = useState(false);
-    const [gridSize, setGridSize] = useState(20);
+    const [gridSize, setGridSize] = useState(15);
     const [zoom, setZoom] = useState(1.0);
     const [lineCap, setLineCap] = useState('round'); // 'round', 'butt'
     const [isFillMode, setIsFillMode] = useState(false);
@@ -1226,6 +1226,18 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                                 value={brushSize} 
                                 onChange={(e) => setBrushSize(parseInt(e.target.value))} 
                                 className="fs-brush-slider"
+                                title="Brush Thickness"
+                            />
+                        </div>
+                        <div className="fs-brush-control">
+                            <span className="fs-brush-label">Grid:</span>
+                            <input 
+                                type="range" 
+                                min="5" max="30" step="1"
+                                value={gridSize} 
+                                onChange={(e) => setGridSize(parseInt(e.target.value))} 
+                                className="fs-brush-slider"
+                                title="Grid Fineness (Block Size)"
                             />
                         </div>
                         <div className="fs-controls-group">
@@ -1255,7 +1267,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                         onPointerLeave={handlePointerUp}
                     >
                         <div className="fs-canvas-grid" style={{ 
-                            backgroundSize: `${zoom * (340/300) * 20}px ${zoom * (340/300) * 20}px`, 
+                            backgroundSize: `${zoom * (340/300) * gridSize}px ${zoom * (340/300) * gridSize}px`, 
                             opacity: isSnapToGrid ? 0.3 : 0.1,
                             backgroundPosition: '50% 50%'
                         }}></div>
