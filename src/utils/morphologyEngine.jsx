@@ -80,13 +80,15 @@ export const applyRuleToWord = (baseWord, rule, grammarRules, vowels, consonants
         for (const depName of depNames) {
             const depRule = grammarRules.find(r => (r.name || '').toLowerCase() === depName);
             if (depRule) {
-                currentBase = applyRuleToWord(currentBase, depRule, grammarRules, vowels, consonants, otherPhonemes, _depth + 1);
+                const depResult = applyRuleToWord(currentBase, depRule, grammarRules, vowels, consonants, otherPhonemes, _depth + 1);
+                if (depResult != null) currentBase = depResult;
             }
         }
     }
 
     // 0. Enforce Allomorph Conditions (After Vowel / After Consonant / After Other)
     if (rule.condition && rule.condition !== 'always') {
+        if (!currentBase) return null;
         const vowelList = vowels ? vowels.split(',').map(v => v.trim().split('=')[0].toLowerCase()).filter(Boolean) : [];
         const consList = consonants ? consonants.split(',').map(c => c.trim().split('=')[0].toLowerCase()).filter(Boolean) : [];
         const otherList = otherPhonemes ? otherPhonemes.split(',').map(o => o.trim().split('=')[0].toLowerCase()).filter(Boolean) : [];
