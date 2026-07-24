@@ -171,7 +171,7 @@ export default function ConlangsTab() {
         const safeConfig = sanitizeConfig(project.project_data.config || {});
         
         setLexicon(safeLexicon);
-        setFullConfig(safeConfig);
+        setFullConfig({ ...safeConfig, projectId: project.id });
         
         navigate('/');
     };

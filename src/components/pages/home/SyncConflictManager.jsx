@@ -107,7 +107,10 @@ export default function SyncConflictManager() {
     return (
         <Modal 
             isOpen={config.syncConflictStatus === 'conflict'} 
-            onClose={() => {}} // Force user to choose an option
+            onClose={() => {
+                config.updateConfig({ syncConflictStatus: 'ignored' });
+                setCloudPayload(null);
+            }} 
             title={<><AlertTriangle color="var(--err)" style={{ position: 'relative', top: '2px', marginRight: '5px' }}/> Sync Conflict Detected</>}
         >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '10px 0' }}>
