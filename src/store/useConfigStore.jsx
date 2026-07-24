@@ -527,6 +527,7 @@ export const useConfigStore = create(
                     newConfig.customFontBase64 = defaultScriptData.customFontBase64;
                 }
 
+                const projectId = newConfig.projectId || useConfigStore.getState().projectId;
                 if (projectId) {
                     const bloat = {};
                     if (newConfig.customFontBase64) bloat.customFontBase64 = newConfig.customFontBase64;
