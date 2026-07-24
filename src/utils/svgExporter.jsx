@@ -16,7 +16,15 @@ const strokesToPaths = (strokes, xOffset = 0) => {
         for (let i = 1; i < stroke.length; i++) {
             pathD += ` L ${stroke[i].x + xOffset} ${stroke[i].y}`;
         }
-        return `  <path d="${pathD}" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />\n`;
+        
+        if (stroke.isFilled) {
+            pathD += ' Z';
+            return `  <path d="${pathD}" fill="currentColor" stroke="none" stroke-linejoin="round" />\n`;
+        } else {
+            const lineCap = stroke.lineCap || 'round';
+            // Default thickness is roughly equivalent to a brushSize of 10.
+            return `  <path d="${pathD}" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="${lineCap}" stroke-linejoin="round" />\n`;
+        }
     }).join('');
 };
 

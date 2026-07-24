@@ -55,6 +55,7 @@ export const INITIAL_CONFIG = {
     unlockedBadges: ['genesis'],
     activity: [],
     isProActive: false,
+    isAutoSyncEnabled: false,
     lastStudyDate: null,
     customFont: null,
     appUiFont: "'Outfit', sans-serif",

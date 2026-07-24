@@ -45,8 +45,10 @@ export default function PublicViewer() {
         }
     }, [playingWordId]);
 
-    // Fetch the project from Supabase using the project_id
+    // Fetch the project from Supabase using the project_id and listen for live updates
     useEffect(() => {
+        let channel;
+
         const fetchProject = async () => {
             try {
                 setLoading(true);
@@ -68,7 +70,35 @@ export default function PublicViewer() {
             }
         };
 
-        if (projectId) fetchProject();
+        if (projectId) {
+            fetchProject();
+
+            // Subscribe to live updates
+            channel = supabase
+                .channel(`public:conlang_snapshots:${projectId}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'conlang_snapshots',
+                        filter: `project_id=eq.${projectId}`
+                    },
+                    (payload) => {
+                        console.log('Live update received from author!');
+                        if (payload.new && payload.new.project_data) {
+                            setProjectData(payload.new.project_data);
+                        }
+                    }
+                )
+                .subscribe();
+        }
+
+        return () => {
+            if (channel) {
+                supabase.removeChannel(channel);
+            }
+        };
     }, [projectId]);
 
     // Auto-compile the block font on the fly if it was stripped from the cloud sync payload

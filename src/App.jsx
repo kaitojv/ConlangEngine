@@ -11,6 +11,7 @@ import { useThemeInjector } from './hooks/useThemeInjector.jsx';
 import { useFontInjector } from './utils/useFontInjector.jsx';
 import { useGlobalHotkeys } from './hooks/useGlobalHotkeys.jsx';
 import { useBackupManager } from './hooks/useBackupManager.jsx';
+import { useAutoSync } from './hooks/useAutoSync.jsx';
 import Footer from './components/Layout/Footer/Footer.jsx';
 import FloatingKeyboard from './components/UI/FloatingKeyboard/FloatingKeyboard.jsx';
 import FloatingBackground from './components/pages/home/FloatingBackground.jsx';
@@ -187,6 +188,7 @@ function App(){
   useThemeInjector();
   useFontInjector();
   useGlobalHotkeys();
+  useAutoSync();
   const { backupNow } = useBackupManager();
 
   return (

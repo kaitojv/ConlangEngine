@@ -7,7 +7,7 @@ import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import Modal from '@/components/UI/Modal/Modal.jsx';
-import { CloudUpload, CloudDownload, Trophy, Activity, User, LogOut, Globe, MessageCircle, BookOpen, Crown, Cog, Puzzle, Tags, Flame, GitBranch, Share2, Heart, Coffee, PieChart, Sparkles, Book, Library, BrainCircuit, ScrollText, Network, Ear, ArrowLeftRight, Layers, Volume2, PenTool, Shapes, Download, Trash2, Edit2 } from 'lucide-react';
+import { CloudUpload, CloudDownload, Trophy, Activity, User, LogOut, Globe, MessageCircle, BookOpen, Crown, Cog, Puzzle, Tags, Flame, GitBranch, Share2, Heart, Coffee, PieChart, Sparkles, Book, Library, BrainCircuit, ScrollText, Network, Ear, ArrowLeftRight, Layers, Volume2, PenTool, Shapes, Download, Trash2, Edit2, History, RotateCcw, RefreshCw } from 'lucide-react';
 import './profileTab.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ALLOWED_REDIRECTS } from '../../../App.jsx';
@@ -64,6 +64,11 @@ export default function ProfileTab() {
     const [password, setPassword] = useState('');
     const [authStatus, setAuthStatus] = useState({ msg: '', type: '' });
     const [syncStatus, setSyncStatus] = useState('');
+    
+    // Version History State
+    const [isVersionHistoryOpen, setVersionHistoryOpen] = useState(false);
+    const [versions, setVersions] = useState([]);
+    const [loadingVersions, setLoadingVersions] = useState(false);
 
     // Listen to Supabase to see if the user is currently logged in
     useEffect(() => {
@@ -426,6 +431,46 @@ export default function ProfileTab() {
         return { Icon, cleanText };
     };
 
+    const loadVersionHistory = async () => {
+        if (!session) return;
+        setVersionHistoryOpen(true);
+        setLoadingVersions(true);
+        try {
+            const { data, error } = await supabase
+                .from('conlang_versions')
+                .select('id, created_at, version_name, project_data')
+                .eq('user_id', session.user.id)
+                .eq('project_id', config.projectId)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            setVersions(data || []);
+        } catch (err) {
+            console.error("Failed to load versions:", err);
+            toast.error("Failed to load version history.");
+        } finally {
+            setLoadingVersions(false);
+        }
+    };
+
+    const handleRestoreVersion = (version) => {
+        if (!confirm(`Are you sure you want to restore "${version.version_name}"? This will overwrite your current local workspace.`)) return;
+        
+        const safeConfig = sanitizeConfig(version.project_data.config || {});
+        const safeLexicon = sanitizeLexicon(version.project_data.dictionary || []);
+        
+        setLexicon(safeLexicon);
+        config.setFullConfig({ ...safeConfig, projectId: config.projectId });
+        
+        if (version.project_data.wiki) {
+            config.updateConfig({ wikiPages: version.project_data.wiki });
+        }
+        
+        setVersionHistoryOpen(false);
+        config.logActivity(`Restored past version: ${version.version_name}`);
+        toast.success("Version restored successfully!");
+    };
+
     return (
         <div className="profile-dashboard-layout">
             
@@ -457,6 +502,9 @@ export default function ProfileTab() {
                                         </Button>
                                         <Button variant="default" className="pull-btn" onClick={handlePullFromCloud}>
                                             <div className="btn-content"><CloudDownload size={16}/> Pull from Cloud</div>
+                                        </Button>
+                                        <Button variant="default" onClick={loadVersionHistory}>
+                                            <div className="btn-content"><History size={16}/> Version History</div>
                                         </Button>
                                     </>
                                 )}
@@ -520,13 +568,23 @@ export default function ProfileTab() {
                     </div>
                     {session && (
                         <div>
-                            <Input
-                                label="Email"
-                                value={session.user.email || ''}
-                                disabled
-                                readOnly
-                            />
-                            <p className="profile-settings-hint">Email is managed through your account provider and cannot be changed here.</p>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                <label style={{ fontSize: '0.9rem', color: 'var(--tx)', fontWeight: 'bold' }}><RefreshCw size={14} style={{ marginRight: '6px', position: 'relative', top: '2px' }}/> Auto-Sync to Cloud</label>
+                                <div 
+                                    style={{ 
+                                        width: '40px', height: '22px', borderRadius: '20px', background: config.isAutoSyncEnabled ? 'var(--acc)' : 'var(--s3)', 
+                                        position: 'relative', cursor: 'pointer', transition: 'background 0.3s ease' 
+                                    }}
+                                    onClick={() => config.updateConfig({ isAutoSyncEnabled: !config.isAutoSyncEnabled })}
+                                >
+                                    <div style={{
+                                        width: '18px', height: '18px', background: '#fff', borderRadius: '50%',
+                                        position: 'absolute', top: '2px', left: config.isAutoSyncEnabled ? '20px' : '2px',
+                                        transition: 'left 0.3s ease'
+                                    }}/>
+                                </div>
+                            </div>
+                            <p className="profile-settings-hint">Automatically push your changes to the cloud (and create a version history snapshot) a few seconds after you stop typing.</p>
                         </div>
                     )}
                 </div>
@@ -658,6 +716,33 @@ export default function ProfileTab() {
                             <span className="project-selector-id">ID: {p.project_id}</span>
                         </div>
                     ))}
+                </div>
+            </Modal>
+            
+            {/* Version History Modal */}
+            <Modal isOpen={isVersionHistoryOpen} onClose={() => setVersionHistoryOpen(false)} title="Version History">
+                <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                    {loadingVersions ? (
+                        <p style={{ textAlign: 'center', padding: '2rem' }}>Loading versions...</p>
+                    ) : versions.length === 0 ? (
+                        <p style={{ textAlign: 'center', padding: '2rem' }}>No versions found for this project. Save to cloud to create one!</p>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {versions.map(v => (
+                                <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--s1)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--bd)' }}>
+                                    <div>
+                                        <h4 style={{ margin: '0 0 4px 0', color: 'var(--tx)' }}>{v.version_name}</h4>
+                                        <div style={{ fontSize: '0.8rem', color: 'var(--tx2)' }}>
+                                            {new Date(v.created_at).toLocaleString()} • {(v.project_data?.dictionary || []).length} words
+                                        </div>
+                                    </div>
+                                    <Button variant="default" onClick={() => handleRestoreVersion(v)} style={{ padding: '6px 12px' }}>
+                                        <div className="btn-content"><RotateCcw size={14}/> Restore</div>
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </Modal>
             

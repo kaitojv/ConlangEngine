@@ -10,7 +10,7 @@ export function useSharing(session) {
     const lexicon = useLexiconStore(state => state.lexicon) || [];
     const config = useConfigStore();
 
-    const handlePushToCloud = async (isManualSync = true) => {
+    const handlePushToCloud = async (isManualSync = true, versionName = null) => {
         // Only enforce session for manual "Push to Cloud" button
         if (isManualSync && !session) {
             toast.error("You must be logged in to sync!");
@@ -62,6 +62,18 @@ export function useSharing(session) {
             }, { onConflict: 'project_id' });
 
             if (error) throw error;
+
+            // Push to version history table if logged in
+            if (session?.user?.id) {
+                const autoVersionName = versionName || (isManualSync ? `Manual Save - ${new Date().toLocaleString()}` : `Auto Save - ${new Date().toLocaleString()}`);
+                const { error: versionError } = await supabase.from('conlang_versions').insert({
+                    user_id: session.user.id,
+                    project_id: currentProjectId,
+                    version_name: autoVersionName,
+                    project_data: payload
+                });
+                if (versionError) console.warn("Failed to save version history:", versionError);
+            }
 
             // If logged in, also push to the conlangs table for syncing across devices
             if (session?.user?.id) {

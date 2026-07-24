@@ -169,6 +169,12 @@ export default function TypographyStudio() {
     const updateGlyph = (char, newCharUnicode) => {
         const key = editingMode === 'Base' ? char : `${char}_${editingMode.toLowerCase()}`;
         writeAlphabetGlyphs({ ...alphabetGlyphs, [key]: newCharUnicode });
+        
+        // Ensure script-level custom font base64 is refreshed immediately from Zustand
+        const latestFont = useConfigStore.getState().customFontBase64;
+        if (latestFont) {
+            updateScriptData(selectedScriptId, { customFontBase64: latestFont });
+        }
         setDrawingChar(null);
     };
 
@@ -241,6 +247,7 @@ export default function TypographyStudio() {
                     isOpen={!!drawingChar} 
                     onClose={() => setDrawingChar(null)}
                     title={`Draw Custom Symbol`}
+                    className="modal-wide"
                 >
                     <FontStudioModal
                         targetLabel={`Letter: ${drawingChar}`}
@@ -453,7 +460,7 @@ export default function TypographyStudio() {
                 </div>
             </Card>
 
-            {scriptType === 'alphabetic' && (
+            {allChars.length > 0 && (
                 <div className="alphabet-table-container">
                     <div style={{ padding: '1rem', background: 'var(--s2)', borderBottom: '1px solid var(--bd)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Currently Editing:</h3>
@@ -524,13 +531,21 @@ export default function TypographyStudio() {
                                                 </td>
                                                 
                                                 <td className="glyph-cell">
-                                                    {customGlyph ? (
-                                                        <span className="custom-font-text drawn-glyph" style={{ color: editingMode === 'Base' ? 'var(--tx)' : 'var(--acc)' }}>
-                                                            {customGlyph}
-                                                        </span>
-                                                    ) : (
-                                                        <span style={{ color: 'var(--tx3)', fontStyle: 'italic' }}>Not drawn</span>
-                                                    )}
+                                                    <input 
+                                                        type="text" 
+                                                        className="sg-input custom-font-text" 
+                                                        style={{ 
+                                                            width: '100px', 
+                                                            padding: '4px 8px', 
+                                                            fontSize: '1.1rem', 
+                                                            textAlign: 'center',
+                                                            color: editingMode === 'Base' ? 'var(--tx)' : 'var(--acc)',
+                                                            fontWeight: 'bold'
+                                                        }}
+                                                        placeholder="Not drawn"
+                                                        value={customGlyph || ''}
+                                                        onChange={(e) => updateGlyph(char, e.target.value)}
+                                                    />
                                                 </td>
                                                 
                                                 <td className="actions-cell">
@@ -577,7 +592,7 @@ export default function TypographyStudio() {
                 </div>
             )}
 
-            {scriptType === 'alphabetic' && (
+            {allChars.length > 0 && (
                 <Card style={{ padding: '1.5rem', marginTop: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--tx)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Keyboard size={18} /> OS Keyboard Layout Exporter

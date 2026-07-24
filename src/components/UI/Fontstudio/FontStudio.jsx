@@ -3,10 +3,85 @@ import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
 import Button from '../Buttons/Buttons.jsx';
-import { RotateCcw, RotateCw, Trash2, Download, Pencil, Minus, Spline, Eraser, Feather, FlipHorizontal, FlipVertical, Grid, Square, Circle, Triangle, SquareDashed, PenTool, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ZoomIn, ZoomOut } from 'lucide-react';
+import { RotateCcw, RotateCw, Trash2, Download, Pencil, Minus, Spline, Eraser, Feather, FlipHorizontal, FlipVertical, Grid, Square, Circle, Triangle, SquareDashed, PenTool, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ZoomIn, ZoomOut, MousePointer, Maximize2, Sliders, Move, Crosshair, Brush, Type, Plus } from 'lucide-react';
 import { exportStrokesAsSVG } from '../../../utils/svgExporter.jsx';
 import { parseSVGToStrokes } from '../../../utils/svgImporter.jsx';
 import './fontStudio.css';
+
+const generateCurvePoints = (p0, p1, p2) => {
+    const points = [];
+    const steps = 20;
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const x = (1 - t) * (1 - t) * p0.x + 2 * (1 - t) * t * p1.x + t * t * p2.x;
+        const y = (1 - t) * (1 - t) * p0.y + 2 * (1 - t) * t * p1.y + t * t * p2.y;
+        if (!isNaN(x) && !isNaN(y)) {
+            points.push({ x, y });
+        }
+    }
+    return points;
+};
+
+const generateSerifStroke = (p1, p2, bSize, lCap) => {
+    if (!p1 || !p2) return null;
+    let dx = p2.x - p1.x;
+    let dy = p2.y - p1.y;
+    let len = Math.sqrt(dx*dx + dy*dy);
+    if (len < 0.001) return null; // Prevent zero length or NaN
+    
+    const nx = -dy / len; 
+    const ny = dx / len;  
+    const vx = dx / len;  
+    const vy = dy / len;  
+    
+    const w = bSize * 1.6; 
+    const d = bSize * 1.5; 
+    const r = bSize * 0.5; 
+    const t = bSize * 0.3; 
+    
+    const capOffset = (lCap === 'butt' ? 0 : bSize * 0.5);
+    const bx = p1.x - vx * capOffset;
+    const by = p1.y - vy * capOffset;
+    
+    const pts = [];
+    // Start at bottom right tip
+    pts.push({ x: bx + nx * w, y: by + ny * w });
+    // Bottom left tip
+    pts.push({ x: bx - nx * w, y: by - ny * w });
+    
+    // Top left tip (adds thickness to serif)
+    const trTip = { x: bx - nx * w + vx * t, y: by - ny * w + vy * t };
+    pts.push(trTip);
+    
+    // Curve into stem (left)
+    const curve1 = generateCurvePoints(
+        trTip, 
+        { x: bx - nx * r + vx * t, y: by - ny * r + vy * t },
+        { x: bx - nx * r + vx * d, y: by - ny * r + vy * d } 
+    );
+    pts.push(...curve1.slice(1));
+    
+    // Cross over to right stem
+    const stemLeft = { x: bx + nx * r + vx * d, y: by + ny * r + vy * d };
+    pts.push(stemLeft);
+    
+    // Curve out to right tip
+    const tlTip = { x: bx + nx * w + vx * t, y: by + ny * w + vy * t };
+    const curve2 = generateCurvePoints(
+        stemLeft,
+        { x: bx + nx * r + vx * t, y: by + ny * r + vy * t },
+        tlTip
+    );
+    pts.push(...curve2.slice(1));
+    
+    // Close the path perfectly
+    pts.push(pts[0]);
+    
+    const stroke = pts;
+    stroke.isFilled = true;
+    stroke.lineCap = lCap;
+    return stroke;
+};
 
 export default function FontStudioModal({ targetLabel, onSave, onCancel, existingCharCode }) {
     const canvasRef = useRef(null);
@@ -17,12 +92,25 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     const [activeTool, setActiveTool] = useState('brush'); // 'brush', 'line', 'curve', 'rect', 'circle', 'select_erase'
     const [isCalligraphy, setIsCalligraphy] = useState(false);
     const [isBrushPen, setIsBrushPen] = useState(false);
+    const [isChisel, setIsChisel] = useState(false);
+    const [isPaintBrush, setIsPaintBrush] = useState(false);
+    const [isSerifPen, setIsSerifPen] = useState(false);
+    const [chiselAngle, setChiselAngle] = useState(45);
     const [symmetryMode, setSymmetryMode] = useState('none'); // 'none', 'horizontal', 'vertical'
     const [isSnapToGrid, setIsSnapToGrid] = useState(false);
+    const [isSnapToMetrics, setIsSnapToMetrics] = useState(false);
+    const [gridSize, setGridSize] = useState(20);
+    const [zoom, setZoom] = useState(1.0);
     const [lineCap, setLineCap] = useState('round'); // 'round', 'butt'
     const [isFillMode, setIsFillMode] = useState(false);
     const [interactionPoints, setInteractionPoints] = useState([]); // [P0, P1, P2]
     const [interactionStage, setInteractionStage] = useState(0); // 0: Idle, 1: Dragging, 2: Setting Curve Control
+    
+    // Node Editing States
+    const [selectedNode, setSelectedNode] = useState(null); // { strokeIndex, pointIndex }
+    const [hoveredNode, setHoveredNode] = useState(null); // { strokeIndex, pointIndex } or { isSegment, insertAfterIndex, insertPoint }
+    const [cursorCoords, setCursorCoords] = useState({x: 0, y: 0});
+    const [fineNudgeStep, setFineNudgeStep] = useState(1);
 
     // Metadata States
     const [glyphScale, setGlyphScale] = useState(1.0);
@@ -80,6 +168,9 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                     setYOffset(firstStroke.yOffset ?? 0);
                     setIsCalligraphy(firstStroke.isCalligraphy ?? false);
                     setIsBrushPen(firstStroke.isBrushPen ?? false);
+                    setIsChisel(firstStroke.isChisel ?? false);
+                    setIsPaintBrush(firstStroke.isPaintBrush ?? false);
+                    setIsSerifPen(firstStroke.isSerifPen ?? false);
                     actualStrokes = existingStrokes.slice(1);
                 } else if (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -999) {
                     setIsCalligraphy(true);
@@ -87,6 +178,27 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                 } else if (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -998) {
                     setIsBrushPen(true);
                     actualStrokes = existingStrokes.slice(1);
+                } else if (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -997) {
+                    setIsPaintBrush(true);
+                    actualStrokes = existingStrokes.slice(1);
+                } else if (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -996) {
+                    setIsSerifPen(true);
+                    actualStrokes = existingStrokes.slice(1);
+                }
+                
+                // Migrate legacy strokes that relied on global isSerifPen renderer
+                if (firstStroke.isSerifPen || (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -996)) {
+                    const migratedStrokes = [];
+                    actualStrokes.forEach(s => {
+                        migratedStrokes.push(s);
+                        if (Array.isArray(s) && s.length >= 2 && !s.isFilled) {
+                            const s1 = generateSerifStroke(s[0], s[1], 5, s.lineCap || 'round'); // Use default brush size 5
+                            if (s1) migratedStrokes.push(s1);
+                            const s2 = generateSerifStroke(s[s.length-1], s[s.length-2], 5, s.lineCap || 'round');
+                            if (s2) migratedStrokes.push(s2);
+                        }
+                    });
+                    actualStrokes = migratedStrokes;
                 }
                 
                 setStrokes(actualStrokes);
@@ -149,11 +261,19 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
+        ctx.save();
+        ctx.scale(2, 2); // Scale by 2 for retina clarity (canvas width is 600, CSS is 300)
+        
         ctx.lineWidth = brushSize; 
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--tx').trim() || '#0f172a';
         
+        ctx.save();
+        ctx.translate(150, 150);
+        ctx.scale(zoom, zoom);
+        ctx.translate(-150, -150);
+
         // Draw background strokes first
         if (backgroundStrokes && backgroundStrokes.length > 0) {
             ctx.save();
@@ -213,7 +333,6 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                 ctx.closePath();
                 ctx.fill();
             } else if (isCalligraphy) {
-                // ...
                 for (let i = 0; i < stroke.length - 1; i++) {
                     const p1 = stroke[i];
                     const p2 = stroke[i+1];
@@ -238,6 +357,37 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                     
                     ctx.lineWidth = currentWidth;
                     ctx.beginPath();
+                    ctx.lineWidth = currentWidth;
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                }
+            } else if (isPaintBrush) {
+                for (let i = 0; i < stroke.length - 1; i++) {
+                    const p1 = stroke[i];
+                    const p2 = stroke[i+1];
+                    const hash = (p1.x * 13 + p1.y * 17) % 10;
+                    const widthMult = 0.7 + (hash / 10) * 0.4;
+                    ctx.lineWidth = brushSize * widthMult;
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                }
+
+            } else if (isChisel) {
+                const radAngle = (chiselAngle * Math.PI) / 180;
+                for (let i = 0; i < stroke.length - 1; i++) {
+                    const p1 = stroke[i];
+                    const p2 = stroke[i+1];
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const strokeAngle = Math.atan2(dy, dx);
+                    const diff = Math.abs(Math.sin(strokeAngle - radAngle));
+                    const w = Math.max(1.5, brushSize * (0.2 + 0.8 * diff));
+                    ctx.lineWidth = w;
+                    ctx.beginPath();
                     ctx.moveTo(p1.x, p1.y);
                     ctx.lineTo(p2.x, p2.y);
                     ctx.stroke();
@@ -249,7 +399,18 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                 for (let i = 1; i < stroke.length; i++) {
                     ctx.lineTo(stroke[i].x, stroke[i].y);
                 }
-                ctx.stroke();
+                if (stroke.isFilled) {
+                    ctx.fillStyle = ctx.strokeStyle;
+                    ctx.beginPath();
+                    ctx.moveTo(stroke[0].x, stroke[0].y);
+                    for (let i = 1; i < stroke.length; i++) {
+                        ctx.lineTo(stroke[i].x, stroke[i].y);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                } else {
+                    ctx.stroke();
+                }
             }
         });
 
@@ -264,38 +425,83 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                 ctx.lineTo(currentStroke[i].x, currentStroke[i].y);
             }
             ctx.stroke();
+            ctx.stroke();
             ctx.setLineDash([]);
         }
-    }, [strokes, currentStroke, brushSize, isCalligraphy, isBrushPen, backgroundStrokes, backgroundText]);
+
+        // Render Nodes if in node_edit mode
+        if (activeTool === 'node_edit') {
+            strokes.forEach((stroke, sIdx) => {
+                if (!Array.isArray(stroke) || stroke.isMeta) return;
+                
+                // Draw connecting segments
+                ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--acc').trim() || '#3b82f6';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([2, 2]);
+                ctx.beginPath();
+                ctx.moveTo(stroke[0].x, stroke[0].y);
+                for (let i = 1; i < stroke.length; i++) {
+                    ctx.lineTo(stroke[i].x, stroke[i].y);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Draw anchor points
+                stroke.forEach((pt, pIdx) => {
+                    const isSelected = selectedNode && selectedNode.strokeIndex === sIdx && selectedNode.pointIndex === pIdx;
+                    
+                    if (isSelected) {
+                        ctx.fillStyle = '#ef4444'; // Red for selected
+                        ctx.fillRect(pt.x - 4, pt.y - 4, 8, 8);
+                    } else {
+                        ctx.fillStyle = '#3b82f6'; // Blue for default
+                        ctx.fillRect(pt.x - 3, pt.y - 3, 6, 6);
+                    }
+                });
+            });
+        }
+        ctx.restore();
+        ctx.restore(); // Restore retina scale
+    }, [strokes, currentStroke, brushSize, isCalligraphy, isBrushPen, isChisel, isPaintBrush, isSerifPen, backgroundStrokes, backgroundText, zoom, activeTool, selectedNode]);
 
     const getCoords = (e) => {
         const rect = canvasRef.current.getBoundingClientRect();
-        const scaleX = canvasRef.current.width / rect.width;
-        const scaleY = canvasRef.current.height / rect.height;
+        // Since canvas is 600x600 but rendered at rect.width, our internal space is 300x300, 
+        // so we map client to 300 space.
+        const scale = 300 / rect.width;
+        let x = (e.clientX - rect.left) * scale;
+        let y = (e.clientY - rect.top) * scale;
         
-        let x = (e.clientX - rect.left) * scaleX;
-        let y = (e.clientY - rect.top) * scaleY;
+        // Apply zoom adjustments (relative to canvas center 150, 150)
+        x = (x - 150) / zoom + 150;
+        y = (y - 150) / zoom + 150;
 
-        if (isSnapToGrid) {
-            const gridSize = 20;
+        // Metric Snapping (ASC 20, CAP 80, X-H 140, BASE 240, DESC 280)
+        if (isSnapToMetrics) {
+            const metrics = [20, 80, 140, 240, 280];
+            metrics.forEach(m => {
+                if (Math.abs(y - m) <= 4) {
+                    y = m;
+                }
+            });
+        }
+
+        // Grid Snapping
+        if (isSnapToGrid && gridSize > 0) {
             x = Math.round(x / gridSize) * gridSize;
             y = Math.round(y / gridSize) * gridSize;
         }
 
-        return { x, y };
+        const finalCoords = { 
+            x: Math.min(300, Math.max(0, Math.round(x * 10) / 10)), 
+            y: Math.min(300, Math.max(0, Math.round(y * 10) / 10)) 
+        };
+
+        setCursorCoords(finalCoords);
+        return finalCoords;
     };
 
-    const generateCurvePoints = (p0, p1, p2) => {
-        const points = [];
-        const steps = 20;
-        for (let i = 0; i <= steps; i++) {
-            const t = i / steps;
-            const x = (1 - t) * (1 - t) * p0.x + 2 * (1 - t) * t * p1.x + t * t * p2.x;
-            const y = (1 - t) * (1 - t) * p0.y + 2 * (1 - t) * t * p1.y + t * t * p2.y;
-            points.push({ x, y });
-        }
-        return points;
-    };
+
 
     const getMirroredStroke = (stroke, mode) => {
         if (mode === 'none') return null;
@@ -369,7 +575,29 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     const handlePointerDown = (e) => {
         const coords = getCoords(e);
 
-        if (activeTool === 'brush') {
+        if (activeTool === 'node_edit') {
+            let foundNode = null;
+            // Reverse loop to pick topmost strokes first
+            for (let sIdx = strokes.length - 1; sIdx >= 0; sIdx--) {
+                const stroke = strokes[sIdx];
+                if (!Array.isArray(stroke) || stroke.isMeta) continue;
+                for (let pIdx = stroke.length - 1; pIdx >= 0; pIdx--) {
+                    const pt = stroke[pIdx];
+                    const dist = Math.sqrt(Math.pow(pt.x - coords.x, 2) + Math.pow(pt.y - coords.y, 2));
+                    if (dist < 10) { // 10px hit area
+                        foundNode = { strokeIndex: sIdx, pointIndex: pIdx };
+                        break;
+                    }
+                }
+                if (foundNode) break;
+            }
+            if (foundNode) {
+                setSelectedNode(foundNode);
+                setIsDrawing(true);
+            } else {
+                setSelectedNode(null);
+            }
+        } else if (activeTool === 'brush') {
             setIsDrawing(true);
             setCurrentStroke([coords]);
         } else if (activeTool === 'line') {
@@ -385,19 +613,30 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                 const p1 = coords;
                 const curvePoints = generateCurvePoints(p0, p1, p2);
                 
-                const mirror = getMirroredStroke(curvePoints, symmetryMode);
                 const finalStroke = [...curvePoints];
                 finalStroke.lineCap = lineCap;
                 finalStroke.isFilled = isFillMode;
 
-                if (mirror) {
-                    mirror.lineCap = lineCap;
-                    mirror.isFilled = isFillMode;
-                    setStrokes(prev => [...prev, finalStroke, mirror]);
-                } else {
-                    setStrokes(prev => [...prev, finalStroke]);
+                const newStrokes = [finalStroke];
+                if (isSerifPen && finalStroke.length >= 2) {
+                    const s1 = generateSerifStroke(finalStroke[0], finalStroke[1], brushSize, lineCap);
+                    if (s1) newStrokes.push(s1);
+                    const s2 = generateSerifStroke(finalStroke[finalStroke.length-1], finalStroke[finalStroke.length-2], brushSize, lineCap);
+                    if (s2) newStrokes.push(s2);
                 }
 
+                const allMirrored = [];
+                newStrokes.forEach(s => {
+                    allMirrored.push(s);
+                    const mirror = getMirroredStroke(s, symmetryMode);
+                    if (mirror) {
+                        mirror.lineCap = s.lineCap;
+                        mirror.isFilled = s.isFilled;
+                        allMirrored.push(mirror);
+                    }
+                });
+
+                setStrokes(prev => [...prev, ...allMirrored]);
                 setInteractionStage(0);
                 setInteractionPoints([]);
                 setCurrentStroke([]);
@@ -414,7 +653,15 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     const handlePointerMove = (e) => {
         const coords = getCoords(e);
 
-        if (activeTool === 'brush' && isDrawing) {
+        if (activeTool === 'node_edit' && isDrawing && selectedNode) {
+            setStrokes(prev => {
+                const newStrokes = [...prev];
+                const stroke = [...newStrokes[selectedNode.strokeIndex]];
+                stroke[selectedNode.pointIndex] = { ...stroke[selectedNode.pointIndex], x: coords.x, y: coords.y };
+                newStrokes[selectedNode.strokeIndex] = stroke;
+                return newStrokes;
+            });
+        } else if (activeTool === 'brush' && isDrawing) {
             const lastPoint = currentStroke[currentStroke.length - 1];
             const canvas = canvasRef.current;
             const ctx = canvas.getContext('2d');
@@ -479,22 +726,53 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         }
     };
 
+    const simplifyStroke = (stroke) => {
+        if (!stroke || stroke.length <= 2) return stroke;
+        const simplified = [stroke[0]];
+        let lastPt = stroke[0];
+        for (let i = 1; i < stroke.length - 1; i++) {
+            const pt = stroke[i];
+            const dist = Math.sqrt(Math.pow(pt.x - lastPt.x, 2) + Math.pow(pt.y - lastPt.y, 2));
+            if (dist > 5) {
+                simplified.push(pt);
+                lastPt = pt;
+            }
+        }
+        simplified.push(stroke[stroke.length - 1]);
+        return simplified;
+    };
+
+
+
     const handlePointerUp = () => {
-        if (activeTool === 'brush' && isDrawing) {
+        if (activeTool === 'node_edit' && isDrawing) {
+            setIsDrawing(false);
+        } else if (activeTool === 'brush' && isDrawing) {
             setIsDrawing(false);
             if (currentStroke.length > 0) {
-                const finalStroke = [...currentStroke];
+                const finalStroke = simplifyStroke([...currentStroke]);
                 finalStroke.lineCap = lineCap;
                 finalStroke.isFilled = isFillMode;
 
-                const mirror = getMirroredStroke(finalStroke, symmetryMode);
-                if (mirror) {
-                    mirror.lineCap = lineCap;
-                    mirror.isFilled = isFillMode;
-                    setStrokes(prev => [...prev, finalStroke, mirror]);
-                } else {
-                    setStrokes(prev => [...prev, finalStroke]);
+                const newStrokes = [finalStroke];
+                if (isSerifPen && finalStroke.length >= 2) {
+                    const s1 = generateSerifStroke(finalStroke[0], finalStroke[1], brushSize, lineCap);
+                    if (s1) newStrokes.push(s1);
+                    const s2 = generateSerifStroke(finalStroke[finalStroke.length-1], finalStroke[finalStroke.length-2], brushSize, lineCap);
+                    if (s2) newStrokes.push(s2);
                 }
+
+                const allMirrored = [];
+                newStrokes.forEach(s => {
+                    allMirrored.push(s);
+                    const mirror = getMirroredStroke(s, symmetryMode);
+                    if (mirror) {
+                        mirror.lineCap = s.lineCap;
+                        mirror.isFilled = s.isFilled;
+                        allMirrored.push(mirror);
+                    }
+                });
+                setStrokes(prev => [...prev, ...allMirrored]);
             }
             setCurrentStroke([]);
         } else if (activeTool === 'line' && isDrawing) {
@@ -503,14 +781,25 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
             finalStroke.lineCap = lineCap;
             finalStroke.isFilled = isFillMode;
 
-            const mirror = getMirroredStroke(finalStroke, symmetryMode);
-            if (mirror) {
-                mirror.lineCap = lineCap;
-                mirror.isFilled = isFillMode;
-                setStrokes(prev => [...prev, finalStroke, mirror]);
-            } else {
-                setStrokes(prev => [...prev, finalStroke]);
+            const newStrokes = [finalStroke];
+            if (isSerifPen && finalStroke.length >= 2) {
+                const s1 = generateSerifStroke(finalStroke[0], finalStroke[1], brushSize, lineCap);
+                if (s1) newStrokes.push(s1);
+                const s2 = generateSerifStroke(finalStroke[finalStroke.length-1], finalStroke[finalStroke.length-2], brushSize, lineCap);
+                if (s2) newStrokes.push(s2);
             }
+
+            const allMirrored = [];
+            newStrokes.forEach(s => {
+                allMirrored.push(s);
+                const mirror = getMirroredStroke(s, symmetryMode);
+                if (mirror) {
+                    mirror.lineCap = s.lineCap;
+                    mirror.isFilled = s.isFilled;
+                    allMirrored.push(mirror);
+                }
+            });
+            setStrokes(prev => [...prev, ...allMirrored]);
             setCurrentStroke([]);
             setInteractionPoints([]);
         } else if (activeTool === 'eraser' && isDrawing) {
@@ -560,9 +849,73 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         setStrokes(prev => prev.slice(0, -1));
     };
 
+    const handleDeleteSelectedNode = () => {
+        if (!selectedNode) return;
+        setStrokes(prev => {
+            const next = prev.map((stroke, sIdx) => {
+                if (sIdx !== selectedNode.strokeIndex) return stroke;
+                const updated = stroke.filter((_, pIdx) => pIdx !== selectedNode.pointIndex);
+                updated.lineCap = stroke.lineCap;
+                updated.isFilled = stroke.isFilled;
+                return updated;
+            }).filter(s => s.length >= 2);
+            return next;
+        });
+        setSelectedNode(null);
+    };
+
+    const handleSmoothNode = () => {
+        if (!selectedNode) return;
+        setStrokes(prev => prev.map((stroke, sIdx) => {
+            if (sIdx !== selectedNode.strokeIndex) return stroke;
+            const pIdx = selectedNode.pointIndex;
+            if (pIdx === 0 || pIdx === stroke.length - 1) return stroke;
+            
+            const A = stroke[pIdx - 1];
+            const B = stroke[pIdx];
+            const C = stroke[pIdx + 1];
+
+            const curvePoints = [];
+            const steps = 6;
+            for (let t = 1/steps; t < 1; t += 1/steps) {
+                const x = (1-t)*(1-t)*A.x + 2*(1-t)*t*B.x + t*t*C.x;
+                const y = (1-t)*(1-t)*A.y + 2*(1-t)*t*B.y + t*t*C.y;
+                curvePoints.push({x, y});
+            }
+
+            const newStroke = [...stroke];
+            newStroke.splice(pIdx, 1, ...curvePoints);
+            newStroke.lineCap = stroke.lineCap;
+            newStroke.isFilled = stroke.isFilled;
+            return newStroke;
+        }));
+        setSelectedNode(null);
+    };
+
+    const handleAddNodeAfter = () => {
+        if (!selectedNode) return;
+        setStrokes(prev => prev.map((stroke, sIdx) => {
+            if (sIdx !== selectedNode.strokeIndex) return stroke;
+            const pIdx = selectedNode.pointIndex;
+            if (pIdx === stroke.length - 1) return stroke;
+            
+            const A = stroke[pIdx];
+            const B = stroke[pIdx + 1];
+            const mid = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 };
+            
+            const newStroke = [...stroke];
+            newStroke.splice(pIdx + 1, 0, mid);
+            newStroke.lineCap = stroke.lineCap;
+            newStroke.isFilled = stroke.isFilled;
+            return newStroke;
+        }));
+        setSelectedNode({ strokeIndex: selectedNode.strokeIndex, pointIndex: selectedNode.pointIndex + 1 });
+    };
+
     const handleClear = () => {
         setStrokes([]);
         setCurrentStroke([]);
+        setSelectedNode(null);
     };
 
     const handleRotate = () => {
@@ -635,7 +988,10 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
             rightMargin: rightMargin,
             yOffset: yOffset,
             isCalligraphy: isCalligraphy,
-            isBrushPen: isBrushPen
+            isBrushPen: isBrushPen,
+            isChisel: isChisel,
+            isPaintBrush: isPaintBrush,
+            isSerifPen: isSerifPen
         };
 
         const strokesToSave = [metaObj, ...strokes];
@@ -732,7 +1088,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                             <button 
                                 className={`fs-tool-btn ${activeTool === 'brush' ? 'active' : ''}`}
                                 onClick={() => setActiveTool('brush')}
-                                title="Brush"
+                                title="Brush Tool"
                             >
                                 <Pencil size={18} />
                             </button>
@@ -741,7 +1097,13 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                                 <button className={`fs-opt-btn ${lineCap === 'butt' ? 'active' : ''}`} onClick={() => setLineCap('butt')}>Flat Cap</button>
                             </div>
                         </div>
-
+                        <button 
+                            className={`fs-tool-btn ${activeTool === 'node_edit' ? 'active' : ''}`}
+                            onClick={() => setActiveTool('node_edit')}
+                            title="Vector Node Edit Tool (Select & Drag Anchor Points)"
+                        >
+                            <MousePointer size={18} />
+                        </button>
                         <button 
                             className={`fs-tool-btn ${activeTool === 'line' ? 'active' : ''}`}
                             onClick={() => setActiveTool('line')}
@@ -803,17 +1165,38 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                         <div className="fs-tool-separator horizontal" />
                         <button 
                             className={`fs-tool-btn ${isCalligraphy ? 'active' : ''}`}
-                            onClick={() => { setIsCalligraphy(!isCalligraphy); setIsBrushPen(false); }}
+                            onClick={() => { setIsCalligraphy(!isCalligraphy); setIsBrushPen(false); setIsChisel(false); setIsPaintBrush(false); setIsSerifPen(false); }}
                             title="Calligraphy Mode (Rounded Taper)"
                         >
                             <Feather size={18} />
                         </button>
                         <button 
                             className={`fs-tool-btn ${isBrushPen ? 'active' : ''}`}
-                            onClick={() => { setIsBrushPen(!isBrushPen); setIsCalligraphy(false); }}
+                            onClick={() => { setIsBrushPen(!isBrushPen); setIsCalligraphy(false); setIsChisel(false); setIsPaintBrush(false); setIsSerifPen(false); }}
                             title="Asian Brush Pen (Sharp Taper)"
                         >
                             <PenTool size={18} />
+                        </button>
+                        <button 
+                            className={`fs-tool-btn ${isChisel ? 'active' : ''}`}
+                            onClick={() => { setIsChisel(!isChisel); setIsCalligraphy(false); setIsBrushPen(false); setIsPaintBrush(false); setIsSerifPen(false); }}
+                            title="Broad Nib Chisel Calligraphy"
+                        >
+                            <Sliders size={18} />
+                        </button>
+                        <button 
+                            className={`fs-tool-btn ${isPaintBrush ? 'active' : ''}`}
+                            onClick={() => { setIsPaintBrush(!isPaintBrush); setIsCalligraphy(false); setIsBrushPen(false); setIsChisel(false); setIsSerifPen(false); }}
+                            title="Dry Paint Brush (Textured width)"
+                        >
+                            <Brush size={18} />
+                        </button>
+                        <button 
+                            className={`fs-tool-btn ${isSerifPen ? 'active' : ''}`}
+                            onClick={() => { setIsSerifPen(!isSerifPen); setIsCalligraphy(false); setIsBrushPen(false); setIsChisel(false); setIsPaintBrush(false); }}
+                            title="Serif Pen (Auto-adds serifs to ends)"
+                        >
+                            <Type size={18} />
                         </button>
                         <div className="fs-tool-separator horizontal" />
                         <button 
@@ -830,68 +1213,102 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                         >
                             <FlipVertical size={18} />
                         </button>
-                        <div className="fs-tool-separator horizontal" />
-                        <button 
-                            className={`fs-tool-btn ${isSnapToGrid ? 'active' : ''}`}
-                            onClick={() => setIsSnapToGrid(!isSnapToGrid)}
-                            title="Snap to Grid"
-                        >
-                            <Grid size={18} />
-                        </button>
                     </div>
                 </div>
 
-                <div className="fs-canvas-wrapper">
-                    {/* Visual Blueprint Background Lines */}
-                    <div className="fs-canvas-grid"></div>
-                    
-                    {/* Typographical Metric Lines */}
-                    <div className="fs-metric-line ascent" title="Ascent"><span>ASC</span></div>
-                    <div className="fs-metric-line cap-height" title="Cap Height"><span>CAP</span></div>
-                    <div className="fs-metric-line x-height" title="x-Height"><span>X-H</span></div>
-                    <div className="fs-metric-line baseline" title="Baseline"><span>BASE</span></div>
-                    <div className="fs-metric-line descent" title="Descent"><span>DESC</span></div>
-                    
-                    <canvas
-                        ref={canvasRef}
-                        width={300}
-                        height={300}
-                        className="fs-canvas"
+                <div className="fs-canvas-wrapper-container">
+                    <div className="fs-controls" style={{ width: '100%' }}>
+                        <div className="fs-brush-control">
+                            <span className="fs-brush-label">Size:</span>
+                            <input 
+                                type="range" 
+                                min="2" max="20" 
+                                value={brushSize} 
+                                onChange={(e) => setBrushSize(parseInt(e.target.value))} 
+                                className="fs-brush-slider"
+                            />
+                        </div>
+                        <div className="fs-controls-group">
+                            <Button variant="default" className="btn-sm" onClick={handleRotate} title="Rotate 90° Clockwise">
+                                <RotateCw size={16} />
+                            </Button>
+                            <Button variant="default" className="btn-sm" onClick={() => handleMove(0, -10)} title="Move Up"><ArrowUp size={16} /></Button>
+                            <Button variant="default" className="btn-sm" onClick={() => handleMove(0, 10)} title="Move Down"><ArrowDown size={16} /></Button>
+                            <Button variant="default" className="btn-sm" onClick={() => handleMove(-10, 0)} title="Move Left"><ArrowLeft size={16} /></Button>
+                            <Button variant="default" className="btn-sm" onClick={() => handleMove(10, 0)} title="Move Right"><ArrowRight size={16} /></Button>
+                            <Button variant="default" className="btn-sm" onClick={() => setZoom(prev => Math.min(3.0, prev + 0.25))} title="Zoom Viewport In"><ZoomIn size={16} /></Button>
+                            <Button variant="default" className="btn-sm" onClick={() => setZoom(prev => Math.max(1.0, prev - 0.25))} title="Zoom Viewport Out"><ZoomOut size={16} /></Button>
+                            <Button variant="default" className="btn-sm" onClick={handleUndo} title="Undo">
+                                <RotateCcw size={16} />
+                            </Button>
+                            <Button variant="default" className="btn-sm fs-clear-btn" onClick={handleClear} title="Clear Canvas">
+                                <Trash2 size={16} />
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div 
+                        className="fs-canvas-wrapper"
                         onPointerDown={handlePointerDown}
                         onPointerMove={handlePointerMove}
                         onPointerUp={handlePointerUp}
                         onPointerLeave={handlePointerUp}
-                    />
-                </div>
-            </div>
+                    >
+                        <div className="fs-canvas-grid" style={{ 
+                            backgroundSize: `${zoom * (340/300) * 20}px ${zoom * (340/300) * 20}px`, 
+                            opacity: isSnapToGrid ? 0.3 : 0.1,
+                            backgroundPosition: '50% 50%'
+                        }}></div>
+                        
+                        {isSnapToMetrics && (
+                            <>
+                                <div className="fs-metric-line ascent"><span>ASC</span></div>
+                                <div className="fs-metric-line cap-height"><span>CAP</span></div>
+                                <div className="fs-metric-line x-height"><span>X-H</span></div>
+                                <div className="fs-metric-line baseline"><span>BASE</span></div>
+                                <div className="fs-metric-line descent"><span>DESC</span></div>
+                            </>
+                        )}
+                        
+                        <canvas ref={canvasRef} className="fs-canvas" width={600} height={600} />
+                    </div>
 
-            <div className="fs-controls">
-                <div className="fs-brush-control">
-                    <span className="fs-brush-label">Size:</span>
-                    <input 
-                        type="range" 
-                        min="2" max="15" 
-                        value={brushSize} 
-                        onChange={(e) => setBrushSize(parseInt(e.target.value))} 
-                        className="fs-brush-slider"
-                    />
-                </div>
-                <div className="fs-controls-group">
-                    <Button variant="default" className="btn-sm" onClick={handleRotate} title="Rotate 90° Clockwise">
-                        <RotateCw size={16} />
-                    </Button>
-                    <Button variant="default" className="btn-sm" onClick={() => handleMove(0, -10)} title="Move Up"><ArrowUp size={16} /></Button>
-                    <Button variant="default" className="btn-sm" onClick={() => handleMove(0, 10)} title="Move Down"><ArrowDown size={16} /></Button>
-                    <Button variant="default" className="btn-sm" onClick={() => handleMove(-10, 0)} title="Move Left"><ArrowLeft size={16} /></Button>
-                    <Button variant="default" className="btn-sm" onClick={() => handleMove(10, 0)} title="Move Right"><ArrowRight size={16} /></Button>
-                    <Button variant="default" className="btn-sm" onClick={() => handleScaleStrokes(1.1)} title="Scale Up"><ZoomIn size={16} /></Button>
-                    <Button variant="default" className="btn-sm" onClick={() => handleScaleStrokes(0.9)} title="Scale Down"><ZoomOut size={16} /></Button>
-                    <Button variant="default" className="btn-sm" onClick={handleUndo} title="Undo">
-                        <RotateCcw size={16} />
-                    </Button>
-                    <Button variant="default" className="btn-sm fs-clear-btn" onClick={handleClear} title="Clear Canvas">
-                        <Trash2 size={16} />
-                    </Button>
+                    <div className="fs-status-bar">
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <div className="fs-status-item">
+                                <Grid size={12} style={{ marginRight: '4px', opacity: isSnapToGrid ? 1 : 0.3 }}/> 
+                                <span style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => setIsSnapToGrid(!isSnapToGrid)}>
+                                    Grid Snap {isSnapToGrid ? 'ON' : 'OFF'}
+                                </span>
+                            </div>
+                            <div className="fs-status-item">
+                                <Maximize2 size={12} style={{ marginRight: '4px', opacity: isSnapToMetrics ? 1 : 0.3 }}/> 
+                                <span style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => setIsSnapToMetrics(!isSnapToMetrics)}>
+                                    Metric Snap {isSnapToMetrics ? 'ON' : 'OFF'}
+                                </span>
+                            </div>
+                            <div className="fs-status-item" style={{ visibility: zoom !== 1.0 ? 'visible' : 'hidden' }}>
+                                <span style={{ cursor: 'pointer', color: 'var(--acc)' }} onClick={() => setZoom(1.0)}>
+                                    Reset Zoom ({(zoom * 100).toFixed(0)}%)
+                                </span>
+                            </div>
+                        </div>
+
+                        {selectedNode && (
+                            <div className="fs-status-item node-info">
+                                <span>Node [{selectedNode.strokeIndex + 1}:{selectedNode.pointIndex + 1}]</span>
+                                <button className="fs-mini-del-btn" onClick={handleSmoothNode} title="Smooth Corner (Turns corner into curve)">
+                                    <Spline size={14} />
+                                </button>
+                                <button className="fs-mini-del-btn" onClick={handleAddNodeAfter} title="Add Node Between Next">
+                                    <Plus size={14} />
+                                </button>
+                                <button className="fs-mini-del-btn" onClick={handleDeleteSelectedNode} title="Delete Node (Del)">
+                                    <Trash2 size={14} />
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -939,7 +1356,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                                                 d={d + (stroke.isFilled ? ' Z' : '')} 
                                                 fill={stroke.isFilled ? 'currentColor' : 'none'} 
                                                 stroke="currentColor" 
-                                                strokeWidth={stroke.isFilled ? 0 : brushSize * 2} 
+                                                strokeWidth={stroke.isFilled ? 0 : brushSize} 
                                                 strokeLinecap={stroke.lineCap || 'round'} 
                                                 strokeLinejoin="round" 
                                             />
