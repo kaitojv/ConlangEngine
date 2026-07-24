@@ -5,7 +5,7 @@ import { useSharing } from '@/hooks/useSharing.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
 import Modal from '@/components/UI/Modal/Modal.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
-import { sanitizeConfig, sanitizeLexicon, decompressPayload } from '@/utils/schemaValidator.jsx';
+import { sanitizeConfig, sanitizeLexicon, decompressPayloadAsync } from '@/utils/schemaValidator.jsx';
 import toast from 'react-hot-toast';
 import { CloudDownload, HardDriveUpload, AlertTriangle } from 'lucide-react';
 
@@ -45,7 +45,7 @@ export default function SyncConflictManager() {
 
             if (!config.lastCloudSync) return; // Do not show conflict for users who have never synced on this device
 
-            const projectData = decompressPayload(data.project_data);
+            const projectData = await decompressPayloadAsync(data.project_data);
             const cloudTimestamp = projectData?.last_updated ? new Date(projectData.last_updated).getTime() : new Date(data.created_at).getTime();
             const localTimestamp = new Date(config.lastCloudSync).getTime();
 

@@ -142,9 +142,16 @@ export function sanitizeBackup(data) {
 /** 
  * Automatically decompresses cloud payloads if they were zipped by the client 
  * to bypass Supabase size limits. Returns the raw payload if uncompressed.
+ * @deprecated Use decompressPayloadAsync instead for new features, as GZIP decompression requires async.
  */
 export function decompressPayload(payload) {
     if (!payload) return payload;
+
+    if (payload.gzip_compressed_payload) {
+        console.warn("Synchronous decompressPayload cannot decompress GZIP payloads! Please use decompressPayloadAsync.");
+        // We can't synchronously decompress it. The UI must be updated to use decompressPayloadAsync.
+        return payload;
+    }
 
     // Handle new partial compression (dictionary & wiki compressed, config left intact for querying)
     if (payload.compressed_payload && typeof payload.compressed_payload === 'string') {
@@ -174,4 +181,41 @@ export function decompressPayload(payload) {
     }
     
     return payload;
+}
+
+/** 
+ * Asynchronously decompresses cloud payloads. Supports GZIP and LZString.
+ * Must be used for any data that might have been compressed with GZIP.
+ */
+export async function decompressPayloadAsync(payload) {
+    if (!payload) return payload;
+
+    // Handle GZIP compression
+    if (payload.gzip_compressed_payload && typeof payload.gzip_compressed_payload === 'string') {
+        try {
+            const binaryString = atob(payload.gzip_compressed_payload);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            const stream = new Blob([bytes]).stream();
+            const decompressedStream = stream.pipeThrough(new DecompressionStream('gzip'));
+            const decompressedResponse = new Response(decompressedStream);
+            const decompressedText = await decompressedResponse.text();
+            const decompressed = JSON.parse(decompressedText);
+            
+            return {
+                ...payload,
+                dictionary: decompressed.dictionary,
+                wiki: decompressed.wiki
+            };
+        } catch (e) {
+            console.error("Failed to decompress gzip cloud payload:", e);
+            return null;
+        }
+    }
+
+    // Fallback to the synchronous LZString decompression if not GZIP
+    return decompressPayload(payload);
 }

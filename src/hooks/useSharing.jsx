@@ -43,18 +43,47 @@ export function useSharing(session) {
         
         if (payloadSizeStr.length > 1000000) {
             try {
-                const compressedString = LZString.compressToBase64(JSON.stringify({
+                // Use native CompressionStream for superior JSON compression
+                const stream = new Blob([JSON.stringify({
                     dictionary: lexicon,
                     wiki: config.wikiPages || {}
-                }));
+                })]).stream();
+                const compressedStream = stream.pipeThrough(new CompressionStream('gzip'));
+                const compressedResponse = new Response(compressedStream);
+                const compressedArrayBuffer = await compressedResponse.arrayBuffer();
+                
+                // Convert ArrayBuffer to Base64 in chunks to avoid Maximum Call Stack Size Exceeded
+                const bytes = new Uint8Array(compressedArrayBuffer);
+                let binary = '';
+                const chunkSize = 1024 * 1024; // 1MB chunks
+                for (let i = 0; i < bytes.length; i += chunkSize) {
+                    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+                }
+                const compressedString = btoa(binary);
+
                 finalPayload = { 
-                    compressed_payload: compressedString,
+                    gzip_compressed_payload: compressedString,
                     config: configData, 
                     wordCount: lexicon.length,
                     last_updated: payload.last_updated
                 };
             } catch (e) {
-                console.warn("Failed to compress payload:", e);
+                console.warn("Failed to compress payload using gzip, trying LZString fallback:", e);
+                // Fallback to LZString if gzip fails for any reason
+                try {
+                    const compressedString = LZString.compressToBase64(JSON.stringify({
+                        dictionary: lexicon,
+                        wiki: config.wikiPages || {}
+                    }));
+                    finalPayload = { 
+                        compressed_payload: compressedString,
+                        config: configData, 
+                        wordCount: lexicon.length,
+                        last_updated: payload.last_updated
+                    };
+                } catch (lzErr) {
+                    console.warn("LZString compression also failed:", lzErr);
+                }
             }
         }
         

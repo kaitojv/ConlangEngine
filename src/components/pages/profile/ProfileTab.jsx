@@ -12,7 +12,7 @@ import './profileTab.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ALLOWED_REDIRECTS } from '../../../App.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
-import { sanitizeConfig, sanitizeLexicon, decompressPayload } from '@/utils/schemaValidator.jsx';
+import { sanitizeConfig, sanitizeLexicon, decompressPayload, decompressPayloadAsync } from '@/utils/schemaValidator.jsx';
 import { useSharing } from '@/hooks/useSharing.jsx';
 import PayPalButton from '@/components/Payment/PayPalButton.jsx';
 
@@ -269,10 +269,10 @@ export default function ProfileTab() {
         }
     };
 
-    const handleSelectProject = (project) => {
+    const handleSelectProject = async (project) => {
         if (project && project.project_data) {
             // SEC-5: Sanitize cloud data before injecting into stores
-            const projectData = decompressPayload(project.project_data);
+            const projectData = await decompressPayloadAsync(project.project_data);
             const safeConfig = sanitizeConfig(projectData.config || {});
             const safeLexicon = sanitizeLexicon(projectData.dictionary || []);
             
@@ -387,7 +387,7 @@ export default function ProfileTab() {
             const saveProjectToArchive = useProjectStore.getState().saveProjectToArchive;
             for (const project of projects) {
                 // Ignore projects that were soft-deleted
-                const projectData = decompressPayload(project.project_data);
+                const projectData = await decompressPayloadAsync(project.project_data);
                 if (projectData && !projectData.deleted) {
                     const safeConfig = sanitizeConfig(projectData.config || {});
                     const safeLexicon = sanitizeLexicon(projectData.dictionary || []);
@@ -399,10 +399,13 @@ export default function ProfileTab() {
             }
 
             // Filter the final list shown in the selector
-            const activeProjects = projects.filter(p => {
-                const pd = decompressPayload(p.project_data);
-                return pd && !pd.deleted;
-            });
+            const activeProjects = [];
+            for (const p of projects) {
+                const pd = await decompressPayloadAsync(p.project_data);
+                if (pd && !pd.deleted) {
+                    activeProjects.push(p);
+                }
+            }
 
             if (activeProjects.length === 0) {
                 setSyncStatus('ℹ️ No active projects found in the cloud for your account.');
@@ -476,7 +479,7 @@ export default function ProfileTab() {
                 
             if (error || !data) throw error;
             
-            const projectData = decompressPayload(data.project_data);
+            const projectData = await decompressPayloadAsync(data.project_data);
             const safeConfig = sanitizeConfig(projectData.config || {});
             const safeLexicon = sanitizeLexicon(projectData.dictionary || []);
             

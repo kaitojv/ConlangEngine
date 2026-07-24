@@ -12,6 +12,7 @@ import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
 import PublicFlashcards from './PublicFlashcards.jsx';
 import ExercisePlayer from '../study/ExercisePlayer.jsx';
 import PageSkeleton from '../../UI/PageSkeleton/PageSkeleton.jsx';
+import { decompressPayloadAsync } from '@/utils/schemaValidator.jsx';
 import './publicViewer.css';
 import '../study/studyTab.css'; // Required for the course map layout
 
@@ -61,7 +62,8 @@ export default function PublicViewer() {
                 if (fetchError) throw fetchError;
                 if (!data || !data.project_data) throw new Error('Project not found');
 
-                setProjectData(data.project_data);
+                const decompressed = await decompressPayloadAsync(data.project_data);
+                setProjectData(decompressed);
             } catch (err) {
                 console.error('Failed to load shared project:', err);
                 setError(err.message || 'Failed to load project');
@@ -84,10 +86,11 @@ export default function PublicViewer() {
                         table: 'conlang_snapshots',
                         filter: `project_id=eq.${projectId}`
                     },
-                    (payload) => {
+                    async (payload) => {
                         console.log('Live update received from author!');
                         if (payload.new && payload.new.project_data) {
-                            setProjectData(payload.new.project_data);
+                            const decompressed = await decompressPayloadAsync(payload.new.project_data);
+                            setProjectData(decompressed);
                         }
                     }
                 )
