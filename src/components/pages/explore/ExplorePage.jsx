@@ -281,8 +281,8 @@ export default function ExplorePage() {
                 return nameA.localeCompare(nameB);
             }
             if (sortBy === 'words') {
-                const wordsA = a.project_data?.dictionary?.length || 0;
-                const wordsB = b.project_data?.dictionary?.length || 0;
+                const wordsA = a.project_data?.wordCount || a.project_data?.dictionary?.length || 0;
+                const wordsB = b.project_data?.wordCount || b.project_data?.dictionary?.length || 0;
                 return wordsB - wordsA;
             }
             return 0;
@@ -346,7 +346,7 @@ export default function ExplorePage() {
                         const author = config?.authorName || 'Unknown Author';
                         const desc = config?.description || 'No description provided.';
                         const themeColor = config?.colors?.accent || 'var(--acc)';
-                        const wordCount = dictionary ? dictionary.length : 0;
+                        const wordCount = lang.project_data.wordCount || (dictionary ? dictionary.length : 0);
                         
                         const defaultScriptId = config?.scriptRules?.defaultScriptId || 'default';
                         const scriptData = config?.scriptDataById?.[defaultScriptId] || config || {};
