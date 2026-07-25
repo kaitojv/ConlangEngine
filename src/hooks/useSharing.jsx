@@ -55,7 +55,8 @@ export function useSharing(session) {
                 // Convert ArrayBuffer to Base64 in chunks to avoid Maximum Call Stack Size Exceeded
                 const bytes = new Uint8Array(compressedArrayBuffer);
                 let binary = '';
-                const chunkSize = 1024 * 1024; // 1MB chunks
+                // V8 limits function arguments to 65535. A safe chunk size is 32768.
+                const chunkSize = 32768; 
                 for (let i = 0; i < bytes.length; i += chunkSize) {
                     binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
                 }
