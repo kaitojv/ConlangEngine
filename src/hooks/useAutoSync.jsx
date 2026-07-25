@@ -55,8 +55,13 @@ export function useAutoSync() {
         if (isFirstRun.current) {
             isFirstRun.current = false;
             // Record initial state but don't sync it
+            const { 
+                lastCloudSync, syncConflictStatus, activeTab, isThemeModalOpen, 
+                showSettings, isSidebarOpen, ...cleanConfig 
+            } = config;
+
             lastSyncStateRef.current = JSON.stringify({
-                config: config,
+                config: cleanConfig,
                 lexicon: lexicon
             });
             return;
@@ -68,8 +73,14 @@ export function useAutoSync() {
 
         // Debounce for 5 seconds
         timeoutRef.current = setTimeout(async () => {
+            // Strip volatile local UI state from comparison to prevent infinite loops
+            const { 
+                lastCloudSync, syncConflictStatus, activeTab, isThemeModalOpen, 
+                showSettings, isSidebarOpen, ...cleanConfig 
+            } = config;
+
             const currentStateStr = JSON.stringify({
-                config: config,
+                config: cleanConfig,
                 lexicon: lexicon
             });
 
