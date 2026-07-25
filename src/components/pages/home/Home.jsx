@@ -63,10 +63,10 @@ export default function Home() {
                     .from('profiles')
                     .select('*', { count: 'exact', head: true });
                 
-                // Fetch snapshots data to count languages and words
+                // Fetch snapshots data to count languages and words without downloading the massive payloads
                 const { data: snapshotsData, error: err2 } = await supabase
                     .from('conlang_snapshots')
-                    .select('project_data, user_id');
+                    .select('user_id, wordCount:project_data->wordCount');
 
                 // Fetch active conlangers count as a fallback (since profiles has RLS restriction)
                 const { data: conlangsData, error: err3 } = await supabase
@@ -82,13 +82,8 @@ export default function Home() {
                 
                 if (snapshotsData) {
                     snapshotsData.forEach(snapshot => {
-                        if (snapshot.project_data?.wordCount !== undefined) {
-                            wordsCount += snapshot.project_data.wordCount;
-                        } else {
-                            const dictionary = snapshot.project_data?.dictionary;
-                            if (Array.isArray(dictionary)) {
-                                wordsCount += dictionary.length;
-                            }
+                        if (snapshot.wordCount !== undefined && snapshot.wordCount !== null) {
+                            wordsCount += Number(snapshot.wordCount);
                         }
                     });
                 }
