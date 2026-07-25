@@ -6,7 +6,7 @@ import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import toast from 'react-hot-toast';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
-import { sanitizeConfig } from '../../../utils/schemaValidator.jsx';
+import { sanitizeConfig, decompressPayloadAsync } from '../../../utils/schemaValidator.jsx';
 import { transliterateText } from '../../../utils/transliteration.js';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import PageSkeleton from '../../UI/PageSkeleton/PageSkeleton.jsx';
@@ -37,27 +37,39 @@ export default function ExplorePage() {
                 }
                 setSessionUser(session.user);
 
-                // Fetch projects from the snapshots table where isPublic is true.
-                // We use .contains on the JSONB column to match { config: { isPublic: true } }
+                // Fetch snapshots without strict .contains filtering on project_data because compressed 
+                // GZIP payloads or legacy structures can prevent Supabase's JSONB operator from matching reliably.
                 const { data, error: fetchError } = await supabase
                     .from('conlang_snapshots')
                     .select('project_id, user_id, project_data, created_at, updated_at')
-                    .contains('project_data', { config: { isPublic: true } })
                     .order('created_at', { ascending: false })
-                    .limit(50);
+                    .limit(100);
 
                 if (fetchError) throw fetchError;
                 
-                // If the .contains filter isn't supported perfectly by the schema, 
-                // we can also do a fallback client-side filter just in case.
-                const validConlangs = (data || []).filter(item => 
+                // Inspect and decompress payloads if necessary so we can reliably check config.isPublic
+                const processedList = await Promise.all(
+                    (data || []).map(async (item) => {
+                        let pData = item.project_data || {};
+                        if (!pData.config && (pData.gzip_compressed_payload || pData.compressed_payload || pData.compressed)) {
+                            try {
+                                pData = (await decompressPayloadAsync(pData)) || pData;
+                            } catch (e) {
+                                console.warn("Decompression failed for item", item.project_id, e);
+                            }
+                        }
+                        return { ...item, project_data: pData };
+                    })
+                );
+
+                const validConlangs = processedList.filter(item => 
                     item.project_data?.config?.isPublic === true
                 );
 
-                setConlangs(validConlangs);
+                setConlangs(validConlangs.slice(0, 50));
 
                 // Fetch likes for these projects
-                const projectIds = validConlangs.map(c => c.project_id);
+                const projectIds = validConlangs.slice(0, 50).map(c => c.project_id);
                 if (projectIds.length > 0) {
                     const { data: likesResult, error: likesError } = await supabase
                         .from('conlang_likes')
@@ -110,7 +122,10 @@ export default function ExplorePage() {
 
         try {
             if (newIsPublic) {
-                await handlePushToCloud(false);
+                const success = await handlePushToCloud(false);
+                if (!success) {
+                    throw new Error("Failed to sync project to cloud.");
+                }
             } else {
                 const { data: dDel, error: errDel } = await supabase.from('conlang_snapshots').delete().eq('project_id', currentProjectId).select();
                 if (errDel) throw errDel;

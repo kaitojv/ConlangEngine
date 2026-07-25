@@ -62,9 +62,13 @@ export function useSharing(session) {
                 }
                 const compressedString = btoa(binary);
 
+                let cleanConfigForCloud = { ...configData };
+                delete cleanConfigForCloud.wikiPages;
+                delete cleanConfigForCloud.wiki;
+
                 finalPayload = { 
                     gzip_compressed_payload: compressedString,
-                    config: configData, 
+                    config: cleanConfigForCloud, 
                     wordCount: lexicon.length,
                     last_updated: payload.last_updated
                 };
@@ -76,9 +80,13 @@ export function useSharing(session) {
                         dictionary: lexicon,
                         wiki: config.wikiPages || {}
                     }));
+                    let cleanConfigForCloud = { ...configData };
+                    delete cleanConfigForCloud.wikiPages;
+                    delete cleanConfigForCloud.wiki;
+
                     finalPayload = { 
                         compressed_payload: compressedString,
-                        config: configData, 
+                        config: cleanConfigForCloud, 
                         wordCount: lexicon.length,
                         last_updated: payload.last_updated
                     };
@@ -99,20 +107,30 @@ export function useSharing(session) {
         const isMassivePayload = finalPayloadSize > 3000000; // > 3MB after compression
         
         if (finalPayloadSize > 20000000) {
-            if (isManualSync) toast.error("Project is too large to sync to the cloud! Please remove large images from your wiki.");
+            toast.error("Project is too large to sync to the cloud! Please remove large images from your wiki.");
             return false;
         }
         
         try {
+            let activeSession = session;
+            if (!activeSession) {
+                try {
+                    const { data } = await supabase.auth.getSession();
+                    activeSession = data?.session;
+                } catch (sErr) {
+                    console.warn("Could not fetch session:", sErr);
+                }
+            }
+
             // SEC: Before upserting, verify that this project_id doesn't belong to another user
-            if (session?.user?.id && currentProjectId) {
+            if (activeSession?.user?.id && currentProjectId) {
                 const { data: existingSnapshot } = await supabase
                     .from('conlang_snapshots')
                     .select('user_id')
                     .eq('project_id', currentProjectId)
                     .maybeSingle();
 
-                if (existingSnapshot && existingSnapshot.user_id && existingSnapshot.user_id !== session.user.id) {
+                if (existingSnapshot && existingSnapshot.user_id && existingSnapshot.user_id !== activeSession.user.id) {
                     // Project belongs to someone else! (e.g., imported from a different account)
                     // Generate a new project ID to fork it instead of overwriting
                     currentProjectId = 'proj_' + crypto.randomUUID();
@@ -123,7 +141,7 @@ export function useSharing(session) {
 
             // Always push to the snapshots table for public links
             const { error } = await supabase.from('conlang_snapshots').upsert({ 
-                user_id: session?.user?.id || null, 
+                user_id: activeSession?.user?.id || null, 
                 project_id: currentProjectId, 
                 project_data: finalPayload 
             }, { onConflict: 'project_id' });
@@ -131,10 +149,10 @@ export function useSharing(session) {
             if (error) throw error;
 
             // Push to version history table if logged in
-            if (session?.user?.id) {
+            if (activeSession?.user?.id) {
                 const autoVersionName = versionName || (isManualSync ? `Manual Save - ${new Date().toLocaleString()}` : `Auto Save - ${new Date().toLocaleString()}`);
                 const { error: versionError } = await supabase.from('conlang_versions').insert({
-                    user_id: session.user.id,
+                    user_id: activeSession.user.id,
                     project_id: currentProjectId,
                     version_name: autoVersionName,
                     project_data: finalPayload
@@ -162,9 +180,9 @@ export function useSharing(session) {
             }
 
             // If logged in, also push to the conlangs table for syncing across devices
-            if (session?.user?.id) {
+            if (activeSession?.user?.id) {
                 const { error: conlangError } = await supabase.from('conlangs').upsert({ 
-                    user_id: session.user.id, 
+                    user_id: activeSession.user.id, 
                     project_id: currentProjectId, 
                     project_data: finalPayload 
                 }, { onConflict: 'project_id' });

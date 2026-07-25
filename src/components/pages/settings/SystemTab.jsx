@@ -99,7 +99,10 @@ export default function SystemTab() {
         try {
             if (checked) {
                 // Publish using the central compressed push logic
-                await handlePushToCloud(false);
+                const success = await handlePushToCloud(false);
+                if (!success) {
+                    throw new Error("Failed to sync project to cloud.");
+                }
             } else {
                 // Delete from explore
                 const { data: dDel, error: errDel } = await supabase.from('conlang_snapshots').delete().eq('project_id', currentProjectId).select();
