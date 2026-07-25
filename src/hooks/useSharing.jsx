@@ -88,10 +88,17 @@ export function useSharing(session) {
             }
         }
         
+        if (configData.scriptDataById) {
+            Object.values(configData.scriptDataById).forEach(script => {
+                delete script.customFontBase64;
+                delete script.customFont;
+            });
+        }
+
         const finalPayloadSize = JSON.stringify(finalPayload).length;
         const isMassivePayload = finalPayloadSize > 3000000; // > 3MB after compression
         
-        if (finalPayloadSize > 8000000) {
+        if (finalPayloadSize > 20000000) {
             if (isManualSync) toast.error("Project is too large to sync to the cloud! Please remove large images from your wiki.");
             return false;
         }
