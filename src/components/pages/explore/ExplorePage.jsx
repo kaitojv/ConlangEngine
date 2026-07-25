@@ -116,14 +116,14 @@ export default function ExplorePage() {
                 if (errDel) throw errDel;
                 
                 if (!dDel || dDel.length === 0) {
-                    const { data: existingConlang } = await supabase.from('conlangs').select('project_data').eq('project_id', currentProjectId).single();
+                    const { data: existingConlang } = await supabase.from('conlangs').select('project_data').eq('project_id', currentProjectId).maybeSingle();
                     if (existingConlang && existingConlang.project_data) {
                         const updatedPayload = { ...existingConlang.project_data, config: { ...existingConlang.project_data.config, isPublic: false } };
                         await supabase.from('conlangs').update({ project_data: updatedPayload }).eq('project_id', currentProjectId);
                         await supabase.from('conlang_snapshots').update({ project_data: updatedPayload }).eq('project_id', currentProjectId);
                     }
                 } else {
-                    const { data: existingConlang } = await supabase.from('conlangs').select('project_data').eq('project_id', currentProjectId).single();
+                    const { data: existingConlang } = await supabase.from('conlangs').select('project_data').eq('project_id', currentProjectId).maybeSingle();
                     if (existingConlang && existingConlang.project_data) {
                         const updatedPayload = { ...existingConlang.project_data, config: { ...existingConlang.project_data.config, isPublic: false } };
                         await supabase.from('conlangs').update({ project_data: updatedPayload }).eq('project_id', currentProjectId);
@@ -203,7 +203,7 @@ export default function ExplorePage() {
 
             // If snapshot deletion fails due to missing DELETE RLS policy, fallback to an update setting isPublic to false
             if (!d2 || d2.length === 0) {
-                const { data: existing } = await supabase.from('conlang_snapshots').select('project_data').eq('project_id', projectId).single();
+                const { data: existing } = await supabase.from('conlang_snapshots').select('project_data').eq('project_id', projectId).maybeSingle();
                 if (existing && existing.project_data) {
                     await supabase.from('conlang_snapshots').update({
                         project_data: {
@@ -218,7 +218,7 @@ export default function ExplorePage() {
             }
 
             // Update the main conlangs table to make it private (DO NOT delete the user's private backup!)
-            const { data: existingConlang } = await supabase.from('conlangs').select('project_data').eq('project_id', projectId).single();
+            const { data: existingConlang } = await supabase.from('conlangs').select('project_data').eq('project_id', projectId).maybeSingle();
             if (existingConlang && existingConlang.project_data) {
                 const updatedPayload = {
                     ...existingConlang.project_data,

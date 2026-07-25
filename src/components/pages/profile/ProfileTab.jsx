@@ -83,7 +83,7 @@ export default function ProfileTab() {
                     .from('profiles')
                     .select('is_pro, live_until')
                     .eq('id', currentSession.user.id)
-                    .single();
+                    .maybeSingle();
 
                 if (error) throw error;
 
@@ -475,7 +475,7 @@ export default function ProfileTab() {
                 .from('conlang_versions')
                 .select('project_data')
                 .eq('id', version.id)
-                .single();
+                .maybeSingle();
                 
             if (error || !data) throw error;
             

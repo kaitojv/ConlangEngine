@@ -31,7 +31,7 @@ export default function SyncConflictManager() {
     }, []);
 
     const checkForConflicts = async () => {
-        if (!session || !config.projectId) return;
+        if (!session || !config.projectId || !config.lastCloudSync || config.projectId.startsWith('local_')) return;
 
         try {
             // Fetch the latest snapshot from the cloud
@@ -39,11 +39,9 @@ export default function SyncConflictManager() {
                 .from('conlang_snapshots')
                 .select('created_at, project_data')
                 .eq('project_id', config.projectId)
-                .single();
+                .maybeSingle();
 
             if (error || !data) return;
-
-            if (!config.lastCloudSync) return; // Do not show conflict for users who have never synced on this device
 
             const projectData = await decompressPayloadAsync(data.project_data);
             const cloudTimestamp = projectData?.last_updated ? new Date(projectData.last_updated).getTime() : new Date(data.created_at).getTime();

@@ -57,7 +57,7 @@ export default function PublicViewer() {
                     .from('conlang_snapshots')
                     .select('project_data')
                     .eq('project_id', projectId)
-                    .single();
+                    .maybeSingle();
 
                 if (fetchError) throw fetchError;
                 if (!data || !data.project_data) throw new Error('Project not found');

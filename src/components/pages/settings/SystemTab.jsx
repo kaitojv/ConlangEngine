@@ -108,7 +108,7 @@ export default function SystemTab() {
                 // If deletion fails due to missing DELETE RLS policy, fallback to an update setting isPublic to false
                 if (!dDel || dDel.length === 0) {
                     // Update main conlangs table to make it private
-                    const { data: existingConlang } = await supabase.from('conlangs').select('project_data').eq('project_id', currentProjectId).single();
+                    const { data: existingConlang } = await supabase.from('conlangs').select('project_data').eq('project_id', currentProjectId).maybeSingle();
                     if (existingConlang && existingConlang.project_data) {
                         const updatedPayload = {
                             ...existingConlang.project_data,
@@ -122,7 +122,7 @@ export default function SystemTab() {
                     }
                 } else {
                      // Update main conlangs table to make it private
-                     const { data: existingConlang } = await supabase.from('conlangs').select('project_data').eq('project_id', currentProjectId).single();
+                     const { data: existingConlang } = await supabase.from('conlangs').select('project_data').eq('project_id', currentProjectId).maybeSingle();
                      if (existingConlang && existingConlang.project_data) {
                          const updatedPayload = {
                              ...existingConlang.project_data,

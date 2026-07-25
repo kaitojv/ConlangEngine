@@ -83,7 +83,7 @@ export default function ConlangsTab() {
                     .from('profiles')
                     .select('is_pro, live_until')
                     .eq('id', currentSession.user.id)
-                    .single();
+                    .maybeSingle();
 
                 if (error) {
                     console.error('Supabase Profiles Error:', error.message);

@@ -110,7 +110,7 @@ export function useSharing(session) {
                     .from('conlang_snapshots')
                     .select('user_id')
                     .eq('project_id', currentProjectId)
-                    .single();
+                    .maybeSingle();
 
                 if (existingSnapshot && existingSnapshot.user_id && existingSnapshot.user_id !== session.user.id) {
                     // Project belongs to someone else! (e.g., imported from a different account)

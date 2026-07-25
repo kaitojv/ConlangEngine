@@ -48,7 +48,7 @@ export default function Header({ openMenu, onBackupNow }) {
                     .from('profiles')
                     .select('is_pro, live_until')
                     .eq('id', currentSession.user.id)
-                    .single();
+                    .maybeSingle();
 
                 let activeLive = false;
                 
