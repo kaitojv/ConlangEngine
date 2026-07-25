@@ -10,6 +10,7 @@ import { sanitizeConfig } from '../../../utils/schemaValidator.jsx';
 import { transliterateText } from '../../../utils/transliteration.js';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import PageSkeleton from '../../UI/PageSkeleton/PageSkeleton.jsx';
+import { useSharing } from '../../../hooks/useSharing.jsx';
 import './explorePage.css';
 
 export default function ExplorePage() {
@@ -24,6 +25,7 @@ export default function ExplorePage() {
 
     const isPublic = useConfigStore((state) => state.isPublic);
     const updateConfig = useConfigStore((state) => state.updateConfig);
+    const { handlePushToCloud } = useSharing(sessionUser ? { user: sessionUser } : null);
 
     const fetchPublicConlangs = React.useCallback(async () => {
             try {
@@ -105,65 +107,31 @@ export default function ExplorePage() {
         }
 
         updateConfig({ isPublic: newIsPublic });
-        
-        const configData = sanitizeConfig({ ...currentStore, isPublic: newIsPublic }, true);
-        const payload = {
-            dictionary: useLexiconStore.getState().lexicon || [],
-            config: configData,
-            wiki: configData.wikiPages || {},
-            last_updated: new Date().toISOString()
-        };
 
         try {
-            if (session?.user?.id && currentProjectId) {
-                const { data: existingSnapshot } = await supabase
-                    .from('conlang_snapshots')
-                    .select('user_id')
-                    .eq('project_id', currentProjectId)
-                    .single();
-
-                if (existingSnapshot && existingSnapshot.user_id && existingSnapshot.user_id !== session.user.id) {
-                    toast.error("You cannot update a public project owned by another account.", { id: toastId });
-                    updateConfig({ isPublic: !newIsPublic }); // revert
-                    return;
-                }
-            }
-
             if (newIsPublic) {
-                await supabase.from('conlang_snapshots').upsert({
-                    user_id: session.user.id,
-                    project_id: currentProjectId,
-                    project_data: payload
-                }, { onConflict: 'project_id' });
+                await handlePushToCloud(false);
             } else {
                 const { data: dDel, error: errDel } = await supabase.from('conlang_snapshots').delete().eq('project_id', currentProjectId).select();
                 if (errDel) throw errDel;
-                // If deletion fails due to missing DELETE RLS policy, fallback to an update setting isPublic to false
+                
                 if (!dDel || dDel.length === 0) {
-                    await supabase.from('conlang_snapshots').update({
-                        project_data: {
-                            ...payload,
-                            config: {
-                                ...payload.config,
-                                isPublic: false
-                            }
-                        }
-                    }).eq('project_id', currentProjectId);
+                    const { data: existingConlang } = await supabase.from('conlangs').select('project_data').eq('project_id', currentProjectId).single();
+                    if (existingConlang && existingConlang.project_data) {
+                        const updatedPayload = { ...existingConlang.project_data, config: { ...existingConlang.project_data.config, isPublic: false } };
+                        await supabase.from('conlangs').update({ project_data: updatedPayload }).eq('project_id', currentProjectId);
+                        await supabase.from('conlang_snapshots').update({ project_data: updatedPayload }).eq('project_id', currentProjectId);
+                    }
+                } else {
+                    const { data: existingConlang } = await supabase.from('conlangs').select('project_data').eq('project_id', currentProjectId).single();
+                    if (existingConlang && existingConlang.project_data) {
+                        const updatedPayload = { ...existingConlang.project_data, config: { ...existingConlang.project_data.config, isPublic: false } };
+                        await supabase.from('conlangs').update({ project_data: updatedPayload }).eq('project_id', currentProjectId);
+                    }
                 }
             }
             
-            await supabase.from('conlangs').upsert({
-                user_id: session.user.id,
-                project_id: currentProjectId,
-                project_data: payload
-            }, { onConflict: 'project_id' });
-
-            // Also update the local archive so this persists across reloads/switches
-            const projectStore = (await import('../../../store/useProjectStore.jsx')).useProjectStore.getState();
-            projectStore.saveProjectToArchive(payload.config, payload.dictionary);
-
             toast.success(newIsPublic ? "Conlang published!" : "Conlang is now private", { id: toastId });
-            
             fetchPublicConlangs(); // Refresh list
         } catch (err) {
             console.error("Update failed", err);
