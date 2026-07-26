@@ -43,6 +43,8 @@ export default function TypographyStudio() {
     const legacyAlphabeticScript = useConfigStore(state => state.alphabeticScript) || 'latin';
     const updateScriptData = useConfigStore(state => state.updateScriptData);
     const updateScriptSystem = useConfigStore(state => state.updateScriptSystem);
+    const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
+    const syllabaryMap = useConfigStore(state => state.syllabaryMap) || {};
 
     // Track which script is being edited. Default to the project's default script.
     const [editingScriptId, setEditingScriptId] = useState(defaultScriptId);
@@ -187,8 +189,9 @@ export default function TypographyStudio() {
     const handleRecompileFont = async () => {
         const tId = toast.loading("Recompiling custom font...");
         try {
-            const currentSettings = useConfigStore.getState().typographySettings || {};
-            const currentCustomGlyphs = useConfigStore.getState().customGlyphs || {};
+            const storeState = useConfigStore.getState();
+            const currentSettings = storeState.typographySettings || {};
+            const currentCustomGlyphs = (storeState.scriptDataById?.[selectedScriptId]?.customGlyphs) || storeState.customGlyphs || {};
             const base64Font = await compileFont(
                 currentCustomGlyphs, 
                 currentSettings.traceWidth ?? 30, 
@@ -210,6 +213,65 @@ export default function TypographyStudio() {
             console.error(err);
             toast.error("Failed to recompile font.", { id: tId });
         }
+    };
+
+    const unusedGlyphKeys = useMemo(() => {
+        const storeState = useConfigStore.getState();
+        const activeGlyphs = { ...(storeState.customGlyphs || {}), ...(storeState.scriptDataById?.[editingScriptId]?.customGlyphs || {}) };
+        const usedCodes = new Set();
+
+        const checkMap = (mapObj) => {
+            if (!mapObj) return;
+            Object.values(mapObj).forEach(val => {
+                if (typeof val === 'string' && val.length > 0) {
+                    const cp = val.codePointAt(0);
+                    if (cp) {
+                        usedCodes.add(String(cp));
+                        usedCodes.add(Number(cp));
+                    }
+                }
+            });
+        };
+
+        checkMap(storeState.alphabetGlyphs);
+        checkMap(storeState.syllabaryMap);
+        Object.values(storeState.scriptDataById || {}).forEach(sData => {
+            checkMap(sData?.alphabetGlyphs);
+            checkMap(sData?.syllabaryMap);
+        });
+
+        const lexicon = storeState.dictionary || [];
+        lexicon.forEach(entry => {
+            if (entry.word) {
+                usedCodes.add(entry.word.toLowerCase());
+            }
+            if (entry.ideogram) {
+                usedCodes.add(entry.ideogram);
+            }
+        });
+
+        const unused = [];
+        Object.keys(activeGlyphs).forEach(key => {
+            const num = Number(key);
+            if (!isNaN(num)) {
+                if (!usedCodes.has(key) && !usedCodes.has(num)) {
+                    unused.push(key);
+                }
+            } else if (!usedCodes.has(key)) {
+                unused.push(key);
+            }
+        });
+
+        return unused;
+    }, [customGlyphs, scriptDataById, editingScriptId, alphabetGlyphs, syllabaryMap]);
+
+    const handleCleanUnusedGlyphs = async (keysToRemove) => {
+        if (!keysToRemove || keysToRemove.length === 0) return;
+        const removeAction = useConfigStore.getState().removeCustomGlyphs;
+        if (removeAction) {
+            removeAction(keysToRemove);
+        }
+        await handleRecompileFont();
     };
 
     const handleAutoMap = () => {
@@ -602,6 +664,34 @@ export default function TypographyStudio() {
                     </p>
                     <Button variant="imp" onClick={() => setShowKeyboardManager(true)}>
                         <Keyboard size={16} /> Open Keyboard Manager
+                    </Button>
+                </Card>
+            )}
+
+            {unusedGlyphKeys && unusedGlyphKeys.length > 0 && (
+                <Card style={{ padding: '1.5rem', marginTop: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', border: '1px solid var(--err, #ef4444)' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--err, #ef4444)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Trash2 size={18} /> Unassigned Saved SVGs & Custom Glyphs ({unusedGlyphKeys.length})
+                    </h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', textAlign: 'center', maxWidth: '580px', margin: 0 }}>
+                        We detected <strong>{unusedGlyphKeys.length}</strong> saved SVG image(s) or custom glyphs in your project that are not assigned to any alphabet letter or syllable. These take up storage space and bloat your compiled font export.
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center', maxHeight: '130px', overflowY: 'auto', width: '100%', padding: '10px', background: 'var(--s1)', borderRadius: '8px', border: '1px solid var(--bd)' }}>
+                        {unusedGlyphKeys.map(key => (
+                            <span key={key} style={{ fontSize: '0.75rem', background: 'var(--s2)', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--bd)', color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                Glyph #{key}
+                                <button
+                                    onClick={() => handleCleanUnusedGlyphs([key])}
+                                    title="Delete this unused glyph"
+                                    style={{ background: 'transparent', border: 'none', color: 'var(--err, #ef4444)', cursor: 'pointer', padding: '0 2px', display: 'flex', alignItems: 'center', fontSize: '1rem', lineHeight: 1 }}
+                                >
+                                    &times;
+                                </button>
+                            </span>
+                        ))}
+                    </div>
+                    <Button variant="error" onClick={() => handleCleanUnusedGlyphs(unusedGlyphKeys)}>
+                        <Trash2 size={16} /> Delete All {unusedGlyphKeys.length} Unused Glyphs & Recompile Font
                     </Button>
                 </Card>
             )}

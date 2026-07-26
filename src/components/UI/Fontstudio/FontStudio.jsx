@@ -123,6 +123,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     const [backgroundText, setBackgroundText] = useState('');
     const [selectedReferenceId, setSelectedReferenceId] = useState('');
     const fileInputRef = useRef(null);
+    const bgFileInputRef = useRef(null);
 
     const { customGlyphs, puaCounter, addCustomGlyph, incrementPuaCounter, alphabetGlyphs, alphabetNames, featuralComponents } = useConfigStore();
 
@@ -220,6 +221,21 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         };
         reader.readAsText(file);
         if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleBgFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const svgContent = event.target.result;
+            const importedStrokes = parseSVGToStrokes(svgContent);
+            if (importedStrokes && importedStrokes.length > 0) {
+                setBackgroundStrokes(importedStrokes);
+            }
+        };
+        reader.readAsText(file);
+        if (bgFileInputRef.current) bgFileInputRef.current.value = '';
     };
 
     const handleSetBackground = () => {
@@ -1056,9 +1072,24 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                             style={{ display: 'none' }} 
                             onChange={handleFileUpload} 
                         />
-                        <Button variant="default" className="btn-sm" onClick={() => fileInputRef.current && fileInputRef.current.click()}>
+                        <input 
+                            type="file" 
+                            accept=".svg" 
+                            ref={bgFileInputRef} 
+                            style={{ display: 'none' }} 
+                            onChange={handleBgFileUpload} 
+                        />
+                        <Button variant="default" className="btn-sm" onClick={() => fileInputRef.current && fileInputRef.current.click()} title="Import SVG strokes directly onto your drawing canvas">
                             <Download size={14} style={{ transform: 'rotate(180deg)', marginRight: '4px' }} /> Import SVG
                         </Button>
+                        <Button variant="default" className="btn-sm" onClick={() => bgFileInputRef.current && bgFileInputRef.current.click()} title="Import SVG strokes as a background tracing guide without saving to your font">
+                            <Download size={14} style={{ transform: 'rotate(180deg)', marginRight: '4px' }} /> Import as Background
+                        </Button>
+                        {backgroundStrokes && backgroundStrokes.length > 0 && (
+                            <Button variant="default" className="btn-sm" onClick={() => setBackgroundStrokes([])} title="Clear background tracing guide" style={{ color: 'var(--tx2)' }}>
+                                <Trash2 size={14} style={{ marginRight: '4px' }} /> Clear Bg
+                            </Button>
+                        )}
                     </div>
                 </div>
 

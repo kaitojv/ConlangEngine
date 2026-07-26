@@ -560,6 +560,49 @@ export const useConfigStore = create(
                 return {};
             }),
 
+            removeCustomGlyphs: (charCodesToRemove) => {
+                const state = useConfigStore.getState();
+                const { projectId, scriptRules, scriptDataById } = state;
+                const defaultScriptId = scriptRules?.defaultScriptId || 'default';
+                const codesSet = new Set(charCodesToRemove.map(String));
+
+                const nextCustomGlyphs = { ...state.customGlyphs };
+                codesSet.forEach(code => delete nextCustomGlyphs[code]);
+
+                if (projectId) {
+                    saveLargeDataToDB(projectId, { customGlyphs: nextCustomGlyphs });
+                    const scriptData = scriptDataById[defaultScriptId] || {};
+                    const nextScriptGlyphs = { ...(scriptData.customGlyphs || {}) };
+                    codesSet.forEach(code => delete nextScriptGlyphs[code]);
+                    saveScriptDataToDB(projectId, defaultScriptId, { ...scriptData, customGlyphs: nextScriptGlyphs });
+                }
+
+                set((state) => {
+                    const nextScriptDataById = { ...state.scriptDataById };
+                    Object.keys(nextScriptDataById).forEach(sId => {
+                        if (nextScriptDataById[sId]?.customGlyphs) {
+                            const sg = { ...nextScriptDataById[sId].customGlyphs };
+                            let changed = false;
+                            codesSet.forEach(code => {
+                                if (sg[code] !== undefined) {
+                                    delete sg[code];
+                                    changed = true;
+                                }
+                            });
+                            if (changed) {
+                                nextScriptDataById[sId] = { ...nextScriptDataById[sId], customGlyphs: sg };
+                            }
+                        }
+                    });
+
+                    return {
+                        customGlyphs: nextCustomGlyphs,
+                        scriptDataById: nextScriptDataById,
+                        activity: [{ text: `Removed ${charCodesToRemove.length} unused custom glyph(s)`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15)
+                    };
+                });
+            },
+
             addCustomGlyph: (charCode, strokesArray, base64Font) => {
                 const state = useConfigStore.getState();
                 const { projectId, scriptRules, scriptDataById } = state;
