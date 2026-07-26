@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/utils/supabaseClient.js';
-import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit, FileText, Map, Zap, ArrowLeft, Loader2, Calendar, Clock } from 'lucide-react';
+import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit, FileText, Map, Zap, ArrowLeft, Loader2, Calendar, Clock, Library } from 'lucide-react';
 import { playAzureTTS } from '@/utils/azureTTS.js';
 import DOMPurify from 'dompurify';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
@@ -146,7 +146,8 @@ export default function PublicViewer() {
     
     const dictionary = useMemo(() => projectData?.dictionary || [], [projectData]);
     const grammarRules = config.grammarRules || [];
-    const wikiPages = config.wikiPages || {};
+    const wikiPages = useMemo(() => projectData?.wiki || config.wikiPages || {}, [projectData, config]);
+    const customCourse = useMemo(() => projectData?.customCourse || config.customCourse || [], [projectData, config]);
 
     const { transliterate } = useTransliterator(config);
     const isLogographic = ['logographic', 'syllabic', 'featural_block'].includes(config.phonologyTypes);
@@ -327,6 +328,13 @@ export default function PublicViewer() {
                     style={{ padding: '10px 20px', border: 'none', background: activeTab === 'overview' ? 'var(--acc)' : 'transparent', color: activeTab === 'overview' ? '#fff' : 'var(--tx)', borderRadius: '20px', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s' }}
                 >
                     <BookOpen size={16} style={{display: 'inline', marginRight: '8px', marginBottom: '-3px'}}/> Overview
+                </button>
+                <button 
+                    className={`pv-tab-btn ${activeTab === 'library' ? 'active' : ''}`} 
+                    onClick={() => { setActiveTab('library'); setActiveLevel(null); }}
+                    style={{ padding: '10px 20px', border: 'none', background: activeTab === 'library' ? 'var(--acc)' : 'transparent', color: activeTab === 'library' ? '#fff' : 'var(--tx)', borderRadius: '20px', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s' }}
+                >
+                    <Library size={16} style={{display: 'inline', marginRight: '8px', marginBottom: '-3px'}}/> Library & Writing
                 </button>
                 <button 
                     className={`pv-tab-btn ${activeTab === 'course' ? 'active' : ''}`} 
@@ -514,14 +522,18 @@ export default function PublicViewer() {
                         </div>
                     </section>
                 )}
+                    </>
+                )}
 
                 {/* WIKI & DOCUMENTATION */}
-                {Object.keys(wikiPages).length > 0 && (
-                    <section className="pv-section">
-                        <div className="pv-section-header">
-                            <FileText size={20} className="pv-section-icon" />
-                            <h2 className="pv-section-title">Grammar Wiki</h2>
-                        </div>
+                {(activeTab === 'overview' || activeTab === 'library') && (
+                    <>
+                        {Object.keys(wikiPages).length > 0 ? (
+                            <section className="pv-section">
+                                <div className="pv-section-header">
+                                    <Library size={20} className="pv-section-icon" />
+                                    <h2 className="pv-section-title">Library & Writing</h2>
+                                </div>
                         <div className="pv-section-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             {(() => {
                                 const rootItems = Object.keys(wikiPages).filter(k => {
@@ -612,8 +624,19 @@ export default function PublicViewer() {
                                 );
                             })()}
                         </div>
-                    </section>
+                            </section>
+                        ) : activeTab === 'library' ? (
+                            <div className="pv-section" style={{ textAlign: 'center', padding: '4rem 2rem', opacity: 0.7 }}>
+                                <Library size={48} style={{ margin: '0 auto 1rem', color: 'var(--tx3)' }} />
+                                <h3>No Library or Corpus Articles</h3>
+                                <p>The creator hasn't published any wiki articles, notebooks, or corpus texts for this conlang yet.</p>
+                            </div>
+                        ) : null}
+                    </>
                 )}
+
+                {activeTab === 'overview' && (
+                    <>
 
                 {/* ALPHABET / ORTHOGRAPHY */}
                 {config.alphabetNames && Object.keys(config.alphabetNames).length > 0 && (
@@ -799,7 +822,7 @@ export default function PublicViewer() {
                     <>
 
                 {/* COURSE MAP */}
-                {!activeLevel && config.customCourse && config.customCourse.length > 0 && (
+                {!activeLevel && customCourse && customCourse.length > 0 && (
                     <section className="pv-section" style={{ border: 'none', background: 'transparent' }}>
                         <div className="pv-section-header" style={{ justifyContent: 'center', marginBottom: '2rem', background: 'transparent', borderBottom: 'none' }}>
                             <Map size={28} className="pv-section-icon" />
@@ -809,10 +832,10 @@ export default function PublicViewer() {
                             <div className="pv-path-track" style={{ position: 'relative' }}>
                                 <svg 
                                     className="path-svg" 
-                                    style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: `${80 + (config.customCourse.length - 1) * 150}px`, overflow: 'visible', zIndex: 0, pointerEvents: 'none' }}
+                                    style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: `${80 + (customCourse.length - 1) * 150}px`, overflow: 'visible', zIndex: 0, pointerEvents: 'none' }}
                                 >
-                                    {config.customCourse.map((node, i) => {
-                                        if (i === config.customCourse.length - 1) return null;
+                                    {customCourse.map((node, i) => {
+                                        if (i === customCourse.length - 1) return null;
                                         const isLeft = i % 2 === 0;
                                         const y1 = 80 + i * 150;
                                         const y2 = 80 + (i + 1) * 150;
@@ -841,7 +864,7 @@ export default function PublicViewer() {
                                     })}
                                 </svg>
 
-                                {config.customCourse.map((node, i) => {
+                                {customCourse.map((node, i) => {
                                     const isZigZag = i % 2 === 0;
                                     return (
                                         <div key={node.id} className={`pv-path-node-wrapper ${isZigZag ? 'left' : 'right'}`}>
@@ -882,6 +905,14 @@ export default function PublicViewer() {
                             customLexicon={dictionary} 
                             customConfig={config} 
                         />
+                    </div>
+                )}
+
+                {!activeLevel && (!customCourse || customCourse.length === 0) && (
+                    <div className="pv-section" style={{ textAlign: 'center', padding: '4rem 2rem', opacity: 0.7 }}>
+                        <Map size={48} style={{ margin: '0 auto 1rem', color: 'var(--tx3)' }} />
+                        <h3>No Course Available</h3>
+                        <p>The creator hasn't published a learning course for this conlang yet.</p>
                     </div>
                 )}
 

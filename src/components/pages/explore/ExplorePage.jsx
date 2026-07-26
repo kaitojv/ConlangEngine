@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../utils/supabaseClient.js';
-import { Globe, BookA, User, Loader2, Heart, Trash2 } from 'lucide-react';
+import { Globe, BookA, User, Loader2, Heart, Trash2, Library, Map } from 'lucide-react';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import toast from 'react-hot-toast';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
@@ -355,13 +355,18 @@ export default function ExplorePage() {
             ) : (
                 <div className="explore-grid">
                     {sortedConlangs.map((lang) => {
-                        const { config, dictionary } = lang.project_data;
+                        const { config, dictionary, wiki, customCourse: topCourse } = lang.project_data;
                         const icon = config?.conlangIcon || '🌐';
                         const name = config?.conlangName || 'Unnamed Conlang';
                         const author = config?.authorName || 'Unknown Author';
                         const desc = config?.description || 'No description provided.';
                         const themeColor = config?.colors?.accent || 'var(--acc)';
                         const wordCount = lang.project_data.wordCount || (dictionary ? dictionary.length : 0);
+                        
+                        const wikiPages = wiki || config?.wikiPages || {};
+                        const wikiCount = Object.keys(wikiPages).length;
+                        const customCourse = topCourse || config?.customCourse || [];
+                        const courseCount = customCourse.length;
                         
                         const defaultScriptId = config?.scriptRules?.defaultScriptId || 'default';
                         const scriptData = config?.scriptDataById?.[defaultScriptId] || config || {};
@@ -432,6 +437,18 @@ export default function ExplorePage() {
                                         <BookA size={14} />
                                         <span>{wordCount} words</span>
                                     </div>
+                                    {wikiCount > 0 && (
+                                        <div className="explore-stat" title={`${wikiCount} wiki/corpus items`}>
+                                            <Library size={14} />
+                                            <span>{wikiCount} {wikiCount === 1 ? 'article' : 'articles'}</span>
+                                        </div>
+                                    )}
+                                    {courseCount > 0 && (
+                                        <div className="explore-stat" title={`${courseCount} course modules`}>
+                                            <Map size={14} />
+                                            <span>{courseCount} {courseCount === 1 ? 'course' : 'courses'}</span>
+                                        </div>
+                                    )}
                                     <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                         <button 
                                             className={`explore-like-btn ${userLikes.has(lang.project_id) ? 'liked' : ''}`}
