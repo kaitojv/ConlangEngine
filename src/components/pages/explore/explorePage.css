@@ -19,6 +19,7 @@
     margin-bottom: 0.5rem;
     background: linear-gradient(135deg, var(--acc), var(--acc2));
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
@@ -113,6 +114,7 @@
     flex: 1;
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
