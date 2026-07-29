@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
+import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import Modal from '../../UI/Modal/Modal.jsx';
 import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
@@ -240,13 +241,18 @@ export default function TypographyStudio() {
             checkMap(sData?.syllabaryMap);
         });
 
-        const lexicon = storeState.dictionary || [];
+        const lexicon = useLexiconStore.getState().lexicon || [];
         lexicon.forEach(entry => {
             if (entry.word) {
                 usedCodes.add(entry.word.toLowerCase());
             }
             if (entry.ideogram) {
                 usedCodes.add(entry.ideogram);
+            }
+            if (entry.scriptForms) {
+                Object.values(entry.scriptForms).forEach(formStr => {
+                    if (formStr) usedCodes.add(formStr);
+                });
             }
         });
 
