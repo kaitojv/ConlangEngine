@@ -10,7 +10,7 @@ import { Sparkles, AlertTriangle, Save, Brush, X, Plus, Wand2 } from 'lucide-rea
 import { applyRuleToWord, expandWildcardDependencies } from '../../../utils/morphologyEngine.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
-import { fetchSynonymOptions } from '../../../utils/semanticUtils.js';
+import { fetchSynonymOptions, fetchDefinitionForWord, fetchTopicOptions } from '../../../utils/semanticUtils.js';
 import './createWordTab.css';
 import Modal from '../../UI/Modal/Modal.jsx';
 import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
@@ -50,6 +50,8 @@ export default function CreateWordTab() {
     const [tagInput, setTagInput] = useState('');
     const [relatedInput, setRelatedInput] = useState('');
     const [isFetchingRelated, setIsFetchingRelated] = useState(false);
+    const [isFetchingDefinition, setIsFetchingDefinition] = useState(false);
+    const [isFetchingTags, setIsFetchingTags] = useState(false);
 
     // Global stores
     const addWord = useLexiconStore((state) => state.addWord);
@@ -331,6 +333,48 @@ export default function CreateWordTab() {
             toast.error("Failed to fetch related words.");
         } finally {
             setIsFetchingRelated(false);
+        }
+    };
+
+    const autoSuggestDefinition = async () => {
+        if (!translation) return toast.error("Please enter a short translation first.");
+        setIsFetchingDefinition(true);
+        try {
+            const def = await fetchDefinitionForWord(translation, wordClass);
+            if (def) {
+                updateField('definition', def);
+                toast.success('Definition found!');
+            } else {
+                toast('No definition found for this word.', { icon: '💡' });
+            }
+        } catch {
+            toast.error('Failed to fetch definition.');
+        } finally {
+            setIsFetchingDefinition(false);
+        }
+    };
+
+    const autoSuggestTags = async () => {
+        if (!translation) return toast.error("Please enter a short translation first.");
+        setIsFetchingTags(true);
+        try {
+            const results = await fetchTopicOptions(translation);
+            if (results && results.length > 0) {
+                const newTags = results.map(r => r.lemma.toLowerCase()).filter(l => !formData.tags.includes(l));
+                const topPicks = [...new Set(newTags)].slice(0, 6);
+                if (topPicks.length > 0) {
+                    updateField('tags', [...formData.tags, ...topPicks]);
+                    toast.success(`Found ${topPicks.length} semantic tags!`);
+                } else {
+                    toast('No new tags found.', { icon: '💡' });
+                }
+            } else {
+                toast('No semantic tags found for this concept.', { icon: '💡' });
+            }
+        } catch {
+            toast.error('Failed to fetch semantic tags.');
+        } finally {
+            setIsFetchingTags(false);
         }
     };
 
@@ -1000,8 +1044,13 @@ export default function CreateWordTab() {
                         />
                     </div>
                     <div>
+                        <div className="auto-suggest-label-row">
+                            <label className="form-label">Full Definition (Optional)</label>
+                            <button className="btn-link" onClick={autoSuggestDefinition} disabled={isFetchingDefinition} style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Wand2 size={12} /> {isFetchingDefinition ? 'Fetching...' : 'Auto-Fill'}
+                            </button>
+                        </div>
                         <Input
-                            label="Full Definition (Optional)"
                             value={definition}
                             onChange={(e) => updateField('definition', e.target.value)}
                             placeholder="Extended description..."
@@ -1035,7 +1084,12 @@ export default function CreateWordTab() {
                 )}
 
                 <div className="tags-section">
-                    <label className="form-label">Semantic Tags</label>
+                    <div className="auto-suggest-label-row">
+                        <label className="form-label">Semantic Tags</label>
+                        <button className="btn-link" onClick={autoSuggestTags} disabled={isFetchingTags} style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Wand2 size={12} /> {isFetchingTags ? 'Searching...' : 'Auto-Suggest'}
+                        </button>
+                    </div>
                     <div className="tags-chip-container">
                         {formData.tags.map(tag => (
                             <span key={tag} className="tag-chip">

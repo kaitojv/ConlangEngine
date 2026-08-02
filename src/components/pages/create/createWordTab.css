@@ -76,6 +76,13 @@
     margin-bottom: 1.5rem;
 }
 
+.auto-suggest-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
 .preview-box {
     padding: 1rem;
     background-color: var(--s2);
