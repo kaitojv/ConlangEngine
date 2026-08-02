@@ -1,0 +1,266 @@
+/* src/components/UI/Modal/definitionSelectModal.css */
+
+.def-select-modal .modal-container {
+    max-width: 720px;
+}
+
+.def-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--tx);
+}
+
+.def-modal-title-icon {
+    color: var(--acc);
+}
+
+.def-target-word {
+    color: var(--acc);
+}
+
+.def-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.def-modal-loading,
+.def-modal-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--tx2);
+    gap: 12px;
+}
+
+.def-modal-loading p {
+    font-size: 0.95rem;
+}
+
+.def-modal-empty-icon {
+    color: var(--tx3);
+    opacity: 0.7;
+}
+
+.def-modal-empty h4 {
+    margin: 0;
+    color: var(--tx);
+    font-size: 1.1rem;
+}
+
+.def-modal-empty p {
+    margin: 0;
+    font-size: 0.88rem;
+    max-width: 440px;
+}
+
+.def-modal-header-desc p {
+    margin: 0 0 12px 0;
+    font-size: 0.88rem;
+    color: var(--tx2);
+    line-height: 1.45;
+}
+
+.def-pos-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    background: var(--bg2);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad);
+}
+
+.def-pos-filter-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--tx3);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 4px;
+}
+
+.def-pos-chip {
+    background: var(--bg);
+    border: 1px solid var(--bd);
+    color: var(--tx2);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.def-pos-chip:hover {
+    background: var(--s2);
+    color: var(--tx);
+}
+
+.def-pos-chip.active {
+    background: var(--acc);
+    color: #ffffff;
+    border-color: var(--acc);
+    font-weight: 600;
+}
+
+.def-pos-chip.target-match:not(.active) {
+    border-color: var(--acc);
+    color: var(--acc);
+}
+
+.chip-badge {
+    background: rgba(255, 255, 255, 0.25);
+    color: inherit;
+    font-size: 0.65rem;
+    padding: 1px 4px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.def-options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.def-option-card {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    background: var(--bg2);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.def-option-card:hover {
+    background: var(--s2);
+    border-color: var(--tx3);
+}
+
+.def-option-card.selected {
+    background: var(--s3);
+    border-color: var(--acc);
+    box-shadow: 0 0 0 1px var(--acc);
+}
+
+.def-option-card.pos-matched:not(.selected) {
+    border-left: 3px solid var(--acc);
+}
+
+.def-option-radio {
+    padding-top: 2px;
+}
+
+.def-option-radio input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--acc);
+}
+
+.def-option-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.def-option-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.def-pos-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--s1);
+    color: var(--tx);
+    border: 1px solid var(--bd);
+    letter-spacing: 0.5px;
+}
+
+.def-match-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--acc);
+    background: rgba(34, 197, 94, 0.12);
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.def-source-badge {
+    margin-left: auto;
+    font-size: 0.7rem;
+    color: var(--tx3);
+}
+
+.def-option-text {
+    font-size: 0.92rem;
+    color: var(--tx);
+    line-height: 1.4;
+    font-weight: 500;
+}
+
+.def-option-example {
+    font-size: 0.83rem;
+    color: var(--tx2);
+    padding-left: 8px;
+    border-left: 2px solid var(--bd);
+    margin-top: 2px;
+}
+
+.def-custom-editor-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+    padding-top: 12px;
+    border-top: 1px solid var(--bd);
+}
+
+.def-editor-label {
+    font-size: 0.83rem;
+    font-weight: 600;
+    color: var(--tx2);
+}
+
+.def-custom-textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 70px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.def-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 8px;
+}

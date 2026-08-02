@@ -10,9 +10,10 @@ import { Sparkles, AlertTriangle, Save, Brush, X, Plus, Wand2 } from 'lucide-rea
 import { applyRuleToWord, expandWildcardDependencies } from '../../../utils/morphologyEngine.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
-import { fetchSynonymOptions, fetchDefinitionForWord, fetchTopicOptions } from '../../../utils/semanticUtils.js';
+import { fetchSynonymOptions, fetchDefinitionOptions, fetchTopicOptions } from '../../../utils/semanticUtils.js';
 import './createWordTab.css';
 import Modal from '../../UI/Modal/Modal.jsx';
+import DefinitionSelectModal from '../../UI/Modal/DefinitionSelectModal.jsx';
 import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
 import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
@@ -336,14 +337,18 @@ export default function CreateWordTab() {
         }
     };
 
+    const [isDefModalOpen, setIsDefModalOpen] = useState(false);
+    const [defOptions, setDefOptions] = useState([]);
+
     const autoSuggestDefinition = async () => {
         if (!translation) return toast.error("Please enter a short translation first.");
         setIsFetchingDefinition(true);
+        setDefOptions([]);
+        setIsDefModalOpen(true);
         try {
-            const def = await fetchDefinitionForWord(translation, wordClass);
-            if (def) {
-                updateField('definition', def);
-                toast.success('Definition found!');
+            const options = await fetchDefinitionOptions(translation);
+            if (options && options.length > 0) {
+                setDefOptions(options);
             } else {
                 toast('No definition found for this word.', { icon: '💡' });
             }
@@ -1255,6 +1260,19 @@ export default function CreateWordTab() {
                     onCancel={() => setIsFontStudioOpen(false)}
                 />
             </Modal>
+
+            <DefinitionSelectModal
+                isOpen={isDefModalOpen}
+                onClose={() => setIsDefModalOpen(false)}
+                translation={translation}
+                wordClass={wordClass}
+                definitions={defOptions}
+                isLoading={isFetchingDefinition}
+                onSelectDefinition={(selectedDef) => {
+                    updateField('definition', selectedDef);
+                    toast.success('Definition updated!');
+                }}
+            />
         </div>
     );
 }

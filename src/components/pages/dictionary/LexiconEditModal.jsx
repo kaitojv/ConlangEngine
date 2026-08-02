@@ -4,10 +4,11 @@ import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
 import { generateIpaFromWord } from '../../../utils/ipaGenerator.js';
-import { fetchSynonymOptions } from '../../../utils/semanticUtils.js';
+import { fetchSynonymOptions, fetchDefinitionOptions } from '../../../utils/semanticUtils.js';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
+import DefinitionSelectModal from '../../UI/Modal/DefinitionSelectModal.jsx';
 import { Search, Volume2, Save, Trash2, X, Link as LinkIcon, GitBranch, Plus, Wand2, Mic, Square, Play } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ToneStressSelector from './ToneStressSelector.jsx';
@@ -298,6 +299,29 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
         updateField('relatedWords', formData.relatedWords.filter(r => r !== rToRemove));
     };
 
+    const [isFetchingDefinition, setIsFetchingDefinition] = useState(false);
+    const [isDefModalOpen, setIsDefModalOpen] = useState(false);
+    const [defOptions, setDefOptions] = useState([]);
+
+    const autoSuggestDefinition = async () => {
+        if (!translation) return toast.error("Please enter a short translation first.");
+        setIsFetchingDefinition(true);
+        setDefOptions([]);
+        setIsDefModalOpen(true);
+        try {
+            const options = await fetchDefinitionOptions(translation);
+            if (options && options.length > 0) {
+                setDefOptions(options);
+            } else {
+                toast('No definition found for this word.', { icon: '💡' });
+            }
+        } catch {
+            toast.error('Failed to fetch definition.');
+        } finally {
+            setIsFetchingDefinition(false);
+        }
+    };
+
     const autoSuggestRelated = async () => {
         if (!translation) return toast.error("Please enter a short translation first.");
         setIsFetchingRelated(true);
@@ -316,7 +340,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
             } else {
                 toast("No related words found for this concept.", { icon: '💡' });
             }
-        } catch (e) {
+        } catch {
             toast.error("Failed to fetch related words.");
         } finally {
             setIsFetchingRelated(false);
@@ -941,8 +965,13 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                     />
                 </div>
                 <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <label className="form-label">Full Definition (Optional)</label>
+                        <button className="btn-link" onClick={autoSuggestDefinition} disabled={isFetchingDefinition} style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Wand2 size={12} /> {isFetchingDefinition ? 'Fetching...' : 'Auto-Fill'}
+                        </button>
+                    </div>
                     <Input
-                        label="Full Definition (Optional)"
                         value={formData.definition}
                         onChange={(e) => updateField('definition', e.target.value)}
                     />
@@ -1071,6 +1100,19 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
             >
                 <Save size={18} /> Save Changes
             </Button>
+
+            <DefinitionSelectModal
+                isOpen={isDefModalOpen}
+                onClose={() => setIsDefModalOpen(false)}
+                translation={translation}
+                wordClass={wordClass}
+                definitions={defOptions}
+                isLoading={isFetchingDefinition}
+                onSelectDefinition={(selectedDef) => {
+                    updateField('definition', selectedDef);
+                    toast.success('Definition updated!');
+                }}
+            />
         </div>
     );
 }

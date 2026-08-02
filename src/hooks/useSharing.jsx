@@ -34,6 +34,7 @@ export function useSharing(session) {
             dictionary: lexicon, 
             config: configData, 
             wiki: config.wikiPages || {},
+            wordCount: lexicon.length,
             last_updated: new Date().toISOString()
         };
         

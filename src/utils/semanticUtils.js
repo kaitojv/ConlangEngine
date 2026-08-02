@@ -407,6 +407,141 @@ export async function fetchDefinitionForWord(translation, wordClass) {
     return null;
 }
 
+/**
+ * Fetches all available definition options and senses for a given translation word.
+ * Queries Free Dictionary API, Datamuse, and Wiktionary.
+ *
+ * @param {string} translation  The English translation/gloss (e.g. "sharp", "water", "run")
+ * @returns {Promise<Array<{id: string, pos: string, definition: string, example: string|null, source: string}>>}
+ */
+export async function fetchDefinitionOptions(translation) {
+    if (!translation) return [];
+
+    let core = translation.toLowerCase().trim();
+    if (core.startsWith('to ')) core = core.substring(3);
+    if (core.startsWith('a ')) core = core.substring(2);
+    if (core.startsWith('an ')) core = core.substring(3);
+    if (core.startsWith('the ')) core = core.substring(4);
+    core = core.split(/[\s(,;]/)[0];
+    if (!core) return [];
+
+    const results = [];
+    const seenDefs = new Set();
+
+    const addDef = (pos, defText, example = null, source = 'Dictionary') => {
+        if (!defText) return;
+        const cleanDef = stripHtml(defText).trim();
+        if (!cleanDef) return;
+        const key = cleanDef.toLowerCase();
+        if (seenDefs.has(key)) return;
+        seenDefs.add(key);
+
+        let cleanPos = (pos || 'noun').toLowerCase().trim();
+        if (cleanPos === 'n') cleanPos = 'noun';
+        if (cleanPos === 'v') cleanPos = 'verb';
+        if (cleanPos === 'adj') cleanPos = 'adjective';
+        if (cleanPos === 'adv') cleanPos = 'adverb';
+
+        results.push({
+            id: `def-opt-${results.length}`,
+            pos: cleanPos,
+            definition: cleanDef,
+            example: example ? stripHtml(example).trim() : null,
+            source
+        });
+    };
+
+    // Parallel fetch from all 3 dictionary APIs simultaneously
+    const freeDictPromise = (async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
+        try {
+            const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(core)}`, {
+                signal: controller.signal
+            });
+            if (res.ok) return await res.json();
+        } catch { /* fall through */ } finally {
+            clearTimeout(timeoutId);
+        }
+        return null;
+    })();
+
+    const datamusePromise = (async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
+        try {
+            const res = await fetch(`${DATAMUSE_BASE_URL}?sp=${encodeURIComponent(core)}&md=d&max=8`, {
+                signal: controller.signal
+            });
+            if (res.ok) return await res.json();
+        } catch { /* fall through */ } finally {
+            clearTimeout(timeoutId);
+        }
+        return null;
+    })();
+
+    const wikiPromise = (async () => {
+        try {
+            return await fetchFullDictionary(core);
+        } catch {
+            return null;
+        }
+    })();
+
+    const [freeDictResult, datamuseResult, wikiResult] = await Promise.allSettled([
+        freeDictPromise,
+        datamusePromise,
+        wikiPromise
+    ]);
+
+    // 1. Process Free Dictionary API results
+    if (freeDictResult.status === 'fulfilled' && Array.isArray(freeDictResult.value)) {
+        for (const entry of freeDictResult.value) {
+            if (entry?.meanings) {
+                for (const meaning of entry.meanings) {
+                    const pos = meaning.partOfSpeech || 'noun';
+                    if (meaning.definitions) {
+                        for (const d of meaning.definitions) {
+                            addDef(pos, d.definition, d.example, 'Free Dictionary API');
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Process Datamuse results
+    if (datamuseResult.status === 'fulfilled' && Array.isArray(datamuseResult.value)) {
+        const exact = datamuseResult.value.find(d => d.word.toLowerCase() === core);
+        if (exact?.defs) {
+            const POS_MAP_REVERSE = { n: 'noun', v: 'verb', adj: 'adjective', adv: 'adverb' };
+            for (const defLine of exact.defs) {
+                const parts = defLine.split('\t');
+                if (parts.length >= 2) {
+                    const rawPos = parts[0];
+                    const text = parts[1];
+                    const fullPos = POS_MAP_REVERSE[rawPos] || rawPos;
+                    addDef(fullPos, text, null, 'Datamuse');
+                }
+            }
+        }
+    }
+
+    // 3. Process Wiktionary results
+    if (wikiResult.status === 'fulfilled' && wikiResult.value?.senses) {
+        for (const sense of wikiResult.value.senses) {
+            const pos = sense.pos || 'noun';
+            if (sense.definitions) {
+                for (const defText of sense.definitions) {
+                    addDef(pos, defText, null, 'Wiktionary');
+                }
+            }
+        }
+    }
+
+    return results;
+}
+
 /** Strips HTML tags from a Wiktionary definition string */
 function stripHtml(html) {
     if (!html) return '';
@@ -420,3 +555,4 @@ function stripHtml(html) {
         .replace(/\s+/g, ' ')       // collapse whitespace
         .trim();
 }
+

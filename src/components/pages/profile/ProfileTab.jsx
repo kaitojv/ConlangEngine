@@ -12,6 +12,7 @@ import './profileTab.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ALLOWED_REDIRECTS } from '../../../App.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
+import toast from 'react-hot-toast';
 import { sanitizeConfig, sanitizeLexicon, decompressPayload, decompressPayloadAsync } from '@/utils/schemaValidator.jsx';
 import { useSharing } from '@/hooks/useSharing.jsx';
 import PayPalButton from '@/components/Payment/PayPalButton.jsx';
@@ -450,7 +451,7 @@ export default function ProfileTab() {
         try {
             const { data, error } = await supabase
                 .from('conlang_versions')
-                .select('id, created_at, version_name')
+                .select('id, created_at, version_name, project_data')
                 .eq('user_id', session.user.id)
                 .eq('project_id', config.projectId)
                 .order('created_at', { ascending: false });
@@ -760,7 +761,7 @@ export default function ProfileTab() {
                                     <div>
                                         <h4 style={{ margin: '0 0 4px 0', color: 'var(--tx)' }}>{v.version_name}</h4>
                                         <div style={{ fontSize: '0.8rem', color: 'var(--tx2)' }}>
-                                            {new Date(v.created_at).toLocaleString()} • {v.project_data?.wordCount !== undefined ? v.project_data.wordCount : (v.project_data?.dictionary || []).length} words
+                                            {new Date(v.created_at).toLocaleString()} • {v.project_data?.wordCount !== undefined ? v.project_data.wordCount : (Array.isArray(v.project_data?.dictionary) ? v.project_data.dictionary.length : 0)} words
                                         </div>
                                     </div>
                                     <Button variant="default" onClick={() => handleRestoreVersion(v)} style={{ padding: '6px 12px' }}>

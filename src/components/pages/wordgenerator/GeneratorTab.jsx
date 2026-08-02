@@ -11,7 +11,8 @@ import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
 import { commonWords } from '@/components/pages/wordgenerator/commonWords.jsx';
 import { Wand2, Send, Dna, BookCopy, SkipForward, Check, Settings2, Download, SlidersHorizontal, ListChecks, Dice5, Loader2 } from 'lucide-react';
-import { fetchDefinitionForWord, fetchSynonymOptions } from '@/utils/semanticUtils.js';
+import { fetchDefinitionForWord, fetchDefinitionOptions, fetchSynonymOptions } from '@/utils/semanticUtils.js';
+import DefinitionSelectModal from '@/components/UI/Modal/DefinitionSelectModal.jsx';
 import toast from 'react-hot-toast';
 import './generatorTab.css';
 
@@ -730,6 +731,33 @@ function ListFillMode({ onExit }) {
     const [rows, setRows] = useState([]);
     const [selectedWords, setSelectedWords] = useState(new Set());
 
+    // Definition modal state for rows
+    const [activeDefRowId, setActiveDefRowId] = useState(null);
+    const [defModalTarget, setDefModalTarget] = useState({ word: '', pos: '' });
+    const [defModalOptions, setDefModalOptions] = useState([]);
+    const [isFetchingRowDef, setIsFetchingRowDef] = useState(false);
+    const [isDefModalOpen, setIsDefModalOpen] = useState(false);
+
+    const handleFetchRowDef = async (row) => {
+        setIsFetchingRowDef(true);
+        setDefModalTarget({ word: row.englishWord, pos: row.wordClass });
+        setActiveDefRowId(row.id);
+        setDefModalOptions([]);
+        setIsDefModalOpen(true);
+        try {
+            const options = await fetchDefinitionOptions(row.englishWord);
+            if (options && options.length > 0) {
+                setDefModalOptions(options);
+            } else {
+                toast('No definition found for this word.', { icon: '💡' });
+            }
+        } catch {
+            toast.error('Failed to fetch definition options.');
+        } finally {
+            setIsFetchingRowDef(false);
+        }
+    };
+
     const loadMore = async (reset = false) => {
         setIsLoading(true);
         let sourceWords = [];
@@ -1062,14 +1090,26 @@ function ListFillMode({ onExit }) {
                                                 onChange={(e) => updateRow(row.id, 'tags', e.target.value)}
                                                 style={{ margin: 0, fontSize: '0.85rem', padding: '6px' }}
                                             />
-                                            <input 
-                                                type="text" 
-                                                placeholder="Description..." 
-                                                className="generator-input"
-                                                value={row.description}
-                                                onChange={(e) => updateRow(row.id, 'description', e.target.value)}
-                                                style={{ margin: 0, fontSize: '0.85rem', padding: '6px' }}
-                                            />
+                                            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Description..." 
+                                                    className="generator-input"
+                                                    value={row.description}
+                                                    onChange={(e) => updateRow(row.id, 'description', e.target.value)}
+                                                    style={{ flex: 1, margin: 0, fontSize: '0.85rem', padding: '6px' }}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="icon-btn"
+                                                    style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: 'var(--rad-sm)', padding: '6px 8px', color: 'var(--tx)', display: 'flex', alignItems: 'center', height: '100%' }}
+                                                    title="Auto-fill definition options"
+                                                    onClick={() => handleFetchRowDef(row)}
+                                                    disabled={isFetchingRowDef && activeDefRowId === row.id}
+                                                >
+                                                    <Wand2 size={14} />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1078,7 +1118,21 @@ function ListFillMode({ onExit }) {
                     </div>
                 )}
             </Card>
+
+            <DefinitionSelectModal
+                isOpen={isDefModalOpen}
+                onClose={() => setIsDefModalOpen(false)}
+                translation={defModalTarget.word}
+                wordClass={defModalTarget.pos}
+                definitions={defModalOptions}
+                isLoading={isFetchingRowDef}
+                onSelectDefinition={(selectedDef) => {
+                    if (activeDefRowId) {
+                        updateRow(activeDefRowId, 'description', selectedDef);
+                        toast.success('Definition updated!');
+                    }
+                }}
+            />
         </div>
     );
 }
-
