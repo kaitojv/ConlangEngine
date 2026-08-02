@@ -7,7 +7,7 @@ import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import { Sparkles, AlertTriangle, Save, Brush, X, Plus, Wand2 } from 'lucide-react';
-import { applyRuleToWord } from '../../../utils/morphologyEngine.jsx';
+import { applyRuleToWord, expandWildcardDependencies } from '../../../utils/morphologyEngine.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
 import { fetchSynonymOptions } from '../../../utils/semanticUtils.js';
@@ -357,7 +357,7 @@ export default function CreateWordTab() {
         // 2. Save any selected derivations
         derivedWords.forEach((item, idx) => {
             if (selectedDerivs[idx]) {
-                const rule = grammarRules.find(r => r.name === item.ruleName);
+                const rule = item.rule || grammarRules.find(r => r.id === item.rule?.id || r.name === item.ruleName);
 
                 // Determine the best class for the derivation
                 let targetClass = wordClass; // Fallback
@@ -366,7 +366,7 @@ export default function CreateWordTab() {
                         targetClass = rule.targetPOS;
                     } else {
                         const ruleClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
-                        if (!ruleClasses.includes('all')) {
+                        if (!ruleClasses.includes('all') && ruleClasses.length > 0) {
                             targetClass = ruleClasses[0];
                         } else if (wordClass.includes(',')) {
                             targetClass = wordClass.split(',')[0].trim();
@@ -378,7 +378,7 @@ export default function CreateWordTab() {
                     word: item.derivedWord,
                     ipa: '', // Derivations don't auto-generate IPA yet
                     wordClass: targetClass,
-                    translation: customTranslations[idx] !== undefined ? customTranslations[idx].trim() : item.translationText,
+                    translation: customTranslations[idx] !== undefined && customTranslations[idx].trim() !== '' ? customTranslations[idx].trim() : item.translationText,
                     definition: '',
                     tags: [...processedTags, 'derived'],
                     relatedWords: [],
@@ -707,17 +707,26 @@ export default function CreateWordTab() {
     // Spin up a live preview of how this word will interact with the language's grammar rules
     // BUG-4: Memoize to avoid running the morphology engine on every render
     const derivedWords = useMemo(() => {
-        if (!word || !translation) return [];
+        if (!word || !word.trim()) return [];
 
         const results = [];
         const safeBaseWord = normalizeToBase(word.trim());
+        if (!safeBaseWord) return [];
 
         const currentClasses = wordClass ? wordClass.split(',').map(c => c.trim().toLowerCase()) : [];
 
-        grammarRules.filter(r => r.isDerivational).forEach(rule => {
+        // If any rule is explicitly marked derivational, filter by that; otherwise fallback to all applicable rules
+        const hasExplicitDerivational = grammarRules.some(r => r.isDerivational);
+        let candidateRules = hasExplicitDerivational
+            ? grammarRules.filter(r => r.isDerivational)
+            : grammarRules;
+
+        candidateRules = expandWildcardDependencies(candidateRules, grammarRules);
+
+        candidateRules.forEach(rule => {
             const ruleClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
 
-            if (ruleClasses.includes('all') || currentClasses.some(cc => ruleClasses.includes(cc))) {
+            if (ruleClasses.includes('all') || currentClasses.length === 0 || currentClasses.some(cc => ruleClasses.includes(cc))) {
                 let base = safeBaseWord;
 
                 // Verb markers are no longer stripped, they only act as a validation warning during creation
@@ -725,10 +734,15 @@ export default function CreateWordTab() {
                 const result = applyRuleToWord(base, rule, grammarRules, vowels, consonants, otherPhonemes);
 
                 if (result) {
+                    const transLabel = translation && translation.trim()
+                        ? `${translation.trim()} (${(rule.gloss || rule.name || 'Unnamed Rule').toLowerCase()})`
+                        : `(${(rule.gloss || rule.name || 'Unnamed Rule').toLowerCase()})`;
+
                     results.push({
                         derivedWord: result,
-                        ruleName: rule.name,
-                        translationText: `${translation} (${(rule.name || 'Unnamed Rule').toLowerCase()})`
+                        ruleName: rule.name || 'Unnamed Rule',
+                        rule: rule,
+                        translationText: transLabel
                     });
                 }
             }
@@ -1106,7 +1120,7 @@ export default function CreateWordTab() {
                     </div>
                 </div>
 
-                {word && translation && grammarRules.length > 0 && (
+                {word && word.trim() && grammarRules.length > 0 && (
                     <div className="preview-box">
                         <span className="preview-title">
                             Auto-Derivations Preview
