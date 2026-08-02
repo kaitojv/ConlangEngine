@@ -80,7 +80,45 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 4px;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.auto-suggest-label-row .form-label {
+    margin-bottom: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.auto-suggest-label-row .btn-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--s3);
+    border: 1px solid var(--bd);
+    color: var(--acc);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 6px;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.auto-suggest-label-row .btn-link:hover:not(:disabled) {
+    background: var(--acc);
+    color: #ffffff;
+    border-color: var(--acc);
+    box-shadow: 0 2px 8px rgba(var(--acc-rgb), 0.25);
+}
+
+.auto-suggest-label-row .btn-link:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .preview-box {

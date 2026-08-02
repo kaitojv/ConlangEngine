@@ -184,20 +184,54 @@ export async function fetchMeronymOptions(word) {
 }
 
 /**
- * Fetches associated domain topics.
+ * Fetches associated semantic domain topics and hypernym categories.
+ * Prefers broad classifications (rel_gen + topics) over text triggers.
  */
 export async function fetchTopicOptions(word) {
     try {
-        const response = await fetch(`${DATAMUSE_BASE_URL}?rel_trg=${word.toLowerCase()}&max=10`);
-        if (!response.ok) return [];
-        const data = await response.json();
-        return data.map((item, index) => ({
-            id: `top-${item.word}-${index}`,
-            lemma: item.word,
-            pos: 'n',
-            type: 'topic'
-        }));
-    } catch (e) {
+        let core = word.toLowerCase().trim();
+        if (core.startsWith('to ')) core = core.substring(3);
+        if (core.startsWith('a ')) core = core.substring(2);
+        if (core.startsWith('an ')) core = core.substring(3);
+        if (core.startsWith('the ')) core = core.substring(4);
+        core = core.split(/[\s(,;]/)[0];
+        if (!core) return [];
+
+        const [genRes, topicRes] = await Promise.all([
+            fetch(`${DATAMUSE_BASE_URL}?rel_gen=${encodeURIComponent(core)}&max=12`),
+            fetch(`${DATAMUSE_BASE_URL}?topics=${encodeURIComponent(core)}&max=12`)
+        ]);
+
+        const genData = genRes.ok ? await genRes.json() : [];
+        const topicData = topicRes.ok ? await topicRes.json() : [];
+
+        // Prioritize general hypernym categories (e.g. time, liquid, emotion)
+        const combined = [...genData, ...topicData];
+        const tagsSet = new Set();
+        const results = [];
+
+        for (const item of combined) {
+            const tag = item.word.toLowerCase().trim();
+            // Filter: single concise words, no spaces/special chars, not equal to base word
+            if (
+                tag &&
+                /^[a-z]+$/.test(tag) &&
+                tag !== core &&
+                tag.length > 2 &&
+                !tagsSet.has(tag)
+            ) {
+                tagsSet.add(tag);
+                results.push({
+                    id: `top-${tag}`,
+                    lemma: tag,
+                    pos: 'n',
+                    type: 'topic'
+                });
+            }
+        }
+
+        return results;
+    } catch {
         return [];
     }
 }

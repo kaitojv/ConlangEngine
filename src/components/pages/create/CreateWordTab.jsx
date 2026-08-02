@@ -329,7 +329,7 @@ export default function CreateWordTab() {
             } else {
                 toast("No related words found for this concept.", { icon: '💡' });
             }
-        } catch (e) {
+        } catch {
             toast.error("Failed to fetch related words.");
         } finally {
             setIsFetchingRelated(false);
@@ -1046,7 +1046,7 @@ export default function CreateWordTab() {
                     <div>
                         <div className="auto-suggest-label-row">
                             <label className="form-label">Full Definition (Optional)</label>
-                            <button className="btn-link" onClick={autoSuggestDefinition} disabled={isFetchingDefinition} style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <button className="btn-link" onClick={autoSuggestDefinition} disabled={isFetchingDefinition}>
                                 <Wand2 size={12} /> {isFetchingDefinition ? 'Fetching...' : 'Auto-Fill'}
                             </button>
                         </div>
@@ -1086,7 +1086,7 @@ export default function CreateWordTab() {
                 <div className="tags-section">
                     <div className="auto-suggest-label-row">
                         <label className="form-label">Semantic Tags</label>
-                        <button className="btn-link" onClick={autoSuggestTags} disabled={isFetchingTags} style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <button className="btn-link" onClick={autoSuggestTags} disabled={isFetchingTags}>
                             <Wand2 size={12} /> {isFetchingTags ? 'Searching...' : 'Auto-Suggest'}
                         </button>
                     </div>
@@ -1142,9 +1142,9 @@ export default function CreateWordTab() {
                 </div>
 
                 <div style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div className="auto-suggest-label-row">
                         <label className="form-label">Related Words</label>
-                        <button className="btn-link" onClick={autoSuggestRelated} disabled={isFetchingRelated} style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <button className="btn-link" onClick={autoSuggestRelated} disabled={isFetchingRelated}>
                             <Wand2 size={12} /> {isFetchingRelated ? 'Searching...' : 'Auto-Suggest'}
                         </button>
                     </div>
