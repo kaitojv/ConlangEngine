@@ -60,18 +60,61 @@
 
 .alpha-filter-bar {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    align-items: center;
+    flex-direction: column;
+    gap: 0.6rem;
     border-top: 1px solid var(--bd);
-    padding: 1rem 30px 1.5rem 30px;
+    padding: 0.85rem 30px 1.25rem 30px;
     margin: 0 -30px -30px -30px;
 }
 
+.alpha-filter-bar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.alpha-bar-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--tx2);
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.alpha-hide-btn {
+    background: transparent;
+    border: none;
+    color: var(--tx2);
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 3px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.alpha-hide-btn:hover {
+    color: var(--tx);
+    background: var(--s2);
+}
+
+.alpha-filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+    width: 100%;
+}
 
 .alpha-icon {
     color: var(--tx2);
-    margin-right: 0.5rem;
 }
 
 .alpha-btn {
@@ -383,6 +426,11 @@
     align-items: center;
     margin-bottom: 1.5rem;
     flex-wrap: wrap;
+}
+
+.toolbar-filters:last-child,
+.active-filters-bar:last-child {
+    margin-bottom: 0;
 }
 
 .filters-label {

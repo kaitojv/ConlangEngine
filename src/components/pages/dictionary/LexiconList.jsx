@@ -13,7 +13,7 @@ import MatrixModal from './MatrixModal.jsx';
 import ProtoRootModal from './ProtoRootModal.jsx';
 import GlyphDetailsModal from '../../UI/GlyphDetailsModal/GlyphDetailsModal.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
-import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download, X, Share2, Music, Zap, LayoutGrid, List } from 'lucide-react';
+import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download, X, Share2, Music, Zap, LayoutGrid, List, ChevronUp, ChevronDown } from 'lucide-react';
 import { exportTextAsSVG } from '../../../utils/svgExporter.jsx';
 import { playAzureTTS } from '../../../utils/azureTTS.js';
 import toast from 'react-hot-toast';
@@ -57,6 +57,16 @@ export default function LexiconList() {
     const [showRomanization, setShowRomanization] = useState(false);
     // Grid vs List view mode
     const [layoutMode, setLayoutMode] = useState('list');
+    // Toggle for showing/hiding quick character jump bar
+    const [showAlphaBar, setShowAlphaBar] = useState(() => {
+        const saved = localStorage.getItem('lexicon_show_alpha_bar');
+        return saved !== null ? saved === 'true' : true;
+    });
+
+    const handleToggleAlphaBar = (val) => {
+        setShowAlphaBar(val);
+        localStorage.setItem('lexicon_show_alpha_bar', String(val));
+    };
     const isScriptMode = ['syllabic', 'featural_block', 'logographic', 'featural', 'block'].includes(phonologyTypes);
     const scriptSystems = useConfigStore(state => state.scriptSystems) || [];
     const scriptRules = useConfigStore(state => state.scriptRules) || {};
@@ -490,6 +500,15 @@ export default function LexiconList() {
                         />
                         Proto-Roots
                     </label>
+                    <label className="bound-toggle">
+                        <input 
+                            type="checkbox" 
+                            className="bound-checkbox"
+                            checked={showAlphaBar}
+                            onChange={(e) => handleToggleAlphaBar(e.target.checked)}
+                        />
+                        Character Bar
+                    </label>
                 </div>
 
                 {/* Active Filters Bar */}
@@ -514,24 +533,41 @@ export default function LexiconList() {
                     </div>
                 )}
 
-                <div className="alpha-filter-bar">
-                    <Filter size={16} className="alpha-icon" />
-                    <button 
-                        className={`alpha-btn ${filters.letter === 'all' ? 'active' : ''}`}
-                        onClick={() => updateFilter('letter', 'all')}
-                    >
-                        #
-                    </button>
-                    {firstLetters.map(letter => (
-                        <button 
-                            key={letter}
-                            className={`alpha-btn ${filters.letter === letter ? 'active' : ''}`}
-                            onClick={() => updateFilter('letter', letter)}
-                        >
-                            {letter}
-                        </button>
-                    ))}
-                </div>
+                {showAlphaBar && (
+                    <div className="alpha-filter-bar">
+                        <div className="alpha-filter-bar-header">
+                            <div className="alpha-bar-title">
+                                <Filter size={14} className="alpha-icon" />
+                                <span>Quick Character Jump ({firstLetters.length})</span>
+                            </div>
+                            <button 
+                                type="button"
+                                className="alpha-hide-btn"
+                                onClick={() => handleToggleAlphaBar(false)}
+                                title="Hide character bar"
+                            >
+                                <ChevronUp size={14} /> Hide
+                            </button>
+                        </div>
+                        <div className="alpha-filter-buttons">
+                            <button 
+                                className={`alpha-btn ${filters.letter === 'all' ? 'active' : ''}`}
+                                onClick={() => updateFilter('letter', 'all')}
+                            >
+                                #
+                            </button>
+                            {firstLetters.map(letter => (
+                                <button 
+                                    key={letter}
+                                    className={`alpha-btn ${filters.letter === letter ? 'active' : ''}`}
+                                    onClick={() => updateFilter('letter', letter)}
+                                >
+                                    {letter}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </Card>
 
             <div className="list-header">
