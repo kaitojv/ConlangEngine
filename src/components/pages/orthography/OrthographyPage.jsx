@@ -4,7 +4,7 @@ import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
-import { Languages, Hash, Plus, Trash2, Calculator, Settings, Edit2, Check, Table2, BookA, Type, Mic2, PenTool, ListChecks } from 'lucide-react';
+import { Languages, Hash, Plus, Trash2, Calculator, Settings, Edit2, Check, Table2, BookA, Type, Mic2, PenTool, ListChecks, Rows } from 'lucide-react';
 import IpaReferencePage from './IpaReferencePage.jsx';
 import './orthographyPage.css';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
@@ -257,6 +257,82 @@ const NumberDerivationView = ({ generateNumberName, numeralBase }) => {
     );
 };
 
+const MeasurementSystemView = () => {
+    const measurementSystem = useConfigStore(state => state.measurementSystem) || { units: [] };
+    const updateConfig = useConfigStore(state => state.updateConfig);
+    
+    const [units, setUnits] = useState(measurementSystem.units || []);
+
+    const saveUnits = (newUnits) => {
+        setUnits(newUnits);
+        updateConfig({ measurementSystem: { ...measurementSystem, units: newUnits } });
+    };
+
+    const addUnit = () => {
+        const newUnit = { id: `unit_${Date.now()}`, name: '', type: 'length', baseEquivalent: '', isBaseUnit: false, conversionFactor: 1, description: '' };
+        saveUnits([...units, newUnit]);
+    };
+
+    const updateUnit = (id, field, value) => {
+        saveUnits(units.map(u => u.id === id ? { ...u, [field]: value } : u));
+    };
+
+    const removeUnit = (id) => {
+        saveUnits(units.filter(u => u.id !== id));
+    };
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            <Card className="matrix-card">
+                <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                    <div>
+                        <h2 className="sg-title" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Units of Measurement</h2>
+                        <p style={{ color: 'var(--tx2)' }}>Define your custom units and map them to real-world equivalents or other conlang units.</p>
+                    </div>
+                    <button className="btn-add" onClick={addUnit} style={{ display: 'flex', alignItems: 'center', gap: '6px', height: 'fit-content' }}>
+                        <Plus size={16} /> Add Unit
+                    </button>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {units.map((unit, index) => (
+                        <div key={unit.id} style={{ background: 'var(--s2)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--bd)', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                            <div style={{ flex: '1 1 150px' }}>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '4px', display: 'block', fontWeight: 600 }}>Unit Name</label>
+                                <input className="fi" placeholder="e.g. schmekal" value={unit.name} onChange={(e) => updateUnit(unit.id, 'name', e.target.value)} />
+                            </div>
+                            <div style={{ flex: '1 1 120px' }}>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '4px', display: 'block', fontWeight: 600 }}>Type</label>
+                                <select className="select select-bordered select-sm w-full" value={unit.type} onChange={(e) => updateUnit(unit.id, 'type', e.target.value)} style={{ height: '42px' }}>
+                                    <option value="length">Length</option>
+                                    <option value="mass">Mass / Weight</option>
+                                    <option value="volume">Volume</option>
+                                    <option value="time">Time</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div style={{ flex: '2 1 200px' }}>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '4px', display: 'block', fontWeight: 600 }}>Equivalent</label>
+                                <input className="fi" placeholder="e.g. 27 schmems or 1 kg" value={unit.baseEquivalent} onChange={(e) => updateUnit(unit.id, 'baseEquivalent', e.target.value)} />
+                            </div>
+                            <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', height: '100%', paddingTop: '1.5rem' }}>
+                                <button className="irr-del" onClick={() => removeUnit(unit.id)} title="Remove Unit" style={{ padding: '8px' }}>
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                    {units.length === 0 && (
+                        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--tx3)' }}>
+                            No units defined. Click "Add Unit" to create one.
+                        </div>
+                    )}
+                </div>
+            </Card>
+        </div>
+    );
+};
+
 const NumbersTab = () => {
     const numeralBase = useConfigStore(state => state.numeralBase) || 10;
     const numberSystem = useConfigStore(state => state.numberSystem) || {
@@ -278,7 +354,7 @@ const NumbersTab = () => {
     const updateConfig = useConfigStore(state => state.updateConfig);
     const { transliterate } = useTransliterator();
     const [testNumber, setTestNumber] = useState('');
-    const [matrixMode, setMatrixMode] = useState(false);
+    const [viewMode, setViewMode] = useState('basic');
     const [listCols, setListCols] = useState(1);
     
     const newIrrValRef = useRef(null);
@@ -426,16 +502,19 @@ const NumbersTab = () => {
         <div className="tab-pane-container">
             <div className="matrix-toggle-container" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
                 <div className="tabs tabs-boxed page-subnav">
-                    <button className={`tab ${!matrixMode ? 'tab-active' : ''}`} onClick={() => setMatrixMode(false)}>
+                    <button className={`tab ${viewMode === 'basic' ? 'tab-active' : ''}`} onClick={() => setViewMode('basic')}>
                         <Settings size={16} style={{ marginRight: '6px' }}/> Basic Setup
                     </button>
-                    <button className={`tab ${matrixMode ? 'tab-active' : ''}`} onClick={() => setMatrixMode(true)}>
+                    <button className={`tab ${viewMode === 'matrix' ? 'tab-active' : ''}`} onClick={() => setViewMode('matrix')}>
                         <Table2 size={16} style={{ marginRight: '6px' }}/> Vocabulary Matrix
+                    </button>
+                    <button className={`tab ${viewMode === 'measurement' ? 'tab-active' : ''}`} onClick={() => setViewMode('measurement')}>
+                        <Rows size={16} style={{ marginRight: '6px' }}/> Units of Measurement
                     </button>
                 </div>
             </div>
 
-            {!matrixMode ? (
+            {viewMode === 'basic' ? (
                 <>
                     <Infobox title="Building your Number System">
                         <p>This engine uses a <b>Recursive Base System</b> to name any quantity:</p>
@@ -696,8 +775,10 @@ const NumbersTab = () => {
                 </div>
             </div>
                 </>
-            ) : (
+            ) : viewMode === 'matrix' ? (
                 <NumberDerivationView generateNumberName={generateNumberName} numeralBase={numeralBase} />
+            ) : (
+                <MeasurementSystemView />
             )}
         </div>
     );

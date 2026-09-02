@@ -138,6 +138,9 @@ export const INITIAL_CONFIG = {
         dateFormat: 'DD/MM/YYYY',
         yearOffset: 0
     },
+    measurementSystem: {
+        units: [], // Array of { id, name, type (e.g. length, mass), baseEquivalent (e.g. 1m, 1kg), isBaseUnit, conversionFactor, description }
+    },
     // Vowel harmony configuration
     vowelHarmonyMode: 'flexible', // 'complete' | 'flexible' | 'optional'
     vowelHarmonySets: [], // Array<{ name: string, vowels: string[] }>

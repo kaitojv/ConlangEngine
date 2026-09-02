@@ -4,6 +4,8 @@ import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { getUniqueParsings } from '@/utils/morphologyEngine.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
+import { transliterateText } from '@/utils/transliteration.js';
+import { buildScriptConfig } from '@/utils/scriptResolver.js';
 import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
@@ -57,6 +59,14 @@ const ConlangSpan = Mark.create({
             style: {
                 default: null,
                 parseHTML: element => element.getAttribute('style'),
+            },
+            'data-script-id': {
+                default: null,
+                parseHTML: element => element.getAttribute('data-script-id'),
+            },
+            'data-writing-direction': {
+                default: null,
+                parseHTML: element => element.getAttribute('data-writing-direction'),
             }
         };
     }
@@ -1834,10 +1844,19 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
 
 // The Classic Rich Text Editor - Upgraded to TipTap
 function LegacyWikiEditor({ content, onSave }) {
-    const { transliterate } = useTransliterator();
+    const config = useConfigStore();
+    const lexicon = useLexiconStore(state => state.lexicon) || [];
+    const scriptSystems = config.scriptSystems || [];
+    
     const [linkModalOpen, setLinkModalOpen] = useState(false);
     const [linkUrl, setLinkUrl] = useState('');
     const [iconPickerOpen, setIconPickerOpen] = useState(false);
+    
+    // Conlang font insertion state
+    const [conlangModalOpen, setConlangModalOpen] = useState(false);
+    const [selectedScriptId, setSelectedScriptId] = useState(config.activeScriptSystemId || 'default');
+    const [writingDirection, setWritingDirection] = useState('horizontal');
+
     const onSaveRef = useRef(onSave);
     useEffect(() => {
         onSaveRef.current = onSave;
@@ -1910,15 +1929,33 @@ function LegacyWikiEditor({ content, onSave }) {
         setIconPickerOpen(false);
     };
 
-    const applyConlangFont = () => {
+    const handleConlangBtnClick = () => {
         const { from, to } = editor.state.selection;
         if (from === to) return; // No selection
+        setConlangModalOpen(true);
+    };
+
+    const applyConlangFontWithOptions = () => {
+        const { from, to } = editor.state.selection;
+        if (from === to) {
+            setConlangModalOpen(false);
+            return;
+        }
         
         const text = editor.state.doc.textBetween(from, to, ' ');
         if (text) {
-            const html = `<span class="custom-font-text notranslate" style="color: var(--acc); font-weight: bold;">${transliterate(text)}</span>`;
+            const scriptConfig = buildScriptConfig(config, selectedScriptId);
+            const transliterated = transliterateText(text, scriptConfig, lexicon);
+            
+            let html;
+            if (writingDirection === 'vertical') {
+                html = `<span class="custom-font-text notranslate" data-script-id="${selectedScriptId}" data-writing-direction="vertical" style="color: var(--acc); font-weight: bold; writing-mode: vertical-rl; text-orientation: upright; display: inline-block;">${transliterated}</span>`;
+            } else {
+                html = `<span class="custom-font-text notranslate" data-script-id="${selectedScriptId}" data-writing-direction="horizontal" style="color: var(--acc); font-weight: bold;">${transliterated}</span>`;
+            }
             editor.commands.insertContent(html);
         }
+        setConlangModalOpen(false);
     };
 
     return (
@@ -1963,7 +2000,7 @@ function LegacyWikiEditor({ content, onSave }) {
                 {/* Inserts */}
                 <button className="wiki-tool-btn" onClick={() => setIconPickerOpen(true)} title="Insert Icon"><Smile size={16} /></button>
                 <button className={`wiki-tool-btn ${editor.isActive('link') ? 'active' : ''}`} onClick={() => setLinkModalOpen(true)} title="Insert Link"><Link size={16} /></button>
-                <button className="wiki-tool-btn" title="Format as Conlang Font" onClick={applyConlangFont}><Type size={16} /> <span style={{fontSize: '0.7rem', marginLeft: '4px', fontWeight: 'bold'}}>CONLANG</span></button>
+                <button className="wiki-tool-btn" title="Format as Conlang Font" onClick={handleConlangBtnClick}><Type size={16} /> <span style={{fontSize: '0.7rem', marginLeft: '4px', fontWeight: 'bold'}}>CONLANG</span></button>
                 
                 <div style={{ flex: 1 }}></div>
                 <Button variant="save" onClick={() => onSave(editor.getHTML())}><div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}><Save size={16} /> Save Document</div></Button>
@@ -2026,6 +2063,45 @@ function LegacyWikiEditor({ content, onSave }) {
                             </button>
                         );
                     })}
+                </div>
+            </Modal>
+
+            <Modal
+                isOpen={conlangModalOpen}
+                onClose={() => setConlangModalOpen(false)}
+                title="Conlang Formatting"
+                maxWidth="400px"
+            >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', paddingTop: '10px' }}>
+                    <div>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px', display: 'block' }}>Target Script</label>
+                        <select 
+                            className="select select-bordered w-full"
+                            style={{ height: '42px' }}
+                            value={selectedScriptId}
+                            onChange={(e) => setSelectedScriptId(e.target.value)}
+                        >
+                            {scriptSystems.map(sys => (
+                                <option key={sys.id} value={sys.id}>{sys.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px', display: 'block' }}>Writing Direction</label>
+                        <select 
+                            className="select select-bordered w-full"
+                            style={{ height: '42px' }}
+                            value={writingDirection}
+                            onChange={(e) => setWritingDirection(e.target.value)}
+                        >
+                            <option value="horizontal">Horizontal</option>
+                            <option value="vertical">Vertical (Upright)</option>
+                        </select>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                        <Button variant="ghost" onClick={() => setConlangModalOpen(false)}>Cancel</Button>
+                        <Button variant="imp" onClick={applyConlangFontWithOptions}>Apply</Button>
+                    </div>
                 </div>
             </Modal>
         </div>
