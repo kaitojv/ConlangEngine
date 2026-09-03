@@ -1949,7 +1949,7 @@ function LegacyWikiEditor({ content, onSave }) {
             
             let html;
             if (writingDirection === 'vertical') {
-                html = `<span class="custom-font-text notranslate" data-script-id="${selectedScriptId}" data-writing-direction="vertical" style="color: var(--acc); font-weight: bold; writing-mode: vertical-rl; text-orientation: upright; display: inline-block;">${transliterated}</span>`;
+                html = `<span class="custom-font-text notranslate" data-script-id="${selectedScriptId}" data-writing-direction="vertical" style="color: var(--acc); font-weight: bold; writing-mode: vertical-rl; text-orientation: upright; display: block; margin: 10px auto; padding: 10px; width: fit-content;">${transliterated}</span>`;
             } else {
                 html = `<span class="custom-font-text notranslate" data-script-id="${selectedScriptId}" data-writing-direction="horizontal" style="color: var(--acc); font-weight: bold;">${transliterated}</span>`;
             }

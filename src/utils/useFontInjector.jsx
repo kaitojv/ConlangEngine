@@ -113,6 +113,10 @@ export function useFontInjector(){
                 ? typographySettings.letterSpacing + 'em'
                 : 'normal';
 
+            const verticalLetterSpacingCSS = typographySettings?.verticalLetterSpacing !== undefined
+                ? typographySettings.verticalLetterSpacing + 'em'
+                : 'normal';
+
             // The default script's font family — used by the broad .custom-font-text selector
             // so all existing class-based rendering continues to work for the main script
             const defaultFontFamily = `ConlangScript_${defaultScriptId}`;
@@ -127,6 +131,9 @@ export function useFontInjector(){
                     font-weight: normal;
                     font-style: normal;
                     letter-spacing: ${letterSpacingCSS} !important;
+                }
+                .conlang-script-${CSS.escape(scriptId)}[data-writing-direction="vertical"] {
+                    letter-spacing: ${verticalLetterSpacingCSS} !important;
                 }
                 `;
             }
@@ -155,6 +162,16 @@ export function useFontInjector(){
                     font-weight: normal;
                     font-style: normal;
                     letter-spacing: ${letterSpacingCSS} !important;
+                }
+
+                [data-writing-direction="vertical"].custom-font-text,
+                [data-writing-direction="vertical"].conlang-word,
+                [data-writing-direction="vertical"].word-text,
+                [data-writing-direction="vertical"].word,
+                [data-writing-direction="vertical"].lexicon-word,
+                [data-writing-direction="vertical"].matrix-base-word,
+                [data-writing-direction="vertical"].entry-main-word {
+                    letter-spacing: ${verticalLetterSpacingCSS} !important;
                 }
 
                 .custom-font-text::placeholder,

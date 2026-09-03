@@ -457,9 +457,9 @@ export default function TypographyStudio() {
                         </select>
                         
                         <div style={{ marginTop: '1.5rem' }}>
-                            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>Letter Spacing</h3>
+                            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>Letter Spacing (Horizontal Gap)</h3>
                             <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '1rem' }}>
-                                Adjust the gap between custom characters across the application.
+                                Adjust the horizontal gap between custom characters.
                             </p>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                 <input 
@@ -473,6 +473,27 @@ export default function TypographyStudio() {
                                 />
                                 <span style={{ color: 'var(--tx)', fontWeight: 'bold', minWidth: '40px' }}>
                                     {(typographySettings.letterSpacing || 0).toFixed(1)}em
+                                </span>
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: '1.5rem' }}>
+                            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>Vertical Gap</h3>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '1rem' }}>
+                                Adjust the gap between characters for Vertical Scripts. Set to negative values to fix overly spaced fonts.
+                            </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <input 
+                                    type="range" 
+                                    min="-1.5" 
+                                    max="1.5" 
+                                    step="0.1" 
+                                    value={typographySettings.verticalLetterSpacing || 0}
+                                    onChange={(e) => updateConfig({ typographySettings: { ...typographySettings, verticalLetterSpacing: parseFloat(e.target.value) } })}
+                                    style={{ flex: 1, accentColor: 'var(--acc)' }}
+                                />
+                                <span style={{ color: 'var(--tx)', fontWeight: 'bold', minWidth: '40px' }}>
+                                    {(typographySettings.verticalLetterSpacing || 0).toFixed(1)}em
                                 </span>
                             </div>
                         </div>

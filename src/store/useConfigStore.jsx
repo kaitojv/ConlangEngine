@@ -213,7 +213,8 @@ export const INITIAL_CONFIG = {
     typographySettings: {
         customTypographyModes: [],
         activeDisplayMode: 'Base',
-        letterSpacing: 0
+        letterSpacing: 0,
+        verticalLetterSpacing: 0
     },
     // REST API backup system — per-project configuration (see https://github.com/niruhsa/ConlangEngine-Obsidian-Backup/blob/master/README.md)
     backupSettings: {
