@@ -198,6 +198,7 @@ export const resolveWordStrokes = (wordOrChar, config = {}, lexicon = []) => {
 
             characters.push({
                 char: ch,
+                charCode: ch.codePointAt(0),
                 label: dictEntry?.translation || dictEntry?.word || (chars.length > 1 ? `Char ${idx + 1}` : cleanWord),
                 strokes,
                 arrows,
@@ -225,6 +226,7 @@ export const resolveWordStrokes = (wordOrChar, config = {}, lexicon = []) => {
                 const arrows = strokes.map((s, sIdx) => calculateStrokeArrowAndNumber(s, sIdx));
                 characters.push({
                     char: ch,
+                    charCode: ch.codePointAt(0),
                     label: syllableName,
                     strokes,
                     arrows,
@@ -254,6 +256,7 @@ export const resolveWordStrokes = (wordOrChar, config = {}, lexicon = []) => {
                 const arrows = strokes.map((s, sIdx) => calculateStrokeArrowAndNumber(s, sIdx));
                 characters.push({
                     char: mappedSymbol || syl,
+                    charCode: mappedSymbol ? mappedSymbol.codePointAt(0) : syl.codePointAt(0),
                     label: syl,
                     strokes,
                     arrows,
@@ -314,6 +317,7 @@ export const resolveWordStrokes = (wordOrChar, config = {}, lexicon = []) => {
 
             characters.push({
                 char: mappedSymbol || blk,
+                charCode: mappedSymbol ? mappedSymbol.codePointAt(0) : null,
                 label: blk,
                 strokes,
                 arrows,
@@ -334,6 +338,7 @@ export const resolveWordStrokes = (wordOrChar, config = {}, lexicon = []) => {
             const arrows = strokes.map((s, sIdx) => calculateStrokeArrowAndNumber(s, sIdx));
             characters.push({
                 char: ch,
+                charCode: ch.codePointAt(0),
                 label: ch,
                 strokes,
                 arrows,

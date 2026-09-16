@@ -6,6 +6,7 @@ import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { playAzureTTS } from '../../../utils/azureTTS.js';
 import StrokeOrderViewer from '../StrokeOrder/StrokeOrderViewer.jsx';
+import GlyphPreviewBadge from '../Glyph/GlyphPreviewBadge.jsx';
 import toast from 'react-hot-toast';
 import './glyphDetailsModal.css';
 
@@ -179,9 +180,11 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                         <div className="glyph-display-card glass">
                             <div 
                                 className="glyph-large custom-font-text notranslate"
-                                style={{ fontSize: dynamicFontSize, wordBreak: 'break-all' }}
+                                style={{ fontSize: dynamicFontSize, wordBreak: 'break-all', display: 'flex', justifyContent: 'center' }}
                             >
-                                {displayStr}
+                                {isWord ? displayStr : (
+                                    <GlyphPreviewBadge glyph={char || glyph} size={110} />
+                                )}
                             </div>
                             <button 
                                 className={`btn-primary audio-btn ${isPlaying ? 'playing' : ''}`}

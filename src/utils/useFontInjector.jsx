@@ -105,7 +105,7 @@ export function useFontInjector(){
                     }
                 });
                 fontsToDelete.forEach(f => {
-                    try { document.fonts.delete(f); } catch (e) { /* ignore */ }
+                    try { document.fonts.delete(f); } catch { /* ignore */ }
                 });
             }
 
@@ -158,10 +158,18 @@ export function useFontInjector(){
                 #f-ideogram, 
                 #edit-ideogram,
                 #alphabet-render-area div {
-                    font-family: '${defaultFontFamily}', 'Inter', sans-serif;
+                    font-family: '${defaultFontFamily}', 'Inter', sans-serif !important;
                     font-weight: normal;
                     font-style: normal;
                     letter-spacing: ${letterSpacingCSS} !important;
+                }
+
+                input.custom-font-text,
+                textarea.custom-font-text,
+                .fi.custom-font-text,
+                .ideogram-edit-input,
+                .ideogram-input {
+                    font-family: '${defaultFontFamily}', 'Inter', sans-serif !important;
                 }
 
                 [data-writing-direction="vertical"].custom-font-text,

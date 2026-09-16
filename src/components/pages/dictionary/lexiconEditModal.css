@@ -101,4 +101,111 @@
     background: var(--s3);
     padding: 2px 8px;
     border-radius: 4px;
-}
+}
+
+/* Compact Ideogram / Symbol Section */
+.ideogram-edit-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+    padding: 8px 10px;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm, 6px);
+}
+
+.ideogram-compact-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ideogram-compact-header .form-label {
+    margin-bottom: 0;
+    font-size: 0.78rem;
+}
+
+.ideogram-compact-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.ideogram-compact-controls .glyph-preview-badge-container {
+    flex-shrink: 0;
+}
+
+.ideogram-compact-input {
+    flex: 1;
+    min-width: 80px;
+    height: 34px;
+    padding: 0 10px;
+    background: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm, 6px);
+    color: var(--tx);
+    font-size: 1rem;
+    text-align: center;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ideogram-compact-input:focus {
+    border-color: var(--acc);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 15%, transparent);
+}
+
+.ideogram-compact-btns {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.ideogram-compact-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 34px;
+    padding: 0 10px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    font-family: inherit;
+    background: var(--s3);
+    color: var(--tx);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm, 6px);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.ideogram-compact-btn:hover {
+    background: var(--s4);
+    border-color: var(--b1);
+    color: var(--tx);
+}
+
+.ideogram-compact-btn:active {
+    transform: scale(0.97);
+}
+
+.ideogram-compact-btn-icon {
+    width: 34px;
+    padding: 0;
+}
+
+.ideogram-compact-btn-danger {
+    color: var(--tx2);
+}
+
+.ideogram-compact-btn-danger:hover {
+    color: var(--err, #ef4444);
+    border-color: var(--err, #ef4444);
+    background: color-mix(in srgb, var(--err, #ef4444) 10%, transparent);
+}

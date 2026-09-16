@@ -83,19 +83,86 @@ const generateSerifStroke = (p1, p2, bSize, lCap) => {
     return stroke;
 };
 
+const extractInitialGlyphData = (existingCharCode, customGlyphs) => {
+    if (!existingCharCode || !customGlyphs || !customGlyphs[existingCharCode]) return null;
+    const existingStrokes = customGlyphs[existingCharCode];
+    if (!existingStrokes || existingStrokes.length === 0) return null;
+
+    let actualStrokes = existingStrokes;
+    const firstStroke = existingStrokes[0];
+    const meta = {
+        scale: 1.0,
+        leftMargin: 100,
+        rightMargin: 100,
+        yOffset: 0,
+        isCalligraphy: false,
+        isBrushPen: false,
+        isChisel: false,
+        isPaintBrush: false,
+        isSerifPen: false
+    };
+
+    if (!Array.isArray(firstStroke) && firstStroke?.isMeta) {
+        meta.scale = firstStroke.scale ?? 1.0;
+        meta.leftMargin = firstStroke.leftMargin ?? 100;
+        meta.rightMargin = firstStroke.rightMargin ?? 100;
+        meta.yOffset = firstStroke.yOffset ?? 0;
+        meta.isCalligraphy = firstStroke.isCalligraphy ?? false;
+        meta.isBrushPen = firstStroke.isBrushPen ?? false;
+        meta.isChisel = firstStroke.isChisel ?? false;
+        meta.isPaintBrush = firstStroke.isPaintBrush ?? false;
+        meta.isSerifPen = firstStroke.isSerifPen ?? false;
+        actualStrokes = existingStrokes.slice(1);
+    } else if (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -999) {
+        meta.isCalligraphy = true;
+        actualStrokes = existingStrokes.slice(1);
+    } else if (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -998) {
+        meta.isBrushPen = true;
+        actualStrokes = existingStrokes.slice(1);
+    } else if (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -997) {
+        meta.isPaintBrush = true;
+        actualStrokes = existingStrokes.slice(1);
+    } else if (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -996) {
+        meta.isSerifPen = true;
+        actualStrokes = existingStrokes.slice(1);
+    }
+
+    if (firstStroke?.isSerifPen || (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -996)) {
+        const migratedStrokes = [];
+        actualStrokes.forEach(s => {
+            migratedStrokes.push(s);
+            if (Array.isArray(s) && s.length >= 2 && !s.isFilled) {
+                const s1 = generateSerifStroke(s[0], s[1], 5, s.lineCap || 'round');
+                if (s1) migratedStrokes.push(s1);
+                const s2 = generateSerifStroke(s[s.length - 1], s[s.length - 2], 5, s.lineCap || 'round');
+                if (s2) migratedStrokes.push(s2);
+            }
+        });
+        actualStrokes = migratedStrokes;
+    }
+
+    return { actualStrokes, meta };
+};
+
 export default function FontStudioModal({ targetLabel, onSave, onCancel, existingCharCode }) {
     const canvasRef = useRef(null);
+    const { customGlyphs, puaCounter, addCustomGlyph, incrementPuaCounter, alphabetGlyphs, alphabetNames, featuralComponents } = useConfigStore();
+
+    const initialData = useMemo(() => {
+        return extractInitialGlyphData(existingCharCode, customGlyphs);
+    }, [existingCharCode, customGlyphs]);
+
     const [isDrawing, setIsDrawing] = useState(false);
-    const [strokes, setStrokes] = useState([]);
+    const [strokes, setStrokes] = useState(() => initialData?.actualStrokes || []);
     const [currentStroke, setCurrentStroke] = useState([]);
     const [brushSize, setBrushSize] = useState(5);
     const [activeTool, setActiveTool] = useState('brush'); // 'brush', 'line', 'curve', 'rect', 'circle', 'select_erase'
-    const [isCalligraphy, setIsCalligraphy] = useState(false);
-    const [isBrushPen, setIsBrushPen] = useState(false);
-    const [isChisel, setIsChisel] = useState(false);
-    const [isPaintBrush, setIsPaintBrush] = useState(false);
-    const [isSerifPen, setIsSerifPen] = useState(false);
-    const [chiselAngle, setChiselAngle] = useState(45);
+    const [isCalligraphy, setIsCalligraphy] = useState(() => initialData?.meta?.isCalligraphy ?? false);
+    const [isBrushPen, setIsBrushPen] = useState(() => initialData?.meta?.isBrushPen ?? false);
+    const [isChisel, setIsChisel] = useState(() => initialData?.meta?.isChisel ?? false);
+    const [isPaintBrush, setIsPaintBrush] = useState(() => initialData?.meta?.isPaintBrush ?? false);
+    const [isSerifPen, setIsSerifPen] = useState(() => initialData?.meta?.isSerifPen ?? false);
+    const [chiselAngle, _setChiselAngle] = useState(45);
     const [symmetryMode, setSymmetryMode] = useState('none'); // 'none', 'horizontal', 'vertical'
     const [isSnapToGrid, setIsSnapToGrid] = useState(false);
     const [isSnapToMetrics, setIsSnapToMetrics] = useState(false);
@@ -109,23 +176,18 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     
     // Node Editing States
     const [selectedNode, setSelectedNode] = useState(null); // { strokeIndex, pointIndex }
-    const [hoveredNode, setHoveredNode] = useState(null); // { strokeIndex, pointIndex } or { isSegment, insertAfterIndex, insertPoint }
-    const [cursorCoords, setCursorCoords] = useState({x: 0, y: 0});
-    const [fineNudgeStep, setFineNudgeStep] = useState(1);
 
     // Metadata States
-    const [glyphScale, setGlyphScale] = useState(1.0);
-    const [leftMargin, setLeftMargin] = useState(100);
-    const [rightMargin, setRightMargin] = useState(100);
-    const [yOffset, setYOffset] = useState(0);
+    const [glyphScale, setGlyphScale] = useState(() => initialData?.meta?.scale ?? 1.0);
+    const [leftMargin, setLeftMargin] = useState(() => initialData?.meta?.leftMargin ?? 100);
+    const [rightMargin, setRightMargin] = useState(() => initialData?.meta?.rightMargin ?? 100);
+    const [yOffset, setYOffset] = useState(() => initialData?.meta?.yOffset ?? 0);
 
     const [backgroundStrokes, setBackgroundStrokes] = useState([]);
     const [backgroundText, setBackgroundText] = useState('');
     const [selectedReferenceId, setSelectedReferenceId] = useState('');
     const fileInputRef = useRef(null);
     const bgFileInputRef = useRef(null);
-
-    const { customGlyphs, puaCounter, addCustomGlyph, incrementPuaCounter, alphabetGlyphs, alphabetNames, featuralComponents } = useConfigStore();
 
     const drawnGlyphsOptions = useMemo(() => {
         const options = [];
@@ -155,58 +217,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         return options;
     }, [alphabetGlyphs, alphabetNames, customGlyphs, featuralComponents]);
 
-    // Load existing strokes if we are redrawing an existing character
-    useEffect(() => {
-        if (existingCharCode && customGlyphs[existingCharCode]) {
-            const existingStrokes = customGlyphs[existingCharCode];
-            if (existingStrokes && existingStrokes.length > 0) {
-                let actualStrokes = existingStrokes;
-                const firstStroke = existingStrokes[0];
-                
-                if (!Array.isArray(firstStroke) && firstStroke.isMeta) {
-                    setGlyphScale(firstStroke.scale ?? 1.0);
-                    setLeftMargin(firstStroke.leftMargin ?? 100);
-                    setRightMargin(firstStroke.rightMargin ?? 100);
-                    setYOffset(firstStroke.yOffset ?? 0);
-                    setIsCalligraphy(firstStroke.isCalligraphy ?? false);
-                    setIsBrushPen(firstStroke.isBrushPen ?? false);
-                    setIsChisel(firstStroke.isChisel ?? false);
-                    setIsPaintBrush(firstStroke.isPaintBrush ?? false);
-                    setIsSerifPen(firstStroke.isSerifPen ?? false);
-                    actualStrokes = existingStrokes.slice(1);
-                } else if (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -999) {
-                    setIsCalligraphy(true);
-                    actualStrokes = existingStrokes.slice(1);
-                } else if (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -998) {
-                    setIsBrushPen(true);
-                    actualStrokes = existingStrokes.slice(1);
-                } else if (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -997) {
-                    setIsPaintBrush(true);
-                    actualStrokes = existingStrokes.slice(1);
-                } else if (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -996) {
-                    setIsSerifPen(true);
-                    actualStrokes = existingStrokes.slice(1);
-                }
-                
-                // Migrate legacy strokes that relied on global isSerifPen renderer
-                if (firstStroke.isSerifPen || (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -996)) {
-                    const migratedStrokes = [];
-                    actualStrokes.forEach(s => {
-                        migratedStrokes.push(s);
-                        if (Array.isArray(s) && s.length >= 2 && !s.isFilled) {
-                            const s1 = generateSerifStroke(s[0], s[1], 5, s.lineCap || 'round'); // Use default brush size 5
-                            if (s1) migratedStrokes.push(s1);
-                            const s2 = generateSerifStroke(s[s.length-1], s[s.length-2], 5, s.lineCap || 'round');
-                            if (s2) migratedStrokes.push(s2);
-                        }
-                    });
-                    actualStrokes = migratedStrokes;
-                }
-                
-                setStrokes(actualStrokes);
-            }
-        }
-    }, [existingCharCode]); // Only run on mount or when existingCharCode changes
+    // handleFileUpload
 
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
@@ -334,7 +345,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
             ctx.restore();
         }
 
-        strokes.forEach(stroke => {
+        strokes.forEach((stroke) => {
             if (stroke.length < 2) return;
             
             ctx.lineCap = stroke.lineCap || 'round';
@@ -479,7 +490,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         }
         ctx.restore();
         ctx.restore(); // Restore retina scale
-    }, [strokes, currentStroke, brushSize, isCalligraphy, isBrushPen, isChisel, isPaintBrush, isSerifPen, backgroundStrokes, backgroundText, zoom, activeTool, selectedNode]);
+    }, [strokes, currentStroke, brushSize, isCalligraphy, isBrushPen, isChisel, chiselAngle, isPaintBrush, isSerifPen, backgroundStrokes, backgroundText, zoom, activeTool, selectedNode]);
 
     const getCoords = (e) => {
         const rect = canvasRef.current.getBoundingClientRect();
@@ -514,7 +525,6 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
             y: Math.min(300, Math.max(0, Math.round(y * 10) / 10)) 
         };
 
-        setCursorCoords(finalCoords);
         return finalCoords;
     };
 
@@ -967,7 +977,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         }));
     };
 
-    const handleScaleStrokes = (factor) => {
+    const _handleScaleStrokes = (factor) => {
         const cx = 150;
         const cy = 150;
         setStrokes(prev => prev.map(stroke => {

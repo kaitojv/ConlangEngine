@@ -15,10 +15,13 @@ import './createWordTab.css';
 import Modal from '../../UI/Modal/Modal.jsx';
 import DefinitionSelectModal from '../../UI/Modal/DefinitionSelectModal.jsx';
 import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
+import StrokeOrderModal from '../../UI/StrokeOrder/StrokeOrderModal.jsx';
+import GlyphPreviewBadge from '../../UI/Glyph/GlyphPreviewBadge.jsx';
 import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import toast from 'react-hot-toast';
 import ToneStressSelector from '../dictionary/ToneStressSelector.jsx';
+import { PenTool } from 'lucide-react';
 
 // Standard POS options that always show in the dropdown
 const STANDARD_WORD_CLASSES = [
@@ -57,7 +60,8 @@ export default function CreateWordTab() {
     // Global stores
     const addWord = useLexiconStore((state) => state.addWord);
     const checkDuplicate = useLexiconStore((state) => state.checkDuplicate);
-    const lexicon = useLexiconStore((state) => state.lexicon) || [];
+    const rawLexicon = useLexiconStore((state) => state.lexicon);
+    const lexicon = useMemo(() => rawLexicon || [], [rawLexicon]);
     const { phonologyTypes, grammarRules, vowels, consonants, otherPhonemes, syllablePattern, verbMarker,
             customWordClasses, customTags, addCustomWordClass, addCustomTag, autoReturnToLexicon,
             vowelHarmonyMode, vowelHarmonySets, vowelHarmonyOverrideWordClasses, vowelHarmonyOverrideTags,
@@ -84,7 +88,8 @@ export default function CreateWordTab() {
         updateConfig: state.updateConfig,
         syllabaryMap: state.syllabaryMap || {}
     })));
-    const scriptSystems = useConfigStore(state => state.scriptSystems) || [];
+    const rawScriptSystems = useConfigStore(state => state.scriptSystems);
+    const scriptSystems = useMemo(() => rawScriptSystems || [], [rawScriptSystems]);
 
     // Let's track all our input fields in one neat object
     const [formData, setFormData] = useState({
@@ -104,12 +109,26 @@ export default function CreateWordTab() {
 
     const { word, ipa, wordClass, translation, definition, tags, relatedWords, ideogram, tone, stress, scriptOverride, personCategory } = formData;
     const [isFontStudioOpen, setIsFontStudioOpen] = useState(false);
+    const [isStrokeOrderOpen, setIsStrokeOrderOpen] = useState(false);
     const [selectedDerivs, setSelectedDerivs] = useState({});
     const [customTranslations, setCustomTranslations] = useState({});
 
     const updateField = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
+
+    // Only show ideogram section when active script is logographic
+    const isLogographic = useMemo(() => {
+        if (scriptOverride && scriptSystems?.length > 0) {
+            const found = scriptSystems.find(s => s.id === scriptOverride);
+            if (found) return found.type === 'logographic';
+        }
+        if (scriptSystems?.length > 0) {
+            const defaultScript = scriptSystems.find(s => s.isDefault) || scriptSystems[0];
+            if (defaultScript) return defaultScript.type === 'logographic';
+        }
+        return phonologyTypes === 'logographic';
+    }, [scriptOverride, scriptSystems, phonologyTypes]);
 
     // Build the merged POS list: standard + custom (deduplicated)
     const allWordClasses = useMemo(() => {
@@ -495,7 +514,7 @@ export default function CreateWordTab() {
                     worker.terminate();
                 };
                 
-                worker.onerror = (err) => {
+                worker.onerror = () => {
                     worker.terminate();
                 };
                 
@@ -897,21 +916,56 @@ export default function CreateWordTab() {
                     <IpaChart onSelect={handleIpaSelect} />
                 </div>
 
-                {phonologyTypes === 'logographic' && (
+                {isLogographic && (
                     <div className="ideogram-section">
-                        <div className="ideogram-input-wrapper">
-                            <Input
-                                label="IDEOGRAM / SYMBOL"
+                        <div className="ideogram-header-row">
+                            <label className="form-label">IDEOGRAM / SYMBOL</label>
+                        </div>
+                        <div className="ideogram-row">
+                            <GlyphPreviewBadge
+                                glyph={ideogram}
+                                size={38}
+                                showCode={false}
+                                title={ideogram ? "Custom Glyph Preview" : "No glyph drawn"}
+                            />
+                            <input
                                 value={ideogram}
                                 onChange={(e) => updateField('ideogram', e.target.value)}
                                 placeholder="e.g., 水"
                                 className="ideogram-input notranslate custom-font-text"
                             />
-                        </div>
-                        <div className="ideogram-action">
-                            <Button variant="edit" onClick={() => setIsFontStudioOpen(true)}>
-                                <Brush size={16} /> Draw Symbol
-                            </Button>
+                            <div className="ideogram-button-group">
+                                <button
+                                    type="button"
+                                    className="ideogram-btn ideogram-btn-edit"
+                                    onClick={() => setIsFontStudioOpen(true)}
+                                    title={ideogram ? "Edit Symbol in Font Studio" : "Draw Symbol in Font Studio"}
+                                >
+                                    <Brush size={14} />
+                                    <span>{ideogram ? 'Edit Symbol' : 'Draw Symbol'}</span>
+                                </button>
+                                {ideogram && (
+                                    <button
+                                        type="button"
+                                        className="ideogram-btn ideogram-btn-secondary"
+                                        onClick={() => setIsStrokeOrderOpen(true)}
+                                        title="View & Reorder Stroke Order"
+                                    >
+                                        <PenTool size={14} />
+                                        <span>Stroke Order</span>
+                                    </button>
+                                )}
+                                {ideogram && (
+                                    <button
+                                        type="button"
+                                        className="ideogram-btn ideogram-btn-icon ideogram-btn-danger"
+                                        onClick={() => updateField('ideogram', '')}
+                                        title="Clear Symbol"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}
@@ -953,7 +1007,7 @@ export default function CreateWordTab() {
                         </div>
 
                         <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', gap: '8px', flexWrap: 'wrap', padding: '4px', borderTop: '1px solid var(--bd)', paddingTop: '15px' }}>
-                            {possibleBlockStructures.map((struct, idx) => {
+                            {possibleBlockStructures.map((struct) => {
                                 const isSelected = (ideogram || possibleBlockStructures[0]) === struct;
                                 return (
                                     <button
@@ -984,7 +1038,7 @@ export default function CreateWordTab() {
                                     const baseChunk = parts[0];
                                     const currentOverride = parts[1] || '';
                                     
-                                    const validLayouts = Object.entries(layouts).filter(([key, val]) => val.slots === baseChunk.length);
+                                    const validLayouts = Object.values(layouts).filter(val => val.slots === baseChunk.length);
                                     if (validLayouts.length <= 1) return null; // No point showing if only 1 layout exists
                                     
                                     return (
@@ -1249,17 +1303,27 @@ export default function CreateWordTab() {
             <Modal
                 isOpen={isFontStudioOpen}
                 onClose={() => setIsFontStudioOpen(false)}
-                title="Draw Custom Ideogram"
+                title={ideogram ? "Edit Custom Ideogram" : "Draw Custom Ideogram"}
             >
                 <FontStudioModal
                     targetLabel={word || 'New Root'}
+                    existingCharCode={ideogram ? ideogram.codePointAt(0) : undefined}
                     onSave={(newChar) => {
-                        updateField('ideogram', ideogram + newChar);
+                        updateField('ideogram', newChar);
                         setIsFontStudioOpen(false);
                     }}
                     onCancel={() => setIsFontStudioOpen(false)}
                 />
             </Modal>
+
+            {isStrokeOrderOpen && (
+                <StrokeOrderModal
+                    word={ideogram || word}
+                    isOpen={isStrokeOrderOpen}
+                    onClose={() => setIsStrokeOrderOpen(false)}
+                    scriptType="logographic"
+                />
+            )}
 
             <DefinitionSelectModal
                 isOpen={isDefModalOpen}

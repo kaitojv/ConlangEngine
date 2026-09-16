@@ -1,8 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Play, Pause, RotateCcw, ChevronLeft, ChevronRight, PenTool } from 'lucide-react';
+import { Play, Pause, RotateCcw, ChevronLeft, ChevronRight, ChevronDown, PenTool, Brush, ArrowLeft, ArrowRight, ArrowLeftRight, Trash2, Check } from 'lucide-react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
-import { resolveWordStrokes } from '../../../utils/strokeOrderResolver.js';
+import { resolveWordStrokes, cleanStrokes, calculateStrokeArrowAndNumber } from '../../../utils/strokeOrderResolver.js';
+import { compileFont } from '../../../utils/fontCompiler.jsx';
+import GlyphPreviewBadge from '../Glyph/GlyphPreviewBadge.jsx';
+import Modal from '../Modal/Modal.jsx';
+import FontStudioModal from '../Fontstudio/FontStudio.jsx';
+import toast from 'react-hot-toast';
 import './strokeOrderViewer.css';
 
 /**
@@ -50,10 +55,13 @@ const RenderStroke = ({ stroke, color = 'var(--tx)', strokeWidth = 12 }) => {
     );
 };
 
-export default function StrokeOrderViewer({ word, char, scriptType: explicitScriptType }) {
+export default function StrokeOrderViewer({ word, char, scriptType: explicitScriptType, rawStrokes, onStrokesChange }) {
     const config = useConfigStore();
     const rawLexicon = useLexiconStore(state => state.lexicon);
     const lexicon = useMemo(() => Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []), [rawLexicon]);
+    const addCustomGlyph = useConfigStore(state => state.addCustomGlyph);
+    const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
+    const typographySettings = useConfigStore(state => state.typographySettings) || {};
 
     const targetInput = char || word || '';
     const activeConfig = useMemo(() => ({
@@ -61,15 +69,47 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
         phonologyTypes: explicitScriptType || config.phonologyTypes || 'alphabetic'
     }), [config, explicitScriptType]);
 
+    // Local override for edits made directly in this viewer
+    const [customStrokesOverride, setCustomStrokesOverride] = useState(null);
+    const [isEditingOrder, setIsEditingOrder] = useState(false);
+    const [isToolsOpen, setIsToolsOpen] = useState(false);
+    const [isFontStudioModalOpen, setIsFontStudioModalOpen] = useState(false);
+
     // Resolve strokes for the word/character
-    const { characters, hasStrokes } = useMemo(() => {
+    const resolvedData = useMemo(() => {
+        if (rawStrokes && Array.isArray(rawStrokes)) {
+            const cleaned = cleanStrokes(rawStrokes);
+            return {
+                characters: [{
+                    char: char || word || 'Character',
+                    charCode: null,
+                    label: 'Live Preview',
+                    strokes: cleaned,
+                    arrows: cleaned.map((s, idx) => calculateStrokeArrowAndNumber(s, idx)),
+                    hasStrokes: cleaned.length > 0
+                }],
+                hasStrokes: cleaned.length > 0
+            };
+        }
         return resolveWordStrokes(targetInput, activeConfig, lexicon);
-    }, [targetInput, activeConfig, lexicon]);
+    }, [rawStrokes, targetInput, activeConfig, lexicon, char, word]);
+
+    const { characters, hasStrokes } = resolvedData;
 
     const [selectedCharIndex, setSelectedCharIndex] = useState(0);
-    const activeCharData = characters[selectedCharIndex] || characters[0];
+    const baseCharData = characters[selectedCharIndex] || characters[0];
 
-    const totalStrokes = activeCharData?.strokes?.length || 0;
+    // Compute effective strokes for the currently active character
+    const strokes = useMemo(() => {
+        if (customStrokesOverride != null) return customStrokesOverride;
+        return baseCharData?.strokes || [];
+    }, [customStrokesOverride, baseCharData]);
+
+    const arrows = useMemo(() => {
+        return strokes.map((s, idx) => calculateStrokeArrowAndNumber(s, idx));
+    }, [strokes]);
+
+    const totalStrokes = strokes.length;
 
     // Player state
     const [currentStep, setCurrentStep] = useState(totalStrokes);
@@ -79,6 +119,7 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
 
     const handleCharChange = (idx) => {
         setSelectedCharIndex(idx);
+        setCustomStrokesOverride(null);
         setIsPlaying(false);
         if (timerRef.current) clearInterval(timerRef.current);
         const charStrokes = characters[idx]?.strokes?.length || 0;
@@ -151,8 +192,73 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
         });
     };
 
+    // Save and propagate stroke changes
+    const applyStrokeUpdate = async (newStrokesList) => {
+        setCustomStrokesOverride(newStrokesList);
+        setCurrentStep(newStrokesList.length);
+
+        if (onStrokesChange) {
+            onStrokesChange(newStrokesList);
+        }
+
+        const charCode = baseCharData?.charCode;
+        if (charCode != null && customGlyphs[charCode]) {
+            const existing = customGlyphs[charCode] || [];
+            let metaObj = null;
+            if (existing.length > 0 && !Array.isArray(existing[0]) && existing[0]?.isMeta) {
+                metaObj = existing[0];
+            }
+            const strokesToSave = metaObj ? [metaObj, ...newStrokesList] : newStrokesList;
+            const updatedDb = { ...customGlyphs, [charCode]: strokesToSave };
+
+            try {
+                const base64Font = await compileFont(
+                    updatedDb,
+                    typographySettings.traceWidth ?? 30,
+                    typographySettings.customFontScale ?? 1.0
+                );
+                addCustomGlyph(charCode, strokesToSave, base64Font);
+                toast.success('Stroke order updated!');
+            } catch (err) {
+                console.error("Font compile error on reorder:", err);
+                addCustomGlyph(charCode, strokesToSave, null);
+                toast.success('Stroke order saved!');
+            }
+        }
+    };
+
+    // Stroke reordering: move from fromIdx to toIdx
+    const handleMoveStroke = (fromIdx, toIdx) => {
+        if (toIdx < 0 || toIdx >= strokes.length) return;
+        const next = [...strokes];
+        const [moved] = next.splice(fromIdx, 1);
+        next.splice(toIdx, 0, moved);
+        applyStrokeUpdate(next);
+    };
+
+    // Reverse stroke direction (flips start and end, and the directional arrow)
+    const handleReverseStroke = (index) => {
+        const next = [...strokes];
+        const target = next[index];
+        if (!target || !Array.isArray(target)) return;
+        const reversed = [...target].reverse();
+        reversed.lineCap = target.lineCap;
+        reversed.isFilled = target.isFilled;
+        next[index] = reversed;
+        applyStrokeUpdate(next);
+    };
+
+    // Delete stroke
+    const handleDeleteStroke = (index) => {
+        if (strokes.length <= 1) {
+            return toast.error("A character must have at least one stroke.");
+        }
+        const next = strokes.filter((_, i) => i !== index);
+        applyStrokeUpdate(next);
+    };
+
     // If no custom strokes available anywhere for this character
-    if (!hasStrokes || !activeCharData || totalStrokes === 0) {
+    if (!hasStrokes || !baseCharData || totalStrokes === 0) {
         return (
             <div className="stroke-order-container">
                 <div className="so-empty-card">
@@ -166,9 +272,6 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
             </div>
         );
     }
-
-    const strokes = activeCharData.strokes || [];
-    const arrows = activeCharData.arrows || [];
 
     return (
         <div className="stroke-order-container">
@@ -189,6 +292,64 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                 </defs>
             </svg>
 
+            {/* Header Toolbar: Title, Reorder Toggle & Font Studio button */}
+            <div className="so-header-toolbar">
+                <div className="so-toolbar-title">
+                    <PenTool size={16} />
+                    <span>{baseCharData.label || baseCharData.char || 'Stroke Order'}</span>
+                    {baseCharData.charCode && (
+                        <span className="glyph-code-tag">
+                            U+{baseCharData.charCode.toString(16).toUpperCase().padStart(4, '0')}
+                        </span>
+                    )}
+                </div>
+                <div className="so-toolbar-actions">
+                    <button
+                        type="button"
+                        className={`so-btn-collapse-toggle ${isToolsOpen ? 'open' : ''} ${isEditingOrder ? 'editing' : ''}`}
+                        onClick={() => setIsToolsOpen(!isToolsOpen)}
+                        title={isToolsOpen ? "Collapse Edit Tools" : "Expand Edit Tools"}
+                    >
+                        <PenTool size={13} />
+                        <span>Edit Tools</span>
+                        <ChevronDown size={14} className={`so-collapse-chevron ${isToolsOpen ? 'rotated' : ''}`} />
+                    </button>
+                </div>
+            </div>
+
+            {/* Collapsible Edit Tools Drawer */}
+            {isToolsOpen && (
+                <div className="so-edit-tools-drawer">
+                    <div className="so-edit-tools-inner">
+                        <button
+                            type="button"
+                            className={`so-btn-toolbar ${isEditingOrder ? 'active' : ''}`}
+                            onClick={() => setIsEditingOrder(!isEditingOrder)}
+                            title="Toggle stroke reordering and reversing controls"
+                        >
+                            {isEditingOrder ? <Check size={14} /> : <ArrowLeftRight size={14} />}
+                            <span>{isEditingOrder ? 'Done Reordering' : 'Reorder Strokes'}</span>
+                        </button>
+                        {(baseCharData.charCode != null || explicitScriptType === 'logographic') && (
+                            <button
+                                type="button"
+                                className="so-btn-toolbar"
+                                onClick={() => setIsFontStudioModalOpen(true)}
+                                title="Open Font Studio to draw or edit this character"
+                            >
+                                <Brush size={14} />
+                                <span>Edit Character</span>
+                            </button>
+                        )}
+                        {isEditingOrder && (
+                            <span className="so-edit-tools-note">
+                                Use ← / → below any step card to move strokes, or ⇄ to reverse direction.
+                            </span>
+                        )}
+                    </div>
+                </div>
+            )}
+
             {/* Character Selector Tabs for Multi-Character Words */}
             {characters.length > 1 && (
                 <div className="so-char-tabs">
@@ -198,7 +359,7 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                             className={`so-char-tab ${selectedCharIndex === idx ? 'active' : ''}`}
                             onClick={() => handleCharChange(idx)}
                         >
-                            <span className="so-char-preview custom-font-text">{item.char}</span>
+                            <GlyphPreviewBadge glyph={item.char} strokes={item.strokes} size={24} />
                             <span>{item.label || `Char ${idx + 1}`}</span>
                         </button>
                     ))}
@@ -266,34 +427,80 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
 
                 {/* Player Controls */}
                 <div className="so-player-controls">
-                    <button className="so-control-btn" onClick={handleReset} title="Reset">
-                        <RotateCcw size={14} />
-                    </button>
-                    <button className="so-control-btn" onClick={handlePrevStep} disabled={currentStep <= 0} title="Previous Stroke">
-                        <ChevronLeft size={16} />
-                    </button>
-                    <button className="so-control-btn primary" onClick={togglePlay} title={isPlaying ? "Pause" : "Play"}>
-                        {isPlaying ? <Pause size={14} /> : <Play size={14} />}
-                    </button>
-                    <button className="so-control-btn" onClick={handleNextStep} disabled={currentStep >= totalStrokes} title="Next Stroke">
-                        <ChevronRight size={16} />
+                    <button 
+                        className="so-control-btn"
+                        onClick={handleReset}
+                        title="Restart from beginning"
+                    >
+                        <RotateCcw size={16} />
                     </button>
 
-                    <div className="so-step-indicator">
-                        {currentStep === 0 ? 'Empty' : currentStep === totalStrokes ? 'Complete' : `Stroke ${currentStep} of ${totalStrokes}`}
-                    </div>
+                    <button 
+                        className="so-control-btn"
+                        onClick={handlePrevStep}
+                        disabled={currentStep <= 0}
+                        title="Previous Stroke"
+                    >
+                        <ChevronLeft size={18} />
+                    </button>
 
-                    <span className="so-speed-toggle" onClick={toggleSpeed} title="Toggle animation speed">
+                    <button 
+                        className="so-control-btn so-btn-primary"
+                        onClick={togglePlay}
+                        title={isPlaying ? "Pause" : "Play Stroke Animation"}
+                    >
+                        {isPlaying ? <Pause size={18} /> : <Play size={18} />}
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                            {isPlaying ? "Pause" : "Play"}
+                        </span>
+                    </button>
+
+                    <button 
+                        className="so-control-btn"
+                        onClick={handleNextStep}
+                        disabled={currentStep >= totalStrokes}
+                        title="Next Stroke"
+                    >
+                        <ChevronRight size={18} />
+                    </button>
+
+                    <button 
+                        className="so-control-btn so-btn-speed"
+                        onClick={toggleSpeed}
+                        title="Toggle Speed (0.5x, 1x, 2x)"
+                    >
                         {speedMultiplier}x
+                    </button>
+                </div>
+
+                {/* Progress bar */}
+                <div className="so-player-progress">
+                    <span className="so-step-indicator">
+                        Stroke {currentStep} of {totalStrokes}
                     </span>
+                    <input
+                        type="range"
+                        min="0"
+                        max={totalStrokes}
+                        value={currentStep}
+                        onChange={(e) => {
+                            setIsPlaying(false);
+                            setCurrentStep(parseInt(e.target.value, 10));
+                        }}
+                        className="so-progress-slider"
+                    />
                 </div>
             </div>
 
-            {/* Sequential Strip (Matching User Image) */}
-            <div className="so-strip-wrapper">
-                <div className="so-strip-title">
-                    <span>Stroke Sequence ({totalStrokes} Strokes)</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--tx3)' }}>Scroll horizontally</span>
+            {/* Sequential Tianzige Strip (Frames 1..N with Red Arrow & Number) */}
+            <div className="so-strip-section">
+                <div className="so-strip-header">
+                    <span className="so-strip-title">Step-by-Step Sequence ({totalStrokes} Strokes)</span>
+                    <span className="so-strip-hint">
+                        {isEditingOrder
+                            ? "Use arrows below each card to reorder (←/→) or reverse (⇄) stroke direction"
+                            : "Click any square to view that step in the player"}
+                    </span>
                 </div>
 
                 <div className="so-strip-scroll">
@@ -390,6 +597,46 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                                     </svg>
                                 </div>
                                 <span className="so-cell-label">{k + 1}</span>
+
+                                {/* Editing Controls when isEditingOrder is active */}
+                                {isEditingOrder && (
+                                    <div className="so-cell-edit-actions" onClick={(e) => e.stopPropagation()}>
+                                        <button
+                                            type="button"
+                                            className="so-cell-btn"
+                                            disabled={k === 0}
+                                            onClick={() => handleMoveStroke(k, k - 1)}
+                                            title="Move Earlier"
+                                        >
+                                            <ArrowLeft size={12} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="so-cell-btn"
+                                            disabled={k === strokes.length - 1}
+                                            onClick={() => handleMoveStroke(k, k + 1)}
+                                            title="Move Later"
+                                        >
+                                            <ArrowRight size={12} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="so-cell-btn"
+                                            onClick={() => handleReverseStroke(k)}
+                                            title="Reverse Direction (flips arrow)"
+                                        >
+                                            <ArrowLeftRight size={12} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="so-cell-btn danger"
+                                            onClick={() => handleDeleteStroke(k)}
+                                            title="Delete Stroke"
+                                        >
+                                            <Trash2 size={12} />
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         );
                     })}
@@ -403,10 +650,10 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                         >
                             <div className="so-cell-svg-wrapper">
                                 <svg viewBox="0 0 300 300" className="so-cell-svg">
-                                    <TianzigeGrid />
-                                    {strokes.map((s, idx) => (
-                                        <RenderStroke key={idx} stroke={s} color="var(--tx2)" strokeWidth={12} />
-                                    ))}
+                                <TianzigeGrid />
+                                {strokes.map((s, idx) => (
+                                    <RenderStroke key={idx} stroke={s} color="var(--tx2)" strokeWidth={12} />
+                                ))}
                                 </svg>
                             </div>
                             <span className="so-cell-label">Done</span>
@@ -414,6 +661,26 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                     )}
                 </div>
             </div>
+
+            {/* Font Studio Modal if user clicks "Edit in Font Studio" */}
+            {isFontStudioModalOpen && (
+                <Modal
+                    isOpen={isFontStudioModalOpen}
+                    onClose={() => setIsFontStudioModalOpen(false)}
+                    title={`Edit Glyph: ${baseCharData.label || baseCharData.char}`}
+                >
+                    <FontStudioModal
+                        targetLabel={baseCharData.label || baseCharData.char}
+                        existingCharCode={baseCharData.charCode}
+                        onSave={(newChar, newStrokes) => {
+                            applyStrokeUpdate(cleanStrokes(newStrokes));
+                            setIsFontStudioModalOpen(false);
+                            toast.success('Character updated!');
+                        }}
+                        onCancel={() => setIsFontStudioModalOpen(false)}
+                    />
+                </Modal>
+            )}
         </div>
     );
 }

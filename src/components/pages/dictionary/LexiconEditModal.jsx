@@ -9,7 +9,11 @@ import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
 import DefinitionSelectModal from '../../UI/Modal/DefinitionSelectModal.jsx';
-import { Search, Volume2, Save, Trash2, X, Link as LinkIcon, GitBranch, Plus, Wand2, Mic, Square, Play } from 'lucide-react';
+import Modal from '../../UI/Modal/Modal.jsx';
+import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
+import StrokeOrderModal from '../../UI/StrokeOrder/StrokeOrderModal.jsx';
+import GlyphPreviewBadge from '../../UI/Glyph/GlyphPreviewBadge.jsx';
+import { Search, Volume2, Save, Trash2, X, Link as LinkIcon, GitBranch, Plus, Wand2, Mic, Square, Play, Brush, PenTool } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ToneStressSelector from './ToneStressSelector.jsx';
 import './lexiconEditModal.css';
@@ -48,19 +52,19 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
     const vowels = useConfigStore(state => state.vowels);
     const consonants = useConfigStore(state => state.consonants);
     const syllablePattern = useConfigStore(state => state.syllablePattern);
-    const customWordClasses = useConfigStore((state) => state.customWordClasses) || [];
-    const customTags = useConfigStore((state) => state.customTags) || [];
-    const vowelHarmonySets = useConfigStore(state => state.vowelHarmonySets) || [];
+    const customWordClasses = useConfigStore((state) => state.customWordClasses);
+    const customTags = useConfigStore((state) => state.customTags);
+    const vowelHarmonySets = useConfigStore(state => state.vowelHarmonySets);
     const vowelHarmonyMode = useConfigStore((state) => state.vowelHarmonyMode) || 'complete';
-    const vowelHarmonyOverrideWordClasses = useConfigStore((state) => state.vowelHarmonyOverrideWordClasses) || [];
-    const vowelHarmonyOverrideTags = useConfigStore((state) => state.vowelHarmonyOverrideTags) || [];
+    const vowelHarmonyOverrideWordClasses = useConfigStore((state) => state.vowelHarmonyOverrideWordClasses);
+    const vowelHarmonyOverrideTags = useConfigStore((state) => state.vowelHarmonyOverrideTags);
     const ipaMappingRules = useConfigStore((state) => state.ipaMappingRules) || '';
     const otherPhonemes = useConfigStore(state => state.otherPhonemes);
     const blockTemplates = useConfigStore(state => state.blockTemplates);
     const blockSettings = useConfigStore(state => state.blockSettings);
-    const syllabaryMap = useConfigStore(state => state.syllabaryMap) || {};
-    const scriptSystems = useConfigStore(state => state.scriptSystems) || [];
-    const setWordScriptOverride = useLexiconStore((state) => state.setWordScriptOverride);
+    const syllabaryMap = useConfigStore(state => state.syllabaryMap);
+    const rawScriptSystems = useConfigStore(state => state.scriptSystems);
+    const scriptSystems = useMemo(() => rawScriptSystems || [], [rawScriptSystems]);
 
     const [activeField, setActiveField] = useState('word');
     
@@ -76,7 +80,22 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
     const [tagInput, setTagInput] = useState('');
     const [relatedInput, setRelatedInput] = useState('');
     const [isFetchingRelated, setIsFetchingRelated] = useState(false);
-    const { word, ipa, wordClass, translation, tags, relatedWords, ideogram, personCategory, tone, stress, customAudioBase64 } = formData;
+    const [isFontStudioOpen, setIsFontStudioOpen] = useState(false);
+    const [isStrokeOrderOpen, setIsStrokeOrderOpen] = useState(false);
+    const { word, ipa, wordClass, translation, tags, ideogram, personCategory, tone, stress, customAudioBase64 } = formData;
+
+    // Only show ideogram section when active script is logographic
+    const isLogographic = useMemo(() => {
+        if (formData.scriptOverride && scriptSystems?.length > 0) {
+            const found = scriptSystems.find(s => s.id === formData.scriptOverride);
+            if (found) return found.type === 'logographic';
+        }
+        if (scriptSystems?.length > 0) {
+            const defaultScript = scriptSystems.find(s => s.isDefault) || scriptSystems[0];
+            if (defaultScript) return defaultScript.type === 'logographic';
+        }
+        return phonologyTypes === 'logographic';
+    }, [formData.scriptOverride, scriptSystems, phonologyTypes]);
 
     const parentWord = useMemo(() => {
         if (!wordObj.parentRootId) return null;
@@ -277,7 +296,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
         setTagInput('');
     };
 
-    const handleClearTags = () => {
+    const _handleClearTags = () => {
         updateField('tags', []);
         setTagInput('');
     };
@@ -375,7 +394,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
 
             mediaRecorder.start();
             setIsRecording(true);
-        } catch (err) {
+        } catch {
             toast.error("Could not access microphone. Check permissions.");
         }
     };
@@ -768,14 +787,57 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                 </div>
             </div>
 
-            {phonologyTypes === 'logographic' && (
-                <div>
-                    <Input
-                        label="Ideogram / Symbol"
-                        value={ideogram}
-                        onChange={(e) => updateField('ideogram', e.target.value)}
-                        className="ideogram-edit-input notranslate custom-font-text"
-                    />
+            {isLogographic && (
+                <div className="ideogram-edit-compact">
+                    <div className="ideogram-compact-header">
+                        <label className="form-label">Ideogram / Symbol</label>
+                    </div>
+                    <div className="ideogram-compact-controls">
+                        <GlyphPreviewBadge
+                            glyph={ideogram}
+                            size={34}
+                            showCode={false}
+                            title={ideogram ? "Custom Glyph Preview" : "No glyph drawn"}
+                        />
+                        <input
+                            value={ideogram}
+                            onChange={(e) => updateField('ideogram', e.target.value)}
+                            placeholder="e.g., 水"
+                            className="ideogram-compact-input notranslate custom-font-text"
+                        />
+                        <div className="ideogram-compact-btns">
+                            <button
+                                type="button"
+                                className="ideogram-compact-btn"
+                                onClick={() => setIsFontStudioOpen(true)}
+                                title={ideogram ? "Edit Character in Font Studio" : "Draw Symbol in Font Studio"}
+                            >
+                                <Brush size={13} />
+                                <span>{ideogram ? 'Edit' : 'Draw'}</span>
+                            </button>
+                            {ideogram && (
+                                <button
+                                    type="button"
+                                    className="ideogram-compact-btn"
+                                    onClick={() => setIsStrokeOrderOpen(true)}
+                                    title="View & Reorder Stroke Order"
+                                >
+                                    <PenTool size={13} />
+                                    <span>Strokes</span>
+                                </button>
+                            )}
+                            {ideogram && (
+                                <button
+                                    type="button"
+                                    className="ideogram-compact-btn ideogram-compact-btn-icon ideogram-compact-btn-danger"
+                                    onClick={() => updateField('ideogram', '')}
+                                    title="Clear Symbol"
+                                >
+                                    <X size={13} />
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -800,7 +862,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                     </div>
 
                     <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', gap: '8px', flexWrap: 'wrap', padding: '4px', borderTop: '1px solid var(--bd)', paddingTop: '15px' }}>
-                        {possibleBlockStructures.map((struct, idx) => {
+                        {possibleBlockStructures.map((struct) => {
                             const isSelected = (ideogram || possibleBlockStructures[0]) === struct;
                             return (
                                 <button
@@ -831,7 +893,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                                 const baseChunk = parts[0];
                                 const currentOverride = parts[1] || '';
                                 
-                                const validLayouts = Object.entries(layouts).filter(([key, val]) => val.slots === baseChunk.length);
+                                const validLayouts = Object.values(layouts).filter(val => val.slots === baseChunk.length);
                                 if (validLayouts.length <= 1) return null; // No point showing if only 1 layout exists
                                 
                                 return (
@@ -1113,6 +1175,31 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                     toast.success('Definition updated!');
                 }}
             />
+
+            <Modal
+                isOpen={isFontStudioOpen}
+                onClose={() => setIsFontStudioOpen(false)}
+                title={ideogram ? "Edit Custom Ideogram" : "Draw Custom Ideogram"}
+            >
+                <FontStudioModal
+                    targetLabel={word || 'Ideogram'}
+                    existingCharCode={ideogram ? ideogram.codePointAt(0) : undefined}
+                    onSave={(newChar) => {
+                        updateField('ideogram', newChar);
+                        setIsFontStudioOpen(false);
+                    }}
+                    onCancel={() => setIsFontStudioOpen(false)}
+                />
+            </Modal>
+
+            {isStrokeOrderOpen && (
+                <StrokeOrderModal
+                    word={ideogram || word}
+                    isOpen={isStrokeOrderOpen}
+                    onClose={() => setIsStrokeOrderOpen(false)}
+                    scriptType="logographic"
+                />
+            )}
         </div>
     );
 }

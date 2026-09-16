@@ -36,24 +36,114 @@
 
 .ideogram-section {
     display: flex;
-    gap: 1rem;
-    margin-bottom: 1rem;
-    animation: fadeIn 0.3s ease-in-out;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 1rem;
+    margin-bottom: 1.25rem;
+    animation: fadeIn 0.2s ease-in-out;
 }
 
-.ideogram-input-wrapper {
-    flex: 1;
-}
-
-.ideogram-input {
-    font-size: 1.5rem;
-    text-align: center;
-}
-
-.ideogram-action {
+.ideogram-header-row {
     display: flex;
-    align-items: flex-end;
-    padding-bottom: 0.25rem;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ideogram-header-row .form-label {
+    margin-bottom: 0;
+}
+
+.ideogram-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.ideogram-row .glyph-preview-badge-container {
+    flex-shrink: 0;
+}
+
+.ideogram-row .ideogram-input {
+    flex: 1;
+    min-width: 100px;
+    height: 38px;
+    padding: 0 12px;
+    background: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm, 6px);
+    color: var(--tx);
+    font-size: 1.1rem;
+    text-align: center;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ideogram-row .ideogram-input:focus {
+    border-color: var(--acc);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 15%, transparent);
+}
+
+.ideogram-button-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.ideogram-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 38px;
+    padding: 0 14px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    font-family: inherit;
+    border-radius: var(--rad-sm, 6px);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    background: var(--s3);
+    color: var(--tx);
+    border: 1px solid var(--bd);
+}
+
+.ideogram-btn:hover {
+    background: var(--s4);
+    border-color: var(--b1);
+    color: var(--tx);
+}
+
+.ideogram-btn:active {
+    transform: scale(0.97);
+}
+
+.ideogram-btn-edit:hover {
+    color: var(--acc);
+    border-color: var(--acc);
+}
+
+.ideogram-btn-secondary:hover {
+    color: var(--tx);
+    border-color: var(--b1);
+}
+
+.ideogram-btn-icon {
+    width: 38px;
+    padding: 0;
+}
+
+.ideogram-btn-danger {
+    color: var(--tx2);
+}
+
+.ideogram-btn-danger:hover {
+    color: var(--err, #ef4444);
+    border-color: var(--err, #ef4444);
+    background: color-mix(in srgb, var(--err, #ef4444) 10%, transparent);
 }
 
 .warning-box {
