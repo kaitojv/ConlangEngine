@@ -58,7 +58,7 @@ export const blockLayoutMatrices = {
     ]
 };
 
-const parseList = (str) => (str || '').split(',')
+export const parseList = (str) => (str || '').split(',')
     .map(s => {
         let clean = s.trim().toLowerCase();
         if (clean.includes('=')) clean = clean.split('=')[0].trim();
@@ -67,7 +67,7 @@ const parseList = (str) => (str || '').split(',')
     .filter(Boolean);
 
 // Helper to compile a single block string using the right template matrix
-const compileBlockStrokes = (blockStr, activeTemplates, featuralComponents, consList, vowList, otherList, overrideLayout = null) => {
+export const compileBlockStrokes = (blockStr, activeTemplates, featuralComponents, consList, vowList, otherList, overrideLayout = null) => {
     let template = null;
     let layoutKey = overrideLayout;
     
@@ -171,7 +171,7 @@ const compileBlockStrokes = (blockStr, activeTemplates, featuralComponents, cons
 };
 
 export const generateBlockFontData = async (config) => {
-    const { blockSettings, blockTemplates, featuralComponents, customGlyphs, puaCounter, consonants, vowels, otherPhonemes } = config;
+    const { blockSettings, blockTemplates, featuralComponents, consonants, vowels, otherPhonemes } = config;
     const traceWidth = config.typographySettings?.traceWidth ?? 30;
 
     if (!featuralComponents || Object.keys(featuralComponents).length === 0) {

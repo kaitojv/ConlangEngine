@@ -1,0 +1,258 @@
+/* Stroke Order Viewer Styles */
+
+.stroke-order-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    width: 100%;
+    color: var(--tx);
+}
+
+/* Character Selector Bar for Multi-Character Words */
+.so-char-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--bd);
+}
+
+.so-char-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.75rem;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: var(--tx2);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    white-space: nowrap;
+}
+
+.so-char-tab:hover {
+    background: var(--s3);
+    color: var(--tx);
+}
+
+.so-char-tab.active {
+    background: var(--acc);
+    color: #ffffff;
+    border-color: var(--acc);
+    font-weight: 600;
+}
+
+.so-char-preview {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+/* Interactive Animation Player Section */
+.so-player-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--s1);
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+    padding: 1.25rem;
+    gap: 1rem;
+}
+
+.so-player-canvas-wrapper {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--s2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.so-player-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.so-player-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.so-control-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    height: 32px;
+    min-width: 32px;
+    padding: 0 0.5rem;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    color: var(--tx);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.so-control-btn:hover:not(:disabled) {
+    background: var(--s3);
+    color: var(--tx);
+}
+
+.so-control-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.so-control-btn.primary {
+    background: var(--acc);
+    color: #ffffff;
+    border-color: var(--acc);
+}
+
+.so-control-btn.primary:hover:not(:disabled) {
+    background: var(--acc2);
+}
+
+.so-step-indicator {
+    font-size: 0.8rem;
+    color: var(--tx2);
+    font-weight: 500;
+    padding: 0 0.5rem;
+    min-width: 90px;
+    text-align: center;
+}
+
+.so-speed-toggle {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+    color: var(--tx3);
+    cursor: pointer;
+    border-radius: 4px;
+    user-select: none;
+}
+
+.so-speed-toggle:hover {
+    color: var(--tx);
+}
+
+/* Sequential Strip Section (Matching User Image) */
+.so-strip-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.so-strip-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--tx2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.so-strip-scroll {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    overflow-x: auto;
+    padding: 0.5rem 0.25rem 1rem 0.25rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--s3) transparent;
+}
+
+.so-strip-scroll::-webkit-scrollbar {
+    height: 6px;
+}
+
+.so-strip-scroll::-webkit-scrollbar-thumb {
+    background: var(--s3);
+    border-radius: 3px;
+}
+
+.so-cell-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+.so-cell-card:hover .so-cell-svg-wrapper {
+    border-color: var(--acc);
+}
+
+.so-cell-card.active .so-cell-svg-wrapper {
+    border-color: var(--acc);
+    box-shadow: 0 0 0 2px var(--acc);
+}
+
+.so-cell-svg-wrapper {
+    width: 90px;
+    height: 90px;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.so-cell-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.so-cell-label {
+    font-size: 0.75rem;
+    color: var(--tx2);
+    font-weight: 500;
+    text-align: center;
+}
+
+.so-cell-card.active .so-cell-label {
+    color: var(--acc);
+    font-weight: 700;
+}
+
+/* Empty State */
+.so-empty-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+    background: var(--s1);
+    border: 1px dashed var(--bd);
+    border-radius: 8px;
+    gap: 0.75rem;
+}
+
+.so-empty-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--tx);
+}
+
+.so-empty-desc {
+    font-size: 0.85rem;
+    color: var(--tx2);
+    max-width: 400px;
+}

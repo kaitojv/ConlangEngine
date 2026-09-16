@@ -616,3 +616,35 @@ input:checked + .slider:before {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+.num-stroke-preview-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    background: var(--s3);
+    border: 1px solid var(--bd);
+    color: var(--tx);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.num-stroke-preview-btn:hover {
+    background: var(--s4);
+    border-color: var(--acc);
+}
+
+.result-value-clickable {
+    cursor: pointer;
+    transition: color 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.result-value-clickable:hover {
+    color: var(--acc);
+}
+

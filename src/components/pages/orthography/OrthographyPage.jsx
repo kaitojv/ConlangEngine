@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
@@ -9,10 +9,11 @@ import IpaReferencePage from './IpaReferencePage.jsx';
 import './orthographyPage.css';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
-import { getScriptSystem, buildScriptConfig, getDefaultScriptId } from '../../../utils/scriptResolver.js';
+import { getScriptSystem, getDefaultScriptId } from '../../../utils/scriptResolver.js';
 import ScriptManager from '../../UI/ScriptManager/ScriptManager.jsx';
 import ScriptRulesEditor from '../../UI/ScriptRulesEditor/ScriptRulesEditor.jsx';
 import GlyphDetailsModal from '../../UI/GlyphDetailsModal/GlyphDetailsModal.jsx';
+import StrokeOrderModal from '../../UI/StrokeOrder/StrokeOrderModal.jsx';
 import toast from 'react-hot-toast';
 
 // --- SUB-COMPONENTS ---
@@ -38,7 +39,7 @@ const useScriptScopedData = (scriptId) => {
     };
 };
 
-const NumberDerivationView = ({ generateNumberName, numeralBase }) => {
+const NumberDerivationView = ({ generateNumberName }) => {
     const numberMatrix = useConfigStore(state => state.numberMatrix) || {};
     const numberDerivedRules = useConfigStore(state => state.numberDerivedRules) || { ordinal: '', fractional: '', multiplier: '' };
     const timeSystemVocab = useConfigStore(state => state.timeSystemVocab) || { second: '', minute: '', hour: '', day: '', week: '', month: '', year: '' };
@@ -295,7 +296,7 @@ const MeasurementSystemView = () => {
                 </div>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {units.map((unit, index) => (
+                    {units.map(unit => (
                         <div key={unit.id} style={{ background: 'var(--s2)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--bd)', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
                             <div style={{ flex: '1 1 150px' }}>
                                 <label style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '4px', display: 'block', fontWeight: 600 }}>Unit Name</label>
@@ -352,10 +353,12 @@ const NumbersTab = () => {
         }
     };
     const updateConfig = useConfigStore(state => state.updateConfig);
+    const phonologyTypes = useConfigStore(state => state.phonologyTypes);
     const { transliterate } = useTransliterator();
     const [testNumber, setTestNumber] = useState('');
     const [viewMode, setViewMode] = useState('basic');
     const [listCols, setListCols] = useState(1);
+    const [selectedNumberForStroke, setSelectedNumberForStroke] = useState(null);
     
     const newIrrValRef = useRef(null);
     const newIrrNameRef = useRef(null);
@@ -384,7 +387,7 @@ const NumbersTab = () => {
         updateSystem(mapName, newMap);
     };
 
-    const generateNumberName = (num) => {
+    const generateNumberName = useCallback((num) => {
         if (num === 0) return numberSystem.zero || '0';
         if (numberSystem.irregulars?.[num]) return numberSystem.irregulars[num];
 
@@ -478,13 +481,13 @@ const NumbersTab = () => {
         }
 
         return components.filter(Boolean).join(globalFusion ? '' : separator);
-    };
+    }, [numeralBase, numberSystem]);
 
     const testResult = useMemo(() => {
         const val = parseInt(testNumber);
         if (isNaN(val)) return '';
         return generateNumberName(val);
-    }, [testNumber, numberSystem, numeralBase]);
+    }, [testNumber, generateNumberName]);
 
     const digitIndices = Array.from({ length: Math.max(0, numeralBase - 1) }, (_, i) => i + 1);
 
@@ -569,7 +572,19 @@ const NumbersTab = () => {
                                     onChange={(e) => updateSystem('zero', e.target.value)}
                                     placeholder="e.g. Zero"
                                 />
-                                <div className="spacer-stem"></div>
+                                <div className="spacer-stem" style={{ display: 'flex', alignItems: 'center' }}>
+                                    {numberSystem.zero && (
+                                        <button 
+                                            type="button"
+                                            className="num-stroke-preview-btn" 
+                                            onClick={() => setSelectedNumberForStroke({ word: numberSystem.zero, name: `0 (${numberSystem.zero})` })}
+                                            title="View stroke order"
+                                        >
+                                            <span className="custom-font-text notranslate">{transliterate(numberSystem.zero)}</span>
+                                            <PenTool size={12} />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                             {digitIndices.map(d => (
                                 <div key={d} className="digit-row-entry">
@@ -580,12 +595,26 @@ const NumbersTab = () => {
                                         onChange={(e) => updateMap('digits', d, e.target.value)}
                                         placeholder="Name"
                                     />
-                                    <input 
-                                        className="char-name-input stem-input"
-                                        value={numberSystem.stems?.[d] || ''}
-                                        onChange={(e) => updateMap('stems', d, e.target.value)}
-                                        placeholder="Stem"
-                                    />
+                                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center', minWidth: 0, flex: 1 }}>
+                                        <input 
+                                            className="char-name-input stem-input"
+                                            value={numberSystem.stems?.[d] || ''}
+                                            onChange={(e) => updateMap('stems', d, e.target.value)}
+                                            placeholder="Stem"
+                                            style={{ flex: 1, minWidth: '60px' }}
+                                        />
+                                        {numberSystem.digits?.[d] && (
+                                            <button 
+                                                type="button"
+                                                className="num-stroke-preview-btn" 
+                                                onClick={() => setSelectedNumberForStroke({ word: numberSystem.digits[d], name: `${d} (${numberSystem.digits[d]})` })}
+                                                title="View stroke order"
+                                            >
+                                                <span className="custom-font-text notranslate">{transliterate(numberSystem.digits[d])}</span>
+                                                <PenTool size={12} />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -612,6 +641,17 @@ const NumbersTab = () => {
                                                 placeholder={`Name for ${labelVal}`}
                                                 style={{ flex: 1, minWidth: 0 }}
                                             />
+                                            {numberSystem.powers?.[val] && (
+                                                <button 
+                                                    type="button"
+                                                    className="num-stroke-preview-btn" 
+                                                    onClick={() => setSelectedNumberForStroke({ word: numberSystem.powers[val], name: `${labelVal} (${numberSystem.powers[val]})` })}
+                                                    title="View stroke order"
+                                                >
+                                                    <span className="custom-font-text notranslate">{transliterate(numberSystem.powers[val])}</span>
+                                                    <PenTool size={12} />
+                                                </button>
+                                            )}
                                             {p === powerCount && p > 6 && (
                                                 <button 
                                                     className="irr-del" 
@@ -652,9 +692,22 @@ const NumbersTab = () => {
                                         value={name}
                                         onChange={(e) => updateMap('irregulars', val, e.target.value)}
                                     />
-                                    <button className="irr-del" onClick={() => updateMap('irregulars', val, '')}>
-                                        <Trash2 size={16} />
-                                    </button>
+                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                        {name && (
+                                            <button 
+                                                type="button"
+                                                className="num-stroke-preview-btn" 
+                                                onClick={() => setSelectedNumberForStroke({ word: name, name: `${val} (${name})` })}
+                                                title="View stroke order"
+                                            >
+                                                <span className="custom-font-text notranslate">{transliterate(name)}</span>
+                                                <PenTool size={12} />
+                                            </button>
+                                        )}
+                                        <button className="irr-del" onClick={() => updateMap('irregulars', val, '')}>
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                             <div className="add-irregular">
@@ -768,7 +821,18 @@ const NumbersTab = () => {
                             />
                             <div className="result-display">
                                 <label>Result:</label>
-                                <div className="result-value custom-font-text">{transliterate(testResult || '') || '—'}</div>
+                                <div 
+                                    className={`result-value custom-font-text ${testResult ? 'result-value-clickable' : ''}`}
+                                    onClick={() => {
+                                        if (testResult) {
+                                            setSelectedNumberForStroke({ word: testResult, name: `${testNumber || 'Result'}: ${testResult}` });
+                                        }
+                                    }}
+                                    title={testResult ? "Click to view stroke order" : ""}
+                                >
+                                    <span>{transliterate(testResult || '') || '—'}</span>
+                                    {testResult && <PenTool size={16} style={{ color: 'var(--acc)', opacity: 0.8 }} />}
+                                </div>
                             </div>
                         </div>
                     </Card>
@@ -780,6 +844,16 @@ const NumbersTab = () => {
             ) : (
                 <MeasurementSystemView />
             )}
+
+            {selectedNumberForStroke && (
+                <StrokeOrderModal
+                    isOpen={!!selectedNumberForStroke}
+                    onClose={() => setSelectedNumberForStroke(null)}
+                    word={selectedNumberForStroke.word}
+                    name={selectedNumberForStroke.name}
+                    scriptType={phonologyTypes}
+                />
+            )}
         </div>
     );
 };
@@ -790,7 +864,6 @@ const AlphabeticShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
     const otherPhonemes = useConfigStore(state => state.otherPhonemes) || '';
     const alphabetNames = useConfigStore(state => state.alphabetNames) || {};
     const { alphabetGlyphs } = useScriptScopedData(scriptId);
-    const { transliterate } = useTransliterator();
 
     const parseChars = (str) => {
         if (!str) return [];
@@ -1218,7 +1291,7 @@ const BlockShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
                             <div 
                                 key={key} 
                                 className="showcase-syl-card glass interactive-card"
-                                onClick={() => onGlyphClick && onGlyphClick({ char: toMorphemeLabel(key), glyph: renderBlockSymbol(val), type: 'block', name: toMorphemeLabel(key) })}
+                                onClick={() => onGlyphClick && onGlyphClick({ char: toMorphemeLabel(key), glyph: renderBlockSymbol(val), type: 'featural_block', name: toMorphemeLabel(key) })}
                             >
                                 <div className="showcase-syl-symbol">{renderBlockSymbol(val)}</div>
                                 <div className="showcase-syl-label">{toMorphemeLabel(key)}</div>

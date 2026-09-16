@@ -4,7 +4,7 @@ import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { renderWordInScript } from '../../../utils/scriptRendering.js';
-import { getScriptSystem, getDefaultScriptId, resolveWordScriptId } from '../../../utils/scriptResolver.js';
+import { getScriptSystem, resolveWordScriptId } from '../../../utils/scriptResolver.js';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import Card from '../../UI/Card/Card.jsx';
 import Modal from '../../UI/Modal/Modal.jsx'
@@ -13,7 +13,7 @@ import MatrixModal from './MatrixModal.jsx';
 import ProtoRootModal from './ProtoRootModal.jsx';
 import GlyphDetailsModal from '../../UI/GlyphDetailsModal/GlyphDetailsModal.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
-import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download, X, Share2, Music, Zap, LayoutGrid, List, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download, X, Share2, Music, Zap, LayoutGrid, List, ChevronUp, ChevronDown, PenTool } from 'lucide-react';
 import { exportTextAsSVG } from '../../../utils/svgExporter.jsx';
 import { playAzureTTS } from '../../../utils/azureTTS.js';
 import toast from 'react-hot-toast';
@@ -69,9 +69,7 @@ export default function LexiconList() {
     };
     const isScriptMode = ['syllabic', 'featural_block', 'logographic', 'featural', 'block'].includes(phonologyTypes);
     const scriptSystems = useConfigStore(state => state.scriptSystems) || [];
-    const scriptRules = useConfigStore(state => state.scriptRules) || {};
     const configFull = useConfigStore();
-    const defaultScriptId = scriptRules.defaultScriptId || 'default';
     
     // Spin up the transliterator to convert base words into the language's custom script
     const { transliterate, normalizeToBase } = useTransliterator();
@@ -346,7 +344,7 @@ export default function LexiconList() {
                 const audio = new Audio(senseWithAudio.customAudioBase64);
                 audio.play();
                 return;
-            } catch (err) {
+            } catch {
                 toast.error("Could not play custom audio.");
             }
         }
@@ -758,9 +756,25 @@ export default function LexiconList() {
                                         <PlusCircle size={16} />
                                     </Button>
                                     {(!['alphabetic', 'abjad', 'abugida'].includes(phonologyTypes || 'alphabetic')) && (
-                                        <Button variant="default" onClick={() => exportTextAsSVG(displayWord, `${safeWord}.svg`)} title="Download SVG" className="btn-icon-only">
-                                            <Download size={16} />
-                                        </Button>
+                                        <>
+                                            <Button 
+                                                variant="default" 
+                                                onClick={() => setSelectedGlyphDetails({ 
+                                                    char: phonologyTypes === 'logographic' ? (baseEntry.ideogram || safeWord) : safeWord, 
+                                                    glyph: displayWord, 
+                                                    type: phonologyTypes, 
+                                                    name: baseEntry.translation || baseEntry.word,
+                                                    isWord: true
+                                                })} 
+                                                title="View Stroke Order" 
+                                                className="btn-icon-only"
+                                            >
+                                                <PenTool size={16} />
+                                            </Button>
+                                            <Button variant="default" onClick={() => exportTextAsSVG(displayWord, `${safeWord}.svg`)} title="Download SVG" className="btn-icon-only">
+                                                <Download size={16} />
+                                            </Button>
+                                        </>
                                     )}
                                 </div>
                             </div>

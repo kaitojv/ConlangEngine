@@ -1,19 +1,31 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Modal from '../Modal/Modal.jsx';
-import { Volume2, BarChart2, FileText, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Volume2, BarChart2, FileText, ArrowRight, ArrowLeft, PenTool } from 'lucide-react';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { playAzureTTS } from '../../../utils/azureTTS.js';
+import StrokeOrderViewer from '../StrokeOrder/StrokeOrderViewer.jsx';
 import toast from 'react-hot-toast';
 import './glyphDetailsModal.css';
 
 export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, name, isWord }) {
-    const lexicon = useLexiconStore(state => state.lexicon) || [];
+    const rawLexicon = useLexiconStore(state => state.lexicon);
+    const lexicon = useMemo(() => Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []), [rawLexicon]);
     const config = useConfigStore.getState();
     const { transliterate } = useTransliterator();
     const [stats, setStats] = useState(null);
     const [isPlaying, setIsPlaying] = useState(false);
+    const isConscript = ['syllabic', 'logographic', 'featural_block', 'featural', 'block'].includes(type);
+    const [activeTab, setActiveTab] = useState(isConscript ? 'stroke_order' : 'analysis');
+
+    useEffect(() => {
+        if (isConscript) {
+            setActiveTab('stroke_order');
+        } else {
+            setActiveTab('analysis');
+        }
+    }, [char, type, isConscript]);
 
     useEffect(() => {
         if (!isOpen || !char) return;
@@ -109,7 +121,7 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
         };
 
         analyzeGlyph();
-    }, [isOpen, char, type, lexicon, transliterate]);
+    }, [isOpen, char, type, lexicon, transliterate, isWord]);
 
     const handlePlayAudio = async () => {
         setIsPlaying(true);
@@ -140,86 +152,110 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
     if (!isOpen) return null;
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Glyph Analysis: ${name}`}>
+        <Modal isOpen={isOpen} onClose={onClose} title={`${name || char}`}>
             <div className="glyph-modal-content">
-                <div className="glyph-display-card glass">
-                    <div 
-                        className="glyph-large custom-font-text notranslate"
-                        style={{ fontSize: dynamicFontSize, wordBreak: 'break-all' }}
-                    >
-                        {displayStr}
-                    </div>
-                    <button 
-                        className={`btn-primary audio-btn ${isPlaying ? 'playing' : ''}`}
-                        onClick={handlePlayAudio}
-                        disabled={isPlaying}
-                    >
-                        <Volume2 size={20} /> Listen to Pronunciation
-                    </button>
-                </div>
-
-                {stats && (
-                    <div className="glyph-stats-grid">
-                        {stats.isWordMode ? (
-                            <>
-                                <div className="stat-card glass">
-                                    <BarChart2 size={24} className="stat-icon" />
-                                    <div className="stat-value">{stats.length}</div>
-                                    <div className="stat-label">Length</div>
-                                </div>
-                                <div className="stat-card glass">
-                                    <BarChart2 size={24} className="stat-icon" />
-                                    <div className="stat-value">{stats.compoundCount}</div>
-                                    <div className="stat-label">Compounds Found</div>
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                <div className="stat-card glass">
-                                    <BarChart2 size={24} className="stat-icon" />
-                                    <div className="stat-value">{stats.frequency}</div>
-                                    <div className="stat-label">Total Uses</div>
-                                </div>
-                                <div className="stat-card glass">
-                                    <BarChart2 size={24} className="stat-icon" />
-                                    <div className="stat-value">{stats.percentage}%</div>
-                                    <div className="stat-label">of all characters</div>
-                                </div>
-                                
-                                <div className="stat-context-card glass">
-                                    <ArrowLeft size={16} className="context-icon" />
-                                    <div className="context-content">
-                                        <div className="context-label">Most common preceding</div>
-                                        <div className="context-value custom-font-text">{stats.topPredecessor}</div>
-                                    </div>
-                                </div>
-                                <div className="stat-context-card glass">
-                                    <ArrowRight size={16} className="context-icon" />
-                                    <div className="context-content">
-                                        <div className="context-label">Most common following</div>
-                                        <div className="context-value custom-font-text">{stats.topSuccessor}</div>
-                                    </div>
-                                </div>
-                            </>
-                        )}
+                {/* Tab Switcher for Conscript Systems */}
+                {isConscript && (
+                    <div className="glyph-modal-tabs">
+                        <button
+                            className={`glyph-modal-tab ${activeTab === 'stroke_order' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('stroke_order')}
+                        >
+                            <PenTool size={16} /> Stroke Order
+                        </button>
+                        <button
+                            className={`glyph-modal-tab ${activeTab === 'analysis' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('analysis')}
+                        >
+                            <BarChart2 size={16} /> Analytics & Usage
+                        </button>
                     </div>
                 )}
 
-                <div className="glyph-words-list glass">
-                    <h3 className="words-list-title"><FileText size={18}/> {stats?.isWordMode ? `Compounds containing ${name}` : `Top Words containing ${name}`}</h3>
-                    {stats?.containingWords.length > 0 ? (
-                        <div className="words-grid">
-                            {stats.containingWords.map(word => (
-                                <div key={word.id} className="word-pill">
-                                    <span className="word-text custom-font-text">{type === 'logographic' ? word.ideogram : word.word}</span>
-                                    <span className="word-translation">{word.translation}</span>
-                                </div>
-                            ))}
+                {activeTab === 'stroke_order' && isConscript ? (
+                    <StrokeOrderViewer word={char} char={char} scriptType={type} />
+                ) : (
+                    <>
+                        <div className="glyph-display-card glass">
+                            <div 
+                                className="glyph-large custom-font-text notranslate"
+                                style={{ fontSize: dynamicFontSize, wordBreak: 'break-all' }}
+                            >
+                                {displayStr}
+                            </div>
+                            <button 
+                                className={`btn-primary audio-btn ${isPlaying ? 'playing' : ''}`}
+                                onClick={handlePlayAudio}
+                                disabled={isPlaying}
+                            >
+                                <Volume2 size={20} /> Listen to Pronunciation
+                            </button>
                         </div>
-                    ) : (
-                        <p className="no-words-text">{stats?.isWordMode ? "No compounds use this word yet." : "No words in the lexicon use this glyph yet."}</p>
-                    )}
-                </div>
+
+                        {stats && (
+                            <div className="glyph-stats-grid">
+                                {stats.isWordMode ? (
+                                    <>
+                                        <div className="stat-card glass">
+                                            <BarChart2 size={24} className="stat-icon" />
+                                            <div className="stat-value">{stats.length}</div>
+                                            <div className="stat-label">Length</div>
+                                        </div>
+                                        <div className="stat-card glass">
+                                            <BarChart2 size={24} className="stat-icon" />
+                                            <div className="stat-value">{stats.compoundCount}</div>
+                                            <div className="stat-label">Compounds Found</div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="stat-card glass">
+                                            <BarChart2 size={24} className="stat-icon" />
+                                            <div className="stat-value">{stats.frequency}</div>
+                                            <div className="stat-label">Total Uses</div>
+                                        </div>
+                                        <div className="stat-card glass">
+                                            <BarChart2 size={24} className="stat-icon" />
+                                            <div className="stat-value">{stats.percentage}%</div>
+                                            <div className="stat-label">of all characters</div>
+                                        </div>
+                                        
+                                        <div className="stat-context-card glass">
+                                            <ArrowLeft size={16} className="context-icon" />
+                                            <div className="context-content">
+                                                <div className="context-label">Most common preceding</div>
+                                                <div className="context-value custom-font-text">{stats.topPredecessor}</div>
+                                            </div>
+                                        </div>
+                                        <div className="stat-context-card glass">
+                                            <ArrowRight size={16} className="context-icon" />
+                                            <div className="context-content">
+                                                <div className="context-label">Most common following</div>
+                                                <div className="context-value custom-font-text">{stats.topSuccessor}</div>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        )}
+
+                        <div className="glyph-words-list glass">
+                            <h3 className="words-list-title"><FileText size={18}/> {stats?.isWordMode ? `Compounds containing ${name}` : `Top Words containing ${name}`}</h3>
+                            {stats?.containingWords.length > 0 ? (
+                                <div className="words-grid">
+                                    {stats.containingWords.map(word => (
+                                        <div key={word.id} className="word-pill">
+                                            <span className="word-text custom-font-text">{type === 'logographic' ? word.ideogram : word.word}</span>
+                                            <span className="word-translation">{word.translation}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="no-words-text">{stats?.isWordMode ? "No compounds use this word yet." : "No words in the lexicon use this glyph yet."}</p>
+                            )}
+                        </div>
+                    </>
+                )}
             </div>
         </Modal>
     );

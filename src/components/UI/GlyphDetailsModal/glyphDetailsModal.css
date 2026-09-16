@@ -165,3 +165,40 @@
     50% { transform: scale(1.02); }
     100% { transform: scale(1); }
 }
+
+.glyph-modal-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--bd);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.glyph-modal-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.85rem;
+    border-radius: 6px;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    color: var(--tx2);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.glyph-modal-tab:hover {
+    background: var(--s3);
+    color: var(--tx);
+}
+
+.glyph-modal-tab.active {
+    background: var(--acc);
+    color: #ffffff;
+    border-color: var(--acc);
+    font-weight: 600;
+}
+
