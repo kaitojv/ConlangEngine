@@ -4,7 +4,7 @@ import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { renderWordInScript } from '../../../utils/scriptRendering.js';
-import { getScriptSystem, resolveWordScriptId } from '../../../utils/scriptResolver.js';
+import { getScriptSystem, resolveWordScriptId, getDefaultScriptId } from '../../../utils/scriptResolver.js';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import Card from '../../UI/Card/Card.jsx';
 import Modal from '../../UI/Modal/Modal.jsx'
@@ -12,6 +12,7 @@ import LexiconEditModal from './LexiconEditModal.jsx';
 import MatrixModal from './MatrixModal.jsx';
 import ProtoRootModal from './ProtoRootModal.jsx';
 import GlyphDetailsModal from '../../UI/GlyphDetailsModal/GlyphDetailsModal.jsx';
+import GlyphPreviewBadge from '../../UI/Glyph/GlyphPreviewBadge.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download, X, Share2, Music, Zap, LayoutGrid, List, ChevronUp, ChevronDown, PenTool } from 'lucide-react';
 import { exportTextAsSVG } from '../../../utils/svgExporter.jsx';
@@ -70,6 +71,7 @@ export default function LexiconList() {
     const isScriptMode = ['syllabic', 'featural_block', 'logographic', 'featural', 'block'].includes(phonologyTypes);
     const scriptSystems = useConfigStore(state => state.scriptSystems) || [];
     const configFull = useConfigStore();
+    const defaultScriptId = getDefaultScriptId(configFull);
     
     // Spin up the transliterator to convert base words into the language's custom script
     const { transliterate, normalizeToBase } = useTransliterator();
@@ -117,52 +119,75 @@ export default function LexiconList() {
         if (customAlphabet && customAlphabet.trim()) {
             const customTokens = customAlphabet.split(',').map(t => t.trim()).filter(Boolean);
             customTokens.forEach(token => {
-                letters.add(token.charAt(0).toUpperCase() + token.slice(1).toLowerCase());
+                const first = Array.from(token)[0] || '';
+                const rest = token.slice(first.length);
+                letters.add(first.toUpperCase() + rest.toLowerCase());
             });
             lexicon.forEach(w => {
-                const cleanWord = w.word.replace(/\*/g, '');
-                const displayWord = transliterate(cleanWord, lexicon);
+                const cleanWord = (w.word || '').replace(/\*/g, '');
+                const displayWord = w.scriptOverride 
+                    ? renderWordInScript(w, configFull, lexicon).text 
+                    : transliterate(cleanWord, lexicon);
                 if (displayWord) {
                     letters.add(extractFirstCustomLetter(displayWord, customAlphabet));
                 }
             });
             const collator = createCustomAlphabetCollator(customAlphabet);
-            return [...letters].sort((a, b) => collator(a.toLowerCase(), b.toLowerCase()));
+            return [...letters].filter(Boolean).sort((a, b) => collator(a.toLowerCase(), b.toLowerCase()));
         }
 
-        // 1. Add letters defined by the user in Phonology settings
-        const parseChars = (str) => {
-            if (!str) return [];
-            return str.split(',')
-                .map(s => s.trim())
-                .filter(Boolean)
-                .map(s => {
-                    if (s.includes('=')) return s.split('=')[1].trim();
-                    return s;
-                });
-        };
-        
-        const configChars = [
-            ...parseChars(consonants),
-            ...parseChars(vowels),
-            ...parseChars(otherPhonemes)
-        ];
-        
-        configChars.forEach(char => {
-            if (char) letters.add(char.charAt(0).toUpperCase());
-        });
+        // 1. Add letters defined by the user in Phonology settings ONLY for standard linear alphabetic scripts
+        if (!isScriptMode) {
+            const parseChars = (str) => {
+                if (!str) return [];
+                return str.split(',')
+                    .map(s => s.trim())
+                    .filter(Boolean)
+                    .map(s => {
+                        if (s.includes('=')) return s.split('=')[1].trim();
+                        return s;
+                    });
+            };
+            
+            const configChars = [
+                ...parseChars(consonants),
+                ...parseChars(vowels),
+                ...parseChars(otherPhonemes)
+            ];
+            
+            configChars.forEach(char => {
+                if (char) {
+                    const trans = transliterate(char, lexicon);
+                    const firstChar = Array.from(trans || char)[0];
+                    if (firstChar) {
+                        const normalized = (firstChar >= 'a' && firstChar <= 'z') 
+                            ? firstChar.toUpperCase() 
+                            : firstChar;
+                        letters.add(normalized);
+                    }
+                }
+            });
+        }
 
         // 2. Add first letters from actual lexicon words (fallback / auto-discovery)
         lexicon.forEach(w => {
-            const cleanWord = w.word.replace(/\*/g, '');
-            const displayWord = transliterate(cleanWord, lexicon);
+            const cleanWord = (w.word || '').replace(/\*/g, '');
+            const displayWord = w.scriptOverride 
+                ? renderWordInScript(w, configFull, lexicon).text 
+                : transliterate(cleanWord, lexicon);
             if (displayWord) {
-                letters.add(displayWord.charAt(0).toUpperCase());
+                const firstChar = Array.from(displayWord)[0];
+                if (firstChar) {
+                    const normalized = (firstChar >= 'a' && firstChar <= 'z') 
+                        ? firstChar.toUpperCase() 
+                        : firstChar;
+                    letters.add(normalized);
+                }
             }
         });
         
-        return [...letters].sort();
-    }, [lexicon, transliterate, consonants, vowels, otherPhonemes, customAlphabet]);
+        return [...letters].filter(Boolean).sort((a, b) => a.localeCompare(b));
+    }, [lexicon, transliterate, consonants, vowels, otherPhonemes, customAlphabet, isScriptMode, configFull]);
 
     // Do the same for word classes (Noun, Verb, etc.) to populate the dropdown
     const uniqueClasses = useMemo(() => {
@@ -264,13 +289,19 @@ export default function LexiconList() {
 
         if (filters.letter !== 'all') {
             result = result.filter(e => {
-                const cleanWord = e.word.replace(/[*-]/g, '');
-                const displayWord = transliterate(cleanWord, lexicon);
+                const cleanWord = (e.word || '').replace(/[*-]/g, '');
+                const displayWord = e.scriptOverride 
+                    ? renderWordInScript(e, configFull, lexicon).text 
+                    : transliterate(cleanWord, lexicon);
                 if (customAlphabet && customAlphabet.trim()) {
                     const firstLetter = extractFirstCustomLetter(displayWord, customAlphabet);
                     return firstLetter.toLowerCase() === filters.letter.toLowerCase();
                 } else {
-                    return displayWord.toUpperCase().startsWith(filters.letter.toUpperCase());
+                    const firstChar = Array.from(displayWord)[0] || '';
+                    return firstChar === filters.letter || 
+                           firstChar.toUpperCase() === filters.letter.toUpperCase() || 
+                           displayWord.toUpperCase().startsWith(filters.letter.toUpperCase()) ||
+                           displayWord.startsWith(filters.letter);
                 }
             });
         }
@@ -520,7 +551,19 @@ export default function LexiconList() {
                             <span className="tag-chip type-filter-chip" onClick={() => updateFilter('type', 'all')}>{filters.type} <X size={12} /></span>
                         )}
                         {filters.letter !== 'all' && (
-                            <span className="tag-chip letter-filter-chip" onClick={() => updateFilter('letter', 'all')}>Starts with {filters.letter} <X size={12} /></span>
+                            <span className="tag-chip letter-filter-chip" onClick={() => updateFilter('letter', 'all')}>
+                                Starts with{' '}
+                                <span className={`letter-filter-val notranslate custom-font-text conlang-script-${defaultScriptId}`}>
+                                    <GlyphPreviewBadge 
+                                        glyph={filters.letter} 
+                                        size={14} 
+                                        strokeWidth={20}
+                                        strokeColor="currentColor"
+                                        plain={true}
+                                    />
+                                </span>
+                                {' '}<X size={12} />
+                            </span>
                         )}
                         <button 
                             className="btn-v btn-sec-v clear-filters-btn" 
@@ -549,18 +592,28 @@ export default function LexiconList() {
                         </div>
                         <div className="alpha-filter-buttons">
                             <button 
+                                type="button"
                                 className={`alpha-btn ${filters.letter === 'all' ? 'active' : ''}`}
                                 onClick={() => updateFilter('letter', 'all')}
+                                title="Show all characters"
                             >
                                 #
                             </button>
                             {firstLetters.map(letter => (
                                 <button 
+                                    type="button"
                                     key={letter}
-                                    className={`alpha-btn ${filters.letter === letter ? 'active' : ''}`}
+                                    className={`alpha-btn notranslate custom-font-text conlang-script-${defaultScriptId} ${filters.letter === letter ? 'active' : ''}`}
                                     onClick={() => updateFilter('letter', letter)}
+                                    title={typeof letter === 'string' && letter.codePointAt(0) ? `U+${letter.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}` : String(letter)}
                                 >
-                                    {letter}
+                                    <GlyphPreviewBadge 
+                                        glyph={letter} 
+                                        size={18} 
+                                        strokeWidth={22}
+                                        strokeColor="currentColor"
+                                        plain={true}
+                                    />
                                 </button>
                             ))}
                         </div>
