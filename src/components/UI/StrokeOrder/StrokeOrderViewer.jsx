@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Play, Pause, RotateCcw, ChevronLeft, ChevronRight, ChevronDown, PenTool, Brush, ArrowLeft, ArrowRight, ArrowLeftRight, Trash2, Check } from 'lucide-react';
+import { Play, Pause, RotateCcw, ChevronLeft, ChevronRight, ChevronDown, PenTool, Brush, ArrowLeft, ArrowRight, ArrowLeftRight, Merge, Check } from 'lucide-react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { resolveWordStrokes, cleanStrokes, calculateStrokeArrowAndNumber } from '../../../utils/strokeOrderResolver.js';
-import { compileFont } from '../../../utils/fontCompiler.jsx';
 import GlyphPreviewBadge from '../Glyph/GlyphPreviewBadge.jsx';
 import Modal from '../Modal/Modal.jsx';
 import FontStudioModal from '../Fontstudio/FontStudio.jsx';
@@ -116,20 +115,24 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
     const [isPlaying, setIsPlaying] = useState(false);
     const [speedMultiplier, setSpeedMultiplier] = useState(1);
     const timerRef = useRef(null);
+    const saveTimerRef = useRef(null);
+    const [strokeHistory, setStrokeHistory] = useState([]);
 
     const handleCharChange = (idx) => {
         setSelectedCharIndex(idx);
         setCustomStrokesOverride(null);
+        setStrokeHistory([]);
         setIsPlaying(false);
         if (timerRef.current) clearInterval(timerRef.current);
         const charStrokes = characters[idx]?.strokes?.length || 0;
         setCurrentStep(charStrokes);
     };
 
-    // Cleanup timer on unmount
+    // Cleanup timers on unmount
     useEffect(() => {
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
+            if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         };
     }, []);
 
@@ -192,10 +195,15 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
         });
     };
 
-    // Save and propagate stroke changes
-    const applyStrokeUpdate = async (newStrokesList) => {
+    // Save and propagate stroke changes smoothly without freezing the UI
+    const applyStrokeUpdate = useCallback((newStrokesList, recordHistory = true) => {
+        if (recordHistory) {
+            setStrokeHistory(prev => [...prev.slice(-25), strokes]);
+        }
+
+        // Instant optimistic UI update
         setCustomStrokesOverride(newStrokesList);
-        setCurrentStep(newStrokesList.length);
+        setCurrentStep(prev => Math.min(prev, newStrokesList.length));
 
         if (onStrokesChange) {
             onStrokesChange(newStrokesList);
@@ -209,23 +217,39 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                 metaObj = existing[0];
             }
             const strokesToSave = metaObj ? [metaObj, ...newStrokesList] : newStrokesList;
-            const updatedDb = { ...customGlyphs, [charCode]: strokesToSave };
 
-            try {
-                const base64Font = await compileFont(
-                    updatedDb,
-                    typographySettings.traceWidth ?? 30,
-                    typographySettings.customFontScale ?? 1.0
-                );
-                addCustomGlyph(charCode, strokesToSave, base64Font);
-                toast.success('Stroke order updated!');
-            } catch (err) {
-                console.error("Font compile error on reorder:", err);
-                addCustomGlyph(charCode, strokesToSave, null);
-                toast.success('Stroke order saved!');
+            // Debounce store/DB update by 200ms to eliminate freezing and lag.
+            // Reordering/merging does not alter static font outline, so heavy font compilation is bypassed.
+            if (saveTimerRef.current) {
+                clearTimeout(saveTimerRef.current);
             }
+            saveTimerRef.current = setTimeout(() => {
+                addCustomGlyph(charCode, strokesToSave);
+            }, 200);
         }
-    };
+    }, [strokes, onStrokesChange, baseCharData, customGlyphs, addCustomGlyph]);
+
+    // Undo last stroke change
+    const handleUndo = useCallback(() => {
+        if (strokeHistory.length === 0) return;
+        const previous = strokeHistory[strokeHistory.length - 1];
+        setStrokeHistory(prev => prev.slice(0, -1));
+        applyStrokeUpdate(previous, false);
+        toast.success("Undone!");
+    }, [strokeHistory, applyStrokeUpdate]);
+
+    // Keyboard shortcut for Undo (Ctrl+Z / Cmd+Z)
+    useEffect(() => {
+        if (!isEditingOrder) return;
+        const handleKeyDown = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault();
+                handleUndo();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isEditingOrder, handleUndo]);
 
     // Stroke reordering: move from fromIdx to toIdx
     const handleMoveStroke = (fromIdx, toIdx) => {
@@ -248,13 +272,20 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
         applyStrokeUpdate(next);
     };
 
-    // Delete stroke
-    const handleDeleteStroke = (index) => {
-        if (strokes.length <= 1) {
-            return toast.error("A character must have at least one stroke.");
-        }
-        const next = strokes.filter((_, i) => i !== index);
+    // Merge two consecutive strokes into one continuous stroke
+    const handleMergeStroke = (indexA, indexB) => {
+        if (indexA < 0 || indexB >= strokes.length || indexA >= indexB) return;
+        const strokeA = strokes[indexA];
+        const strokeB = strokes[indexB];
+        if (!strokeA || !strokeB) return;
+
+        const merged = [...strokeA, ...strokeB];
+        merged.lineCap = strokeA.lineCap || strokeB.lineCap || 'round';
+        merged.isFilled = strokeA.isFilled || strokeB.isFilled || false;
+
+        const next = [...strokes.slice(0, indexA), merged, ...strokes.slice(indexB + 1)];
         applyStrokeUpdate(next);
+        toast.success(`Merged strokes ${indexA + 1} & ${indexB + 1}`);
     };
 
     // If no custom strokes available anywhere for this character
@@ -325,11 +356,22 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                             type="button"
                             className={`so-btn-toolbar ${isEditingOrder ? 'active' : ''}`}
                             onClick={() => setIsEditingOrder(!isEditingOrder)}
-                            title="Toggle stroke reordering and reversing controls"
+                            title="Toggle stroke reordering, reversing, and merging controls"
                         >
                             {isEditingOrder ? <Check size={14} /> : <ArrowLeftRight size={14} />}
-                            <span>{isEditingOrder ? 'Done Reordering' : 'Reorder Strokes'}</span>
+                            <span>{isEditingOrder ? 'Done Editing' : 'Reorder / Merge Strokes'}</span>
                         </button>
+                        {isEditingOrder && strokeHistory.length > 0 && (
+                            <button
+                                type="button"
+                                className="so-btn-toolbar"
+                                onClick={handleUndo}
+                                title="Undo last change (Ctrl+Z)"
+                            >
+                                <RotateCcw size={14} />
+                                <span>Undo</span>
+                            </button>
+                        )}
                         {(baseCharData.charCode != null || explicitScriptType === 'logographic') && (
                             <button
                                 type="button"
@@ -338,12 +380,12 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                                 title="Open Font Studio to draw or edit this character"
                             >
                                 <Brush size={14} />
-                                <span>Edit Character</span>
+                                <span>Edit in Font Studio</span>
                             </button>
                         )}
                         {isEditingOrder && (
                             <span className="so-edit-tools-note">
-                                Use ← / → below any step card to move strokes, or ⇄ to reverse direction.
+                                Use ← / → to reorder, ⇄ to reverse, or <Merge size={12} style={{ verticalAlign: 'middle', display: 'inline-block' }} /> to merge strokes.
                             </span>
                         )}
                     </div>
@@ -383,9 +425,19 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                             );
                         })}
 
-                        {/* Active stroke red directional arrow & number */}
+                        {/* Active stroke red directional arrow, starting point marker & number */}
                         {currentStep > 0 && currentStep <= strokes.length && arrows[currentStep - 1] && (
                             <g key={`arrow-${currentStep - 1}`}>
+                                {arrows[currentStep - 1].startMarker && (
+                                    <circle
+                                        cx={arrows[currentStep - 1].startMarker.x}
+                                        cy={arrows[currentStep - 1].startMarker.y}
+                                        r={arrows[currentStep - 1].isClosed ? 4.5 : 3.5}
+                                        fill="#ef4444"
+                                        stroke="#ffffff"
+                                        strokeWidth="1.5"
+                                    />
+                                )}
                                 {arrows[currentStep - 1].isDot ? (
                                     <text
                                         x={arrows[currentStep - 1].numX}
@@ -498,7 +550,7 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                     <span className="so-strip-title">Step-by-Step Sequence ({totalStrokes} Strokes)</span>
                     <span className="so-strip-hint">
                         {isEditingOrder
-                            ? "Use arrows below each card to reorder (←/→) or reverse (⇄) stroke direction"
+                            ? "Use arrows below each card to reorder (←/→), reverse (⇄), or merge with next stroke"
                             : "Click any square to view that step in the player"}
                     </span>
                 </div>
@@ -521,7 +573,7 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                         <span className="so-cell-label">Full</span>
                     </div>
 
-                    {/* Frames 1..N: Cumulative Strokes with Red Arrow & Number */}
+                    {/* Frames 1..N: Cumulative Strokes with Red Arrow, Start Marker & Number */}
                     {strokes.map((stroke, k) => {
                         const arrow = arrows[k];
                         const isSelected = currentStep === k + 1;
@@ -555,9 +607,19 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                                             strokeWidth={12}
                                         />
 
-                                        {/* Red Arrow and Number */}
+                                        {/* Red Arrow, Start Marker and Number */}
                                         {arrow && (
                                             <g key={`arrow-k-${k}`}>
+                                                {arrow.startMarker && (
+                                                    <circle
+                                                        cx={arrow.startMarker.x}
+                                                        cy={arrow.startMarker.y}
+                                                        r={arrow.isClosed ? 4.5 : 3.5}
+                                                        fill="#ef4444"
+                                                        stroke="#ffffff"
+                                                        strokeWidth="1.5"
+                                                    />
+                                                )}
                                                 {arrow.isDot ? (
                                                     <text
                                                         x={arrow.numX}
@@ -623,18 +685,20 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                                             type="button"
                                             className="so-cell-btn"
                                             onClick={() => handleReverseStroke(k)}
-                                            title="Reverse Direction (flips arrow)"
+                                            title="Reverse Direction (flips start and arrow)"
                                         >
                                             <ArrowLeftRight size={12} />
                                         </button>
-                                        <button
-                                            type="button"
-                                            className="so-cell-btn danger"
-                                            onClick={() => handleDeleteStroke(k)}
-                                            title="Delete Stroke"
-                                        >
-                                            <Trash2 size={12} />
-                                        </button>
+                                        {k < strokes.length - 1 && (
+                                            <button
+                                                type="button"
+                                                className="so-cell-btn merge-btn"
+                                                onClick={() => handleMergeStroke(k, k + 1)}
+                                                title={`Merge stroke ${k + 1} with stroke ${k + 2}`}
+                                            >
+                                                <Merge size={12} />
+                                            </button>
+                                        )}
                                     </div>
                                 )}
                             </div>

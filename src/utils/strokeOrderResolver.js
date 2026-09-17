@@ -39,13 +39,112 @@ export const calculateStrokeArrowAndNumber = (stroke, strokeIndex) => {
     const dy = p1.y - p0.y;
     const dist = Math.hypot(dx, dy);
 
-    if (dist < 4) {
+    // Calculate total path length along the stroke
+    let pathLength = 0;
+    for (let i = 1; i < stroke.length; i++) {
+        pathLength += Math.hypot(stroke[i].x - stroke[i - 1].x, stroke[i].y - stroke[i - 1].y);
+    }
+
+    // Truly tiny mark or single-point click
+    if (pathLength < 12 || stroke.length <= 2) {
         return {
             isDot: true,
             numX: p0.x,
             numY: Math.max(16, p0.y - 18),
             number: num,
-            dot: p0
+            dot: p0,
+            startMarker: p0
+        };
+    }
+
+    // Detect closed shape (start point and end point meet: circle, square, loop, polygon)
+    const isClosed = dist < 25 || (pathLength > 50 && dist / pathLength < 0.22);
+
+    if (isClosed) {
+        // Collect points along the first portion (~35% of total path length, at least 30px)
+        let accLen = 0;
+        const initPoints = [stroke[0]];
+        const targetLen = Math.min(Math.max(pathLength * 0.35, 30), 90);
+
+        for (let i = 1; i < stroke.length; i++) {
+            const segDist = Math.hypot(stroke[i].x - stroke[i - 1].x, stroke[i].y - stroke[i - 1].y);
+            accLen += segDist;
+            initPoints.push(stroke[i]);
+            if (accLen >= targetLen) break;
+        }
+
+        const sStart = initPoints[0];
+        const sEnd = initPoints[initPoints.length - 1];
+        const sDx = sEnd.x - sStart.x;
+        const sDy = sEnd.y - sStart.y;
+        const sDist = Math.hypot(sDx, sDy) || 1;
+        const sUx = sDx / sDist;
+        const sUy = sDy / sDist;
+
+        // Compute centroid of the closed shape
+        let cx = 0, cy = 0;
+        for (const pt of stroke) {
+            cx += pt.x;
+            cy += pt.y;
+        }
+        cx /= stroke.length;
+        cy /= stroke.length;
+
+        // Normal perpendicular to initial tangent (-sUy, sUx)
+        let sNx = -sUy;
+        let sNy = sUx;
+
+        // Midpoint of initial segment
+        const midX = (sStart.x + sEnd.x) / 2;
+        const midY = (sStart.y + sEnd.y) / 2;
+
+        // Orient normal outward from the centroid
+        if (sNx * (midX - cx) + sNy * (midY - cy) < 0) {
+            sNx = -sNx;
+            sNy = -sNy;
+        }
+
+        const OFFSET = 20;
+        const sampled = [];
+        const startSampleIdx = Math.max(0, Math.floor(initPoints.length * 0.08));
+        for (let i = startSampleIdx; i < initPoints.length; i++) {
+            sampled.push({
+                x: Number((initPoints[i].x + sNx * OFFSET).toFixed(1)),
+                y: Number((initPoints[i].y + sNy * OFFSET).toFixed(1))
+            });
+        }
+
+        let arrowPathD = '';
+        let arrowStart = { x: 0, y: 0 };
+        let arrowEnd = { x: 0, y: 0 };
+
+        if (sampled.length >= 2) {
+            arrowStart = sampled[0];
+            arrowEnd = sampled[sampled.length - 1];
+            arrowPathD = `M ${sampled[0].x} ${sampled[0].y}`;
+            for (let i = 1; i < sampled.length; i++) {
+                arrowPathD += ` L ${sampled[i].x} ${sampled[i].y}`;
+            }
+        } else {
+            arrowStart = { x: Number((sStart.x + sNx * OFFSET).toFixed(1)), y: Number((sStart.y + sNy * OFFSET).toFixed(1)) };
+            arrowEnd = { x: Number((sEnd.x + sNx * OFFSET).toFixed(1)), y: Number((sEnd.y + sNy * OFFSET).toFixed(1)) };
+            arrowPathD = `M ${arrowStart.x} ${arrowStart.y} L ${arrowEnd.x} ${arrowEnd.y}`;
+        }
+
+        // Place number near p0 and offset outward
+        const numX = Number(Math.min(Math.max(16, arrowStart.x - sUx * 14 + sNx * 6), 284).toFixed(1));
+        const numY = Number(Math.min(Math.max(16, arrowStart.y - sUy * 14 + sNy * 6), 284).toFixed(1));
+
+        return {
+            isDot: false,
+            isClosed: true,
+            arrowPathD,
+            arrowStart,
+            arrowEnd,
+            numX,
+            numY,
+            number: num,
+            startMarker: p0
         };
     }
 
@@ -128,17 +227,19 @@ export const calculateStrokeArrowAndNumber = (stroke, strokeIndex) => {
     }
 
     // Position red number slightly before the arrow start
-    const numX = Number((arrowStart.x - ux * 16 - nx * 2).toFixed(1));
-    const numY = Number((arrowStart.y - uy * 16 - ny * 2).toFixed(1));
+    const numX = Number(Math.min(Math.max(16, arrowStart.x - ux * 16 - nx * 2), 284).toFixed(1));
+    const numY = Number(Math.min(Math.max(16, arrowStart.y - uy * 16 - ny * 2), 284).toFixed(1));
 
     return {
         isDot: false,
+        isClosed: false,
         arrowPathD,
         arrowStart,
         arrowEnd,
         numX,
         numY,
-        number: num
+        number: num,
+        startMarker: p0
     };
 };
 

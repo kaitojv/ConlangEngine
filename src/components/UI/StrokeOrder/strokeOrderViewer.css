@@ -406,8 +406,8 @@
     cursor: not-allowed;
 }
 
-.so-cell-btn.danger:hover:not(:disabled) {
-    color: var(--err, #ef4444);
-    border-color: var(--err, #ef4444);
-    background: rgba(239, 68, 68, 0.15);
+.so-cell-btn.merge-btn:hover:not(:disabled) {
+    color: var(--acc);
+    border-color: var(--acc);
+    background: color-mix(in srgb, var(--acc) 15%, var(--s2));
 }

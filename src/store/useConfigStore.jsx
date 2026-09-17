@@ -633,8 +633,7 @@ export const useConfigStore = create(
                 }
                 set((state) => ({
                     customGlyphs: { ...state.customGlyphs, [charCode]: strokesArray },
-                    customFontBase64: base64Font,
-                    customFont: base64Font,
+                    ...(base64Font ? { customFontBase64: base64Font, customFont: base64Font } : {}),
                     scriptDataById: {
                         ...state.scriptDataById,
                         [defaultScriptId]: {
