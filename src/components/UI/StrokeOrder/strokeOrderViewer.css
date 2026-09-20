@@ -411,3 +411,22 @@
     border-color: var(--acc);
     background: color-mix(in srgb, var(--acc) 15%, var(--s2));
 }
+
+.so-cell-card.merge-source .so-cell-svg-wrapper {
+    border-color: var(--acc) !important;
+    box-shadow: 0 0 0 2px var(--acc) !important;
+}
+
+.so-cell-card.merge-picking {
+    cursor: pointer;
+}
+
+.so-cell-card.merge-target .so-cell-svg-wrapper {
+    border-style: dashed;
+}
+
+.so-cell-card.merge-target:hover .so-cell-svg-wrapper {
+    border-color: var(--acc);
+    border-style: solid;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 40%, transparent);
+}

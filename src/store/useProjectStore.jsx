@@ -74,6 +74,9 @@ export const useProjectStore = create(
               customFont: undefined,
               syllabaryMap: undefined,
               customGlyphs: undefined,
+              scriptDataById: undefined,
+              alphabetGlyphs: undefined,
+              featuralComponents: undefined,
               isRehydrating: undefined
             }));
             const safeLexicon = JSON.parse(JSON.stringify(lexicon));

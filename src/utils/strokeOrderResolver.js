@@ -49,11 +49,14 @@ export const calculateStrokeArrowAndNumber = (stroke, strokeIndex) => {
     if (pathLength < 12 || stroke.length <= 2) {
         return {
             isDot: true,
-            numX: p0.x,
-            numY: Math.max(16, p0.y - 18),
+            numX: Math.min(Math.max(16, p0.x), 284),
+            numY: Math.min(Math.max(16, p0.y - 18), 284),
             number: num,
             dot: p0,
-            startMarker: p0
+            startMarker: {
+                x: Math.min(Math.max(8, p0.x), 292),
+                y: Math.min(Math.max(8, p0.y), 292)
+            }
         };
     }
 
@@ -61,10 +64,10 @@ export const calculateStrokeArrowAndNumber = (stroke, strokeIndex) => {
     const isClosed = dist < 25 || (pathLength > 50 && dist / pathLength < 0.22);
 
     if (isClosed) {
-        // Collect points along the first portion (~35% of total path length, at least 30px)
+        // Collect points along the first portion (at least 30px, at most 60px)
         let accLen = 0;
         const initPoints = [stroke[0]];
-        const targetLen = Math.min(Math.max(pathLength * 0.35, 30), 90);
+        const targetLen = Math.min(Math.max(pathLength * 0.22, 30), 60);
 
         for (let i = 1; i < stroke.length; i++) {
             const segDist = Math.hypot(stroke[i].x - stroke[i - 1].x, stroke[i].y - stroke[i - 1].y);
@@ -98,19 +101,33 @@ export const calculateStrokeArrowAndNumber = (stroke, strokeIndex) => {
         const midX = (sStart.x + sEnd.x) / 2;
         const midY = (sStart.y + sEnd.y) / 2;
 
-        // Orient normal outward from the centroid
+        // Try outward from centroid first
         if (sNx * (midX - cx) + sNy * (midY - cy) < 0) {
             sNx = -sNx;
             sNy = -sNy;
         }
 
-        const OFFSET = 20;
+        // Boundary safety: if outward pushes arrow off-canvas (< 14 or > 286), flip inward!
+        let offset = 16;
+        const testStartX = sStart.x + sNx * offset;
+        const testStartY = sStart.y + sNy * offset;
+        const testEndX = sEnd.x + sNx * offset;
+        const testEndY = sEnd.y + sNy * offset;
+
+        if (testStartX < 14 || testStartX > 286 || testStartY < 14 || testStartY > 286 ||
+            testEndX < 14 || testEndX > 286 || testEndY < 14 || testEndY > 286) {
+            // Outward goes off-canvas! Flip inward toward centroid where space is guaranteed
+            sNx = -sNx;
+            sNy = -sNy;
+            offset = 14;
+        }
+
         const sampled = [];
         const startSampleIdx = Math.max(0, Math.floor(initPoints.length * 0.08));
         for (let i = startSampleIdx; i < initPoints.length; i++) {
             sampled.push({
-                x: Number((initPoints[i].x + sNx * OFFSET).toFixed(1)),
-                y: Number((initPoints[i].y + sNy * OFFSET).toFixed(1))
+                x: Number(Math.min(Math.max(12, initPoints[i].x + sNx * offset), 288).toFixed(1)),
+                y: Number(Math.min(Math.max(12, initPoints[i].y + sNy * offset), 288).toFixed(1))
             });
         }
 
@@ -126,12 +143,18 @@ export const calculateStrokeArrowAndNumber = (stroke, strokeIndex) => {
                 arrowPathD += ` L ${sampled[i].x} ${sampled[i].y}`;
             }
         } else {
-            arrowStart = { x: Number((sStart.x + sNx * OFFSET).toFixed(1)), y: Number((sStart.y + sNy * OFFSET).toFixed(1)) };
-            arrowEnd = { x: Number((sEnd.x + sNx * OFFSET).toFixed(1)), y: Number((sEnd.y + sNy * OFFSET).toFixed(1)) };
+            arrowStart = {
+                x: Number(Math.min(Math.max(12, sStart.x + sNx * offset), 288).toFixed(1)),
+                y: Number(Math.min(Math.max(12, sStart.y + sNy * offset), 288).toFixed(1))
+            };
+            arrowEnd = {
+                x: Number(Math.min(Math.max(12, sEnd.x + sNx * offset), 288).toFixed(1)),
+                y: Number(Math.min(Math.max(12, sEnd.y + sNy * offset), 288).toFixed(1))
+            };
             arrowPathD = `M ${arrowStart.x} ${arrowStart.y} L ${arrowEnd.x} ${arrowEnd.y}`;
         }
 
-        // Place number near p0 and offset outward
+        // Place number near p0 and offset
         const numX = Number(Math.min(Math.max(16, arrowStart.x - sUx * 14 + sNx * 6), 284).toFixed(1));
         const numY = Number(Math.min(Math.max(16, arrowStart.y - sUy * 14 + sNy * 6), 284).toFixed(1));
 
@@ -144,7 +167,10 @@ export const calculateStrokeArrowAndNumber = (stroke, strokeIndex) => {
             numX,
             numY,
             number: num,
-            startMarker: p0
+            startMarker: {
+                x: Math.min(Math.max(8, p0.x), 292),
+                y: Math.min(Math.max(8, p0.y), 292)
+            }
         };
     }
 
@@ -171,7 +197,12 @@ export const calculateStrokeArrowAndNumber = (stroke, strokeIndex) => {
         }
     }
 
-    const OFFSET = 20;
+    let offset = 18;
+    // Boundary check for open strokes
+    if (p0.x + nx * offset < 12 || p0.x + nx * offset > 288 || p0.y + ny * offset < 12 || p0.y + ny * offset > 288) {
+        nx = -nx;
+        ny = -ny;
+    }
 
     // Check if stroke has significant curvature
     let isCurved = false;
@@ -189,12 +220,12 @@ export const calculateStrokeArrowAndNumber = (stroke, strokeIndex) => {
     if (!isCurved) {
         // Straight arrow offset parallel to the stroke
         arrowStart = {
-            x: Number((p0.x + nx * OFFSET + ux * 6).toFixed(1)),
-            y: Number((p0.y + ny * OFFSET + uy * 6).toFixed(1))
+            x: Number(Math.min(Math.max(12, p0.x + nx * offset + ux * 6), 288).toFixed(1)),
+            y: Number(Math.min(Math.max(12, p0.y + ny * offset + uy * 6), 288).toFixed(1))
         };
         arrowEnd = {
-            x: Number((p1.x + nx * OFFSET - ux * 6).toFixed(1)),
-            y: Number((p1.y + ny * OFFSET - uy * 6).toFixed(1))
+            x: Number(Math.min(Math.max(12, p1.x + nx * offset - ux * 6), 288).toFixed(1)),
+            y: Number(Math.min(Math.max(12, p1.y + ny * offset - uy * 6), 288).toFixed(1))
         };
         arrowPathD = `M ${arrowStart.x} ${arrowStart.y} L ${arrowEnd.x} ${arrowEnd.y}`;
     } else {
@@ -207,8 +238,8 @@ export const calculateStrokeArrowAndNumber = (stroke, strokeIndex) => {
         for (let i = startIndex; i <= endIndex; i++) {
             const pt = stroke[i];
             sampled.push({
-                x: Number((pt.x + nx * OFFSET).toFixed(1)),
-                y: Number((pt.y + ny * OFFSET).toFixed(1))
+                x: Number(Math.min(Math.max(12, pt.x + nx * offset), 288).toFixed(1)),
+                y: Number(Math.min(Math.max(12, pt.y + ny * offset), 288).toFixed(1))
             });
         }
 
@@ -220,8 +251,14 @@ export const calculateStrokeArrowAndNumber = (stroke, strokeIndex) => {
                 arrowPathD += ` L ${sampled[i].x} ${sampled[i].y}`;
             }
         } else {
-            arrowStart = { x: p0.x + nx * OFFSET, y: p0.y + ny * OFFSET };
-            arrowEnd = { x: p1.x + nx * OFFSET, y: p1.y + ny * OFFSET };
+            arrowStart = {
+                x: Number(Math.min(Math.max(12, p0.x + nx * offset), 288).toFixed(1)),
+                y: Number(Math.min(Math.max(12, p0.y + ny * offset), 288).toFixed(1))
+            };
+            arrowEnd = {
+                x: Number(Math.min(Math.max(12, p1.x + nx * offset), 288).toFixed(1)),
+                y: Number(Math.min(Math.max(12, p1.y + ny * offset), 288).toFixed(1))
+            };
             arrowPathD = `M ${arrowStart.x} ${arrowStart.y} L ${arrowEnd.x} ${arrowEnd.y}`;
         }
     }
@@ -239,7 +276,10 @@ export const calculateStrokeArrowAndNumber = (stroke, strokeIndex) => {
         numX,
         numY,
         number: num,
-        startMarker: p0
+        startMarker: {
+            x: Math.min(Math.max(8, p0.x), 292),
+            y: Math.min(Math.max(8, p0.y), 292)
+        }
     };
 };
 
@@ -255,6 +295,7 @@ export const resolveWordStrokes = (wordOrChar, config = {}, lexicon = []) => {
 
     const scriptType = config.phonologyTypes || 'alphabetic';
     const customGlyphs = config.customGlyphs || {};
+    const scriptDataById = config.scriptDataById || {};
     const syllabaryMap = config.syllabaryMap || {};
     const featuralComponents = config.featuralComponents || {};
     const blockTemplates = config.blockTemplates || [];
@@ -265,13 +306,30 @@ export const resolveWordStrokes = (wordOrChar, config = {}, lexicon = []) => {
 
     const characters = [];
 
-    // Helper to extract strokes from customGlyphs by charCode or symbol
+    // Robust helper to extract strokes from customGlyphs or scriptDataById
     const getStrokesForChar = (char) => {
         if (!char) return [];
         const codePoint = char.codePointAt(0);
+
+        // 1. Check direct config.customGlyphs
         if (customGlyphs[codePoint]) return cleanStrokes(customGlyphs[codePoint]);
         if (customGlyphs[String(codePoint)]) return cleanStrokes(customGlyphs[String(codePoint)]);
         if (customGlyphs[char]) return cleanStrokes(customGlyphs[char]);
+
+        // 2. Check scriptDataById (active script, default script, then all scripts)
+        if (scriptDataById && typeof scriptDataById === 'object') {
+            const defaultId = config.scriptRules?.defaultScriptId || 'default';
+            const activeId = config.activeScriptSystemId || defaultId;
+            const searchOrder = [activeId, defaultId, ...Object.keys(scriptDataById)];
+            for (const sId of searchOrder) {
+                const sGlyphs = scriptDataById[sId]?.customGlyphs;
+                if (!sGlyphs) continue;
+                if (sGlyphs[codePoint]) return cleanStrokes(sGlyphs[codePoint]);
+                if (sGlyphs[String(codePoint)]) return cleanStrokes(sGlyphs[String(codePoint)]);
+                if (sGlyphs[char]) return cleanStrokes(sGlyphs[char]);
+            }
+        }
+
         return [];
     };
 

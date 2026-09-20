@@ -55,24 +55,33 @@ const RenderStroke = ({ stroke, color = 'var(--tx)', strokeWidth = 12 }) => {
 };
 
 export default function StrokeOrderViewer({ word, char, scriptType: explicitScriptType, rawStrokes, onStrokesChange }) {
-    const config = useConfigStore();
+    const phonologyTypes = useConfigStore(state => state.phonologyTypes);
+    const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
+    const scriptDataById = useConfigStore(state => state.scriptDataById) || {};
+    const scriptRules = useConfigStore(state => state.scriptRules);
+    const scriptSystems = useConfigStore(state => state.scriptSystems);
+    const activeScriptSystemId = useConfigStore(state => state.activeScriptSystemId);
+    const addCustomGlyph = useConfigStore(state => state.addCustomGlyph);
+    const typographySettings = useConfigStore(state => state.typographySettings) || {};
+
     const rawLexicon = useLexiconStore(state => state.lexicon);
     const lexicon = useMemo(() => Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []), [rawLexicon]);
-    const addCustomGlyph = useConfigStore(state => state.addCustomGlyph);
-    const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
-    const typographySettings = useConfigStore(state => state.typographySettings) || {};
 
     const targetInput = char || word || '';
     const activeConfig = useMemo(() => ({
-        ...config,
-        phonologyTypes: explicitScriptType || config.phonologyTypes || 'alphabetic'
-    }), [config, explicitScriptType]);
+        phonologyTypes: explicitScriptType || phonologyTypes || 'alphabetic',
+        customGlyphs,
+        scriptDataById,
+        scriptRules,
+        scriptSystems,
+        activeScriptSystemId
+    }), [explicitScriptType, phonologyTypes, customGlyphs, scriptDataById, scriptRules, scriptSystems, activeScriptSystemId]);
 
     // Local override for edits made directly in this viewer
     const [customStrokesOverride, setCustomStrokesOverride] = useState(null);
     const [isEditingOrder, setIsEditingOrder] = useState(false);
-    const [isToolsOpen, setIsToolsOpen] = useState(false);
     const [isFontStudioModalOpen, setIsFontStudioModalOpen] = useState(false);
+    const [mergePickSource, setMergePickSource] = useState(null); // null = idle, -1 = ready to pick 1st, >=0 = index of 1st stroke
 
     // Resolve strokes for the word/character
     const resolvedData = useMemo(() => {
@@ -122,6 +131,7 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
         setSelectedCharIndex(idx);
         setCustomStrokesOverride(null);
         setStrokeHistory([]);
+        setMergePickSource(null);
         setIsPlaying(false);
         if (timerRef.current) clearInterval(timerRef.current);
         const charStrokes = characters[idx]?.strokes?.length || 0;
@@ -210,24 +220,40 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
         }
 
         const charCode = baseCharData?.charCode;
-        if (charCode != null && customGlyphs[charCode]) {
-            const existing = customGlyphs[charCode] || [];
+        if (charCode != null) {
+            const state = useConfigStore.getState();
+            const defaultScriptId = state.scriptRules?.defaultScriptId || 'default';
+            const activeScriptId = state.activeScriptSystemId || defaultScriptId;
+            let targetScriptId = defaultScriptId;
+            let existing = state.customGlyphs?.[charCode] || state.customGlyphs?.[String(charCode)];
+
+            if (!existing && state.scriptDataById) {
+                const searchOrder = [activeScriptId, defaultScriptId, ...Object.keys(state.scriptDataById)];
+                for (const sId of searchOrder) {
+                    const sg = state.scriptDataById[sId]?.customGlyphs;
+                    if (sg && (sg[charCode] || sg[String(charCode)])) {
+                        existing = sg[charCode] || sg[String(charCode)];
+                        targetScriptId = sId;
+                        break;
+                    }
+                }
+            }
+
             let metaObj = null;
-            if (existing.length > 0 && !Array.isArray(existing[0]) && existing[0]?.isMeta) {
+            if (existing && existing.length > 0 && !Array.isArray(existing[0]) && existing[0]?.isMeta) {
                 metaObj = existing[0];
             }
             const strokesToSave = metaObj ? [metaObj, ...newStrokesList] : newStrokesList;
 
-            // Debounce store/DB update by 200ms to eliminate freezing and lag.
-            // Reordering/merging does not alter static font outline, so heavy font compilation is bypassed.
+            // Debounce store/DB update by 250ms to eliminate freezing and lag.
             if (saveTimerRef.current) {
                 clearTimeout(saveTimerRef.current);
             }
             saveTimerRef.current = setTimeout(() => {
-                addCustomGlyph(charCode, strokesToSave);
-            }, 200);
+                addCustomGlyph(charCode, strokesToSave, null, targetScriptId, true);
+            }, 250);
         }
-    }, [strokes, onStrokesChange, baseCharData, customGlyphs, addCustomGlyph]);
+    }, [strokes, onStrokesChange, baseCharData, addCustomGlyph]);
 
     // Undo last stroke change
     const handleUndo = useCallback(() => {
@@ -260,32 +286,40 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
         applyStrokeUpdate(next);
     };
 
-    // Reverse stroke direction (flips start and end, and the directional arrow)
+    // Stroke reversal: reverse direction of stroke at index
     const handleReverseStroke = (index) => {
-        const next = [...strokes];
-        const target = next[index];
-        if (!target || !Array.isArray(target)) return;
+        if (index < 0 || index >= strokes.length) return;
+        const target = strokes[index];
+        if (!Array.isArray(target) || target.length < 2) return;
+
         const reversed = [...target].reverse();
-        reversed.lineCap = target.lineCap;
-        reversed.isFilled = target.isFilled;
+        if (target.isFilled) reversed.isFilled = true;
+        if (target.lineCap) reversed.lineCap = target.lineCap;
+
+        const next = [...strokes];
         next[index] = reversed;
         applyStrokeUpdate(next);
+        toast.success(`Stroke ${index + 1} direction reversed`);
     };
 
-    // Merge two consecutive strokes into one continuous stroke
+    // Merge stroke at indexA with stroke at indexB
     const handleMergeStroke = (indexA, indexB) => {
-        if (indexA < 0 || indexB >= strokes.length || indexA >= indexB) return;
-        const strokeA = strokes[indexA];
-        const strokeB = strokes[indexB];
-        if (!strokeA || !strokeB) return;
+        if (indexA < 0 || indexA >= strokes.length || indexB < 0 || indexB >= strokes.length || indexA === indexB) return;
+        const [firstIdx, secondIdx] = indexA < indexB ? [indexA, indexB] : [indexB, indexA];
+        const strokeA = strokes[firstIdx];
+        const strokeB = strokes[secondIdx];
+        if (!Array.isArray(strokeA) || !Array.isArray(strokeB)) return;
 
-        const merged = [...strokeA, ...strokeB];
-        merged.lineCap = strokeA.lineCap || strokeB.lineCap || 'round';
-        merged.isFilled = strokeA.isFilled || strokeB.isFilled || false;
+        const mergedPoints = [...strokeA, ...strokeB];
+        if (strokeA.isFilled || strokeB.isFilled) mergedPoints.isFilled = true;
+        if (strokeA.lineCap || strokeB.lineCap) mergedPoints.lineCap = strokeA.lineCap || strokeB.lineCap;
 
-        const next = [...strokes.slice(0, indexA), merged, ...strokes.slice(indexB + 1)];
+        const next = [...strokes];
+        next.splice(secondIdx, 1);
+        next.splice(firstIdx, 1, mergedPoints);
         applyStrokeUpdate(next);
-        toast.success(`Merged strokes ${indexA + 1} & ${indexB + 1}`);
+        setMergePickSource(null);
+        toast.success(`Merged stroke ${firstIdx + 1} and stroke ${secondIdx + 1}`);
     };
 
     // If no custom strokes available anywhere for this character
@@ -337,57 +371,63 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                 <div className="so-toolbar-actions">
                     <button
                         type="button"
-                        className={`so-btn-collapse-toggle ${isToolsOpen ? 'open' : ''} ${isEditingOrder ? 'editing' : ''}`}
-                        onClick={() => setIsToolsOpen(!isToolsOpen)}
-                        title={isToolsOpen ? "Collapse Edit Tools" : "Expand Edit Tools"}
+                        className={`so-btn-toolbar ${isEditingOrder ? 'active' : ''}`}
+                        onClick={() => {
+                            setIsEditingOrder(!isEditingOrder);
+                            setMergePickSource(null);
+                        }}
+                        title={isEditingOrder ? "Finish stroke editing" : "Enable stroke reordering, reversing, and merging"}
                     >
-                        <PenTool size={13} />
-                        <span>Edit Tools</span>
-                        <ChevronDown size={14} className={`so-collapse-chevron ${isToolsOpen ? 'rotated' : ''}`} />
+                        {isEditingOrder ? <Check size={14} /> : <ArrowLeftRight size={14} />}
+                        <span>{isEditingOrder ? 'Done Editing' : 'Reorder / Merge Strokes'}</span>
                     </button>
+
+                    {(baseCharData.charCode != null || explicitScriptType === 'logographic') && (
+                        <button
+                            type="button"
+                            className="so-btn-toolbar"
+                            onClick={() => setIsFontStudioModalOpen(true)}
+                            title="Open Font Studio to draw or edit this character"
+                        >
+                            <Brush size={14} />
+                            <span>Font Studio</span>
+                        </button>
+                    )}
                 </div>
             </div>
 
-            {/* Collapsible Edit Tools Drawer */}
-            {isToolsOpen && (
+            {/* Active Editing Sub-toolbar */}
+            {isEditingOrder && (
                 <div className="so-edit-tools-drawer">
                     <div className="so-edit-tools-inner">
                         <button
                             type="button"
-                            className={`so-btn-toolbar ${isEditingOrder ? 'active' : ''}`}
-                            onClick={() => setIsEditingOrder(!isEditingOrder)}
-                            title="Toggle stroke reordering, reversing, and merging controls"
+                            className={`so-btn-toolbar ${mergePickSource !== null ? 'active' : ''}`}
+                            onClick={() => setMergePickSource(mergePickSource !== null ? null : -1)}
+                            title="Click any two stroke cards to merge them together"
                         >
-                            {isEditingOrder ? <Check size={14} /> : <ArrowLeftRight size={14} />}
-                            <span>{isEditingOrder ? 'Done Editing' : 'Reorder / Merge Strokes'}</span>
+                            <Merge size={14} />
+                            <span>{mergePickSource !== null ? 'Cancel Merge Pick' : 'Pick 2 Strokes to Merge'}</span>
                         </button>
-                        {isEditingOrder && strokeHistory.length > 0 && (
-                            <button
-                                type="button"
-                                className="so-btn-toolbar"
-                                onClick={handleUndo}
-                                title="Undo last change (Ctrl+Z)"
-                            >
-                                <RotateCcw size={14} />
-                                <span>Undo</span>
-                            </button>
-                        )}
-                        {(baseCharData.charCode != null || explicitScriptType === 'logographic') && (
-                            <button
-                                type="button"
-                                className="so-btn-toolbar"
-                                onClick={() => setIsFontStudioModalOpen(true)}
-                                title="Open Font Studio to draw or edit this character"
-                            >
-                                <Brush size={14} />
-                                <span>Edit in Font Studio</span>
-                            </button>
-                        )}
-                        {isEditingOrder && (
-                            <span className="so-edit-tools-note">
-                                Use ← / → to reorder, ⇄ to reverse, or <Merge size={12} style={{ verticalAlign: 'middle', display: 'inline-block' }} /> to merge strokes.
-                            </span>
-                        )}
+
+                        <button
+                            type="button"
+                            className="so-btn-toolbar"
+                            onClick={handleUndo}
+                            disabled={strokeHistory.length === 0}
+                            title="Undo last change (Ctrl+Z)"
+                        >
+                            <RotateCcw size={14} />
+                            <span>Undo {strokeHistory.length > 0 ? `(${strokeHistory.length})` : ''}</span>
+                        </button>
+
+                        <span className="so-edit-tools-note">
+                            {mergePickSource !== null 
+                                ? (mergePickSource === -1 
+                                    ? '👉 Click the 1st stroke card below to merge' 
+                                    : `👉 Now click the 2nd stroke card to merge with Stroke ${mergePickSource + 1}`)
+                                : 'Use ← / → to reorder, ⇄ to reverse, or click Merge under a card to combine.'}
+                        </span>
                     </div>
                 </div>
             )}
@@ -577,13 +617,34 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                     {strokes.map((stroke, k) => {
                         const arrow = arrows[k];
                         const isSelected = currentStep === k + 1;
+                        const isMergeSource = mergePickSource === k;
+                        const isMergeTarget = mergePickSource !== null && mergePickSource !== -1 && mergePickSource !== k;
 
                         return (
                             <div
                                 key={k}
-                                className={`so-cell-card ${isSelected ? 'active' : ''}`}
-                                onClick={() => { setIsPlaying(false); setCurrentStep(k + 1); }}
-                                title={`Step ${k + 1}`}
+                                className={`so-cell-card ${isSelected ? 'active' : ''} ${isMergeSource ? 'merge-source' : ''} ${isMergeTarget ? 'merge-target' : ''} ${mergePickSource !== null ? 'merge-picking' : ''}`}
+                                onClick={() => {
+                                    if (mergePickSource !== null) {
+                                        if (mergePickSource === -1) {
+                                            setMergePickSource(k);
+                                        } else if (mergePickSource === k) {
+                                            setMergePickSource(null);
+                                        } else {
+                                            handleMergeStroke(mergePickSource, k);
+                                        }
+                                        return;
+                                    }
+                                    setIsPlaying(false);
+                                    setCurrentStep(k + 1);
+                                }}
+                                title={mergePickSource !== null 
+                                    ? (mergePickSource === -1 
+                                        ? `Click to select Stroke ${k + 1}` 
+                                        : (mergePickSource === k 
+                                            ? 'Click to deselect' 
+                                            : `Click to merge Stroke ${mergePickSource + 1} with Stroke ${k + 1}`))
+                                    : `Step ${k + 1}`}
                             >
                                 <div className="so-cell-svg-wrapper">
                                     <svg viewBox="0 0 300 300" className="so-cell-svg">

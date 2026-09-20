@@ -607,42 +607,43 @@ export const useConfigStore = create(
                 });
             },
 
-            addCustomGlyph: (charCode, strokesArray, base64Font) => {
+            addCustomGlyph: (charCode, strokesArray, base64Font, targetScriptId = null, isSilent = false) => {
                 const state = useConfigStore.getState();
                 const { projectId, scriptRules, scriptDataById } = state;
                 const defaultScriptId = scriptRules?.defaultScriptId || 'default';
+                const resolvedScriptId = targetScriptId || defaultScriptId;
+
+                const nextCustomGlyphs = { ...state.customGlyphs, [charCode]: strokesArray };
+                const currentScriptData = scriptDataById[resolvedScriptId] || {};
+                const nextScriptGlyphs = { ...(currentScriptData.customGlyphs || {}), [charCode]: strokesArray };
+                const newScriptData = {
+                    ...currentScriptData,
+                    customGlyphs: nextScriptGlyphs,
+                    ...(base64Font ? { customFontBase64: base64Font, customFont: base64Font } : {})
+                };
 
                 if (projectId) {
-                    const bloat = { customGlyphs: { ...state.customGlyphs, [charCode]: strokesArray } };
-                    if (base64Font) {
-                        bloat.customFontBase64 = base64Font;
-                        bloat.customFont = base64Font;
-                    }
-                    saveLargeDataToDB(projectId, bloat);
-
-                    const scriptData = scriptDataById[defaultScriptId] || {};
-                    const newScriptData = {
-                        ...scriptData,
-                        customGlyphs: { ...(scriptData.customGlyphs || {}), [charCode]: strokesArray },
+                    const bloatPatch = {
+                        customGlyphs: nextCustomGlyphs,
+                        [resolvedScriptId]: newScriptData
                     };
                     if (base64Font) {
-                        newScriptData.customFontBase64 = base64Font;
-                        newScriptData.customFont = base64Font;
+                        bloatPatch.customFontBase64 = base64Font;
+                        bloatPatch.customFont = base64Font;
                     }
-                    saveScriptDataToDB(projectId, defaultScriptId, newScriptData);
+                    saveLargeDataToDB(projectId, bloatPatch);
                 }
+
                 set((state) => ({
-                    customGlyphs: { ...state.customGlyphs, [charCode]: strokesArray },
+                    customGlyphs: nextCustomGlyphs,
                     ...(base64Font ? { customFontBase64: base64Font, customFont: base64Font } : {}),
                     scriptDataById: {
                         ...state.scriptDataById,
-                        [defaultScriptId]: {
-                            ...(state.scriptDataById[defaultScriptId] || {}),
-                            customGlyphs: { ...(state.scriptDataById[defaultScriptId]?.customGlyphs || {}), [charCode]: strokesArray },
-                            ...(base64Font ? { customFontBase64: base64Font, customFont: base64Font } : {})
-                        }
+                        [resolvedScriptId]: newScriptData
                     },
-                    activity: [{ text: `Created custom glyph (${charCode})`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15)
+                    ...(isSilent ? {} : {
+                        activity: [{ text: `Created custom glyph (${charCode})`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15)
+                    })
                 }));
             },
 
