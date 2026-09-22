@@ -1,0 +1,563 @@
+/* vocabChecklist.css — Vocab Checklist component styles */
+/* No emojis, no glassmorphism — clean functional UI following no-slop-ui guidelines */
+
+/* ── Checklist Container ───────────────────────────────────────────────── */
+.vc-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* ── Header ────────────────────────────────────────────────────────────── */
+.vc-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+
+.vc-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.vc-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--tx);
+    margin: 0;
+}
+
+.vc-subtitle {
+    font-size: 0.82rem;
+    color: var(--tx2);
+    margin: 0;
+}
+
+/* ── Progress Bar ──────────────────────────────────────────────────────── */
+.vc-progress-block {
+    margin-top: 12px;
+    margin-bottom: 4px;
+}
+
+.vc-progress-stats {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.vc-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.vc-stat-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--tx);
+    line-height: 1;
+}
+
+.vc-stat-label {
+    font-size: 0.72rem;
+    color: var(--tx2);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+}
+
+.vc-stat-value.accent {
+    color: var(--acc);
+}
+
+.vc-stat-divider {
+    width: 1px;
+    height: 28px;
+    background: var(--bd);
+}
+
+.vc-progress-bar {
+    height: 6px;
+    background: var(--s2);
+    border-radius: 99px;
+    overflow: hidden;
+    border: 1px solid var(--bd);
+}
+
+.vc-progress-fill {
+    height: 100%;
+    background: var(--acc);
+    border-radius: 99px;
+    transition: width 0.4s ease;
+    min-width: 0;
+}
+
+/* ── Category Navigation ───────────────────────────────────────────────── */
+.vc-category-nav {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 12px 0 4px;
+    border-top: 1px solid var(--bd);
+    margin-top: 12px;
+}
+
+.vc-cat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    border: 1px solid var(--bd);
+    border-radius: 4px;
+    background: var(--s1);
+    color: var(--tx2);
+    cursor: pointer;
+    transition: all 0.12s ease;
+    white-space: nowrap;
+}
+
+.vc-cat-chip:hover {
+    border-color: var(--acc);
+    color: var(--tx);
+    background: var(--s2);
+}
+
+.vc-cat-chip.active {
+    border-color: var(--acc);
+    background: color-mix(in srgb, var(--acc) 12%, var(--s1));
+    color: var(--tx);
+    font-weight: 600;
+}
+
+.vc-cat-chip-icon {
+    opacity: 0.65;
+    flex-shrink: 0;
+}
+
+.vc-cat-chip.active .vc-cat-chip-icon {
+    opacity: 1;
+    color: var(--acc);
+}
+
+.vc-cat-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--tx2);
+    background: var(--s2);
+    border-radius: 99px;
+    padding: 1px 6px;
+    border: 1px solid var(--bd);
+    min-width: 20px;
+    text-align: center;
+}
+
+.vc-cat-chip.active .vc-cat-badge {
+    background: var(--acc);
+    color: #fff;
+    border-color: var(--acc);
+}
+
+/* ── Filter Row ────────────────────────────────────────────────────────── */
+.vc-filter-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 12px 0 4px;
+    border-top: 1px solid var(--bd);
+    margin-top: 8px;
+}
+
+.vc-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 120px;
+}
+
+.vc-filter-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--tx2);
+}
+
+.vc-filter-input {
+    background: var(--s1);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    color: var(--tx);
+    font-size: 0.85rem;
+    padding: 6px 10px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.vc-filter-input:focus {
+    border-color: var(--acc);
+}
+
+.vc-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px 0 4px;
+}
+
+.vc-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: var(--tx2);
+    cursor: pointer;
+    user-select: none;
+}
+
+.vc-toggle-label input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--acc);
+    cursor: pointer;
+}
+
+/* ── Toolbar (batch actions) ───────────────────────────────────────────── */
+.vc-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 10px 0 6px;
+    border-top: 1px solid var(--bd);
+    margin-top: 8px;
+}
+
+.vc-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.vc-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.vc-count-label {
+    font-size: 0.82rem;
+    color: var(--tx2);
+}
+
+.vc-count-label strong {
+    color: var(--tx);
+}
+
+/* ── Word Rows ─────────────────────────────────────────────────────────── */
+.vc-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+    max-height: 560px;
+    overflow-y: auto;
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--s3) transparent;
+}
+
+.vc-rows::-webkit-scrollbar {
+    width: 5px;
+}
+.vc-rows::-webkit-scrollbar-thumb {
+    background: var(--s3);
+    border-radius: 3px;
+}
+
+.vc-row {
+    display: grid;
+    grid-template-columns: 20px 180px 1fr;
+    gap: 12px;
+    align-items: start;
+    background: var(--s1);
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    padding: 10px 12px;
+    transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.vc-row.selected {
+    border-color: var(--acc);
+    background: color-mix(in srgb, var(--acc) 6%, var(--s1));
+}
+
+.vc-row.created {
+    opacity: 0.65;
+}
+
+.vc-row-check {
+    display: flex;
+    align-items: center;
+    padding-top: 2px;
+}
+
+.vc-row-check input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--acc);
+    cursor: pointer;
+}
+
+/* Left column: english word info */
+.vc-row-english {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.vc-english-word {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--tx);
+    text-transform: capitalize;
+}
+
+.vc-row-meta {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.vc-pos-badge {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--acc);
+    background: color-mix(in srgb, var(--acc) 12%, var(--s2));
+    border: 1px solid color-mix(in srgb, var(--acc) 30%, var(--bd));
+    border-radius: 3px;
+    padding: 1px 5px;
+}
+
+.vc-cat-label {
+    font-size: 0.68rem;
+    color: var(--tx2);
+}
+
+.vc-list-badge {
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: var(--tx2);
+    border: 1px solid var(--bd);
+    border-radius: 3px;
+    padding: 1px 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* Status indicator: created / uncreated */
+.vc-status {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    margin-top: 4px;
+}
+
+.vc-status.created {
+    color: var(--tx2);
+}
+
+.vc-status.uncreated {
+    color: var(--tx3);
+}
+
+.vc-status-word {
+    font-weight: 600;
+    color: var(--tx);
+    font-family: var(--font-conlang, inherit);
+}
+
+/* Right column: inputs */
+.vc-row-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.vc-input-row {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.vc-conlang-input {
+    flex: 1;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 4px;
+    color: var(--tx);
+    font-size: 0.9rem;
+    padding: 5px 8px;
+    outline: none;
+    transition: border-color 0.12s ease;
+}
+
+.vc-conlang-input:focus {
+    border-color: var(--acc);
+}
+
+.vc-conlang-input.has-value {
+    border-color: color-mix(in srgb, var(--acc) 50%, var(--bd));
+}
+
+.vc-meta-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+}
+
+.vc-meta-input {
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 4px;
+    color: var(--tx);
+    font-size: 0.8rem;
+    padding: 4px 7px;
+    outline: none;
+    transition: border-color 0.12s ease;
+    width: 100%;
+}
+
+.vc-meta-input:focus {
+    border-color: var(--acc);
+}
+
+.vc-icon-btn {
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 4px;
+    color: var(--tx2);
+    cursor: pointer;
+    padding: 5px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s ease;
+    flex-shrink: 0;
+}
+
+.vc-icon-btn:hover:not(:disabled) {
+    border-color: var(--acc);
+    color: var(--tx);
+    background: var(--s3);
+}
+
+.vc-icon-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Select inside row */
+.vc-row-select {
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 4px;
+    color: var(--tx);
+    font-size: 0.8rem;
+    padding: 4px 7px;
+    outline: none;
+    cursor: pointer;
+}
+
+/* ── Empty State ───────────────────────────────────────────────────────── */
+.vc-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 3rem 2rem;
+    gap: 0.75rem;
+    background: var(--s1);
+    border: 1px dashed var(--bd);
+    border-radius: 8px;
+    margin-top: 12px;
+}
+
+.vc-empty-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--tx);
+    margin: 0;
+}
+
+.vc-empty-desc {
+    font-size: 0.85rem;
+    color: var(--tx2);
+    margin: 0;
+    max-width: 360px;
+}
+
+/* ── Syllable Range ────────────────────────────────────────────────────── */
+.vc-syl-range {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.vc-syl-range .vc-filter-input {
+    max-width: 60px;
+    text-align: center;
+}
+
+.vc-syl-sep {
+    font-size: 0.8rem;
+    color: var(--tx2);
+    white-space: nowrap;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+    .vc-row {
+        grid-template-columns: 20px 1fr;
+        grid-template-rows: auto auto;
+    }
+
+    .vc-row-english {
+        grid-column: 2;
+    }
+
+    .vc-row-inputs {
+        grid-column: 1 / -1;
+    }
+
+    .vc-meta-row {
+        grid-template-columns: 1fr;
+    }
+
+    .vc-progress-stats {
+        gap: 10px;
+    }
+}
