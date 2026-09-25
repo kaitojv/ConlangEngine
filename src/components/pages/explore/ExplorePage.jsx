@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../utils/supabaseClient.js';
-import { Globe, BookA, User, Loader2, Heart, Trash2, Library, Map, Search, Users } from 'lucide-react';
+import { Globe, BookA, User, Loader2, Heart, Trash2, Library, Map as MapIcon, Search, Users } from 'lucide-react';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import toast from 'react-hot-toast';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
@@ -483,7 +483,7 @@ export default function ExplorePage() {
                     )}
                     {courseCount > 0 && (
                         <div className="explore-stat" title={`${courseCount} course modules`}>
-                            <Map size={14} />
+                            <MapIcon size={14} />
                             <span>{courseCount} {courseCount === 1 ? 'course' : 'courses'}</span>
                         </div>
                     )}
