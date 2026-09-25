@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../utils/supabaseClient.js';
-import { Globe, BookA, User, Loader2, Heart, Trash2, Library, Map } from 'lucide-react';
+import { Globe, BookA, User, Loader2, Heart, Trash2, Library, Map, Search, Users } from 'lucide-react';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import toast from 'react-hot-toast';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
@@ -21,7 +21,9 @@ export default function ExplorePage() {
     const [likesData, setLikesData] = useState({}); // { projectId: count }
     const [userLikes, setUserLikes] = useState(new Set()); // Set of projectIds liked by user
     const [sessionUser, setSessionUser] = useState(null);
-    const [sortBy, setSortBy] = useState('updated'); // 'updated', 'likes', 'name', 'words'
+    const [sortBy, setSortBy] = useState('updated'); // 'updated', 'likes', 'name', 'author', 'words'
+    const [groupByAuthor, setGroupByAuthor] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const isPublic = useConfigStore((state) => state.isPublic);
     const updateConfig = useConfigStore((state) => state.updateConfig);
@@ -274,8 +276,19 @@ export default function ExplorePage() {
         }
     };
 
-    const sortedConlangs = React.useMemo(() => {
-        return [...conlangs].sort((a, b) => {
+    const filteredConlangs = React.useMemo(() => {
+        if (!searchQuery.trim()) return conlangs;
+        const q = searchQuery.toLowerCase().trim();
+        return conlangs.filter(lang => {
+            const name = (lang.project_data?.config?.conlangName || '').toLowerCase();
+            const author = (lang.project_data?.config?.authorName || '').toLowerCase();
+            const desc = (lang.project_data?.config?.description || '').toLowerCase();
+            return name.includes(q) || author.includes(q) || desc.includes(q);
+        });
+    }, [conlangs, searchQuery]);
+
+    const sortConlangList = React.useCallback((list) => {
+        return [...list].sort((a, b) => {
             if (sortBy === 'updated') {
                 const dateA = new Date(a.project_data?.last_updated || a.updated_at || a.created_at).getTime();
                 const dateB = new Date(b.project_data?.last_updated || b.updated_at || b.created_at).getTime();
@@ -285,7 +298,6 @@ export default function ExplorePage() {
                 const likesA = likesData[a.project_id] || 0;
                 const likesB = likesData[b.project_id] || 0;
                 if (likesB !== likesA) return likesB - likesA;
-                // fallback to updated
                 const dateA = new Date(a.project_data?.last_updated || a.updated_at || a.created_at).getTime();
                 const dateB = new Date(b.project_data?.last_updated || b.updated_at || b.created_at).getTime();
                 return dateB - dateA;
@@ -295,6 +307,11 @@ export default function ExplorePage() {
                 const nameB = b.project_data?.config?.conlangName || 'Unnamed Conlang';
                 return nameA.localeCompare(nameB);
             }
+            if (sortBy === 'author') {
+                const authorA = a.project_data?.config?.authorName || 'Unknown Author';
+                const authorB = b.project_data?.config?.authorName || 'Unknown Author';
+                return authorA.localeCompare(authorB);
+            }
             if (sortBy === 'words') {
                 const wordsA = a.project_data?.wordCount || a.project_data?.dictionary?.length || 0;
                 const wordsB = b.project_data?.wordCount || b.project_data?.dictionary?.length || 0;
@@ -302,7 +319,191 @@ export default function ExplorePage() {
             }
             return 0;
         });
-    }, [conlangs, likesData, sortBy]);
+    }, [sortBy, likesData]);
+
+    const authorGroups = React.useMemo(() => {
+        if (!groupByAuthor) return [];
+
+        const groupMap = new Map();
+
+        filteredConlangs.forEach(lang => {
+            // Group primarily by user_id if present; fallback to trimmed lowercase author name
+            const key = lang.user_id 
+                ? `uid_${lang.user_id}` 
+                : `name_${(lang.project_data?.config?.authorName || 'unknown').trim().toLowerCase()}`;
+            
+            if (!groupMap.has(key)) {
+                groupMap.set(key, {
+                    key,
+                    userId: lang.user_id,
+                    authorNames: [],
+                    langs: [],
+                    totalLikes: 0,
+                    totalWords: 0,
+                    latestDate: 0
+                });
+            }
+            
+            const grp = groupMap.get(key);
+            grp.langs.push(lang);
+            const aName = lang.project_data?.config?.authorName?.trim();
+            if (aName && !grp.authorNames.includes(aName)) {
+                grp.authorNames.push(aName);
+            }
+            grp.totalLikes += (likesData[lang.project_id] || 0);
+            grp.totalWords += (lang.project_data?.wordCount || lang.project_data?.dictionary?.length || 0);
+            const itemDate = new Date(lang.project_data?.last_updated || lang.updated_at || lang.created_at).getTime();
+            if (itemDate > grp.latestDate) {
+                grp.latestDate = itemDate;
+            }
+        });
+
+        const groups = Array.from(groupMap.values()).map(grp => {
+            // Pick longest, most complete author name (e.g. "Arthur Gregório Nogueira" over "Arthur")
+            const authorName = grp.authorNames.length > 0 
+                ? [...grp.authorNames].sort((a, b) => b.length - a.length)[0]
+                : 'Unknown Author';
+
+            return {
+                ...grp,
+                authorName,
+                sortedLangs: sortConlangList(grp.langs)
+            };
+        });
+
+        return groups.sort((a, b) => {
+            if (sortBy === 'updated') {
+                return b.latestDate - a.latestDate;
+            }
+            if (sortBy === 'likes') {
+                if (b.totalLikes !== a.totalLikes) return b.totalLikes - a.totalLikes;
+                return b.latestDate - a.latestDate;
+            }
+            if (sortBy === 'name' || sortBy === 'author') {
+                return a.authorName.localeCompare(b.authorName);
+            }
+            if (sortBy === 'words') {
+                return b.totalWords - a.totalWords;
+            }
+            return 0;
+        });
+    }, [filteredConlangs, groupByAuthor, likesData, sortBy, sortConlangList]);
+
+    const flatSortedConlangs = React.useMemo(() => {
+        return sortConlangList(filteredConlangs);
+    }, [filteredConlangs, sortConlangList]);
+
+    const renderConlangCard = (lang) => {
+        const { config, dictionary, wiki, customCourse: topCourse } = lang.project_data;
+        const icon = config?.conlangIcon || '🌐';
+        const name = config?.conlangName || 'Unnamed Conlang';
+        const author = config?.authorName || 'Unknown Author';
+        const desc = config?.description || 'No description provided.';
+        const themeColor = config?.colors?.accent || 'var(--acc)';
+        const wordCount = lang.project_data.wordCount || (dictionary ? dictionary.length : 0);
+        
+        const wikiPages = wiki || config?.wikiPages || {};
+        const wikiCount = Object.keys(wikiPages).length;
+        const customCourse = topCourse || config?.customCourse || [];
+        const courseCount = customCourse.length;
+        
+        const defaultScriptId = config?.scriptRules?.defaultScriptId || 'default';
+        const scriptData = config?.scriptDataById?.[defaultScriptId] || config || {};
+
+        const customFont = scriptData?.customFontBase64 || config?.customFontBase64;
+        const fontName = customFont ? `ExploreFont_${lang.project_id}` : undefined;
+        // Strip charset to prevent browser decoding failure for binary fonts
+        const safeFontUrl = customFont ? customFont.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,') : '';
+
+        let displayName = name;
+
+        // Merge scriptData into a temporary config for transliteration
+        const translitConfig = { ...config, ...scriptData };
+
+        // If the snapshot is missing a compiled font, do not attempt to map to PUA glyphs, 
+        // as they will only render as tofu. This will allow standard Unicode transliterations 
+        // (like Cyrillic or Greek) to continue working, while falling back to base letters for custom scripts.
+        if (!customFont) {
+            translitConfig.alphabetGlyphs = {};
+            translitConfig.syllabaryMap = {};
+        }
+
+        // Hanul (featural_block) uses font ligatures so it doesn't need text replacement
+        const needsTransliteration = ['logographic', 'syllabic', 'alphabetic'].includes(config?.phonologyTypes);
+        if (needsTransliteration) {
+            displayName = name.split(/(\s+)/).map(w => w.trim() ? transliterateText(w, translitConfig, dictionary || []) : w).join('');
+        }
+
+        return (
+            <div 
+                key={lang.project_id} 
+                className="conlang-explore-card"
+                style={{ '--card-theme': themeColor }}
+                onClick={() => handleCardClick(lang.project_id)}
+            >
+                {customFont && (
+                    <style>{`
+                        @font-face {
+                            font-family: '${fontName}';
+                            src: url('${safeFontUrl}');
+                        }
+                    `}</style>
+                )}
+                <div className="explore-card-top">
+                    <div className="explore-icon" style={{ color: themeColor }}>
+                        {getConlangIcon(icon, 32)}
+                    </div>
+                    <div className="explore-titles">
+                        <h3 className="explore-name notranslate" title={name} style={customFont ? { fontFamily: `'${fontName}', 'Inter', sans-serif` } : {}}>{displayName}</h3>
+                        <p className="explore-author">
+                            <User size={12} /> {author}
+                        </p>
+                    </div>
+                    {sessionUser && sessionUser.id === lang.user_id && (
+                        <button 
+                            className="explore-delete-btn" 
+                            onClick={(e) => handleDeletePublicConlang(e, lang.project_id)}
+                            title="Delete from Explore"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    )}
+                </div>
+                <p className="explore-desc notranslate">{desc}</p>
+                <div className="explore-stats">
+                    <div className="explore-stat">
+                        <BookA size={14} />
+                        <span>{wordCount} words</span>
+                    </div>
+                    {wikiCount > 0 && (
+                        <div className="explore-stat" title={`${wikiCount} wiki/corpus items`}>
+                            <Library size={14} />
+                            <span>{wikiCount} {wikiCount === 1 ? 'article' : 'articles'}</span>
+                        </div>
+                    )}
+                    {courseCount > 0 && (
+                        <div className="explore-stat" title={`${courseCount} course modules`}>
+                            <Map size={14} />
+                            <span>{courseCount} {courseCount === 1 ? 'course' : 'courses'}</span>
+                        </div>
+                    )}
+                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <button 
+                            className={`explore-like-btn ${userLikes.has(lang.project_id) ? 'liked' : ''}`}
+                            onClick={(e) => toggleLike(e, lang.project_id)}
+                            title={userLikes.has(lang.project_id) ? "Unlike" : "Like"}
+                        >
+                            <Heart size={14} />
+                            <span>{likesData[lang.project_id] || 0}</span>
+                        </button>
+                        <div className="explore-stat" style={{ fontSize: '0.7rem', fontWeight: 'normal', opacity: 0.7 }}>
+                            Last updated: {new Date(lang.project_data?.last_updated || lang.updated_at || lang.created_at).toLocaleDateString()}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     if (loading) {
         return <PageSkeleton type="conlangs" />;
@@ -324,7 +525,38 @@ export default function ExplorePage() {
                     <h1>Explore</h1>
                     <p>Discover public conlangs created by the community.</p>
                 </div>
-                <div className="explore-header-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div className="explore-header-actions" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div className="explore-search-wrapper">
+                        <Search size={15} className="explore-search-icon" />
+                        <input 
+                            type="text" 
+                            className="explore-search-input"
+                            placeholder="Search conlangs or authors..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                        {searchQuery && (
+                            <button 
+                                type="button"
+                                className="explore-search-clear" 
+                                onClick={() => setSearchQuery('')}
+                                title="Clear search"
+                            >
+                                ×
+                            </button>
+                        )}
+                    </div>
+
+                    <button 
+                        type="button"
+                        className={`explore-toggle-btn ${groupByAuthor ? 'active' : ''}`}
+                        onClick={() => setGroupByAuthor(prev => !prev)}
+                        title={groupByAuthor ? "Switch to flat grid" : "Group conlangs by author"}
+                    >
+                        <Users size={14} />
+                        <span>{groupByAuthor ? 'Grouped by Author' : 'All Conlangs'}</span>
+                    </button>
+
                     <div className="explore-sort">
                         <select 
                             value={sortBy} 
@@ -333,10 +565,12 @@ export default function ExplorePage() {
                         >
                             <option value="updated">Last Updated</option>
                             <option value="likes">Most Liked</option>
-                            <option value="name">A-Z</option>
+                            <option value="name">Conlang A-Z</option>
+                            <option value="author">Author A-Z</option>
                             <option value="words">Word Count</option>
                         </select>
                     </div>
+
                     <Button 
                         variant={isPublic ? 'error' : 'primary'} 
                         onClick={handleTogglePublish}
@@ -352,120 +586,47 @@ export default function ExplorePage() {
                     <h3>No public conlangs found.</h3>
                     <p>Be the first to share your creation by toggling "Publicly Visible" in your System Settings and syncing to the cloud!</p>
                 </div>
-            ) : (
-                <div className="explore-grid">
-                    {sortedConlangs.map((lang) => {
-                        const { config, dictionary, wiki, customCourse: topCourse } = lang.project_data;
-                        const icon = config?.conlangIcon || '🌐';
-                        const name = config?.conlangName || 'Unnamed Conlang';
-                        const author = config?.authorName || 'Unknown Author';
-                        const desc = config?.description || 'No description provided.';
-                        const themeColor = config?.colors?.accent || 'var(--acc)';
-                        const wordCount = lang.project_data.wordCount || (dictionary ? dictionary.length : 0);
-                        
-                        const wikiPages = wiki || config?.wikiPages || {};
-                        const wikiCount = Object.keys(wikiPages).length;
-                        const customCourse = topCourse || config?.customCourse || [];
-                        const courseCount = customCourse.length;
-                        
-                        const defaultScriptId = config?.scriptRules?.defaultScriptId || 'default';
-                        const scriptData = config?.scriptDataById?.[defaultScriptId] || config || {};
-
-                        const customFont = scriptData?.customFontBase64 || config?.customFontBase64;
-                        const fontName = customFont ? `ExploreFont_${lang.project_id}` : undefined;
-                        // Strip charset to prevent browser decoding failure for binary fonts
-                        const safeFontUrl = customFont ? customFont.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,') : '';
-
-                        let displayName = name;
-
-                        // Merge scriptData into a temporary config for transliteration
-                        const translitConfig = { ...config, ...scriptData };
-
-                        // If the snapshot is missing a compiled font, do not attempt to map to PUA glyphs, 
-                        // as they will only render as tofu. This will allow standard Unicode transliterations 
-                        // (like Cyrillic or Greek) to continue working, while falling back to base letters for custom scripts.
-                        if (!customFont) {
-                            translitConfig.alphabetGlyphs = {};
-                            translitConfig.syllabaryMap = {};
-                        }
-                        
-
-                        // Hanul (featural_block) uses font ligatures so it doesn't need text replacement
-                        const needsTransliteration = ['logographic', 'syllabic', 'alphabetic'].includes(config?.phonologyTypes);
-                        if (needsTransliteration) {
-                            displayName = name.split(/(\s+)/).map(w => w.trim() ? transliterateText(w, translitConfig, dictionary || []) : w).join('');
-                        }
-
-                        return (
-                            <div 
-                                key={lang.project_id} 
-                                className="conlang-explore-card"
-                                style={{ '--card-theme': themeColor }}
-                                onClick={() => handleCardClick(lang.project_id)}
-                            >
-                                {customFont && (
-                                    <style>{`
-                                        @font-face {
-                                            font-family: '${fontName}';
-                                            src: url('${safeFontUrl}');
-                                        }
-                                    `}</style>
-                                )}
-                                <div className="explore-card-top">
-                                    <div className="explore-icon" style={{ color: themeColor }}>
-                                        {getConlangIcon(icon, 32)}
+            ) : filteredConlangs.length === 0 ? (
+                <div className="explore-empty">
+                    <Search size={40} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
+                    <h3>No conlangs found</h3>
+                    <p>No results matching "{searchQuery}". Try a different search term.</p>
+                    <div style={{ marginTop: '1rem' }}>
+                        <Button variant="secondary" onClick={() => setSearchQuery('')}>
+                            Clear Search
+                        </Button>
+                    </div>
+                </div>
+            ) : groupByAuthor ? (
+                <div className="explore-author-groups">
+                    {authorGroups.map((group) => (
+                        <section key={group.key} className="explore-author-section">
+                            <div className="explore-author-header">
+                                <div className="explore-author-info">
+                                    <div className="explore-author-avatar">
+                                        <User size={16} />
                                     </div>
-                                    <div className="explore-titles">
-                                        <h3 className="explore-name notranslate" title={name} style={customFont ? { fontFamily: `'${fontName}', 'Inter', sans-serif` } : {}}>{displayName}</h3>
-                                        <p className="explore-author">
-                                            <User size={12} /> {author}
-                                        </p>
+                                    <div className="explore-author-name-row">
+                                        <h2 className="explore-author-name">{group.authorName}</h2>
+                                        <span className="explore-author-badge">
+                                            {group.langs.length} {group.langs.length === 1 ? 'conlang' : 'conlangs'}
+                                        </span>
                                     </div>
-                                    {sessionUser && sessionUser.id === lang.user_id && (
-                                        <button 
-                                            className="explore-delete-btn" 
-                                            onClick={(e) => handleDeletePublicConlang(e, lang.project_id)}
-                                            title="Delete from Explore"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    )}
                                 </div>
-                                <p className="explore-desc notranslate">{desc}</p>
-                                <div className="explore-stats">
-                                    <div className="explore-stat">
-                                        <BookA size={14} />
-                                        <span>{wordCount} words</span>
-                                    </div>
-                                    {wikiCount > 0 && (
-                                        <div className="explore-stat" title={`${wikiCount} wiki/corpus items`}>
-                                            <Library size={14} />
-                                            <span>{wikiCount} {wikiCount === 1 ? 'article' : 'articles'}</span>
-                                        </div>
-                                    )}
-                                    {courseCount > 0 && (
-                                        <div className="explore-stat" title={`${courseCount} course modules`}>
-                                            <Map size={14} />
-                                            <span>{courseCount} {courseCount === 1 ? 'course' : 'courses'}</span>
-                                        </div>
-                                    )}
-                                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                        <button 
-                                            className={`explore-like-btn ${userLikes.has(lang.project_id) ? 'liked' : ''}`}
-                                            onClick={(e) => toggleLike(e, lang.project_id)}
-                                            title={userLikes.has(lang.project_id) ? "Unlike" : "Like"}
-                                        >
-                                            <Heart size={14} />
-                                            <span>{likesData[lang.project_id] || 0}</span>
-                                        </button>
-                                        <div className="explore-stat" style={{ fontSize: '0.7rem', fontWeight: 'normal', opacity: 0.7 }}>
-                                            Last updated: {new Date(lang.project_data?.last_updated || lang.updated_at || lang.created_at).toLocaleDateString()}
-                                        </div>
-                                    </div>
+                                <div className="explore-author-stats">
+                                    <span><BookA size={13} /> {group.totalWords.toLocaleString()} words</span>
+                                    <span><Heart size={13} /> {group.totalLikes} likes</span>
                                 </div>
                             </div>
-                        );
-                    })}
+                            <div className="explore-grid">
+                                {group.sortedLangs.map((lang) => renderConlangCard(lang))}
+                            </div>
+                        </section>
+                    ))}
+                </div>
+            ) : (
+                <div className="explore-grid">
+                    {flatSortedConlangs.map((lang) => renderConlangCard(lang))}
                 </div>
             )}
         </div>

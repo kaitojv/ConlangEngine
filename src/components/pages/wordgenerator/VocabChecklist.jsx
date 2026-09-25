@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
@@ -8,20 +8,25 @@ import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { fetchDefinitionOptions } from '@/utils/semanticUtils.js';
 import DefinitionSelectModal from '@/components/UI/Modal/DefinitionSelectModal.jsx';
-import { vocabDatabase, VOCAB_CATEGORIES, getWordsByCategory } from '@/data/vocabDatabase.js';
+import {
+    vocabDatabase, VOCAB_LISTS, VOCAB_THEMES, VOCAB_CATEGORIES,
+    getWords, getWordsByCategory
+} from '@/data/vocabDatabase.js';
 import { buildLexiconIndex, checkWordInLexicon, getCategoryProgress } from '@/utils/lexiconMatcher.js';
 import toast from 'react-hot-toast';
 import {
     Wand2, Send, Check, Dice5, Globe, Star, List, BookOpen,
     Leaf, Bird, Heart, Users, Zap, Wheat, Hammer, Brain, Clock, Layers, Hash,
-    Type, Landmark, Search, Sparkles, ArrowLeft, ChevronLeft, ChevronRight
+    Type, Landmark, Search, Sparkles, ArrowLeft, ChevronLeft, ChevronRight,
+    MessageSquare, Coins, ChevronDown, X, Filter
 } from 'lucide-react';
 import './vocabChecklist.css';
 
-// ── Icon map for category chips ──────────────────────────────────────────
+// ── Icon map for category chips & dropdown items ──────────────────────────
 const CATEGORY_ICONS = {
     Globe, Star, List, BookOpen, Leaf, Bird, Heart, Users, Zap, Wheat,
     Hammer, Brain, Clock, Layers, Hash, Type, Landmark,
+    MessageSquare, Coins, Sparkles, Filter
 };
 
 export default function VocabChecklist({ onExit }) {
@@ -36,8 +41,12 @@ export default function VocabChecklist({ onExit }) {
     const [minSyllables, setMinSyllables] = useState(2);
     const [maxSyllables, setMaxSyllables] = useState(3);
 
-    // Filtering
-    const [selectedCategory, setSelectedCategory] = useState('all');
+    // Filtering: List Tiers & Collapsible Semantic Themes
+    const [selectedList, setSelectedList] = useState('all');
+    const [selectedTheme, setSelectedTheme] = useState('all');
+    const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
+    const themeDropdownRef = useRef(null);
+
     const [onlyUncreated, setOnlyUncreated] = useState(true);
     const [posFilter, setPosFilter] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
@@ -58,32 +67,64 @@ export default function VocabChecklist({ onExit }) {
     const [isFetchingRowDef, setIsFetchingRowDef] = useState(false);
     const [isDefModalOpen, setIsDefModalOpen] = useState(false);
 
+    // Close theme dropdown on outside click or Escape
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (themeDropdownRef.current && !themeDropdownRef.current.contains(e.target)) {
+                setIsThemeDropdownOpen(false);
+            }
+        };
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setIsThemeDropdownOpen(false);
+            }
+        };
+        if (isThemeDropdownOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('keydown', handleKeyDown);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isThemeDropdownOpen]);
+
     // Build O(1) lexicon lookup index
     const lexiconIndex = useMemo(() => buildLexiconIndex(lexicon), [lexicon]);
 
-    // Overall progress stats
-    const totalStats = useMemo(() => {
-        return getCategoryProgress(vocabDatabase, lexiconIndex);
-    }, [lexiconIndex]);
-
-    // Category progress map
-    const categoryStats = useMemo(() => {
+    // List progress stats map
+    const listStats = useMemo(() => {
         const stats = {};
-        for (const cat of VOCAB_CATEGORIES) {
-            const catWords = getWordsByCategory(cat.id);
-            stats[cat.id] = getCategoryProgress(catWords, lexiconIndex);
+        for (const l of VOCAB_LISTS) {
+            const words = getWords(l.id, 'all');
+            stats[l.id] = getCategoryProgress(words, lexiconIndex);
         }
         return stats;
     }, [lexiconIndex]);
 
-    // Base words for selected category
-    const categoryWords = useMemo(() => {
-        return getWordsByCategory(selectedCategory);
-    }, [selectedCategory]);
+    // Theme progress map (scoped to active list if one is selected)
+    const themeStats = useMemo(() => {
+        const stats = {};
+        for (const t of VOCAB_THEMES) {
+            const words = getWords(selectedList, t.id);
+            stats[t.id] = getCategoryProgress(words, lexiconIndex);
+        }
+        return stats;
+    }, [selectedList, lexiconIndex]);
+
+    // Words in current scope (List + Theme)
+    const scopedWords = useMemo(() => {
+        return getWords(selectedList, selectedTheme);
+    }, [selectedList, selectedTheme]);
+
+    // Active scope progress stats for the progress bar & numbers
+    const totalStats = useMemo(() => {
+        return getCategoryProgress(scopedWords, lexiconIndex);
+    }, [scopedWords, lexiconIndex]);
 
     // Filtered words
     const filteredWords = useMemo(() => {
-        return categoryWords.filter(item => {
+        return scopedWords.filter(item => {
             const { isCreated } = checkWordInLexicon(item.word, lexiconIndex);
 
             // Filter: only uncreated
@@ -103,12 +144,12 @@ export default function VocabChecklist({ onExit }) {
 
             return true;
         });
-    }, [categoryWords, onlyUncreated, posFilter, searchTerm, lexiconIndex]);
+    }, [scopedWords, onlyUncreated, posFilter, searchTerm, lexiconIndex]);
 
     // Reset pagination when filter changes
     useEffect(() => {
         setPage(0);
-    }, [selectedCategory, onlyUncreated, posFilter, searchTerm]);
+    }, [selectedList, selectedTheme, onlyUncreated, posFilter, searchTerm]);
 
     const totalPages = Math.max(1, Math.ceil(filteredWords.length / PAGE_SIZE));
     const paginatedWords = useMemo(() => {
@@ -301,6 +342,15 @@ export default function VocabChecklist({ onExit }) {
     const visibleUncreated = paginatedWords.filter(w => !checkWordInLexicon(w.word, lexiconIndex).isCreated);
     const allVisibleSelected = visibleUncreated.length > 0 && visibleUncreated.every(w => selectedEnglishWords.has(w.word));
 
+    const selectedThemeObj = useMemo(() => {
+        return VOCAB_THEMES.find(t => t.id === selectedTheme) || VOCAB_THEMES[0];
+    }, [selectedTheme]);
+
+    const SelectedThemeIcon = CATEGORY_ICONS[selectedThemeObj.icon] || Globe;
+    const activeThemeBadge = onlyUncreated
+        ? (themeStats[selectedTheme]?.uncreated ?? 0)
+        : (themeStats[selectedTheme]?.total ?? 0);
+
     return (
         <div className="vc-container">
             <Card>
@@ -347,23 +397,25 @@ export default function VocabChecklist({ onExit }) {
                     </div>
                 </div>
 
-                {/* ── Category Navigation Chips ── */}
-                <div className="vc-category-nav">
-                    {VOCAB_CATEGORIES.map(cat => {
-                        const IconComp = CATEGORY_ICONS[cat.icon] || Globe;
-                        const stats = categoryStats[cat.id] || { total: 0, created: 0, uncreated: 0 };
-                        const isActive = selectedCategory === cat.id;
+                {/* ── List / Tier Navigation Pills ── */}
+                <div className="vc-list-nav">
+                    {VOCAB_LISTS.map(list => {
+                        const IconComp = CATEGORY_ICONS[list.icon] || Globe;
+                        const stats = listStats[list.id] || { total: 0, created: 0, uncreated: 0 };
+                        const isActive = selectedList === list.id;
                         const badgeCount = onlyUncreated ? stats.uncreated : stats.total;
+                        const isPhraseBuilder = list.id === 'phrase-builder';
 
                         return (
                             <button
-                                key={cat.id}
+                                key={list.id}
                                 type="button"
-                                className={`vc-cat-chip ${isActive ? 'active' : ''}`}
-                                onClick={() => setSelectedCategory(cat.id)}
+                                className={`vc-cat-chip ${isActive ? 'active' : ''} ${isPhraseBuilder ? 'phrase-builder-chip' : ''}`}
+                                onClick={() => setSelectedList(list.id)}
+                                title={list.desc}
                             >
                                 <IconComp size={14} className="vc-cat-chip-icon" />
-                                <span>{cat.label}</span>
+                                <span>{list.label}</span>
                                 <span className="vc-cat-badge">{badgeCount}</span>
                             </button>
                         );
@@ -372,6 +424,72 @@ export default function VocabChecklist({ onExit }) {
 
                 {/* ── Filters Row ── */}
                 <div className="vc-filter-row">
+                    {/* Collapsed Semantic Theme Dropdown */}
+                    <div className="vc-filter-group vc-theme-filter-group" ref={themeDropdownRef}>
+                        <span className="vc-filter-label">Semantic Theme</span>
+                        <div className="vc-theme-dropdown-wrapper">
+                            <button
+                                type="button"
+                                className={`vc-filter-input vc-theme-dropdown-btn ${selectedTheme !== 'all' ? 'active-theme' : ''}`}
+                                onClick={() => setIsThemeDropdownOpen(prev => !prev)}
+                                aria-haspopup="listbox"
+                                aria-expanded={isThemeDropdownOpen}
+                            >
+                                <div className="vc-theme-btn-text">
+                                    <SelectedThemeIcon size={14} className="vc-theme-icon" />
+                                    <span>{selectedThemeObj.label}</span>
+                                </div>
+                                <div className="vc-theme-btn-end">
+                                    <span className="vc-cat-badge">{activeThemeBadge}</span>
+                                    <ChevronDown size={14} className={`vc-theme-chevron ${isThemeDropdownOpen ? 'rotated' : ''}`} />
+                                </div>
+                            </button>
+                            {selectedTheme !== 'all' && (
+                                <button
+                                    type="button"
+                                    className="vc-theme-clear-btn"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedTheme('all');
+                                    }}
+                                    title="Reset to All Themes"
+                                >
+                                    <X size={12} />
+                                </button>
+                            )}
+                            {isThemeDropdownOpen && (
+                                <div className="vc-theme-menu" role="listbox">
+                                    {VOCAB_THEMES.map(theme => {
+                                        const IconComp = CATEGORY_ICONS[theme.icon] || Globe;
+                                        const stats = themeStats[theme.id] || { total: 0, created: 0, uncreated: 0 };
+                                        const isSelected = selectedTheme === theme.id;
+                                        const badgeCount = onlyUncreated ? stats.uncreated : stats.total;
+
+                                        return (
+                                            <button
+                                                key={theme.id}
+                                                type="button"
+                                                className={`vc-theme-menu-item ${isSelected ? 'active' : ''}`}
+                                                onClick={() => {
+                                                    setSelectedTheme(theme.id);
+                                                    setIsThemeDropdownOpen(false);
+                                                }}
+                                                role="option"
+                                                aria-selected={isSelected}
+                                            >
+                                                <div className="vc-theme-menu-item-left">
+                                                    <IconComp size={14} className="vc-theme-item-icon" />
+                                                    <span>{theme.label}</span>
+                                                </div>
+                                                <span className="vc-cat-badge">{badgeCount}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     <div className="vc-filter-group" style={{ flex: 2 }}>
                         <span className="vc-filter-label">Search Vocabulary</span>
                         <div style={{ position: 'relative' }}>
@@ -400,6 +518,8 @@ export default function VocabChecklist({ onExit }) {
                             <option value="adjective">Adjective</option>
                             <option value="adverb">Adverb</option>
                             <option value="pronoun">Pronoun</option>
+                            <option value="conjunction">Conjunction</option>
+                            <option value="preposition">Preposition</option>
                             <option value="numeral">Numeral</option>
                             <option value="particle">Particle</option>
                         </select>
