@@ -16,22 +16,38 @@ export const parseSVGToStrokes = (svgString) => {
         
         let currentStroke = [];
         const isFilled = d.toLowerCase().includes('z') || (path.getAttribute('fill') && path.getAttribute('fill') !== 'none');
-        
+
+        let lastCoord = { x: 0, y: 0 }; 
         commands.forEach(cmd => {
             const type = cmd[0].toUpperCase();
+            const isRelative = type != cmd[0]; // cmd[0] is lowercase so coordinates are relative 
             const args = cmd.slice(1).trim().split(/[\s,]+/).filter(Boolean).map(parseFloat);
-            
-            if (type === 'M' || type === 'L') {
-                if (args.length >= 2) {
-                    const x = args[0];
-                    const y = args[1];
-                    currentStroke.push({ x, y });
-                    minX = Math.min(minX, x);
-                    minY = Math.min(minY, y);
-                    maxX = Math.max(maxX, x);
-                    maxY = Math.max(maxY, y);
+            let x = 0, y = 0;
+            // deltaX and deltaY are damed such because they have different meanings to dx and dy in the SVG standard
+            let deltaX = useRelative ? lastCoord.x : 0;
+            let deltaY = useRelative ? lastCoord.y : 0;
+            if (type === 'M' || type === 'L')
+                if (args.length < 2) { return; }
+                x = args[0] + deltaX;
+                y = args[1] + deltaY;
+            }
+            else if (type === 'H' || type === 'V') {
+                if (args.length < 1) { return; }
+                if (type == 'H') {
+                    x = args[0] + deltaX;
+                    y = lastCoord.y;
+                }
+                else { // type === 'V'
+                    x = lastCoord.x;
+                    y = args[0] + deltaX;
                 }
             }
+            lastCoord = { x, y };
+            currentStroke.push({ x, y });
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
         });
         
         if (currentStroke.length > 0) {
