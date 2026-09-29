@@ -197,17 +197,29 @@ export const exportMinecraftResourcePack = async (config, customTranslations, op
         langCode = 'art_custom',
         regionName = 'Conlangia',
         bidirectional = false,
-        packFormat = 15
+        packFormat = 121
     } = options;
+
+    // Formats >= 88 (1.21.9+) use min_format/max_format instead of pack_format
+    const formatNum = parseFloat(packFormat);
+    const usesMinMaxFormat = formatNum >= 88;
 
     const zip = new JSZip();
 
     // 1. Create pack.mcmeta
-    const packMcmeta = {
-        pack: {
-            pack_format: parseInt(packFormat, 10) || 15,
+    const packSection = usesMinMaxFormat
+        ? {
+            description: `${langName} Language Pack - Conlang Engine`,
+            min_format: formatNum,
+            max_format: formatNum
+        }
+        : {
+            pack_format: parseInt(packFormat, 10) || 121,
             description: `${langName} Language Pack - Conlang Engine`
-        },
+        };
+
+    const packMcmeta = {
+        pack: packSection,
         language: {
             [langCode]: {
                 name: langName,

@@ -4,12 +4,15 @@ import {
     X, Book, Sparkles, FileText, Download, AlertTriangle, 
     Loader2, Table2, FileSpreadsheet, FileCode, Gamepad, 
     Package, Languages, Globe, Layers, CheckCircle2,
-    BookOpen, Terminal, Maximize
+    BookOpen, Terminal, Maximize, Swords, Code2
 } from 'lucide-react';
+
 import Button from '../../UI/Buttons/Buttons.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { MINECRAFT_KEYS, autoMatchLexicon } from '../../../utils/minecraftExporter.jsx';
+import { TERRARIA_KEYS, autoMatchLexiconTerraria } from '../../../utils/terrariaExporter.jsx';
+
 import './exportModal.css';
 
 export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
@@ -27,9 +30,18 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
     const [langCode, setLangCode] = useState('');
     const [regionName, setRegionName] = useState('Conlangia');
     const [bidirectional, setBidirectional] = useState(false);
-    const [packFormat, setPackFormat] = useState('15');
+    const [packFormat, setPackFormat] = useState('121');
     const [activeCategory, setActiveCategory] = useState('Interface');
     const [customTranslations, setCustomTranslations] = useState({});
+
+    // Terraria Exporter States
+    const [trModName, setTrModName] = useState('');
+    const [trLangCode, setTrLangCode] = useState('en-US');
+    const [trModVersion, setTrModVersion] = useState('1.0.0');
+    const [trModAuthor, setTrModAuthor] = useState('');
+    const [trActiveCategory, setTrActiveCategory] = useState('Items');
+    const [trCustomTranslations, setTrCustomTranslations] = useState({});
+
 
     // Reset and initialize Minecraft configurations reactively on mount/open
     useEffect(() => {
@@ -45,7 +57,8 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
             setLangCode(generatedCode);
             setRegionName('Conlangia');
             setBidirectional(false);
-            setPackFormat('15');
+            setPackFormat('121');
+
             setActiveCategory('Interface');
 
             // Automatically scan lexicon for matching keys
@@ -57,6 +70,31 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
             setCustomTranslations(initialTrans);
         }
     }, [isOpen, type, config.conlangName, lexicon]);
+
+    // Reset and initialize Terraria configurations reactively on mount/open
+    useEffect(() => {
+        if (isOpen && type === 'terraria') {
+            const confName = config.conlangName || 'My Conlang';
+            const generatedModName = confName
+                .trim()
+                .replace(/\s+/g, '')
+                .replace(/[^a-zA-Z0-9]/g, '')
+                || 'MyConlangMod';
+            setTrModName(generatedModName);
+            setTrLangCode('en-US');
+            setTrModVersion('1.0.0');
+            setTrModAuthor(confName);
+            setTrActiveCategory('Items');
+
+            const initialTrans = {};
+            TERRARIA_KEYS.forEach(item => {
+                const match = autoMatchLexiconTerraria(item.english, lexicon);
+                initialTrans[item.key] = match || '';
+            });
+            setTrCustomTranslations(initialTrans);
+        }
+    }, [isOpen, type, config.conlangName, lexicon]);
+
 
     if (!isOpen) return null;
 
@@ -118,6 +156,13 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                     bidirectional,
                     packFormat
                 });
+            } else if (type === 'terraria') {
+                onExport(trCustomTranslations, {
+                    modName: trModName,
+                    langCode: trLangCode,
+                    modVersion: trModVersion,
+                    modAuthor: trModAuthor,
+                });
             } else {
                 onExport(templateId, {
                     includeInflections,
@@ -140,27 +185,47 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
         if (type === 'sheets') return <FileSpreadsheet size={20} className="text-green-400" />;
         if (type === 'obsidian') return <FileCode size={20} className="text-orange-400" />;
         if (type === 'minecraft') return <Gamepad size={20} className="text-purple-400" />;
+        if (type === 'terraria') return <Swords size={20} className="text-lime-400" />;
         return <Download size={20} className="text-purple-400" />;
     };
 
-    const translatedCount = Object.values(customTranslations).filter(v => v && v.trim() !== '').length;
+    const getModalTitle = () => {
+        if (type === 'minecraft') return 'Minecraft Resource Pack';
+        if (type === 'terraria') return 'Terraria tModLoader Localization';
+        return `${type?.toUpperCase()} Reference`;
+    };
+
+    const translatedCount = Object.values(
+        type === 'terraria' ? trCustomTranslations : customTranslations
+    ).filter(v => v && v.trim() !== '').length;
+
+    const totalKeyCount = type === 'terraria' ? TERRARIA_KEYS.length : MINECRAFT_KEYS.length;
 
     return ReactDOM.createPortal(
         <div className="export-modal-overlay" onClick={isProcessing ? undefined : onClose}>
-            <div className={`export-modal ${type === 'minecraft' ? 'minecraft-modal-wide' : ''}`} onClick={e => e.stopPropagation()}>
+            <div className={`export-modal ${(type === 'minecraft' || type === 'terraria') ? 'minecraft-modal-wide' : ''}`} onClick={e => e.stopPropagation()}>
                 
                 {isProcessing && (
                     <div className="export-processing-overlay">
                         <Loader2 className="processing-spinner" size={48} />
-                        <h3>{type === 'minecraft' ? 'Assembling Resource Pack...' : 'Processing Documentation...'}</h3>
-                        <p>{type === 'minecraft' ? 'Compressing zip file and generating custom icon.' : 'Generating complex morphology tables. Please wait.'}</p>
+                        <h3>
+                            {type === 'minecraft' ? 'Assembling Resource Pack...' 
+                            : type === 'terraria' ? 'Building Localization Pack...'
+                            : 'Processing Documentation...'}
+                        </h3>
+                        <p>
+                            {type === 'minecraft' ? 'Compressing zip file and generating custom icon.' 
+                            : type === 'terraria' ? 'Compiling .hjson files and packaging your mod.'
+                            : 'Generating complex morphology tables. Please wait.'}
+                        </p>
                     </div>
                 )}
+
 
                 <div className="vrb-header">
                     <div className="vrb-header-title-group">
                         {getFormatIcon()}
-                        <h2>Export {type === 'minecraft' ? 'Minecraft Resource Pack' : `${type?.toUpperCase()} Reference`}</h2>
+                        <h2>Export {getModalTitle()}</h2>
                     </div>
                     <button className="export-modal-close-btn" onClick={onClose} disabled={isProcessing}>
                         <X size={20} />
@@ -211,12 +276,25 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                                 <div className="mc-field">
                                     <label>Minecraft Target Version</label>
                                     <select value={packFormat} onChange={e => setPackFormat(e.target.value)}>
-                                        <option value="15">1.20 - 1.20.1 (Format 15)</option>
-                                        <option value="18">1.20.2+ (Format 18)</option>
-                                        <option value="13">1.19.4 (Format 13)</option>
-                                        <option value="12">1.19 - 1.19.3 (Format 12)</option>
-                                        <option value="9">1.18.2 (Format 9)</option>
-                                        <option value="6">1.16.5 (Format 6)</option>
+                                        <option value="121">26.3 (Latest) — Format 121</option>
+                                        <option value="107">26.2 — Format 107</option>
+                                        <option value="101">26.1 – 26.1.2 — Format 101</option>
+                                        <option value="94">1.21.11 — Format 94</option>
+                                        <option value="88">1.21.9 – 1.21.10 — Format 88 (min/max)</option>
+                                        <option value="81">1.21.7 – 1.21.8 — Format 81</option>
+                                        <option value="80">1.21.6 — Format 80</option>
+                                        <option value="71">1.21.5 — Format 71</option>
+                                        <option value="61">1.21.4 — Format 61</option>
+                                        <option value="57">1.21.2 – 1.21.3 — Format 57</option>
+                                        <option value="48">1.21 – 1.21.1 — Format 48</option>
+                                        <option value="41">1.20.5 – 1.20.6 — Format 41</option>
+                                        <option value="26">1.20.3 – 1.20.4 — Format 26</option>
+                                        <option value="18">1.20.2 — Format 18</option>
+                                        <option value="15">1.20 – 1.20.1 — Format 15</option>
+                                        <option value="13">1.19.4 — Format 13</option>
+                                        <option value="12">1.19 – 1.19.3 — Format 12</option>
+                                        <option value="9">1.18.2 — Format 9</option>
+                                        <option value="6">1.16.2 – 1.16.5 — Format 6</option>
                                     </select>
                                 </div>
 
@@ -235,7 +313,22 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                                     <h4>Real-Time pack.mcmeta Preview</h4>
                                     <div className="mc-code-box">
                                         <pre>
-{`{
+{parseFloat(packFormat) >= 88
+? `{
+  "pack": {
+    "description": "${langName}",
+    "min_format": ${parseFloat(packFormat)},
+    "max_format": ${parseFloat(packFormat)}
+  },
+  "language": {
+    "${langCode || 'art_custom'}": {
+      "name": "${config.conlangName || 'My Conlang'}",
+      "region": "${regionName}",
+      "bidirectional": ${bidirectional}
+    }
+  }
+}`
+: `{
   "pack": {
     "pack_format": ${packFormat},
     "description": "${langName}"
@@ -313,6 +406,156 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                                 <div className="plain-export-action" style={{ marginTop: '16px' }}>
                                     <Button variant="save" onClick={() => handleExportClick()} style={{ width: '100%', padding: '16px', fontSize: '1.05rem', gap: '8px' }}>
                                         <Gamepad size={18} /> Compile & Download Resource Pack
+                                    </Button>
+                                </div>
+                            </div>
+
+                        </div>
+                    ) : type === 'terraria' ? (
+                        <div className="minecraft-wizard-layout">
+
+                            {/* Left Panel: Mod Configuration */}
+                            <div className="mc-settings-panel">
+                                <h3 className="panel-title"><Package size={16} /> Mod Settings</h3>
+
+                                <div className="mc-field">
+                                    <label>Mod Internal Name</label>
+                                    <input
+                                        type="text"
+                                        value={trModName}
+                                        onChange={e => setTrModName(e.target.value.replace(/[^a-zA-Z0-9]/g, ''))}
+                                        placeholder="e.g. HighElvishMod"
+                                    />
+                                    <small>PascalCase, no spaces or special chars</small>
+                                </div>
+
+                                <div className="mc-field-row">
+                                    <div className="mc-field">
+                                        <label>Language Code</label>
+                                        <select value={trLangCode} onChange={e => setTrLangCode(e.target.value)}>
+                                            <option value="en-US">en-US (English)</option>
+                                            <option value="pt-BR">pt-BR (Portuguese)</option>
+                                            <option value="es-ES">es-ES (Spanish)</option>
+                                            <option value="fr-FR">fr-FR (French)</option>
+                                            <option value="de-DE">de-DE (German)</option>
+                                            <option value="ru-RU">ru-RU (Russian)</option>
+                                            <option value="zh-Hans">zh-Hans (Chinese)</option>
+                                            <option value="ja-JP">ja-JP (Japanese)</option>
+                                        </select>
+                                        <small>Output filename: {trLangCode}.hjson</small>
+                                    </div>
+                                    <div className="mc-field">
+                                        <label>Version</label>
+                                        <input
+                                            type="text"
+                                            value={trModVersion}
+                                            onChange={e => setTrModVersion(e.target.value)}
+                                            placeholder="1.0.0"
+                                        />
+                                        <small>Semantic version (x.y.z)</small>
+                                    </div>
+                                </div>
+
+                                <div className="mc-field">
+                                    <label>Mod Author</label>
+                                    <input
+                                        type="text"
+                                        value={trModAuthor}
+                                        onChange={e => setTrModAuthor(e.target.value)}
+                                        placeholder="Your name"
+                                    />
+                                </div>
+
+                                <div className="mc-preview-card">
+                                    <h4>build.txt Preview</h4>
+                                    <div className="mc-code-box">
+                                        <pre>{`displayName = ${config.conlangName || 'My Conlang'}
+author = ${trModAuthor || 'Author'}
+version = ${trModVersion}`}
+                                        </pre>
+                                    </div>
+                                </div>
+
+                                <div className="mc-preview-card">
+                                    <h4>.hjson Structure Preview</h4>
+                                    <div className="mc-code-box">
+                                        <pre>{`Mods: {
+  ${trModName || 'MyMod'}: {
+    Items: {
+      IronSword: {
+        DisplayName: "..."
+      }
+    }
+    NPCs: { ... }
+    Buffs: { ... }
+    UI: { ... }
+  }
+}`}
+                                        </pre>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Right Panel: Translation Mapper */}
+                            <div className="mc-mapper-panel">
+                                <div className="mc-mapper-header">
+                                    <h3 className="panel-title"><Languages size={16} /> Translation Mapper</h3>
+                                    <span className="mc-progress-badge">
+                                        <CheckCircle2 size={12} /> {translatedCount} / {totalKeyCount} Keys
+                                    </span>
+                                </div>
+
+                                <p className="mc-mapper-desc">
+                                    Below are prominent Terraria content keys for your conlang mod. The engine automatically scanned your lexicon for matches. Override them below:
+                                </p>
+
+                                <div className="mc-tabs">
+                                    {['Items', 'NPCs', 'Buffs', 'UI'].map(cat => (
+                                        <button
+                                            key={cat}
+                                            className={`mc-tab-btn ${trActiveCategory === cat ? 'active' : ''}`}
+                                            onClick={() => setTrActiveCategory(cat)}
+                                        >
+                                            {cat}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="mc-keys-scroll">
+                                    <div className="mc-keys-grid">
+                                        {TERRARIA_KEYS.filter(item => item.category === trActiveCategory).map(item => {
+                                            const autoMatched = autoMatchLexiconTerraria(item.english, lexicon);
+                                            const isAutoMatched = autoMatched && trCustomTranslations[item.key] === autoMatched;
+
+                                            return (
+                                                <div key={item.key} className="mc-key-card">
+                                                    <div className="mc-key-meta">
+                                                        <span className="mc-eng">{item.english}</span>
+                                                        <span className="mc-key-id">{item.key}</span>
+                                                    </div>
+                                                    <div className="mc-input-wrapper">
+                                                        <input
+                                                            type="text"
+                                                            value={trCustomTranslations[item.key] || ''}
+                                                            onChange={e => setTrCustomTranslations(prev => ({ ...prev, [item.key]: e.target.value }))}
+                                                            placeholder={`Translate: "${item.english}"`}
+                                                            className={isAutoMatched ? 'auto-matched' : ''}
+                                                        />
+                                                        {isAutoMatched && (
+                                                            <span className="mc-match-badge" title="Automatically pre-filled from your lexicon">
+                                                                Lexicon Match
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div className="plain-export-action" style={{ marginTop: '16px' }}>
+                                    <Button variant="save" onClick={() => handleExportClick()} style={{ width: '100%', padding: '16px', fontSize: '1.05rem', gap: '8px' }}>
+                                        <Swords size={18} /> Compile &amp; Download Mod Localization
                                     </Button>
                                 </div>
                             </div>

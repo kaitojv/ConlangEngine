@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
-import { Menu, Home, Printer, Save, FolderUp, User, Cloud, FileText, Table, FileEdit, Download, Gamepad, Globe, Database, Search, Book } from 'lucide-react';
+import { Menu, Home, Printer, Save, FolderUp, User, Cloud, FileText, Table, FileEdit, Download, Gamepad, Globe, Database, Search, Book, Swords } from 'lucide-react';
+
 
 // Bring in our UI components and styling
 import Button from '../../UI/Buttons/Buttons.jsx';
@@ -16,6 +17,8 @@ import { generateObsidianMarkdown } from '../../../utils/obsidianExporter.jsx';
 import { generateSheetsExport } from '../../../utils/sheetsExporter.jsx';
 import { generateDocxExport } from '../../../utils/docxExporter.jsx';
 import { exportMinecraftResourcePack } from '../../../utils/minecraftExporter.jsx';
+import { exportTerrariaLocalizationPack } from '../../../utils/terrariaExporter.jsx';
+
 import { ExportModal } from './ExportModal.jsx';
 import { CsvImportModal } from './CsvImportModal.jsx';
 import BackupStatus from '../BackupStatus/BackupStatus.jsx';
@@ -229,6 +232,8 @@ export default function Header({ openMenu, onBackupNow }) {
             generateSheetsExport(config, lexicon, options);
         } else if (exportType === 'minecraft') {
             exportMinecraftResourcePack(config, template, options);
+        } else if (exportType === 'terraria') {
+            exportTerrariaLocalizationPack(config, template, options);
         }
         
         setExportType(null);
@@ -292,6 +297,9 @@ export default function Header({ openMenu, onBackupNow }) {
                                 </button>
                                 <button className="export-opt" onClick={() => setExportType('minecraft')}>
                                     <Gamepad size={14} /> Minecraft Pack
+                                </button>
+                                <button className="export-opt" onClick={() => setExportType('terraria')}>
+                                    <Swords size={14} /> Terraria Mod
                                 </button>
                             </div>
                         </div>

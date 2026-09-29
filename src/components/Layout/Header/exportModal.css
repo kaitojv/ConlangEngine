@@ -17,6 +17,7 @@
     background: var(--s1);
     width: 600px;
     max-width: 95%;
+    max-height: 90vh;
     border-radius: 16px;
     border: 1px solid var(--bd);
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
@@ -648,6 +649,18 @@ input:checked + .slider:before {
     border: 1px solid color-mix(in srgb, var(--acc) 30%, transparent);
     padding: 1px 5px;
     border-radius: 3px;
+}
+
+/* FOOTER */
+.vrb-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 14px 24px;
+    border-top: 1px solid var(--bd);
+    background: var(--s1);
+    flex-shrink: 0;
+    gap: 10px;
 }
 
 /* RESPONSIVE LAYOUT BREAKPOINTS */
