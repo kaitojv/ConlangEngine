@@ -19,6 +19,7 @@ export default function GlyphPreviewBadge({
     onClick,
     title,
     plain = false,
+    hideOnEmpty = false,
 }) {
     const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
     const scriptDataById = useConfigStore(state => state.scriptDataById) || {};
@@ -72,6 +73,9 @@ export default function GlyphPreviewBadge({
     const hasStrokes = resolvedStrokes && resolvedStrokes.length > 0;
     const isInteractive = Boolean(onClick);
     const finalStrokeColor = (plain && strokeColor === 'var(--acc)') ? 'currentColor' : strokeColor;
+
+    // When requested, render nothing unless the glyph actually has custom drawn strokes.
+    if (hideOnEmpty && !hasStrokes) return null;
 
     if (plain) {
         if (hasStrokes) {

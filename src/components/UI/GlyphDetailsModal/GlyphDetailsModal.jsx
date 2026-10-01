@@ -146,7 +146,9 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
     };
 
     const displayStr = glyph || char || '';
-    const dynamicFontSize = isWord ? Math.max(2.5, Math.min(10, 34 / displayStr.length)) + 'rem' : '10rem';
+    // Scale long words down so they wrap within the modal instead of overflowing it.
+    // The previous 2.5rem floor was too high to ever shrink for very long words.
+    const dynamicFontSize = isWord ? Math.max(1.25, Math.min(10, 34 / displayStr.length)) + 'rem' : '10rem';
 
     if (!isOpen) return null;
 
@@ -178,7 +180,7 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                         <div className="glyph-display-card glass">
                             <div 
                                 className="glyph-large custom-font-text notranslate"
-                                style={{ fontSize: dynamicFontSize, wordBreak: 'break-all', display: 'flex', justifyContent: 'center' }}
+                                style={{ fontSize: dynamicFontSize }}
                             >
                                 {isWord ? displayStr : (
                                     <GlyphPreviewBadge glyph={char || glyph} size={180} />

@@ -4,7 +4,7 @@ import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
-import { Languages, Hash, Plus, Trash2, Calculator, Settings, Edit2, Check, Table2, BookA, Type, Mic2, PenTool, ListChecks, Rows } from 'lucide-react';
+import { Languages, Hash, Plus, Trash2, Calculator, Settings, Edit2, Check, Table2, BookA, Type, Mic2, PenTool, ListChecks, Rows, Eye, EyeOff } from 'lucide-react';
 import IpaReferencePage from './IpaReferencePage.jsx';
 import './orthographyPage.css';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
@@ -13,6 +13,7 @@ import { getScriptSystem, getDefaultScriptId } from '../../../utils/scriptResolv
 import ScriptManager from '../../UI/ScriptManager/ScriptManager.jsx';
 import ScriptRulesEditor from '../../UI/ScriptRulesEditor/ScriptRulesEditor.jsx';
 import GlyphDetailsModal from '../../UI/GlyphDetailsModal/GlyphDetailsModal.jsx';
+import GlyphPreviewBadge from '../../UI/Glyph/GlyphPreviewBadge.jsx';
 import StrokeOrderModal from '../../UI/StrokeOrder/StrokeOrderModal.jsx';
 import toast from 'react-hot-toast';
 
@@ -355,10 +356,16 @@ const NumbersTab = () => {
     const updateConfig = useConfigStore(state => state.updateConfig);
     const phonologyTypes = useConfigStore(state => state.phonologyTypes);
     const { transliterate } = useTransliterator();
+    // Required by transliterate()'s logographic branch: it resolves a word to its
+    // drawn glyph via the lexicon entry's `ideogram`. Without it the call falls
+    // through to `return cleanWord`, i.e. the romanized name instead of the glyph.
+    const lexicon = useLexiconStore(state => state.lexicon) || [];
     const [testNumber, setTestNumber] = useState('');
     const [viewMode, setViewMode] = useState('basic');
     const [listCols, setListCols] = useState(1);
     const [selectedNumberForStroke, setSelectedNumberForStroke] = useState(null);
+    // Which digit rows have their (rendered) number revealed via the eye toggle.
+    const [revealedNumbers, setRevealedNumbers] = useState({});
     
     const newIrrValRef = useRef(null);
     const newIrrNameRef = useRef(null);
@@ -501,6 +508,47 @@ const NumbersTab = () => {
         }
     };
 
+    // Shared trailing controls for each number row: a pen button to edit the glyph and
+    // an eye button that reveals the rendered glyph. The glyph itself is only shown
+    // while the row is revealed — previously the badge rendered unconditionally, which
+    // leaked the answer before the eye toggle was ever pressed.
+    const renderDigitControls = (key, name) => {
+        const rendered = name ? transliterate(name, lexicon) : '';
+        return (
+            <div className="digit-number-cell">
+                {name && (
+                    <>
+                        <button
+                            type="button"
+                            className="num-icon-btn"
+                            onClick={() => setSelectedNumberForStroke({ word: name, name: `${key} (${name})` })}
+                            title="Edit / view stroke order"
+                        >
+                            <PenTool size={13} />
+                        </button>
+                        <button
+                            type="button"
+                            className={`num-icon-btn ${revealedNumbers[key] ? 'active' : ''}`}
+                            onClick={() => setRevealedNumbers(prev => ({ ...prev, [key]: !prev[key] }))}
+                            title={revealedNumbers[key] ? 'Hide number' : 'Show number'}
+                        >
+                            {revealedNumbers[key] ? <EyeOff size={13} /> : <Eye size={13} />}
+                        </button>
+                        {revealedNumbers[key] && rendered && (
+                            <GlyphPreviewBadge
+                                glyph={rendered}
+                                size={26}
+                                hideOnEmpty
+                                showCode={false}
+                                title="Custom glyph"
+                            />
+                        )}
+                    </>
+                )}
+            </div>
+        );
+    };
+
     return (
         <div className="tab-pane-container">
             <div className="matrix-toggle-container" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
@@ -572,18 +620,8 @@ const NumbersTab = () => {
                                     onChange={(e) => updateSystem('zero', e.target.value)}
                                     placeholder="e.g. Zero"
                                 />
-                                <div className="spacer-stem" style={{ display: 'flex', alignItems: 'center' }}>
-                                    {numberSystem.zero && (
-                                        <button 
-                                            type="button"
-                                            className="num-stroke-preview-btn" 
-                                            onClick={() => setSelectedNumberForStroke({ word: numberSystem.zero, name: `0 (${numberSystem.zero})` })}
-                                            title="View stroke order"
-                                        >
-                                            <span className="custom-font-text notranslate">{transliterate(numberSystem.zero)}</span>
-                                            <PenTool size={12} />
-                                        </button>
-                                    )}
+                                <div className="digit-stem-cell">
+                                    {renderDigitControls('0', numberSystem.zero)}
                                 </div>
                             </div>
                             {digitIndices.map(d => (
@@ -595,25 +633,14 @@ const NumbersTab = () => {
                                         onChange={(e) => updateMap('digits', d, e.target.value)}
                                         placeholder="Name"
                                     />
-                                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center', minWidth: 0, flex: 1 }}>
+                                    <div className="digit-stem-cell">
                                         <input 
                                             className="char-name-input stem-input"
                                             value={numberSystem.stems?.[d] || ''}
                                             onChange={(e) => updateMap('stems', d, e.target.value)}
                                             placeholder="Stem"
-                                            style={{ flex: 1, minWidth: '60px' }}
                                         />
-                                        {numberSystem.digits?.[d] && (
-                                            <button 
-                                                type="button"
-                                                className="num-stroke-preview-btn" 
-                                                onClick={() => setSelectedNumberForStroke({ word: numberSystem.digits[d], name: `${d} (${numberSystem.digits[d]})` })}
-                                                title="View stroke order"
-                                            >
-                                                <span className="custom-font-text notranslate">{transliterate(numberSystem.digits[d])}</span>
-                                                <PenTool size={12} />
-                                            </button>
-                                        )}
+                                        {renderDigitControls(String(d), numberSystem.digits?.[d])}
                                     </div>
                                 </div>
                             ))}
@@ -633,35 +660,25 @@ const NumbersTab = () => {
                                 return (
                                     <div key={p} className="digit-entry">
                                         <label>{numeralBase}<sup>{p}</sup> ({labelVal})</label>
-                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <div className="power-row-controls">
                                             <input 
-                                                className="char-name-input"
+                                                className="char-name-input power-name-input"
                                                 value={numberSystem.powers?.[val] || ''}
                                                 onChange={(e) => updateMap('powers', val, e.target.value)}
                                                 placeholder={`Name for ${labelVal}`}
-                                                style={{ flex: 1, minWidth: 0 }}
                                             />
-                                            {numberSystem.powers?.[val] && (
-                                                <button 
-                                                    type="button"
-                                                    className="num-stroke-preview-btn" 
-                                                    onClick={() => setSelectedNumberForStroke({ word: numberSystem.powers[val], name: `${labelVal} (${numberSystem.powers[val]})` })}
-                                                    title="View stroke order"
-                                                >
-                                                    <span className="custom-font-text notranslate">{transliterate(numberSystem.powers[val])}</span>
-                                                    <PenTool size={12} />
-                                                </button>
-                                            )}
+                                            {renderDigitControls(`power-${val}`, numberSystem.powers?.[val])}
                                             {p === powerCount && p > 6 && (
                                                 <button 
-                                                    className="irr-del" 
+                                                    type="button"
+                                                    className="num-icon-btn"
                                                     onClick={() => {
                                                         updateMap('powers', val, '');
                                                         setPowerCount(prev => prev - 1);
                                                     }}
                                                     title="Remove this power"
                                                 >
-                                                    <Trash2 size={14} />
+                                                    <Trash2 size={13} />
                                                 </button>
                                             )}
                                         </div>
@@ -843,14 +860,21 @@ const NumbersTab = () => {
                                     </button>
                                 )}
                             </div>
-                            {testResult && (
-                                <p
-                                    className="custom-font-text notranslate"
-                                    style={{ margin: '0.5rem 0 0', fontSize: '1.05rem', color: 'var(--tx)' }}
+                            <div className="result-display">
+                                <label>Result:</label>
+                                <div
+                                    className={`result-value custom-font-text notranslate ${testResult ? 'result-value-clickable' : ''}`}
+                                    onClick={() => {
+                                        if (testResult) {
+                                            setSelectedNumberForStroke({ word: testResult, name: `${testNumber || 'Result'}: ${testResult}` });
+                                        }
+                                    }}
+                                    title={testResult ? "Click to view stroke order" : ""}
                                 >
-                                    {transliterate(testResult) || testResult}
-                                </p>
-                            )}
+                                    <span>{transliterate(testResult || '') || '—'}</span>
+                                    {testResult && <PenTool size={16} style={{ color: 'var(--acc)', opacity: 0.8 }} />}
+                                </div>
+                            </div>
                         </div>
                     </Card>
                 </div>

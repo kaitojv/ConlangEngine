@@ -723,7 +723,7 @@ export default function LexiconList() {
                         >
                             <div className="entry-header">
                                 <div className="entry-words">
-                                    <div className="entry-word-with-wave" style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'stretch' }}>
+                                    <div className="entry-word-with-wave">
                                         {filters.showTones && <StressWave word={safeWord} stress={displayStress} tone={displayTone} customVowelsStr={useConfigStore.getState().vowels} />}
                                         <span 
                                             className={`notranslate entry-main-word custom-font-text conlang-script-${wordScriptId} ${phonologyTypes === 'featural_block' ? 'featural-block-render' : ''}`} 

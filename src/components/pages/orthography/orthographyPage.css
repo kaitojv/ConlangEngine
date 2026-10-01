@@ -227,26 +227,11 @@
     display: grid;
     grid-template-columns: var(--grid-cols, 1fr);
     gap: 0.5rem 1rem;
-    max-height: 500px;
-    overflow-y: auto;
-    padding-right: 0.5rem;
-}
-
-/* Custom Scrollbar for the digit grid */
-.digits-grid-wide::-webkit-scrollbar {
-    width: 6px;
-}
-.digits-grid-wide::-webkit-scrollbar-thumb {
-    background: var(--bd);
-    border-radius: 10px;
-}
-.digits-grid-wide::-webkit-scrollbar-thumb:hover {
-    background: var(--acc);
 }
 
 .digit-entry-header {
     display: grid;
-    grid-template-columns: 50px 1.2fr 1fr;
+    grid-template-columns: 50px minmax(0, 1.2fr) minmax(0, 1fr);
     gap: 1rem;
     padding: 0.5rem 1rem;
     font-size: 0.75rem;
@@ -256,14 +241,11 @@
     background: var(--s1);
     border-radius: 0.5rem;
     margin-bottom: 0.5rem;
-    position: sticky;
-    top: 0;
-    z-index: 10;
 }
 
 .digit-row-entry {
     display: grid;
-    grid-template-columns: 50px 1.2fr 1fr;
+    grid-template-columns: 50px minmax(0, 1.2fr) minmax(0, 1fr);
     gap: 1rem;
     align-items: center;
     background: var(--s4);
@@ -280,6 +262,101 @@
 .digit-label { font-weight: 800; color: var(--acc); text-align: center; font-size: 1.1rem; }
 .stem-input { border-color: rgba(124, 58, 237, 0.3) !important; }
 .spacer-stem { height: 1px; }
+
+/* Number name / stem inputs — shrink to fit their grid cell instead of using the
+   browser-default input width (which caused horizontal overflow / clipping). */
+.char-name-input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 0.5rem 0.7rem;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    color: var(--tx);
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: border-color 0.15s ease;
+}
+
+.char-name-input:focus {
+    outline: none;
+    border-color: var(--acc);
+}
+
+.char-name-input::placeholder {
+    color: var(--tx3);
+}
+
+/* Third grid cell: the Stem input plus the trailing icon controls.
+   The track is narrow (minmax(0,1fr) in a 400px sidebar) and the icon buttons are
+   fixed-width, so without a usable floor on the input the buttons crush it to a few
+   pixels — the value stays in state (stems still work) but no letters are visible.
+   min-width gives the input a readable floor; flex-wrap lets the buttons drop to a
+   second line rather than squeezing the text out of existence. */
+.digit-stem-cell {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+}
+
+.digit-stem-cell > .stem-input {
+    flex: 1 1 80px;
+    min-width: 80px;
+}
+
+/* Powers rows: name input + trailing icon controls (pen / eye / remove).
+   Same shrinkable-flex contract as .digit-stem-cell so a long power name can never
+   push the fixed-width buttons outside the card. */
+.power-row-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+}
+
+.power-row-controls > .power-name-input {
+    flex: 1 1 100px;
+    min-width: 100px;
+}
+
+/* Base-digit row trailing controls (edit + reveal number) */
+.digit-number-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.num-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: var(--s3);
+    border: 1px solid var(--bd);
+    color: var(--tx2);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    flex-shrink: 0;
+}
+
+.num-icon-btn:hover {
+    background: var(--s4);
+    border-color: var(--acc);
+    color: var(--acc);
+}
+
+.num-icon-btn.active {
+    background: var(--acc);
+    border-color: var(--acc);
+    color: #ffffff;
+}
 
 @media (max-width: 600px) {
     .digit-entry-header { display: none; }
@@ -428,6 +505,9 @@ input:checked + .slider:before {
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
+    /* Grid item: must be allowed to shrink so the trailing buttons inside
+       .power-row-controls stay within the track. */
+    min-width: 0;
 }
 
 .digit-entry input {
