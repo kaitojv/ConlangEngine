@@ -9,6 +9,7 @@ import { usePublicThemeInjector, usePublicFontInjector } from '../../../hooks/us
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { renderWordInScript } from '../../../utils/scriptRendering.js';
 import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
+import { compileFont } from '../../../utils/fontCompiler.jsx';
 import PublicFlashcards from './PublicFlashcards.jsx';
 import ExercisePlayer from '../study/ExercisePlayer.jsx';
 import PageSkeleton from '../../UI/PageSkeleton/PageSkeleton.jsx';
@@ -104,7 +105,7 @@ export default function PublicViewer() {
         };
     }, [projectId]);
 
-    // Auto-compile the block font on the fly if it was stripped from the cloud sync payload
+    // Auto-compile the block font or custom glyph font on the fly if it was stripped from the cloud sync payload
     useEffect(() => {
         if (!projectData || !projectData.config) return;
         const rawConf = projectData.config;
@@ -113,7 +114,7 @@ export default function PublicViewer() {
         const conf = { ...rawConf, ...scriptData };
         
         if (conf.phonologyTypes === 'featural_block' && !conf.customFontBase64 && conf.featuralComponents) {
-            const compileFont = async () => {
+            const compileBlock = async () => {
                 try {
                     const newData = await generateBlockFontData({ ...conf, lexicon: projectData.dictionary || [] });
                     setProjectData(prev => {
@@ -131,7 +132,42 @@ export default function PublicViewer() {
                     console.warn("PublicViewer auto-compile failed:", e);
                 }
             };
-            compileFont();
+            compileBlock();
+        } else if (!conf.customFontBase64 && conf.customGlyphs && Object.keys(conf.customGlyphs).length > 0) {
+            const compileCustom = async () => {
+                try {
+                    const typographySettings = conf.typographySettings || {};
+                    const compiledBase64 = await compileFont(
+                        conf.customGlyphs,
+                        typographySettings.traceWidth ?? conf.traceWidth ?? 30,
+                        typographySettings.customFontScale ?? conf.customFontScale ?? 1.0
+                    );
+                    if (compiledBase64) {
+                        setProjectData(prev => {
+                            if (!prev) return prev;
+                            const prevConf = prev.config || {};
+                            const prevScriptDataById = prevConf.scriptDataById ? { ...prevConf.scriptDataById } : {};
+                            if (prevScriptDataById[defaultScriptId]) {
+                                prevScriptDataById[defaultScriptId] = {
+                                    ...prevScriptDataById[defaultScriptId],
+                                    customFontBase64: compiledBase64
+                                };
+                            }
+                            return {
+                                ...prev,
+                                config: {
+                                    ...prevConf,
+                                    customFontBase64: compiledBase64,
+                                    scriptDataById: prevScriptDataById
+                                }
+                            };
+                        });
+                    }
+                } catch (e) {
+                    console.warn("PublicViewer custom glyph compile failed:", e);
+                }
+            };
+            compileCustom();
         }
     }, [projectData]);
 

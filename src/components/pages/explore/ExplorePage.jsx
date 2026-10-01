@@ -8,6 +8,8 @@ import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { sanitizeConfig, decompressPayloadAsync } from '../../../utils/schemaValidator.jsx';
 import { transliterateText } from '../../../utils/transliteration.js';
+import { compileFont } from '../../../utils/fontCompiler.jsx';
+import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import PageSkeleton from '../../UI/PageSkeleton/PageSkeleton.jsx';
 import { useSharing } from '../../../hooks/useSharing.jsx';
@@ -68,7 +70,73 @@ export default function ExplorePage() {
                     item.project_data?.config?.isPublic === true
                 );
 
-                setConlangs(validConlangs.slice(0, 50));
+                // Pre-compile fonts for valid public conlangs if customFontBase64 is missing
+                const enrichedConlangs = await Promise.all(
+                    validConlangs.slice(0, 50).map(async (item) => {
+                        const cfg = item.project_data?.config;
+                        if (!cfg) return item;
+                        const defaultScriptId = cfg.scriptRules?.defaultScriptId || 'default';
+                        const scriptData = cfg.scriptDataById?.[defaultScriptId] || {};
+                        const merged = { ...cfg, ...scriptData };
+
+                        if (!merged.customFontBase64) {
+                            if (merged.phonologyTypes === 'featural_block' && merged.featuralComponents) {
+                                try {
+                                    const newData = await generateBlockFontData({ ...merged, lexicon: item.project_data?.dictionary || [] });
+                                    if (newData?.customFontBase64) {
+                                        return {
+                                            ...item,
+                                            project_data: {
+                                                ...item.project_data,
+                                                config: {
+                                                    ...cfg,
+                                                    customFontBase64: newData.customFontBase64,
+                                                    syllabaryMap: newData.syllabaryMap
+                                                }
+                                            }
+                                        };
+                                    }
+                                } catch (e) {
+                                    console.warn("Could not generate block font for explore item", item.project_id, e);
+                                }
+                            } else if (merged.customGlyphs && Object.keys(merged.customGlyphs).length > 0) {
+                                try {
+                                    const typographySettings = merged.typographySettings || {};
+                                    const compiled = await compileFont(
+                                        merged.customGlyphs,
+                                        typographySettings.traceWidth ?? merged.traceWidth ?? 30,
+                                        typographySettings.customFontScale ?? merged.customFontScale ?? 1.0
+                                    );
+                                    if (compiled) {
+                                        const updatedScriptData = cfg.scriptDataById ? { ...cfg.scriptDataById } : {};
+                                        if (updatedScriptData[defaultScriptId]) {
+                                            updatedScriptData[defaultScriptId] = {
+                                                ...updatedScriptData[defaultScriptId],
+                                                customFontBase64: compiled
+                                            };
+                                        }
+                                        return {
+                                            ...item,
+                                            project_data: {
+                                                ...item.project_data,
+                                                config: {
+                                                    ...cfg,
+                                                    customFontBase64: compiled,
+                                                    scriptDataById: updatedScriptData
+                                                }
+                                            }
+                                        };
+                                    }
+                                } catch (e) {
+                                    console.warn("Could not compile font for explore item", item.project_id, e);
+                                }
+                            }
+                        }
+                        return item;
+                    })
+                );
+
+                setConlangs(enrichedConlangs);
 
                 // Fetch likes for these projects
                 const projectIds = validConlangs.slice(0, 50).map(c => c.project_id);
@@ -412,8 +480,10 @@ export default function ExplorePage() {
 
         const customFont = scriptData?.customFontBase64 || config?.customFontBase64;
         const fontName = customFont ? `ExploreFont_${lang.project_id}` : undefined;
-        // Strip charset to prevent browser decoding failure for binary fonts
-        const safeFontUrl = customFont ? customFont.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,') : '';
+        // Ensure data URL header is clean and valid for @font-face
+        const safeFontUrl = customFont 
+            ? (customFont.startsWith('data:') ? customFont.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,') : `data:font/truetype;base64,${customFont}`) 
+            : '';
 
         let displayName = name;
 

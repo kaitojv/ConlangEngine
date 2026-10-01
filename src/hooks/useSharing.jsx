@@ -26,9 +26,11 @@ export function useSharing(session) {
 
         const configData = sanitizeConfig(useConfigStore.getState(), true);
         
-        // SEC/PERF: Strip massive base64 font from cloud payload to prevent Supabase statement timeouts
-        delete configData.customFontBase64;
-        delete configData.customFont;
+        // SEC/PERF: Strip exceptionally massive base64 font (> 2MB) from cloud payload to prevent Supabase statement timeouts
+        if (typeof configData.customFontBase64 === 'string' && configData.customFontBase64.length > 2000000) {
+            delete configData.customFontBase64;
+            delete configData.customFont;
+        }
         
         const payload = { 
             dictionary: lexicon, 
@@ -99,8 +101,10 @@ export function useSharing(session) {
         
         if (configData.scriptDataById) {
             Object.values(configData.scriptDataById).forEach(script => {
-                delete script.customFontBase64;
-                delete script.customFont;
+                if (typeof script.customFontBase64 === 'string' && script.customFontBase64.length > 2000000) {
+                    delete script.customFontBase64;
+                    delete script.customFont;
+                }
             });
         }
 
