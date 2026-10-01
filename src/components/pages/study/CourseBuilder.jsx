@@ -59,7 +59,8 @@ const TextcardEditor = ({ value, onChange }) => {
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder="e.g. In this lesson, we will learn about... (Line breaks supported)"
-                style={{ width: '100%', height: '100px', padding: '10px', border: 'none', background: 'transparent', color: 'var(--tx)', fontFamily: 'inherit', resize: 'vertical', outline: 'none' }}
+                className="custom-font-text notranslate"
+                style={{ width: '100%', height: '100px', padding: '10px', border: 'none', background: 'transparent', color: 'var(--tx)', resize: 'vertical', outline: 'none' }}
             />
         </div>
     );
@@ -227,7 +228,7 @@ export default function CourseBuilder({ onExit }) {
                 } else {
                     alert("Invalid course format");
                 }
-            } catch (err) {
+            } catch {
                 alert("Invalid JSON file");
             }
         };
@@ -337,10 +338,6 @@ export default function CourseBuilder({ onExit }) {
 
     const updateLevelTitle = (id, newTitle) => {
         setCourseData(courseData.map(l => l.id === id ? { ...l, title: newTitle } : l));
-    };
-
-    const updateLevelNotes = (id, newNotes) => {
-        setCourseData(courseData.map(l => l.id === id ? { ...l, lessonNotes: newNotes } : l));
     };
 
     const updateLevelField = (id, field, value) => {
@@ -566,7 +563,7 @@ export default function CourseBuilder({ onExit }) {
                                                             phrase.type === 'fill_blank' ? "e.g. The ____ pays" :
                                                             "e.g. nuvir'lo zikrifi"
                                                         }
-                                                        className={phrase.type !== 'picture_match' && phrase.type !== 'conjugation_drill' ? "custom-font-text notranslate" : ""}
+                                                        className={phrase.type !== 'picture_match' ? "custom-font-text notranslate" : ""}
                                                         style={{ width: '100%' }}
                                                     />
                                                 </div>
@@ -588,6 +585,7 @@ export default function CourseBuilder({ onExit }) {
                                                             phrase.type === 'conjugation_drill' ? "e.g. ran" :
                                                             "e.g. Hi, Hello (comma separated)"
                                                         }
+                                                        className="custom-font-text notranslate"
                                                         style={{ width: '100%' }}
                                                     />
                                                 </div>
@@ -622,6 +620,7 @@ export default function CourseBuilder({ onExit }) {
                                                                 updatePhrase(level.id, phrase.id, 'options', newOptions);
                                                             }}
                                                             placeholder={`Incorrect option ${idx + 1}`}
+                                                            className="custom-font-text notranslate"
                                                             style={{ flex: 1 }}
                                                         />
                                                     ))}
@@ -636,6 +635,7 @@ export default function CourseBuilder({ onExit }) {
                                                     value={phrase.distractors || ''}
                                                     onChange={(e) => updatePhrase(level.id, phrase.id, 'distractors', e.target.value)}
                                                     placeholder="e.g. dog, cat, run"
+                                                    className="custom-font-text notranslate"
                                                     style={{ width: '100%' }}
                                                 />
                                             </div>
@@ -670,6 +670,7 @@ export default function CourseBuilder({ onExit }) {
                                                                         updatePhrase(level.id, phrase.id, 'pairs', newPairs);
                                                                     }}
                                                                     placeholder="English Meaning"
+                                                                    className="custom-font-text notranslate"
                                                                     style={{ flex: 1 }}
                                                                 />
                                                             </div>

@@ -351,7 +351,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                         <h4 style={{ margin: '0 0 10px 0', color: 'var(--tx)' }}>Needs more practice:</h4>
                         <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--tx2)' }}>
                             {failedExercises.slice(0, 5).map((e, i) => (
-                                <li key={i}>{e.englishSentence || e.type}</li>
+                                <li key={i} className="custom-font-text notranslate">{e.englishSentence || e.type}</li>
                             ))}
                             {failedExercises.length > 5 && <li>...and {failedExercises.length - 5} more</li>}
                         </ul>
@@ -378,7 +378,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                     <h3 className="sg-title" style={{ margin: 0, paddingRight: '40px', flex: 1, textAlign: 'center' }}>Lesson Guide</h3>
                 </div>
                 <div className="ep-content" style={{ padding: '20px', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
-                    <div style={{ background: 'var(--s1)', padding: '20px', borderRadius: '8px', border: '1px solid var(--bd)' }}>
+                    <div className="custom-font-text notranslate" style={{ background: 'var(--s1)', padding: '20px', borderRadius: '8px', border: '1px solid var(--bd)' }}>
                         {levelNode.lessonNotes}
                     </div>
                 </div>
@@ -426,7 +426,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                 )}
 
                 {currentEx.type !== 'matching_pairs' && currentEx.type !== 'teach' && currentEx.type !== 'listening' && (
-                    <div className={`ep-prompt ${currentEx.type === 'picture_match' || currentEx.type === 'conjugation_drill' || currentEx.type === 'true_false' ? '' : 'custom-font-text notranslate'}`} style={{ fontSize: currentEx.type === 'picture_match' ? '5rem' : currentEx.type === 'translate_to_conlang' ? '1.5rem' : '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                    <div className={`ep-prompt ${currentEx.type === 'picture_match' ? '' : 'custom-font-text notranslate'}`} style={{ fontSize: currentEx.type === 'picture_match' ? '5rem' : currentEx.type === 'translate_to_conlang' ? '1.5rem' : '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
                         {currentEx.type === 'translate_to_english' ? transliterate(currentEx.conlangSentence)
                         : currentEx.type === 'multiple_choice' ? transliterate(currentEx.conlangSentence)
                         : currentEx.type === 'picture_match' ? currentEx.conlangSentence
@@ -435,7 +435,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                         : currentEx.type === 'true_false' ? (
                             <>
                                 <span className="custom-font-text notranslate">{transliterate(currentEx.conlangSentence)}</span>
-                                <span style={{ fontSize: '1.2rem', color: 'var(--tx2)' }}>"{currentEx.displayEnglish}"</span>
+                                <span className="custom-font-text notranslate" style={{ fontSize: '1.2rem', color: 'var(--tx2)' }}>"{currentEx.displayEnglish}"</span>
                             </>
                         )
                         : currentEx.englishSentence}
@@ -468,7 +468,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                             placeholder={currentEx.type === 'translate_to_english' || currentEx.type === 'picture_match' || currentEx.type === 'fill_blank' || currentEx.type === 'conjugation_drill' ? "Type your answer..." : "Type your Conlang translation..."}
                             autoFocus
                             disabled={!!feedback}
-                            className={currentEx.type === 'translate_to_conlang' || currentEx.type === 'listening' ? "custom-font-text notranslate" : ""}
+                            className="custom-font-text notranslate"
                         />
                     </form>
                 ) : currentEx.type === 'multiple_choice' ? (
@@ -479,6 +479,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                                 variant={selectedOption === opt ? 'imp' : 'default'}
                                 onClick={() => setSelectedOption(opt)}
                                 disabled={!!feedback}
+                                className="custom-font-text notranslate"
                                 style={{ width: '100%', marginBottom: '10px', justifyContent: 'flex-start', padding: '15px' }}
                             >
                                 {opt}
@@ -551,7 +552,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                         </div>
                     </div>
                 ) : currentEx.type === 'teach' ? (
-                    <div className="ep-teach" style={{ padding: '20px', background: 'var(--s1)', borderRadius: '8px', border: '1px solid var(--bd)', whiteSpace: 'pre-wrap', lineHeight: '1.6', fontSize: '1.1rem', marginTop: '10px' }}>
+                    <div className="ep-teach custom-font-text notranslate" style={{ padding: '20px', background: 'var(--s1)', borderRadius: '8px', border: '1px solid var(--bd)', whiteSpace: 'pre-wrap', lineHeight: '1.6', fontSize: '1.1rem', marginTop: '10px' }}>
                         {renderRichText(currentEx.englishSentence)}
                     </div>
                 ) : null}
@@ -572,7 +573,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                         {feedback && (
                             <div className="ep-feedback-msg">
                                 <Mascot state={feedback.status} isSpeaking={false} size="small" />
-                                <p>{feedback.message}</p>
+                                <p className="custom-font-text notranslate">{feedback.message}</p>
                             </div>
                         )}
                         <Button 
