@@ -812,28 +812,45 @@ const NumbersTab = () => {
                             Preview
                         </h2>
                         <div className="preview-body">
-                            <input 
-                                type="number"
-                                className="fi test-input"
-                                value={testNumber}
-                                onChange={(e) => setTestNumber(e.target.value)}
-                                placeholder="42"
-                            />
-                            <div className="result-display">
-                                <label>Result:</label>
-                                <div 
-                                    className={`result-value custom-font-text ${testResult ? 'result-value-clickable' : ''}`}
-                                    onClick={() => {
-                                        if (testResult) {
-                                            setSelectedNumberForStroke({ word: testResult, name: `${testNumber || 'Result'}: ${testResult}` });
-                                        }
-                                    }}
-                                    title={testResult ? "Click to view stroke order" : ""}
-                                >
-                                    <span>{transliterate(testResult || '') || '—'}</span>
-                                    {testResult && <PenTool size={16} style={{ color: 'var(--acc)', opacity: 0.8 }} />}
-                                </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <input
+                                    type="number"
+                                    className="fi test-input"
+                                    value={testNumber}
+                                    onChange={(e) => setTestNumber(e.target.value)}
+                                    placeholder="42"
+                                />
+                                {testResult && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedNumberForStroke({ word: testResult, name: `${testNumber || 'Result'}: ${testResult}` })}
+                                        title="View stroke order"
+                                        style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            height: '40px',
+                                            width: '40px',
+                                            flexShrink: 0,
+                                            background: 'var(--s2)',
+                                            border: '1px solid var(--bd)',
+                                            borderRadius: '6px',
+                                            color: 'var(--acc)',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        <PenTool size={16} />
+                                    </button>
+                                )}
                             </div>
+                            {testResult && (
+                                <p
+                                    className="custom-font-text notranslate"
+                                    style={{ margin: '0.5rem 0 0', fontSize: '1.05rem', color: 'var(--tx)' }}
+                                >
+                                    {transliterate(testResult) || testResult}
+                                </p>
+                            )}
                         </div>
                     </Card>
                 </div>

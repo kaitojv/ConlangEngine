@@ -17,8 +17,19 @@ export default function StrokeOrderModal({
 }) {
     const config = useConfigStore();
     const [isPlaying, setIsPlaying] = useState(false);
+    const [isDirty, setIsDirty] = useState(false);
 
     if (!isOpen) return null;
+
+    const handleClose = () => {
+        if (isDirty) {
+            const ok = window.confirm(
+                'You have unsaved stroke changes.\n\nClose and discard them? (Your saved character is untouched.)'
+            );
+            if (!ok) return;
+        }
+        onClose();
+    };
 
     const displayTitle = name || word || char || 'Stroke Order';
     const displaySubtitle = translation ? `"${translation}"` : (word && word !== displayTitle ? word : '');
@@ -50,7 +61,7 @@ export default function StrokeOrderModal({
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`Stroke Order: ${displayTitle}`}>
+        <Modal isOpen={isOpen} onClose={handleClose} title={`Stroke Order: ${displayTitle}`}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', minWidth: 0 }}>
                 {/* Header Summary */}
                 <div style={{ 
@@ -104,7 +115,7 @@ export default function StrokeOrderModal({
                 </div>
 
                 {/* Stroke Order Visualizer */}
-                <StrokeOrderViewer word={word} char={char} scriptType={scriptType} />
+                <StrokeOrderViewer word={word} char={char} scriptType={scriptType} onDirtyChange={setIsDirty} />
             </div>
         </Modal>
     );

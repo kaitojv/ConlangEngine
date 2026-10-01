@@ -3,7 +3,7 @@ import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
 import Button from '../Buttons/Buttons.jsx';
-import { RotateCcw, RotateCw, Trash2, Download, Pencil, Minus, Spline, Eraser, Feather, FlipHorizontal, FlipVertical, Grid, Square, Circle, Triangle, SquareDashed, PenTool, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ZoomIn, ZoomOut, MousePointer, Maximize2, Sliders, Move, Crosshair, Brush, Type, Plus } from 'lucide-react';
+import { RotateCcw, RotateCw, Trash2, Download, Pencil, Minus, Spline, Eraser, Feather, FlipHorizontal, FlipVertical, Grid, Square, Circle, Triangle, SquareDashed, PenTool, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ZoomIn, ZoomOut, MousePointer, Maximize2, Sliders, Move, Crosshair, Brush, Type, Plus, Pointer } from 'lucide-react';
 import { exportStrokesAsSVG } from '../../../utils/svgExporter.jsx';
 import { parseSVGToStrokes } from '../../../utils/svgImporter.jsx';
 import './fontStudio.css';
@@ -83,6 +83,17 @@ const generateSerifStroke = (p1, p2, bSize, lCap) => {
     return stroke;
 };
 
+const distToSegment = (p, a, b) => {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const lenSq = dx * dx + dy * dy;
+    let t = lenSq === 0 ? 0 : ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+    const projX = a.x + t * dx;
+    const projY = a.y + t * dy;
+    return Math.hypot(p.x - projX, p.y - projY);
+};
+
 const extractInitialGlyphData = (existingCharCode, customGlyphs) => {
     if (!existingCharCode || !customGlyphs || !customGlyphs[existingCharCode]) return null;
     const existingStrokes = customGlyphs[existingCharCode];
@@ -152,6 +163,8 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         return extractInitialGlyphData(existingCharCode, customGlyphs);
     }, [existingCharCode, customGlyphs]);
 
+    const initialStrokesJson = useMemo(() => JSON.stringify(initialData?.actualStrokes || []), [initialData]);
+
     const [isDrawing, setIsDrawing] = useState(false);
     const [strokes, setStrokes] = useState(() => initialData?.actualStrokes || []);
     const [currentStroke, setCurrentStroke] = useState([]);
@@ -176,6 +189,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     
     // Node Editing States
     const [selectedNode, setSelectedNode] = useState(null); // { strokeIndex, pointIndex }
+    const [selectedStrokeIndex, setSelectedStrokeIndex] = useState(null); // select tool: whole-stroke index
 
     // Metadata States
     const [glyphScale, setGlyphScale] = useState(() => initialData?.meta?.scale ?? 1.0);
@@ -346,6 +360,15 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         }
 
         strokes.forEach((stroke) => {
+            if (!Array.isArray(stroke) || stroke.isMeta) return;
+            // Single-point stroke → render as a dot so it is never invisible.
+            if (stroke.length === 1) {
+                ctx.fillStyle = ctx.strokeStyle;
+                ctx.beginPath();
+                ctx.arc(stroke[0].x, stroke[0].y, Math.max(2, brushSize / 2), 0, Math.PI * 2);
+                ctx.fill();
+                return;
+            }
             if (stroke.length < 2) return;
             
             ctx.lineCap = stroke.lineCap || 'round';
@@ -442,6 +465,41 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
             }
         });
 
+        // Highlight the whole selected stroke (select tool)
+        if (selectedStrokeIndex != null && strokes[selectedStrokeIndex] && Array.isArray(strokes[selectedStrokeIndex])) {
+            const sel = strokes[selectedStrokeIndex];
+            ctx.save();
+            ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--acc').trim() || '#3b82f6';
+            ctx.fillStyle = ctx.strokeStyle;
+            ctx.globalAlpha = 0.85;
+            ctx.setLineDash([]);
+            if (sel.length >= 2) {
+                ctx.lineWidth = brushSize + 4;
+                ctx.beginPath();
+                ctx.moveTo(sel[0].x, sel[0].y);
+                for (let i = 1; i < sel.length; i++) {
+                    ctx.lineTo(sel[i].x, sel[i].y);
+                }
+                if (sel.isFilled) { ctx.closePath(); ctx.fill(); } else { ctx.stroke(); }
+            } else if (sel.length === 1) {
+                ctx.beginPath();
+                ctx.arc(sel[0].x, sel[0].y, Math.max(4, brushSize), 0, Math.PI * 2);
+                ctx.fill();
+            }
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            sel.forEach(pt => {
+                minX = Math.min(minX, pt.x); minY = Math.min(minY, pt.y);
+                maxX = Math.max(maxX, pt.x); maxY = Math.max(maxY, pt.y);
+            });
+            const pad = 8;
+            ctx.globalAlpha = 1;
+            ctx.setLineDash([5, 4]);
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(minX - pad, minY - pad, (maxX - minX) + pad * 2, (maxY - minY) + pad * 2);
+            ctx.setLineDash([]);
+            ctx.restore();
+        }
+
         // Draw preview of current stroke
         if (currentStroke.length >= 2) {
             ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--tx2').trim() || '#64748b';
@@ -490,7 +548,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         }
         ctx.restore();
         ctx.restore(); // Restore retina scale
-    }, [strokes, currentStroke, brushSize, isCalligraphy, isBrushPen, isChisel, chiselAngle, isPaintBrush, isSerifPen, backgroundStrokes, backgroundText, zoom, activeTool, selectedNode]);
+    }, [strokes, currentStroke, brushSize, isCalligraphy, isBrushPen, isChisel, chiselAngle, isPaintBrush, isSerifPen, backgroundStrokes, backgroundText, zoom, activeTool, selectedNode, selectedStrokeIndex]);
 
     const getCoords = (e) => {
         const rect = canvasRef.current.getBoundingClientRect();
@@ -601,6 +659,27 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
 
     const handlePointerDown = (e) => {
         const coords = getCoords(e);
+
+        if (activeTool === 'select') {
+            // Pick the stroke nearest to the click — works even for hidden or overlapping strokes.
+            let bestIdx = null;
+            let bestDist = Infinity;
+            strokes.forEach((s, idx) => {
+                if (!Array.isArray(s) || s.isMeta) return;
+                if (s.length === 1) {
+                    const d = Math.hypot(s[0].x - coords.x, s[0].y - coords.y);
+                    if (d < bestDist) { bestDist = d; bestIdx = idx; }
+                    return;
+                }
+                for (let i = 0; i < s.length - 1; i++) {
+                    const d = distToSegment(coords, s[i], s[i + 1]);
+                    if (d < bestDist) { bestDist = d; bestIdx = idx; }
+                }
+            });
+            const threshold = Math.max(12, brushSize + 8);
+            setSelectedStrokeIndex(bestDist <= threshold ? bestIdx : null);
+            return;
+        }
 
         if (activeTool === 'node_edit') {
             let foundNode = null;
@@ -891,6 +970,31 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         setSelectedNode(null);
     };
 
+    const handleDeleteSelectedStroke = () => {
+        if (selectedStrokeIndex == null) return;
+        const ok = window.confirm(
+            `Delete stroke ${selectedStrokeIndex + 1}?\n\nThis is not saved until you press "Save Glyph". Undo or Cancel restores it.`
+        );
+        if (!ok) return;
+        setStrokes(prev => prev.filter((_, i) => i !== selectedStrokeIndex));
+        setSelectedStrokeIndex(null);
+    };
+
+    // Keyboard: Delete / Backspace removes the currently selected stroke.
+    useEffect(() => {
+        const onKey = (e) => {
+            if (selectedStrokeIndex == null) return;
+            if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+            const tag = (e.target && e.target.tagName ? e.target.tagName : '').toLowerCase();
+            if (tag === 'input' || tag === 'textarea') return;
+            e.preventDefault();
+            handleDeleteSelectedStroke();
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedStrokeIndex, strokes]);
+
     const handleSmoothNode = () => {
         if (!selectedNode) return;
         setStrokes(prev => prev.map((stroke, sIdx) => {
@@ -940,9 +1044,26 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     };
 
     const handleClear = () => {
+        if (strokes.length > 0) {
+            const ok = window.confirm(
+                'Clear the whole canvas? Every stroke will be removed.\n\nThis is NOT written to your saved glyph until you press "Save Glyph", so Cancel restores it.'
+            );
+            if (!ok) return;
+        }
         setStrokes([]);
         setCurrentStroke([]);
         setSelectedNode(null);
+        setSelectedStrokeIndex(null);
+    };
+
+    const handleCancel = () => {
+        if (JSON.stringify(strokes) !== initialStrokesJson) {
+            const ok = window.confirm(
+                'You have unsaved drawing changes.\n\nDiscard them and close? (Your saved glyph is untouched.)'
+            );
+            if (!ok) return;
+        }
+        onCancel();
     };
 
     const handleRotate = () => {
@@ -1145,6 +1266,13 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                             title="Vector Node Edit Tool (Select & Drag Anchor Points)"
                         >
                             <MousePointer size={18} />
+                        </button>
+                        <button 
+                            className={`fs-tool-btn ${activeTool === 'select' ? 'active' : ''}`}
+                            onClick={() => setActiveTool('select')}
+                            title="Select Stroke Tool (Click a stroke to isolate & delete it)"
+                        >
+                            <Pointer size={18} />
                         </button>
                         <button 
                             className={`fs-tool-btn ${activeTool === 'line' ? 'active' : ''}`}
@@ -1362,12 +1490,21 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                                 </button>
                             </div>
                         )}
+
+                        {selectedStrokeIndex != null && (
+                            <div className="fs-status-item stroke-info">
+                                <span>Stroke {selectedStrokeIndex + 1} selected</span>
+                                <button className="fs-mini-del-btn" onClick={handleDeleteSelectedStroke} title="Delete this whole stroke (Del)">
+                                    <Trash2 size={14} />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
 
             <div className="fs-action-btns">
-                <Button variant="cancel" className="fs-btn-full" onClick={onCancel}>Cancel</Button>
+                <Button variant="cancel" className="fs-btn-full" onClick={handleCancel}>Cancel</Button>
                 <Button 
                     variant="default" 
                     className="fs-btn-full" 

@@ -12,6 +12,7 @@ import DefinitionSelectModal from '../../UI/Modal/DefinitionSelectModal.jsx';
 import Modal from '../../UI/Modal/Modal.jsx';
 import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
 import StrokeOrderModal from '../../UI/StrokeOrder/StrokeOrderModal.jsx';
+import GlyphDetailsModal from '../../UI/GlyphDetailsModal/GlyphDetailsModal.jsx';
 import GlyphPreviewBadge from '../../UI/Glyph/GlyphPreviewBadge.jsx';
 import { Search, Volume2, Save, Trash2, X, Link as LinkIcon, GitBranch, Plus, Wand2, Mic, Square, Play, Brush, PenTool } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -82,6 +83,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
     const [isFetchingRelated, setIsFetchingRelated] = useState(false);
     const [isFontStudioOpen, setIsFontStudioOpen] = useState(false);
     const [isStrokeOrderOpen, setIsStrokeOrderOpen] = useState(false);
+    const [isGlyphViewerOpen, setIsGlyphViewerOpen] = useState(false);
     const { word, ipa, wordClass, translation, tags, ideogram, personCategory, tone, stress, customAudioBase64 } = formData;
 
     // Only show ideogram section when active script is logographic
@@ -797,7 +799,8 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                             glyph={ideogram}
                             size={34}
                             showCode={false}
-                            title={ideogram ? "Custom Glyph Preview" : "No glyph drawn"}
+                            onClick={ideogram ? () => setIsGlyphViewerOpen(true) : undefined}
+                            title={ideogram ? "Click to open the character viewer" : "No glyph drawn"}
                         />
                         <input
                             value={ideogram}
@@ -1198,6 +1201,17 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                     isOpen={isStrokeOrderOpen}
                     onClose={() => setIsStrokeOrderOpen(false)}
                     scriptType="logographic"
+                />
+            )}
+
+            {isGlyphViewerOpen && ideogram && (
+                <GlyphDetailsModal
+                    isOpen={isGlyphViewerOpen}
+                    onClose={() => setIsGlyphViewerOpen(false)}
+                    char={ideogram}
+                    glyph={ideogram}
+                    type="logographic"
+                    name={ideogram}
                 />
             )}
         </div>

@@ -16,6 +16,7 @@ import Modal from '../../UI/Modal/Modal.jsx';
 import DefinitionSelectModal from '../../UI/Modal/DefinitionSelectModal.jsx';
 import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
 import StrokeOrderModal from '../../UI/StrokeOrder/StrokeOrderModal.jsx';
+import GlyphDetailsModal from '../../UI/GlyphDetailsModal/GlyphDetailsModal.jsx';
 import GlyphPreviewBadge from '../../UI/Glyph/GlyphPreviewBadge.jsx';
 import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
@@ -110,6 +111,7 @@ export default function CreateWordTab() {
     const { word, ipa, wordClass, translation, definition, tags, relatedWords, ideogram, tone, stress, scriptOverride, personCategory } = formData;
     const [isFontStudioOpen, setIsFontStudioOpen] = useState(false);
     const [isStrokeOrderOpen, setIsStrokeOrderOpen] = useState(false);
+    const [isGlyphViewerOpen, setIsGlyphViewerOpen] = useState(false);
     const [selectedDerivs, setSelectedDerivs] = useState({});
     const [customTranslations, setCustomTranslations] = useState({});
 
@@ -926,7 +928,8 @@ export default function CreateWordTab() {
                                 glyph={ideogram}
                                 size={38}
                                 showCode={false}
-                                title={ideogram ? "Custom Glyph Preview" : "No glyph drawn"}
+                                onClick={ideogram ? () => setIsGlyphViewerOpen(true) : undefined}
+                                title={ideogram ? "Click to open the character viewer" : "No glyph drawn"}
                             />
                             <input
                                 value={ideogram}
@@ -1322,6 +1325,17 @@ export default function CreateWordTab() {
                     isOpen={isStrokeOrderOpen}
                     onClose={() => setIsStrokeOrderOpen(false)}
                     scriptType="logographic"
+                />
+            )}
+
+            {isGlyphViewerOpen && ideogram && (
+                <GlyphDetailsModal
+                    isOpen={isGlyphViewerOpen}
+                    onClose={() => setIsGlyphViewerOpen(false)}
+                    char={ideogram}
+                    glyph={ideogram}
+                    type="logographic"
+                    name={ideogram}
                 />
             )}
 

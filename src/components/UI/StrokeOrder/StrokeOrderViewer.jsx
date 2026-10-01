@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Play, Pause, RotateCcw, ChevronLeft, ChevronRight, ChevronDown, PenTool, Brush, ArrowLeft, ArrowRight, ArrowLeftRight, Merge, Check } from 'lucide-react';
+import { Play, Pause, RotateCcw, ChevronLeft, ChevronRight, ChevronDown, PenTool, Brush, ArrowLeft, ArrowRight, ArrowLeftRight, Merge, Check, Trash2, Eye, EyeOff, Save, Undo2, AlertTriangle } from 'lucide-react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { resolveWordStrokes, cleanStrokes, calculateStrokeArrowAndNumber } from '../../../utils/strokeOrderResolver.js';
@@ -54,7 +54,7 @@ const RenderStroke = ({ stroke, color = 'var(--tx)', strokeWidth = 12 }) => {
     );
 };
 
-export default function StrokeOrderViewer({ word, char, scriptType: explicitScriptType, rawStrokes, onStrokesChange }) {
+export default function StrokeOrderViewer({ word, char, scriptType: explicitScriptType, rawStrokes, onStrokesChange, onDirtyChange }) {
     const phonologyTypes = useConfigStore(state => state.phonologyTypes);
     const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
     const scriptDataById = useConfigStore(state => state.scriptDataById) || {};
@@ -62,7 +62,6 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
     const scriptSystems = useConfigStore(state => state.scriptSystems);
     const activeScriptSystemId = useConfigStore(state => state.activeScriptSystemId);
     const addCustomGlyph = useConfigStore(state => state.addCustomGlyph);
-    const typographySettings = useConfigStore(state => state.typographySettings) || {};
 
     const rawLexicon = useLexiconStore(state => state.lexicon);
     const lexicon = useMemo(() => Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []), [rawLexicon]);
@@ -82,6 +81,7 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
     const [isEditingOrder, setIsEditingOrder] = useState(false);
     const [isFontStudioModalOpen, setIsFontStudioModalOpen] = useState(false);
     const [mergePickSource, setMergePickSource] = useState(null); // null = idle, -1 = ready to pick 1st, >=0 = index of 1st stroke
+    const [soloIndex, setSoloIndex] = useState(null); // null = show all strokes, >=0 = isolate a single stroke
 
     // Resolve strokes for the word/character
     const resolvedData = useMemo(() => {
@@ -124,14 +124,29 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
     const [isPlaying, setIsPlaying] = useState(false);
     const [speedMultiplier, setSpeedMultiplier] = useState(1);
     const timerRef = useRef(null);
-    const saveTimerRef = useRef(null);
     const [strokeHistory, setStrokeHistory] = useState([]);
+    // True whenever there are LOCAL, unsaved stroke edits for this character.
+    const isDirty = customStrokesOverride != null;
+    // Which stroke the player should highlight/arrow (solo overrides the step slider).
+    const activeStepIndex = soloIndex != null ? soloIndex : (currentStep > 0 ? currentStep - 1 : -1);
+
+    // Let the wrapping modal know there are unsaved edits (so it can guard closing).
+    useEffect(() => {
+        if (onDirtyChange) onDirtyChange(isDirty);
+    }, [isDirty, onDirtyChange]);
 
     const handleCharChange = (idx) => {
+        if (customStrokesOverride != null && idx !== selectedCharIndex) {
+            const ok = window.confirm(
+                'You have unsaved stroke changes for this character.\n\nDiscard them and switch characters? (Nothing stored is affected.)'
+            );
+            if (!ok) return;
+        }
         setSelectedCharIndex(idx);
         setCustomStrokesOverride(null);
         setStrokeHistory([]);
         setMergePickSource(null);
+        setSoloIndex(null);
         setIsPlaying(false);
         if (timerRef.current) clearInterval(timerRef.current);
         const charStrokes = characters[idx]?.strokes?.length || 0;
@@ -142,7 +157,6 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
     useEffect(() => {
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
-            if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         };
     }, []);
 
@@ -205,55 +219,86 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
         });
     };
 
-    // Save and propagate stroke changes smoothly without freezing the UI
-    const applyStrokeUpdate = useCallback((newStrokesList, recordHistory = true) => {
+    // ── STAGED EDITING ──────────────────────────────────────────────────────
+    // All edits (reorder / reverse / merge / delete) below mutate a LOCAL draft
+    // only. Nothing is written to the Zustand store or the DB until the user
+    // explicitly clicks "Save Changes". This makes it impossible to destroy an
+    // existing character by accident — you can always Discard and recover.
+    const stageUpdate = useCallback((newStrokesList, recordHistory = true) => {
         if (recordHistory) {
             setStrokeHistory(prev => [...prev.slice(-25), strokes]);
         }
 
-        // Instant optimistic UI update
+        // Instant optimistic UI update (local only)
         setCustomStrokesOverride(newStrokesList);
         setCurrentStep(prev => Math.min(prev, newStrokesList.length));
 
         if (onStrokesChange) {
             onStrokesChange(newStrokesList);
         }
+    }, [strokes, onStrokesChange]);
 
+    // Backwards-compatible alias so existing call-sites keep working.
+    const applyStrokeUpdate = stageUpdate;
+
+    // Persist the draft. Only ever rewrites the ONE targeted charCode and always
+    // preserves the existing meta/marker element [0] byte-for-byte.
+    const commitStrokes = useCallback(() => {
+        const draft = customStrokesOverride;
+        if (draft == null) {
+            toast('No changes to save.');
+            return;
+        }
         const charCode = baseCharData?.charCode;
-        if (charCode != null) {
-            const state = useConfigStore.getState();
-            const defaultScriptId = state.scriptRules?.defaultScriptId || 'default';
-            const activeScriptId = state.activeScriptSystemId || defaultScriptId;
-            let targetScriptId = defaultScriptId;
-            let existing = state.customGlyphs?.[charCode] || state.customGlyphs?.[String(charCode)];
+        if (charCode == null) {
+            toast.error('This character cannot be saved (no code point).');
+            return;
+        }
 
-            if (!existing && state.scriptDataById) {
-                const searchOrder = [activeScriptId, defaultScriptId, ...Object.keys(state.scriptDataById)];
-                for (const sId of searchOrder) {
-                    const sg = state.scriptDataById[sId]?.customGlyphs;
-                    if (sg && (sg[charCode] || sg[String(charCode)])) {
-                        existing = sg[charCode] || sg[String(charCode)];
-                        targetScriptId = sId;
-                        break;
-                    }
+        const state = useConfigStore.getState();
+        const defaultScriptId = state.scriptRules?.defaultScriptId || 'default';
+        const activeScriptId = state.activeScriptSystemId || defaultScriptId;
+        let targetScriptId = defaultScriptId;
+        let existing = state.customGlyphs?.[charCode] || state.customGlyphs?.[String(charCode)];
+
+        if (!existing && state.scriptDataById) {
+            const searchOrder = [activeScriptId, defaultScriptId, ...Object.keys(state.scriptDataById)];
+            for (const sId of searchOrder) {
+                const sg = state.scriptDataById[sId]?.customGlyphs;
+                if (sg && (sg[charCode] || sg[String(charCode)])) {
+                    existing = sg[charCode] || sg[String(charCode)];
+                    targetScriptId = sId;
+                    break;
                 }
             }
-
-            let metaObj = null;
-            if (existing && existing.length > 0 && !Array.isArray(existing[0]) && existing[0]?.isMeta) {
-                metaObj = existing[0];
-            }
-            const strokesToSave = metaObj ? [metaObj, ...newStrokesList] : newStrokesList;
-
-            // Debounce store/DB update by 250ms to eliminate freezing and lag.
-            if (saveTimerRef.current) {
-                clearTimeout(saveTimerRef.current);
-            }
-            saveTimerRef.current = setTimeout(() => {
-                addCustomGlyph(charCode, strokesToSave, null, targetScriptId, true);
-            }, 250);
         }
-    }, [strokes, onStrokesChange, baseCharData, addCustomGlyph]);
+
+        let metaObj = null;
+        if (existing && existing.length > 0 && !Array.isArray(existing[0]) && existing[0]?.isMeta) {
+            metaObj = existing[0];
+        }
+        const strokesToSave = metaObj ? [metaObj, ...draft] : draft;
+
+        addCustomGlyph(charCode, strokesToSave, null, targetScriptId, false);
+        setCustomStrokesOverride(null);
+        setStrokeHistory([]);
+        setSoloIndex(null);
+        if (onStrokesChange) {
+            onStrokesChange(draft);
+        }
+        toast.success('Stroke changes saved.');
+    }, [customStrokesOverride, baseCharData, onStrokesChange, addCustomGlyph]);
+
+    // Throw away the draft and fall back to what is stored (the recovery path).
+    const discardChanges = useCallback(() => {
+        if (customStrokesOverride == null) return;
+        setCustomStrokesOverride(null);
+        setStrokeHistory([]);
+        setMergePickSource(null);
+        setSoloIndex(null);
+        setIsPlaying(false);
+        toast('Reverted to the saved version.');
+    }, [customStrokesOverride]);
 
     // Undo last stroke change
     const handleUndo = useCallback(() => {
@@ -322,8 +367,26 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
         toast.success(`Merged stroke ${firstIdx + 1} and stroke ${secondIdx + 1}`);
     };
 
-    // If no custom strokes available anywhere for this character
-    if (!hasStrokes || !baseCharData || totalStrokes === 0) {
+    // Delete a single stroke (staged — reversible until "Save Changes" is pressed).
+    const handleDeleteStroke = (index) => {
+        if (index < 0 || index >= strokes.length) return;
+        const ok = window.confirm(
+            `Delete stroke ${index + 1}?\n\nThis only changes your local draft — it is fully restored if you press Discard.`
+        );
+        if (!ok) return;
+        const next = strokes.filter((_, i) => i !== index);
+        applyStrokeUpdate(next);
+        if (soloIndex === index) setSoloIndex(null);
+        toast.success(`Stroke ${index + 1} removed (unsaved)`);
+    };
+
+    // Isolate a single stroke so overlapping / hidden strokes can be inspected.
+    const toggleSolo = (index) => {
+        setSoloIndex(prev => (prev === index ? null : index));
+    };
+
+    // If no custom strokes available anywhere for this character (and no draft being edited)
+    if (!baseCharData || (!hasStrokes && customStrokesOverride == null) || (totalStrokes === 0 && customStrokesOverride == null)) {
         return (
             <div className="stroke-order-container">
                 <div className="so-empty-card">
@@ -396,6 +459,25 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                 </div>
             </div>
 
+            {/* Unsaved-changes banner (shown even outside edit mode) */}
+            {isDirty && (
+                <div className="so-dirty-banner">
+                    <AlertTriangle size={14} />
+                    <span>
+                        Unsaved stroke changes — press <strong>Save Changes</strong> to keep them,
+                        or <strong>Discard</strong> to revert to the stored character.
+                    </span>
+                    <div className="so-dirty-banner-actions">
+                        <button type="button" className="so-btn-toolbar" onClick={commitStrokes}>
+                            <Save size={13} /> <span>Save</span>
+                        </button>
+                        <button type="button" className="so-btn-toolbar" onClick={discardChanges}>
+                            <Undo2 size={13} /> <span>Discard</span>
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Active Editing Sub-toolbar */}
             {isEditingOrder && (
                 <div className="so-edit-tools-drawer">
@@ -419,6 +501,29 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                         >
                             <RotateCcw size={14} />
                             <span>Undo {strokeHistory.length > 0 ? `(${strokeHistory.length})` : ''}</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            className="so-btn-toolbar"
+                            onClick={commitStrokes}
+                            disabled={!isDirty}
+                            title="Save your stroke changes to this character (nothing else is touched)"
+                            style={isDirty ? { background: 'var(--acc)', color: '#ffffff', borderColor: 'var(--acc)' } : undefined}
+                        >
+                            <Save size={14} />
+                            <span>Save Changes</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            className="so-btn-toolbar"
+                            onClick={discardChanges}
+                            disabled={!isDirty}
+                            title="Discard unsaved changes and revert to the saved version"
+                        >
+                            <Undo2 size={14} />
+                            <span>Discard</span>
                         </button>
 
                         <span className="so-edit-tools-note">
@@ -454,45 +559,53 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                     <svg viewBox="0 0 300 300" className="so-player-svg">
                         <TianzigeGrid />
 
-                        {/* Render all strokes up to currentStep */}
-                        {strokes.slice(0, currentStep).map((stroke, sIdx) => {
-                            const isCurrent = sIdx === currentStep - 1;
-                            const color = isCurrent ? 'var(--tx)' : 'var(--tx2)';
-                            return (
-                                <g key={sIdx}>
-                                    <RenderStroke stroke={stroke} color={color} strokeWidth={12} />
+                        {/* Render all strokes up to currentStep (or just the isolated stroke) */}
+                        {soloIndex != null ? (
+                            strokes[soloIndex] && (
+                                <g key={`solo-${soloIndex}`}>
+                                    <RenderStroke stroke={strokes[soloIndex]} color="var(--tx)" strokeWidth={12} />
                                 </g>
-                            );
-                        })}
+                            )
+                        ) : (
+                            strokes.slice(0, currentStep).map((stroke, sIdx) => {
+                                const isCurrent = sIdx === currentStep - 1;
+                                const color = isCurrent ? 'var(--tx)' : 'var(--tx2)';
+                                return (
+                                    <g key={sIdx}>
+                                        <RenderStroke stroke={stroke} color={color} strokeWidth={12} />
+                                    </g>
+                                );
+                            })
+                        )}
 
                         {/* Active stroke red directional arrow, starting point marker & number */}
-                        {currentStep > 0 && currentStep <= strokes.length && arrows[currentStep - 1] && (
-                            <g key={`arrow-${currentStep - 1}`}>
-                                {arrows[currentStep - 1].startMarker && (
+                        {activeStepIndex >= 0 && arrows[activeStepIndex] && (
+                            <g key={`arrow-${activeStepIndex}`}>
+                                {arrows[activeStepIndex].startMarker && (
                                     <circle
-                                        cx={arrows[currentStep - 1].startMarker.x}
-                                        cy={arrows[currentStep - 1].startMarker.y}
-                                        r={arrows[currentStep - 1].isClosed ? 4.5 : 3.5}
+                                        cx={arrows[activeStepIndex].startMarker.x}
+                                        cy={arrows[activeStepIndex].startMarker.y}
+                                        r={arrows[activeStepIndex].isClosed ? 4.5 : 3.5}
                                         fill="#ef4444"
                                         stroke="#ffffff"
                                         strokeWidth="1.5"
                                     />
                                 )}
-                                {arrows[currentStep - 1].isDot ? (
+                                {arrows[activeStepIndex].isDot ? (
                                     <text
-                                        x={arrows[currentStep - 1].numX}
-                                        y={arrows[currentStep - 1].numY}
+                                        x={arrows[activeStepIndex].numX}
+                                        y={arrows[activeStepIndex].numY}
                                         fill="#ef4444"
                                         fontSize="18"
                                         fontWeight="bold"
                                         textAnchor="middle"
                                     >
-                                        {arrows[currentStep - 1].number}
+                                        {arrows[activeStepIndex].number}
                                     </text>
                                 ) : (
                                     <>
                                         <path
-                                            d={arrows[currentStep - 1].arrowPathD}
+                                            d={arrows[activeStepIndex].arrowPathD}
                                             stroke="#ef4444"
                                             strokeWidth="3"
                                             fill="none"
@@ -500,15 +613,15 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                                             markerEnd="url(#red-arrowhead)"
                                         />
                                         <text
-                                            x={arrows[currentStep - 1].numX}
-                                            y={arrows[currentStep - 1].numY}
+                                            x={arrows[activeStepIndex].numX}
+                                            y={arrows[activeStepIndex].numY}
                                             fill="#ef4444"
                                             fontSize="18"
                                             fontWeight="bold"
                                             textAnchor="middle"
                                             dominantBaseline="central"
                                         >
-                                            {arrows[currentStep - 1].number}
+                                            {arrows[activeStepIndex].number}
                                         </text>
                                     </>
                                 )}
@@ -590,8 +703,10 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                     <span className="so-strip-title">Step-by-Step Sequence ({totalStrokes} Strokes)</span>
                     <span className="so-strip-hint">
                         {isEditingOrder
-                            ? "Use arrows below each card to reorder (←/→), reverse (⇄), or merge with next stroke"
-                            : "Click any square to view that step in the player"}
+                            ? "Reorder (←/→), reverse (⇄), merge, isolate (👁) or delete (🗑) any stroke — then Save."
+                            : (soloIndex != null
+                                ? `Isolating stroke ${soloIndex + 1} — click the eye again to show all strokes`
+                                : "Click any square to view that step in the player")}
                     </span>
                 </div>
 
@@ -623,7 +738,7 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                         return (
                             <div
                                 key={k}
-                                className={`so-cell-card ${isSelected ? 'active' : ''} ${isMergeSource ? 'merge-source' : ''} ${isMergeTarget ? 'merge-target' : ''} ${mergePickSource !== null ? 'merge-picking' : ''}`}
+                                className={`so-cell-card ${isSelected ? 'active' : ''} ${isMergeSource ? 'merge-source' : ''} ${isMergeTarget ? 'merge-target' : ''} ${mergePickSource !== null ? 'merge-picking' : ''} ${soloIndex === k ? 'solo' : ''} ${soloIndex != null && soloIndex !== k ? 'dimmed' : ''}`}
                                 onClick={() => {
                                     if (mergePickSource !== null) {
                                         if (mergePickSource === -1) {
@@ -650,8 +765,8 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                                     <svg viewBox="0 0 300 300" className="so-cell-svg">
                                         <TianzigeGrid />
 
-                                        {/* Prior strokes 0..k-1 rendered in muted grey */}
-                                        {strokes.slice(0, k).map((priorStroke, pIdx) => (
+                                        {/* Prior strokes 0..k-1 rendered in muted grey (hidden while isolating) */}
+                                        {soloIndex !== k && strokes.slice(0, k).map((priorStroke, pIdx) => (
                                             <RenderStroke
                                                 key={`prior-${pIdx}`}
                                                 stroke={priorStroke}
@@ -760,6 +875,22 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                                                 <Merge size={12} />
                                             </button>
                                         )}
+                                        <button
+                                            type="button"
+                                            className={`so-cell-btn ${soloIndex === k ? 'active-btn' : ''}`}
+                                            onClick={() => toggleSolo(k)}
+                                            title={soloIndex === k ? `Show all strokes again` : `Isolate stroke ${k + 1} (hide the rest)`}
+                                        >
+                                            {soloIndex === k ? <EyeOff size={12} /> : <Eye size={12} />}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="so-cell-btn danger"
+                                            onClick={() => handleDeleteStroke(k)}
+                                            title={`Delete stroke ${k + 1}`}
+                                        >
+                                            <Trash2 size={12} />
+                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -797,8 +928,12 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                     <FontStudioModal
                         targetLabel={baseCharData.label || baseCharData.char}
                         existingCharCode={baseCharData.charCode}
-                        onSave={(newChar, newStrokes) => {
-                            applyStrokeUpdate(cleanStrokes(newStrokes));
+                        onSave={() => {
+                            // Font Studio already persisted via addCustomGlyph, so simply
+                            // clear any local draft and show the freshly saved glyph.
+                            setCustomStrokesOverride(null);
+                            setStrokeHistory([]);
+                            setSoloIndex(null);
                             setIsFontStudioModalOpen(false);
                             toast.success('Character updated!');
                         }}

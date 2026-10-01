@@ -495,3 +495,11 @@
     margin-bottom: 2px;
 }
 
+/* Stroke selection status (character editor) */
+.fs-status-item.stroke-info {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--acc);
+    font-weight: 600;
+}

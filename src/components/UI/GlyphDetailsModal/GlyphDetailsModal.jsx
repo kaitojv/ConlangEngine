@@ -18,14 +18,12 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
     const [stats, setStats] = useState(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const isConscript = ['syllabic', 'logographic', 'featural_block', 'featural', 'block'].includes(type);
-    const [activeTab, setActiveTab] = useState(isConscript ? 'stroke_order' : 'analysis');
+    // Default to the glyph viewer (large display + usage stats), NOT the stroke editor.
+    const [activeTab, setActiveTab] = useState('analysis');
 
     useEffect(() => {
-        if (isConscript) {
-            setActiveTab('stroke_order');
-        } else {
-            setActiveTab('analysis');
-        }
+        // Always open the character viewer first; the stroke editor is opt-in via its own tab.
+        setActiveTab('analysis');
     }, [char, type, isConscript]);
 
     useEffect(() => {
@@ -148,27 +146,27 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
     };
 
     const displayStr = glyph || char || '';
-    const dynamicFontSize = isWord ? Math.max(2, Math.min(8, 30 / displayStr.length)) + 'rem' : '8rem';
+    const dynamicFontSize = isWord ? Math.max(2.5, Math.min(10, 34 / displayStr.length)) + 'rem' : '10rem';
 
     if (!isOpen) return null;
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`${name || char}`}>
+        <Modal isOpen={isOpen} onClose={onClose} className="modal-xwide" title={`${name || char}`}>
             <div className="glyph-modal-content">
                 {/* Tab Switcher for Conscript Systems */}
                 {isConscript && (
                     <div className="glyph-modal-tabs">
                         <button
+                            className={`glyph-modal-tab ${activeTab === 'analysis' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('analysis')}
+                        >
+                            <BarChart2 size={16} /> Glyph & Usage
+                        </button>
+                        <button
                             className={`glyph-modal-tab ${activeTab === 'stroke_order' ? 'active' : ''}`}
                             onClick={() => setActiveTab('stroke_order')}
                         >
                             <PenTool size={16} /> Stroke Order
-                        </button>
-                        <button
-                            className={`glyph-modal-tab ${activeTab === 'analysis' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('analysis')}
-                        >
-                            <BarChart2 size={16} /> Analytics & Usage
                         </button>
                     </div>
                 )}
@@ -183,7 +181,7 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                                 style={{ fontSize: dynamicFontSize, wordBreak: 'break-all', display: 'flex', justifyContent: 'center' }}
                             >
                                 {isWord ? displayStr : (
-                                    <GlyphPreviewBadge glyph={char || glyph} size={110} />
+                                    <GlyphPreviewBadge glyph={char || glyph} size={180} />
                                 )}
                             </div>
                             <button 

@@ -51,3 +51,7 @@
 .modal-container.modal-wide {
     max-width: 900px;
 }
+
+.modal-container.modal-xwide {
+    max-width: 1100px;
+}

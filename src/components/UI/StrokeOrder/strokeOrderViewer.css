@@ -430,3 +430,52 @@
     border-style: solid;
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 40%, transparent);
 }
+
+/* ── Unsaved-changes banner ─────────────────────────────────────────── */
+.so-dirty-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: color-mix(in srgb, #f59e0b 14%, var(--s2));
+    border: 1px solid #f59e0b;
+    color: var(--tx);
+    font-size: 0.82rem;
+}
+
+.so-dirty-banner > svg {
+    color: #f59e0b;
+    flex-shrink: 0;
+}
+
+.so-dirty-banner-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+/* ── Isolate (solo) a single stroke ─────────────────────────────────── */
+.so-cell-card.dimmed .so-cell-svg-wrapper {
+    opacity: 0.35;
+}
+
+.so-cell-card.solo .so-cell-svg-wrapper {
+    border-color: var(--acc) !important;
+    box-shadow: 0 0 0 2px var(--acc) !important;
+}
+
+.so-cell-btn.active-btn {
+    background: var(--acc);
+    color: #ffffff;
+    border-color: var(--acc);
+}
+
+/* ── Delete-stroke button ───────────────────────────────────────────── */
+.so-cell-btn.danger:hover:not(:disabled) {
+    color: #ffffff;
+    background: var(--err, #ef4444);
+    border-color: var(--err, #ef4444);
+}
