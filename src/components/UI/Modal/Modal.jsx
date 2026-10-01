@@ -1,5 +1,6 @@
 // src/components/UI/Modal/Modal.jsx
 import React from 'react';
+import ReactDOM from 'react-dom';
 import { X } from 'lucide-react';
 import './Modal.css';
 
@@ -21,7 +22,11 @@ export default function Modal({ isOpen, onClose, title, children, className }) {
         setMouseDownOnBackdrop(false);
     };
 
-    return (
+    // Render into <body> so the modal escapes any ancestor stacking context
+    // (e.g. .tab-pane-container sets position:relative + z-index:1). Without this the
+    // backdrop's z-index is resolved *within* that context and page content (notably
+    // the alphabet/char-card grids) paints straight over the dialog.
+    return ReactDOM.createPortal(
         <div 
             className="modal-backdrop" 
             onMouseDown={handleMouseDown}
@@ -38,6 +43,7 @@ export default function Modal({ isOpen, onClose, title, children, className }) {
                     {children}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
