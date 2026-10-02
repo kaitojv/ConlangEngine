@@ -72,7 +72,7 @@ export default function OnboardingWizard() {
     // Step 1 State
     const [name, setName] = useState(conlangName === 'My New Conlang' ? '' : conlangName);
     const [author, setAuthor] = useState(authorName === 'Author Name' ? '' : authorName);
-    const [icon, setIcon] = useState(conlangIcon || 'Globe');
+    const [icon] = useState(conlangIcon || 'Globe');
     const [scriptType, setScriptType] = useState(phonologyTypes || 'alphabetic');
 
     // Step 2 State

@@ -278,8 +278,6 @@ export default function SemanticExplorer() {
         setIsModalOpen(false);
     };
 
-    const currentTabInfo = TABS.find(t => t.id === activeTab);
-
     return (
         <div className="semantic-page-container">
             <Card className="semantic-header-card">

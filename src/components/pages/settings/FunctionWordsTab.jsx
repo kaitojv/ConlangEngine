@@ -12,8 +12,6 @@ import './personRulesEditor.css';
 const getEnglishPronoun = (person, number, gender, caseType) => {
     const isColl = number === 'C';
     const isPlur = number === 'P' || number === 'D';
-    const isNone = number === 'N';
-
     if (caseType === 'dem') {
         if (gender === 'Near') return isPlur ? 'these' : 'this';
         if (gender === 'Far') return isPlur ? 'those' : 'that';

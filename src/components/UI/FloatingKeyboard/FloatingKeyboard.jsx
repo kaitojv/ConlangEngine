@@ -37,8 +37,6 @@ export default function FloatingKeyboard() {
     const setLexicon = useLexiconStore(state => state.setLexicon);
 
     const { transliterate } = useTransliterator(config);
-    const isLogographic = ['logographic', 'syllabic', 'featural_block'].includes(config.phonologyTypes);
-
     // Standard IPA character grid
     // Standard IPA character grid is now handled by the IpaChart component
     // const ipaCharacters = [...];

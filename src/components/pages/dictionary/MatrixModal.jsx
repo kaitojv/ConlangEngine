@@ -96,7 +96,6 @@ export default function MatrixModal({ wordObj }) {
     }, [personsConfig, liveWord]);
 
     const hasNonStandaloneRules = inflectionalRules.some(rule => !rule.standalone); // Rules that need person/class
-    const hasStandaloneRules = inflectionalRules.some(rule => rule.standalone); // Rules that don't need person/class
     const hasDualConjugation = personRules.some(p => p.affix && p.freeForm); // Check if any person rule has both affix and free form
 
     // Scan for existing derivations in the lexicon to prevent duplicates

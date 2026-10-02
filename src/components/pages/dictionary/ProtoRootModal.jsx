@@ -17,7 +17,9 @@ export default function ProtoRootModal({ isOpen, onClose, oldWord }) {
     const updateWord = useLexiconStore(state => state.updateWord);
     
     const [newWord, setNewWord] = useState('');
-    const [newTranslation, setNewTranslation] = useState(oldWord?.translation || '');
+    // The setter is currently unused: there is no translation input wired up,
+    // so the field always falls back to the existing translation.
+    const [newTranslation] = useState(oldWord?.translation || '');
     const [destinationId, setDestinationId] = useState(config.parentId || 'current');
 
     const handleSave = async () => {
