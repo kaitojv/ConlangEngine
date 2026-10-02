@@ -330,7 +330,7 @@ export default function LexiconList() {
         }
 
         return result;
-    }, [lexicon, filters, transliterate, showBoundMorphemes, grammarRules, normalizeToBase, consonants, vowels, otherPhonemes, customAlphabet]);
+    }, [lexicon, filters, transliterate, showBoundMorphemes, grammarRules, normalizeToBase, consonants, vowels, otherPhonemes, customAlphabet, configFull]);
 
     // Group identical conlang words visually so the user can see multiple senses under 1 dictionary entry
     const groupedLexicon = useMemo(() => {

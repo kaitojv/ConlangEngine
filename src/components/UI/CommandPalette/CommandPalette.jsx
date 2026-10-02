@@ -179,6 +179,31 @@ export default function CommandPalette() {
         return matches;
     }, [query, lexicon, wikiPages, localProjects, navigate]);
 
+    // Defined before the keyboard effect below, which captures it in a closure.
+    const executeResult = (result) => {
+        if (result.type === 'action') {
+            result.action();
+        } else if (result.type === 'word') {
+            navigate('/lexicon', { state: { searchQuery: result.wordEntry.word.replace(/\*/g, '') } });
+        } else if (result.type === 'route' || result.type === 'wiki') {
+            navigate(result.path);
+        } else if (result.type === 'workspace') {
+            const project = result.project;
+            if (project) {
+                const projectStore = useProjectStore.getState();
+                projectStore.saveProjectToArchive(useConfigStore.getState(), useLexiconStore.getState().lexicon);
+
+                const safeLexicon = sanitizeLexicon(project.project_data?.dictionary);
+                const safeConfig = sanitizeConfig(project.project_data?.config || {});
+
+                useLexiconStore.getState().setLexicon(safeLexicon);
+                useConfigStore.getState().setFullConfig(safeConfig);
+                navigate('/');
+            }
+        }
+        setIsOpen(false);
+    };
+
     // Handle keyboard navigation inside the modal
     useEffect(() => {
         if (!isOpen) return;
@@ -209,30 +234,6 @@ export default function CommandPalette() {
             }
         }
     }, [selectedIndex, isOpen]);
-
-    const executeResult = (result) => {
-        if (result.type === 'action') {
-            result.action();
-        } else if (result.type === 'word') {
-            navigate('/lexicon', { state: { searchQuery: result.wordEntry.word.replace(/\*/g, '') } });
-        } else if (result.type === 'route' || result.type === 'wiki') {
-            navigate(result.path);
-        } else if (result.type === 'workspace') {
-            const project = result.project;
-            if (project) {
-                const projectStore = useProjectStore.getState();
-                projectStore.saveProjectToArchive(useConfigStore.getState(), useLexiconStore.getState().lexicon);
-                
-                const safeLexicon = sanitizeLexicon(project.project_data?.dictionary);
-                const safeConfig = sanitizeConfig(project.project_data?.config || {});
-                
-                useLexiconStore.getState().setLexicon(safeLexicon);
-                useConfigStore.getState().setFullConfig(safeConfig);
-                navigate('/');
-            }
-        }
-        setIsOpen(false);
-    };
 
     const getIcon = (iconName) => {
         switch (iconName) {

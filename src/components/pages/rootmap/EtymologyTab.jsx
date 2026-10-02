@@ -68,7 +68,7 @@ export default function EtymologyTab() {
             }
             return acc;
         }, []);
-    }, [targetWord, grammarRules, vowels, verbMarker, cliticsRules]);
+    }, [targetWord, grammarRules, vowels, consonants, otherPhonemes, verbMarker, cliticsRules]);
 
     // Find actual distinct lexicon entries that derived from this root
     const lexicalDescendants = useMemo(() => {

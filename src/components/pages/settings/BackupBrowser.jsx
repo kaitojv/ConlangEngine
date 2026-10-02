@@ -66,7 +66,10 @@ export default function BackupBrowser({ isOpen, onClose, endpoint }) {
     }, [isOpen, refresh]);
 
     // Load a specific backup (or the latest) into the workspace and switch project.
-    const useProject = async (projectId, version) => {
+    // Named restoreProject rather than useProject: this is an async event handler,
+    // not a hook, and the old name made the rules-of-hooks linter flag its use
+    // inside onClick callbacks.
+    const restoreProject = async (projectId, version) => {
         const isLatest = !version;
         const confirmMsg = `Load "${projectId}"${isLatest ? ' (latest)' : ` (${version})`} into your workspace?\n\nThis replaces your CURRENT config and lexicon. Make sure your current work is backed up first.`;
         if (!window.confirm(confirmMsg)) return;
@@ -231,7 +234,7 @@ export default function BackupBrowser({ isOpen, onClose, endpoint }) {
                                 <div className="bb-actions">
                                     <button
                                         className="bb-use-btn"
-                                        onClick={() => useProject(p.projectId)}
+                                        onClick={() => restoreProject(p.projectId)}
                                         disabled={restoringKey === `${p.projectId}:latest`}
                                     >
                                         {restoringKey === `${p.projectId}:latest`
@@ -292,7 +295,7 @@ export default function BackupBrowser({ isOpen, onClose, endpoint }) {
                                             <span className="bb-version-meta">{formatBytes(b.sizeBytes)}</span>
                                             <button
                                                 className="bb-version-use"
-                                                onClick={() => useProject(p.projectId, b.version)}
+                                                onClick={() => restoreProject(p.projectId, b.version)}
                                                 disabled={restoringKey === `${p.projectId}:${b.version}`}
                                             >
                                                 {restoringKey === `${p.projectId}:${b.version}`

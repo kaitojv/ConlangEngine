@@ -844,6 +844,7 @@ export const useConfigStore = create(
                 const isFirst = !state.scriptSystems || state.scriptSystems.length === 0;
 
                 const newScript = {
+                    ...partialScript,
                     id,
                     name,
                     type,
@@ -854,10 +855,6 @@ export const useConfigStore = create(
                     blockSettings: partialScript.blockSettings || INITIAL_CONFIG.blockSettings,
                     blockTemplates: partialScript.blockTemplates || [],
                     alphabetNames: partialScript.alphabetNames || {},
-                    ...partialScript,
-                    id,
-                    name,
-                    type,
                 };
 
                 const scriptSystems = [...(state.scriptSystems || []), newScript];

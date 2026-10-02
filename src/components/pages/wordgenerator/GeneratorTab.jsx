@@ -142,7 +142,7 @@ export default function GeneratorTab() {
             const result = applyRuleToWord(base, rule, grammarRules, vowels, consonants, otherPhonemes);
             return { name: rule.name, result };
         });
-    }, [generatedWord, generatedClass, grammarRules, vowels, verbMarker, cliticsRules]);
+    }, [generatedWord, generatedClass, grammarRules, vowels, consonants, otherPhonemes, verbMarker, cliticsRules]);
 
     if (isFillMode) return <FillMode onExit={() => setIsFillMode(false)} />;
     if (isBatchMode) return <BatchMode onExit={() => setIsBatchMode(false)} />;

@@ -8,29 +8,17 @@ export function useTransliterator(overrideConfig = null) {
     const storeConfig = useConfigStore();
     const activeConfig = overrideConfig || storeConfig;
 
+    // Depend on the config object itself, not a hand-picked subset of fields.
+    // The bodies below read the whole config, so tracking only some keys (as an
+    // earlier version did) left a stale closure whenever any other field changed
+    // -- which silently produced outdated transliterations.
     const transliterate = React.useCallback((word, lexicon = []) => {
         return transliterateText(word, activeConfig, lexicon);
-    }, [
-        activeConfig.phonologyTypes,
-        activeConfig.alphabeticScript,
-        activeConfig.alphabetGlyphs,
-        activeConfig.syllabaryMap,
-        activeConfig.consonants,
-        activeConfig.vowels,
-        activeConfig.otherPhonemes,
-        activeConfig.syllabificationAlgorithm,
-    ]);
+    }, [activeConfig]);
 
     const normalizeToBase = React.useCallback((word) => {
         return normalizeToBasePure(word, activeConfig);
-    }, [
-        activeConfig.phonologyTypes,
-        activeConfig.alphabeticScript,
-        activeConfig.alphabetGlyphs,
-        activeConfig.consonants,
-        activeConfig.vowels,
-        activeConfig.otherPhonemes,
-    ]);
+    }, [activeConfig]);
 
     return { transliterate, normalizeToBase };
 }

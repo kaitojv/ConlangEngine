@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
@@ -35,19 +35,38 @@ export default function FloatingBackground() {
     const lexicon = useLexiconStore(state => state.lexicon) || [];
     const { transliterate } = useTransliterator();
 
+    // The words shown are picked in an effect rather than during render.
+    // Shuffling inside useMemo meant every unrelated re-render (any config change,
+    // any re-render of a parent) produced a brand new random selection and rebuilt
+    // the whole animation, so the background visibly reshuffled. Now the selection
+    // only changes when the lexicon or background type actually changes.
+    const [lexiconWords, setLexiconWords] = useState([]);
+
+    useEffect(() => {
+        if (config.type !== 'lexicon_words' || lexicon.length === 0) {
+            setLexiconWords([]);
+            return;
+        }
+        // Pick up to 15 distinct random words.
+        const count = Math.min(15, lexicon.length);
+        const pool = [...lexicon];
+        for (let i = pool.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        setLexiconWords(pool.slice(0, count).map((e) => e.word.replace(/\*/g, '')));
+    }, [config.type, lexicon]);
+
     const bgElements = useMemo(() => {
-        if (config.type === 'lexicon_words' && lexicon.length > 0) {
-            // Pick up to 15 random words
-            const count = Math.min(15, lexicon.length);
-            const shuffled = [...lexicon].sort(() => 0.5 - Math.random());
-            return shuffled.slice(0, count).map((entry, idx) => (
+        if (config.type === 'lexicon_words' && lexiconWords.length > 0) {
+            return lexiconWords.map((word, idx) => (
                 <span key={idx} className="notranslate custom-font-text" style={{ whiteSpace: 'nowrap' }}>
-                    {transliterate(entry.word.replace(/\*/g, ''), lexicon)}
+                    {transliterate(word, lexicon)}
                 </span>
             ));
         }
         return TYPE_MAP[config.type] || TYPE_MAP['greetings'];
-    }, [config.type, lexicon, transliterate]);
+    }, [config.type, lexiconWords, lexicon, transliterate]);
 
     useEffect(() => {
         const container = containerRef.current;
