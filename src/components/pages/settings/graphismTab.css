@@ -78,3 +78,37 @@
     font-size: 1.5rem;
     line-height: 1;
 }
+
+/* Bulk glyph slimming block, shown next to Apply Settings. Kept visually
+   secondary to the main action because it rewrites all stored glyphs. */
+.gt-lighten-block {
+    margin-top: 1.25rem;
+    padding: 16px;
+    border: 1px solid var(--bd);
+    border-radius: var(--rad);
+    background: var(--s4);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.gt-lighten-title {
+    margin: 0 0 4px;
+    font-size: 0.95rem;
+    color: var(--tx);
+}
+
+.gt-lighten-desc {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--tx3);
+    line-height: 1.5;
+}
+
+.gt-lighten-tolerance {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: var(--tx2);
+}

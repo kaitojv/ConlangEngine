@@ -10,8 +10,9 @@ import Button from '../../UI/Buttons/Buttons.jsx';
 import SyllabaryManager from '../../UI/SyllabaryManager/SyllabaryManager.jsx';
 import BlockManager from '../../UI/BlockManager/BlockManager.jsx';
 import KeyboardManager from '../../UI/KeyboardManager/KeyboardManager.jsx';
-import { Keyboard, RefreshCw, Wand2 } from 'lucide-react';
+import { Keyboard, RefreshCw, Wand2, Spline } from 'lucide-react';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
+import { previewSimplification, simplifyGlyphMap } from '../../../utils/glyphSimplify.js';
 import { SCRIPT_MAPS } from '../../../utils/transliteration.js';
 import toast from 'react-hot-toast';
 import './graphismTab.css';
@@ -44,11 +45,16 @@ export default function TypographyStudio() {
     const legacyAlphabeticScript = useConfigStore(state => state.alphabeticScript) || 'latin';
     const updateScriptData = useConfigStore(state => state.updateScriptData);
     const updateScriptSystem = useConfigStore(state => state.updateScriptSystem);
+    const simplifyAllGlyphs = useConfigStore(state => state.simplifyAllGlyphs);
     const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
     const syllabaryMap = useConfigStore(state => state.syllabaryMap) || {};
 
     // Track which script is being edited. Default to the project's default script.
     const [editingScriptId, setEditingScriptId] = useState(defaultScriptId);
+
+    // Shared by the per-glyph Lighten button in Font Studio and the bulk
+    // "Lighten all glyphs" action below, so both use the same fidelity knob.
+    const [glyphLightenTolerance, setGlyphLightenTolerance] = useState(0.5);
 
     // Repair stale selection if scripts change underneath us.
     const selectedScript = useMemo(() => {
@@ -185,6 +191,78 @@ export default function TypographyStudio() {
         const newGlyphs = { ...alphabetGlyphs };
         delete newGlyphs[key];
         writeAlphabetGlyphs(newGlyphs);
+    };
+
+    /**
+     * Rewrites every glyph in the project in a lighter form.
+     *
+     * This is the migration path for workspaces that already hold hundreds or
+     * thousands of glyphs: Font Studio's dense sampling is what makes them
+     * large, and it is not obvious to a user that the fix is available. Both
+     * the legacy top-level glyphs and every script's own copy are rewritten so
+     * the result does not depend on which script happens to be selected.
+     */
+    const handleLightenAllGlyphs = async () => {
+        const tId = toast.loading('Analysing glyphs...');
+        try {
+            const storeState = useConfigStore.getState();
+            const topLevel = storeState.customGlyphs || {};
+            const byScript = {};
+
+            // Collect every script that actually owns glyphs.
+            for (const [scriptId, data] of Object.entries(storeState.scriptDataById || {})) {
+                if (data && data.customGlyphs && Object.keys(data.customGlyphs).length > 0) {
+                    byScript[scriptId] = data.customGlyphs;
+                }
+            }
+
+            const all = { ...topLevel, ...Object.assign({}, ...Object.values(byScript)) };
+            if (Object.keys(all).length === 0) {
+                toast.error('No custom glyphs to lighten.', { id: tId });
+                return;
+            }
+
+            const preview = previewSimplification(all, { tolerance: glyphLightenTolerance, precision: 2 });
+            if (preview.byteReduction < 0.01) {
+                toast('Your glyphs are already lightweight.', { id: tId });
+                return;
+            }
+
+            const toMb = (n) => (n / 1024 / 1024).toFixed(2);
+            if (!window.confirm(
+                `Lighten ${preview.glyphCount} glyph(s)?\n\n` +
+                `Points: ${preview.beforePoints.toLocaleString()} to ${preview.afterPoints.toLocaleString()} ` +
+                `(${Math.round(preview.pointReduction * 100)}% fewer)\n` +
+                `Size: ${toMb(preview.beforeBytes)} MB to ${toMb(preview.afterBytes)} MB\n\n` +
+                `Each glyph keeps its shape within ${glyphLightenTolerance}px. This cannot be undone, ` +
+                `so export a backup first if you want to keep the original point data.`
+            )) {
+                toast.dismiss(tId);
+                return;
+            }
+
+            const simplifiedTopLevel = simplifyGlyphMap(topLevel, { tolerance: glyphLightenTolerance, precision: 2 });
+            const simplifiedByScript = {};
+            for (const [scriptId, glyphs] of Object.entries(byScript)) {
+                simplifiedByScript[scriptId] = simplifyGlyphMap(glyphs, { tolerance: glyphLightenTolerance, precision: 2 });
+            }
+
+            // Recompile from the simplified default-script glyphs so the
+            // rendered font matches the new stroke data.
+            const fontSource = simplifiedByScript[selectedScriptId] || simplifiedTopLevel;
+            const settings = storeState.typographySettings || {};
+            const base64Font = await compileFont(fontSource, settings.traceWidth ?? 30, settings.customFontScale ?? 1.0);
+
+            simplifyAllGlyphs(simplifiedTopLevel, simplifiedByScript, base64Font);
+
+            toast.success(
+                `Lightened ${preview.glyphCount} glyph(s), saving ${toMb(preview.beforeBytes - preview.afterBytes)} MB.`,
+                { id: tId }
+            );
+        } catch (err) {
+            console.error('Lighten all glyphs failed:', err);
+            toast.error('Could not lighten glyphs. See the console for details.', { id: tId });
+        }
     };
 
     const handleRecompileFont = async () => {
@@ -543,6 +621,34 @@ export default function TypographyStudio() {
                         <div style={{ marginTop: '2rem' }}>
                             <Button variant="imp" onClick={handleRecompileFont} style={{ width: '100%' }}>
                                 <RefreshCw size={16} /> Apply Settings & Recompile Font
+                            </Button>
+                        </div>
+
+                        {/* Bulk glyph slimming. Projects with many glyphs can
+                            otherwise grow until saves fail or storage fills up. */}
+                        <div className="gt-lighten-block">
+                            <div className="gt-lighten-header">
+                                <h4 className="gt-lighten-title">Lighten all glyphs</h4>
+                                <p className="gt-lighten-desc">
+                                    Font Studio samples strokes densely so drawing stays precise, but that
+                                    makes saved glyphs large. This rewrites every glyph in a lighter,
+                                    visually equivalent form. Cannot be undone.
+                                </p>
+                            </div>
+                            <label className="gt-lighten-tolerance">
+                                Fidelity tolerance: {glyphLightenTolerance.toFixed(1)}px
+                                <input
+                                    type="range"
+                                    className="range range-xs range-primary"
+                                    min="0.1"
+                                    max="3"
+                                    step="0.1"
+                                    value={glyphLightenTolerance}
+                                    onChange={(e) => setGlyphLightenTolerance(parseFloat(e.target.value))}
+                                />
+                            </label>
+                            <Button variant="edit" onClick={handleLightenAllGlyphs} style={{ width: '100%' }}>
+                                <Spline size={16} /> Lighten all glyphs
                             </Button>
                         </div>
                     </div>

@@ -607,6 +607,53 @@ export const useConfigStore = create(
                 });
             },
 
+            /**
+             * Rewrites every stored glyph in a lighter, visually equivalent form.
+             *
+             * Font Studio samples strokes densely for accurate drawing and
+             * erasing, which is what makes saved glyphs enormous: a real
+             * 923-glyph workspace stored 243k points at 45.7 bytes per point,
+             * almost entirely float-precision noise. This is the migration path
+             * for projects that already have thousands of glyphs.
+             *
+             * The caller must supply the recompiled font, since the compiled
+             * TTF is derived from the stroke data and would otherwise be stale.
+             * Both customGlyphs and each script's own copy are updated, and the
+             * large-data layer is patched alongside, matching addCustomGlyph.
+             */
+            simplifyAllGlyphs: (simplifiedTopLevel, simplifiedByScript, base64Font) => {
+                const state = useConfigStore.getState();
+                const { projectId, scriptDataById } = state;
+
+                const nextScriptDataById = { ...scriptDataById };
+                for (const [scriptId, glyphs] of Object.entries(simplifiedByScript || {})) {
+                    const existing = scriptDataById[scriptId] || {};
+                    nextScriptDataById[scriptId] = {
+                        ...existing,
+                        customGlyphs: glyphs,
+                        ...(base64Font ? { customFontBase64: base64Font, customFont: base64Font } : {}),
+                    };
+                }
+
+                if (projectId) {
+                    const bloatPatch = { customGlyphs: simplifiedTopLevel };
+                    for (const [scriptId, glyphs] of Object.entries(simplifiedByScript || {})) {
+                        bloatPatch[scriptId] = { ...(scriptDataById[scriptId] || {}), customGlyphs: glyphs };
+                    }
+                    if (base64Font) {
+                        bloatPatch.customFontBase64 = base64Font;
+                        bloatPatch.customFont = base64Font;
+                    }
+                    saveLargeDataToDB(projectId, bloatPatch);
+                }
+
+                set(() => ({
+                    customGlyphs: simplifiedTopLevel,
+                    ...(base64Font ? { customFontBase64: base64Font, customFont: base64Font } : {}),
+                    scriptDataById: nextScriptDataById,
+                }));
+            },
+
             addCustomGlyph: (charCode, strokesArray, base64Font, targetScriptId = null, isSilent = false) => {
                 const state = useConfigStore.getState();
                 const { projectId, scriptRules, scriptDataById } = state;
