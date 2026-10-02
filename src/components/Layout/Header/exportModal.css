@@ -323,11 +323,16 @@ input:checked + .slider:before {
     gap: 24px;
     align-items: stretch;
     text-align: left;
+    min-width: 0;
 }
 
 .mc-settings-panel {
     flex: 1;
     max-width: 380px;
+    /* Flex items default to min-width:auto, which refuses to shrink below the
+       content's intrinsic width. Without this the two panels together exceed
+       the modal and the right-hand side gets clipped. */
+    min-width: 0;
     background: var(--s2);
     border: 1px solid var(--bd);
     border-radius: 12px;
@@ -339,6 +344,9 @@ input:checked + .slider:before {
 
 .mc-mapper-panel {
     flex: 1.5;
+    /* See the note on .mc-settings-panel: without min-width:0 this panel
+       refuses to shrink and overflows the modal. */
+    min-width: 0;
     background: var(--s2);
     border: 1px solid var(--bd);
     border-radius: 12px;
@@ -435,6 +443,9 @@ input:checked + .slider:before {
     margin-top: 8px;
     border-top: 1px dashed var(--bd);
     padding-top: 16px;
+    /* Column flex child: without min-width:0 the pack.mcmeta <pre> below sets
+       the panel's intrinsic width and the wizard overflows. */
+    min-width: 0;
 }
 
 .mc-preview-card h4 {
@@ -452,6 +463,8 @@ input:checked + .slider:before {
     padding: 12px;
     overflow-x: auto;
     max-height: 175px;
+    /* Scroll internally rather than stretching its ancestor. */
+    min-width: 0;
 }
 
 .mc-code-box pre {
@@ -461,12 +474,19 @@ input:checked + .slider:before {
     line-height: 1.4;
     color: var(--tx);
     text-align: left;
+    /* JSON lines are wide; a <pre> defaults to nowrap and would otherwise set
+       the panel's intrinsic width. */
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .mc-mapper-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 10px;
+    /* Wrap instead of pushing the badge off the right edge. */
+    flex-wrap: wrap;
     margin-bottom: 12px;
 }
 
@@ -474,6 +494,10 @@ input:checked + .slider:before {
     display: flex;
     align-items: center;
     gap: 4px;
+    /* The count is now four digits ("0 / 2995"), so it must be allowed to
+       shrink rather than forcing the header row wider than the panel. */
+    flex-shrink: 0;
+    white-space: nowrap;
     background: color-mix(in srgb, var(--ok) 8%, transparent);
     border: 1px solid color-mix(in srgb, var(--ok) 20%, transparent);
     color: var(--ok);
@@ -499,6 +523,8 @@ input:checked + .slider:before {
     border-radius: 8px;
     border: 1px solid var(--bd);
     margin-bottom: 14px;
+    /* Column flex child of the mapper panel. */
+    min-width: 0;
 }
 
 /* The tab list is now derived from the vocabulary, so it holds ~10 entries
@@ -533,11 +559,15 @@ input:checked + .slider:before {
     display: flex;
     gap: 8px;
     align-items: center;
+    /* Stack the filter button below the search box on a narrow panel rather
+       than overflowing it. */
+    flex-wrap: wrap;
     margin-bottom: 8px;
 }
 
 .mc-search-wrap {
-    flex: 1;
+    flex: 1 1 180px;
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -589,6 +619,8 @@ input:checked + .slider:before {
     font-size: 0.7rem;
     color: var(--tx2);
     margin-bottom: 8px;
+    /* Wrap the range text instead of forcing the panel wider. */
+    overflow-wrap: anywhere;
 }
 
 .mc-pagination {
@@ -627,6 +659,9 @@ input:checked + .slider:before {
     flex: 1;
     max-height: 320px;
     overflow-y: auto;
+    /* min-width:0 lets this flex child shrink with the panel; without it the
+       scroll box stays at its content width and the cards get clipped. */
+    min-width: 0;
     border: 1px solid var(--bd);
     border-radius: 8px;
     background: var(--s1);
@@ -660,6 +695,9 @@ input:checked + .slider:before {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    /* Long keys (block.minecraft.amethyst_cluster) plus a fixed-width input
+       overran the panel. Wrapping drops the input below the label instead. */
+    flex-wrap: wrap;
     background: var(--s2);
     border: 1px solid var(--bd);
     padding: 10px 14px;
@@ -679,7 +717,7 @@ input:checked + .slider:before {
     display: flex;
     flex-direction: column;
     gap: 3px;
-    flex: 1;
+    flex: 1 1 180px;
     min-width: 0;
 }
 
@@ -707,11 +745,18 @@ input:checked + .slider:before {
     align-items: flex-end;
     gap: 4px;
     position: relative;
-    flex-shrink: 0;
+    /* Allow the wrapper to shrink with the panel; the input inside it is
+       flex-basis 220px but is allowed to collapse further. */
+    flex: 0 1 220px;
+    min-width: 0;
 }
 
 .mc-input-wrapper input {
-    width: 220px;
+    /* Flexible rather than a fixed 220px: the panel can now be much narrower
+       (or the window small), and a hard width forced the card to overflow. */
+    flex: 1 1 220px;
+    width: auto;
+    min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
     background: var(--s1);
@@ -770,7 +815,24 @@ input:checked + .slider:before {
     .mc-settings-panel {
         max-width: 100%;
     }
-    .mc-input-wrapper input {
-        width: 160px;
+    /* No fixed width here: the input is already fluid, and pinning it back to
+       160px is what made the card overflow on small screens. */
+    .mc-input-wrapper {
+        flex: 1 1 160px;
+    }
+}
+
+/* Narrow desktop windows: drop the input under the key label so the row never
+   needs more width than the panel can give it. */
+@media (max-width: 1200px) {
+    .mc-key-card {
+        flex-wrap: wrap;
+    }
+    .mc-key-meta {
+        flex: 1 1 100%;
+    }
+    .mc-input-wrapper {
+        flex: 1 1 100%;
+        align-items: stretch;
     }
 }
