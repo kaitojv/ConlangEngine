@@ -228,14 +228,6 @@ const GRAMMAR_RULE_IMPORT_MAP = [
     { keywords: ['subject', 'nominative'], trigger: 'S', type: 'trigger', position: 'suffix' },
 ];
 
-function importDefaults(ruleName) {
-    const lower = (ruleName || '').toLowerCase();
-    for (const map of GRAMMAR_RULE_IMPORT_MAP) {
-        if (map.keywords.some(k => lower.includes(k))) return map;
-    }
-    return { trigger: '', type: 'word', position: 'suffix' };
-}
-
 const ANIMACY_SCOPES = {
     "pronoun_1_2": {
         description: "1st/2nd Person only",
@@ -657,20 +649,9 @@ const reorderBreakdown = (breakdownArray) => {
         return base + ' ' + a;                                // particle (space-separated)
     };
 
-    // Get 1-based position of a role letter in the syntaxOrder string
-    const rolePosition = (role) => syntaxOrder.indexOf(role) + 1; // 0 if not found
-
     // Type → colour token for the badge
     const TYPE_COLORS = { direct: 'var(--acc)', pronoun: '#10b981', inflected: '#f59e0b', 'grammar-case': '#ec4899' };
     const TYPE_LABELS  = { direct: 'lexicon', pronoun: 'pronoun', inflected: 'conjugated', 'grammar-case': 'case' };
-
-    const getWordAtCursor = (str, pos) => {
-        let start = pos;
-        while (start > 0 && !/\s/.test(str[start - 1])) start--;
-        let end = pos;
-        while (end < str.length && !/\s/.test(str[end])) end++;
-        return { word: str.slice(start, end), start, end };
-    };
 
     const FUNCTION_WORDS = new Set([
         'the', 'a', 'an', 'of', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'and', 'or', 'but', 'if', 'as',
@@ -701,7 +682,7 @@ const reorderBreakdown = (breakdownArray) => {
         try {
             const regex = new RegExp('(^|[^a-z0-9])' + esc + '($|[^a-z0-9])', 'i');
             if (definitions.some(d => regex.test(d))) return true;
-        } catch(e) {
+        } catch {
             // A malformed query can produce an invalid RegExp. The fallback
             // below handles it, so there is nothing to recover here.
         }
@@ -1263,7 +1244,6 @@ const reorderBreakdown = (breakdownArray) => {
         const finalRAlt = [];
 
         let totalPhraseIsNegative = false;
-        let hasAlt = false;
         let currentInheritedRole = 'S';
 
         segments.forEach((seg) => {
@@ -1332,7 +1312,6 @@ const reorderBreakdown = (breakdownArray) => {
                     w.found
                 );
                 if (ambiguousWords.length >= 2) {
-                    hasAlt = true;
                     const clauseBAlt = JSON.parse(JSON.stringify(parsed.breakdown));
                     clauseBAlt.forEach(w => {
                         if (w && w.role === 'S') w.role = 'O';

@@ -50,7 +50,7 @@ export const stripAffix = (word, affixRule, normalizeToBase) => {
     const normClean = normalizeToBase ? normalizeToBase(clean.toLowerCase()) : clean.toLowerCase();
 
     // Secondary normalization for common separators if they aren't in the orthography
-    const cleanSep = (s) => s.replace(/[’‘]/g, "'");
+    const cleanSep = (s) => s.replace(/[â€™â€˜]/g, "'");
     const finalWord = cleanSep(normWord);
     const finalClean = cleanSep(normClean);
 
@@ -125,7 +125,7 @@ export const applyRuleToWord = (baseWord, rule, grammarRules, vowels, consonants
             try {
                 const regex = new RegExp(pattern, 'gi');
                 return currentBase.replace(regex, replacement);
-            } catch (e) {
+            } catch {
                 console.error("Invalid Regex rule:", pattern);
                 return currentBase;
             }
@@ -266,8 +266,8 @@ export const findAllParsings = (surface, lexicon, config, normalizeToBase, depth
         // Flexible match for affixes: allow matching even if apostrophes are "shared" or slightly different
         const isAffixMatch = normAffix && (
             normAffix === safeSurface || 
-            normAffix.replace(/^['’‘]/, '') === safeSurface ||
-            normAffix === safeSurface.replace(/^['’‘]/, '')
+            normAffix.replace(/^['â€™â€˜]/, '') === safeSurface ||
+            normAffix === safeSurface.replace(/^['â€™â€˜]/, '')
         );
 
         if (isFreeMatch || isAffixMatch) {
@@ -349,9 +349,6 @@ export const segmentToken = (token, lexicon, config, normalizeToBase, getUniqueP
     let remaining = safeToken;
 
     const findLongestMatch = (str) => {
-        let longest = null;
-        let matchLength = 0;
-
         // Check Lexicon + Affixes (The key fix: check if the chunk is parsable)
         // We try from longest possible prefix to shortest
         for (let len = str.length; len >= 1; len--) {
@@ -381,7 +378,7 @@ export const segmentToken = (token, lexicon, config, normalizeToBase, getUniqueP
             remaining = remaining.slice(match.length);
         } else {
             // Handle separators and glottal stops that might be in the middle
-            if (remaining.startsWith("'") || remaining.startsWith("-") || remaining.startsWith("’") || remaining.startsWith("‘")) {
+            if (remaining.startsWith("'") || remaining.startsWith("-") || remaining.startsWith("â€™") || remaining.startsWith("â€˜")) {
                 remaining = remaining.slice(1);
                 continue;
             }

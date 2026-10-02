@@ -1,5 +1,5 @@
 // src/utils/soundEffects.js
-// Procedural audio using Web Audio API — no external files needed.
+// Procedural audio using Web Audio API â€” no external files needed.
 // Respects the studySoundEffects toggle from config store.
 
 import { useConfigStore } from '@/store/useConfigStore.jsx';
@@ -36,8 +36,8 @@ function playTone(frequency, duration, type = 'sine', volume = 0.15) {
         gain.connect(ctx.destination);
         osc.start(ctx.currentTime);
         osc.stop(ctx.currentTime + duration);
-    } catch (e) {
-        // Silently fail — audio is non-critical
+    } catch {
+        // Silently fail â€” audio is non-critical
     }
 }
 
@@ -72,7 +72,7 @@ export function playCorrect() {
         gain2.connect(ctx.destination);
         osc2.start(now + 0.1);
         osc2.stop(now + 0.35);
-    } catch (e) {
+    } catch {
         // Audio is decorative: if the WebAudio context is unavailable or
         // blocked, silently skip the sound rather than interrupting the lesson.
     }
@@ -95,7 +95,7 @@ export function playIncorrect() {
         gain.connect(ctx.destination);
         osc.start(now);
         osc.stop(now + 0.3);
-    } catch (e) {
+    } catch {
         // Audio is decorative; see the note in playCorrect.
     }
 }
@@ -122,7 +122,7 @@ export function playLevelComplete() {
             osc.start(start);
             osc.stop(start + 0.4);
         });
-    } catch (e) {
+    } catch {
         // Audio is decorative; see the note in playCorrect.
     }
 }

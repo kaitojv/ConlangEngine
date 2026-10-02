@@ -166,8 +166,6 @@ export function transliterateText(word, config, lexicon = []) {
                     const match = base;
                     const originalStr = rawWord.substring(i, i + match.length);
                     const isCapitalized = originalStr[0] !== originalStr[0].toLowerCase();
-                    const isInitial = i === 0 || !/[a-zA-Z]/.test(rawWord[i - 1]);
-                    const isFinal = i + match.length === rawWord.length || !/[a-zA-Z]/.test(rawWord[i + match.length]);
 
                     let mappedChar = null;
 
