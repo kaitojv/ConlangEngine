@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useShallow } from 'zustand/react/shallow';
-import { stripAffix, getPersonRules, segmentToken, getUniqueParsings } from '@/utils/morphologyEngine.jsx';
+import { segmentToken, getUniqueParsings } from '@/utils/morphologyEngine.jsx';
 import { findParticleBySurface, resolveSense, getNeighborPOS } from '@/utils/particleEngine.js';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import Card from '@/components/UI/Card/Card.jsx';

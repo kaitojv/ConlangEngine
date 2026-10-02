@@ -9,13 +9,11 @@ import { useConfigStore, INITIAL_CONFIG } from '../../../store/useConfigStore.js
 import { useProjectStore } from '../../../store/useProjectStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { CONLANG_ICONS, getConlangIcon } from '../../../utils/iconMap.jsx';
-import opentype from 'opentype.js';
 import { DARK_THEMES, LIGHT_THEMES, PRIDE_THEMES_DARK, PRIDE_THEMES_LIGHT } from '../../../utils/themePresets.js';
 import { UI_FONTS } from '../../../utils/uiFonts.js';
 import Modal from '../../UI/Modal/Modal.jsx';
 import { Info, User } from 'lucide-react';
 import { supabase } from '../../../utils/supabaseClient.js';
-import { sanitizeConfig } from '../../../utils/schemaValidator.jsx';
 import toast from 'react-hot-toast';
 import { useSharing } from '../../../hooks/useSharing.jsx';
 

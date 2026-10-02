@@ -1,7 +1,7 @@
 // src/components/UI/ScriptManager/ScriptManager.jsx
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
-import { SCRIPT_TYPES, normalizeScriptName, getDefaultScriptId } from '../../../utils/scriptResolver.js';
+import { SCRIPT_TYPES, getDefaultScriptId } from '../../../utils/scriptResolver.js';
 import { Plus, Trash2, Edit2, Check, X, Copy, AlertTriangle, GripVertical, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './scriptManager.css';
