@@ -27,7 +27,7 @@ export default function applySoundChanges(wordString, rulesString) {
                     evolvedWord = newWord;
                     steps.push(`${pattern} => ${evolvedWord}`);
                 }
-            } catch (e) {
+            } catch {
                 console.error("Invalid Regex rule:", pattern);
             }
         });

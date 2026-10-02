@@ -101,7 +101,7 @@ export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "",
                     return testWord.slice(0, Math.floor(testWord.length / 2)) + stdValue + testWord.slice(Math.floor(testWord.length / 2));
                 }
             }
-        } catch (e) {
+        } catch {
             return 'Invalid Rule';
         }
         return testWord;
@@ -316,7 +316,7 @@ export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "",
 
                         <div className="vrb-result-formula">
                             <div className="vrb-label" style={{ margin: 0 }}>Generated Formula:</div>
-                            <div className="vrb-formula-tag">{result || '—'}</div>
+                            <div className="vrb-formula-tag">{result || 'â€”'}</div>
                         </div>
                     </div>
 

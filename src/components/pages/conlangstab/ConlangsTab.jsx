@@ -180,7 +180,7 @@ export default function ConlangsTab() {
     const handleDeleteProject = async (e, id) => {
         e.stopPropagation(); // Stop the click from accidentally opening the project!
         
-        if (!window.confirm("⚠️ Are you sure you want to permanently delete this conlang?")) return;
+        if (!window.confirm("âš ï¸ Are you sure you want to permanently delete this conlang?")) return;
 
         deleteLocalProject(id);
 
@@ -268,7 +268,7 @@ export default function ConlangsTab() {
                 try {
                     const regex = new RegExp(pattern, 'g');
                     evolvedWord = evolvedWord.replace(regex, replacement);
-                } catch (e) {
+                } catch {
                     console.error("Invalid Regex rule:", pattern);
                 }
             });

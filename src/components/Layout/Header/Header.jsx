@@ -68,7 +68,7 @@ export default function Header({ openMenu, onBackupNow }) {
                 
                 // Silently sync with the global store so the NavBar unlocks properly
                 useConfigStore.setState({ isProActive: activeLive });
-            } catch (err) {
+            } catch {
                 setIsLive(false);
             }
         };

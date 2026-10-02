@@ -261,7 +261,7 @@ export default function LexiconTab() {
                             updatedCount++;
                         }
                     }
-                } catch (e) {
+                } catch {
                     console.error("Failed auto-relating", entry.translation);
                 }
             }
@@ -319,7 +319,7 @@ export default function LexiconTab() {
                         updateWord(entry.id, { definition: def });
                         updatedCount++;
                     }
-                } catch (e) {
+                } catch {
                     console.error("Failed auto-defining", entry.translation);
                 }
 
@@ -334,7 +334,7 @@ export default function LexiconTab() {
 
             setIsAutoDefining(false);
             setAutoDefineProgress(0);
-            const skipMsg = skippedCount > 0 ? ` (${skippedCount} skipped — already had definitions)` : '';
+            const skipMsg = skippedCount > 0 ? ` (${skippedCount} skipped Ã¢â‚¬â€ already had definitions)` : '';
             toast.success(`Auto-define complete! Generated definitions for ${updatedCount} words.${skipMsg}`);
         };
 
@@ -342,7 +342,7 @@ export default function LexiconTab() {
         let overwriteChecked = false;
         toast.custom((t) => (
             <div className="custom-toast-v">
-                <strong>📖 Generate Full Definitions</strong>
+                <strong>Ã°Å¸â€œâ€“ Generate Full Definitions</strong>
                 <span>This will look up English definitions for all <b>{lexicon.length}</b> entries using Datamuse and Wiktionary. This may take a few minutes.</span>
                 <label className="auto-define-overwrite-label">
                     <input
@@ -425,9 +425,9 @@ export default function LexiconTab() {
             </div>
 
             <Infobox title="Lexicon Management Tips">
-                • <b>Global Rename:</b> Renaming a Part of Speech or Tag here will automatically update every single word in your lexicon.<br />
-                • <b>Custom Classes:</b> Add unique categories (like "classifier" or "ideophone") to make your grammar matrix more precise.<br />
-                • <b>Clean Slate:</b> Deleting a category here removes it from all words globally. Use this to prune unused tags.
+                Ã¢â‚¬Â¢ <b>Global Rename:</b> Renaming a Part of Speech or Tag here will automatically update every single word in your lexicon.<br />
+                Ã¢â‚¬Â¢ <b>Custom Classes:</b> Add unique categories (like "classifier" or "ideophone") to make your grammar matrix more precise.<br />
+                Ã¢â‚¬Â¢ <b>Clean Slate:</b> Deleting a category here removes it from all words globally. Use this to prune unused tags.
             </Infobox>
 
             <div className="search-bar-management">
