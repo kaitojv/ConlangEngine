@@ -61,7 +61,7 @@ export default function PhrasesTab() {
                 useIpa: azureTtsUseIpa
             });
             toast.dismiss(toastId);
-        } catch(err) {
+        } catch {
             toast.dismiss(toastId);
             toast.error("Failed to play audio.");
         }
