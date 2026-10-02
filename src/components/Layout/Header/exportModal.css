@@ -492,6 +492,7 @@ input:checked + .slider:before {
 
 .mc-tabs {
     display: flex;
+    flex-wrap: wrap;
     gap: 4px;
     background: var(--s3);
     padding: 3px;
@@ -500,8 +501,11 @@ input:checked + .slider:before {
     margin-bottom: 14px;
 }
 
+/* The tab list is now derived from the vocabulary, so it holds ~10 entries
+   rather than 4. Fixed-width pills wrap onto a second row instead of each tab
+   shrinking to an unreadable sliver. */
 .mc-tab-btn {
-    flex: 1;
+    flex: 0 0 auto;
     border: none;
     background: transparent;
     padding: 6px 12px;
@@ -522,6 +526,101 @@ input:checked + .slider:before {
     background: color-mix(in srgb, var(--acc) 12%, transparent);
     border: 1px solid color-mix(in srgb, var(--acc) 20%, transparent);
     color: var(--acc);
+}
+
+/* Search + filter row above the key grid. */
+.mc-grid-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.mc-search-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--s3);
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: var(--tx2);
+}
+
+.mc-search-wrap input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--tx);
+    font-size: 0.8rem;
+    outline: none;
+}
+
+.mc-filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    background: var(--s3);
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: var(--tx2);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mc-filter-btn:hover {
+    color: var(--tx);
+    background: var(--s4);
+}
+
+.mc-filter-btn.active {
+    background: color-mix(in srgb, var(--acc) 12%, transparent);
+    border-color: color-mix(in srgb, var(--acc) 30%, transparent);
+    color: var(--acc);
+}
+
+/* "Showing 1-100 of 988 in Blocks" */
+.mc-grid-status {
+    font-size: 0.7rem;
+    color: var(--tx2);
+    margin-bottom: 8px;
+}
+
+.mc-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 10px;
+    font-size: 0.75rem;
+    color: var(--tx2);
+}
+
+.mc-pagination button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--s3);
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: var(--tx);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mc-pagination button:hover:not(:disabled) {
+    background: var(--s4);
+}
+
+.mc-pagination button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 .mc-keys-scroll {

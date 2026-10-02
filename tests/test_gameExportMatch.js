@@ -4,12 +4,14 @@
 // key namespace. Also pins the lexicon matcher, whose old substring fallback
 // matched "iron" inside "Iron Sword" and silently dropped "sword".
 import {
+    autoMatchAll,
     autoMatchLexicon,
     findLexiconMatches,
     glossCandidates,
     searchLexicon,
 } from '../src/utils/gameExportMatch.js';
 import {
+    MINECRAFT_KEYS,
     MINECRAFT_VERSIONS,
     buildPackMcmeta,
     getMinecraftVersion,
@@ -88,6 +90,34 @@ assert('searching "sword" offers its word', searchLexicon('sword', LEX).map((f) 
 assert('exact hits sort before partials', searchLexicon('iron', LEX)[0].label, 'iron');
 assert('a partial needs every word present', searchLexicon('iron sword', LEX).length, 0);
 assert('searching an empty lexicon is safe', searchLexicon('iron', []), []);
+
+console.log('— the indexed bulk path agrees with the linear one —');
+// autoMatchAll exists purely for speed. If it disagrees with
+// autoMatchLexicon, pre-filled translations would silently change meaning.
+const TERMS = [
+    { key: 'k1', english: 'Iron Sword' },
+    { key: 'k2', english: 'Stone' },
+    { key: 'k3', english: 'Diamond' },
+    { key: 'k4', english: 'Ender Pearl' },
+    { key: 'k5', english: 'Diamond' },   // duplicate term, distinct key
+];
+const bulk = autoMatchAll(TERMS, LEX);
+const linear = Object.fromEntries(TERMS.map((t) => [t.key, autoMatchLexicon(t.english, LEX)]));
+assert('the indexed result matches the linear result', bulk, linear);
+assert('an alternative gloss resolves via the index', autoMatchAll([{ key: 'a', english: 'observe' }], LEX).a, 'Vel');
+assert('a missing term is empty via the index', autoMatchAll([{ key: 'a', english: 'Netherite Ingot' }], LEX).a, '');
+assert('an ambiguous gloss is still refused via the index',
+    autoMatchAll([{ key: 'a', english: 'iron' }],
+        [{ word: 'A', translation: 'iron' }, { word: 'B', translation: 'iron' }]).a, '');
+assert('an empty lexicon is safe in bulk', autoMatchAll(TERMS, []).k2, '');
+assert('a non-array lexicon is safe in bulk', autoMatchAll(TERMS, null).k2, '');
+assertTrue('every requested key gets an entry', TERMS.every((t) => t.key in bulk));
+
+console.log('— the generated vocabularies are well-formed —');
+assert('no duplicate Minecraft keys', new Set(MINECRAFT_KEYS.map((k) => k.key)).size, MINECRAFT_KEYS.length);
+assert('no duplicate Terraria keys', new Set(TERRARIA_KEYS.map((k) => k.key)).size, TERRARIA_KEYS.length);
+assertTrue('every Minecraft key has a category', MINECRAFT_KEYS.every((k) => typeof k.category === 'string' && k.category.length > 0));
+assertTrue('every Minecraft key has English text', MINECRAFT_KEYS.every((k) => typeof k.english === 'string' && k.english.trim().length > 0));
 
 console.log('— pack.mcmeta follows the version era —');
 // Verified against Mojang's version data (misode/mcmeta): 1.21.9 is format 69

@@ -12,8 +12,11 @@ import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { MINECRAFT_KEYS, MINECRAFT_VERSIONS, buildPackMcmeta, DEFAULT_MINECRAFT_VERSION } from '../../../utils/minecraftExportData.js';
 import { TERRARIA_KEYS, TERRARIA_VERSIONS, TERRARIA_LANGUAGES, buildTerrariaHjson, buildBuildTxt, DEFAULT_TERRARIA_VERSION } from '../../../utils/terrariaExportData.js';
-import { autoMatchLexicon, searchLexicon } from '../../../utils/gameExportMatch.js';
+import { autoMatchAll } from '../../../utils/gameExportMatch.js';
 
+
+import { useTranslationGrid } from './useTranslationGrid.js';
+import TranslationGridControls from './TranslationGridControls.jsx';
 import './exportModal.css';
 
 export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
@@ -32,7 +35,6 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
     const [regionName, setRegionName] = useState('Conlangia');
     const [bidirectional, setBidirectional] = useState(false);
     const [mcVersion, setMcVersion] = useState(DEFAULT_MINECRAFT_VERSION);
-    const [activeCategory, setActiveCategory] = useState('Interface');
     const [customTranslations, setCustomTranslations] = useState({});
 
     // Terraria Exporter States
@@ -41,7 +43,6 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
     const [trModVersion, setTrModVersion] = useState('1.0.0');
     const [trGameVersion, setTrGameVersion] = useState(DEFAULT_TERRARIA_VERSION);
     const [trModAuthor, setTrModAuthor] = useState('');
-    const [trActiveCategory, setTrActiveCategory] = useState('Items');
     const [trCustomTranslations, setTrCustomTranslations] = useState({});
 
 
@@ -61,15 +62,11 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
             setBidirectional(false);
             setMcVersion(DEFAULT_MINECRAFT_VERSION);
 
-            setActiveCategory('Interface');
 
-            // Automatically scan lexicon for matching keys
-            const initialTrans = {};
-            MINECRAFT_KEYS.forEach(item => {
-                const match = autoMatchLexicon(item.english, lexicon);
-                initialTrans[item.key] = match || '';
-            });
-            setCustomTranslations(initialTrans);
+            // Automatically scan lexicon for matching keys. Done in one indexed
+            // pass; per-key autoMatchLexicon is O(keys x lexicon) and froze the
+            // modal for seconds once the vocabulary reached a few thousand keys.
+            setCustomTranslations(autoMatchAll(MINECRAFT_KEYS, lexicon));
         }
     }, [isOpen, type, config.conlangName, lexicon]);
 
@@ -87,14 +84,9 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
             setTrModVersion('1.0.0');
             setTrGameVersion(DEFAULT_TERRARIA_VERSION);
             setTrModAuthor(confName);
-            setTrActiveCategory('Items');
 
-            const initialTrans = {};
-            TERRARIA_KEYS.forEach(item => {
-                const match = autoMatchLexicon(item.english, lexicon);
-                initialTrans[item.key] = match || '';
-            });
-            setTrCustomTranslations(initialTrans);
+            // Same single indexed pass for the Terraria mapper.
+            setTrCustomTranslations(autoMatchAll(TERRARIA_KEYS, lexicon));
         }
     }, [isOpen, type, config.conlangName, lexicon]);
 
@@ -108,6 +100,11 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
     }, [isOpen, isProcessing, onClose]);
+
+    // Grid state for both games. These own the active tab, the search text and
+    // the page, so the JSX below does not need to filter or slice the vocabulary.
+    const mcGrid = useTranslationGrid(MINECRAFT_KEYS, customTranslations, 'Interface');
+    const trGrid = useTranslationGrid(TERRARIA_KEYS, trCustomTranslations, 'Items');
 
 
     if (!isOpen) return null;
@@ -191,6 +188,16 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
 
     const handleTranslationChange = (key, value) => {
         setCustomTranslations(prev => ({
+            ...prev,
+            [key]: value
+        }));
+    };
+
+    // The Terraria mapper is a separate state tree, so it needs its own setter.
+    // Both grids share the same controls component, which only needs a
+    // (key, value) => void.
+    const handleTrTranslationChange = (key, value) => {
+        setTrCustomTranslations(prev => ({
             ...prev,
             [key]: value
         }));
@@ -343,55 +350,13 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                                     Below are the most prominent translation keys in Minecraft. The engine automatically scanned your lexicon for matching glosses. You can override or manually enter terms below:
                                 </p>
 
-                                <div className="mc-tabs">
-                                    {['Interface', 'Blocks', 'Items & Tools', 'Gameplay'].map(cat => (
-                                        <button 
-                                            key={cat} 
-                                            className={`mc-tab-btn ${activeCategory === cat ? 'active' : ''}`}
-                                            onClick={() => setActiveCategory(cat)}
-                                        >
-                                            {cat}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                <div className="mc-keys-scroll">
-                                    <div className="mc-keys-grid">
-                                        {MINECRAFT_KEYS.filter(item => item.category === activeCategory).map(item => {
-                                            const autoMatched = autoMatchLexicon(item.english, lexicon);
-                                            const isAutoMatched = autoMatched && customTranslations[item.key] === autoMatched;
-                                            
-                                            return (
-                                                <div key={item.key} className="mc-key-card">
-                                                    <div className="mc-key-meta">
-                                                        <span className="mc-eng">{item.english}</span>
-                                                        <span className="mc-key-id">{item.key}</span>
-                                                    </div>
-                                                    <div className="mc-input-wrapper">
-                                                        <input 
-                                                            type="text" 
-                                                            value={customTranslations[item.key] || ''} 
-                                                            onChange={e => handleTranslationChange(item.key, e.target.value)} 
-                                                            placeholder={`Translate: "${item.english}"`}
-                                                            className={isAutoMatched ? 'auto-matched' : ''}
-                                                                list={`lex-mc-${item.key.replace(/\./g, "_")}`}
-                                                        />
-                                                        {isAutoMatched && (
-                                                            <span className="mc-match-badge" title="Automatically pre-filled from your lexicon">
-                                                                Lexicon Match
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <datalist id={`lex-mc-${item.key.replace(/\./g, "_")}`}>
-                                                    {searchLexicon(item.english, lexicon).slice(0, 25).map((c, ci) => (
-                                                    <option key={ci} value={c.word} />
-                                                    ))}
-                                                    </datalist>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
+                                <TranslationGridControls
+                                    grid={mcGrid}
+                                    keys={MINECRAFT_KEYS}
+                                    translations={customTranslations}
+                                    onChange={handleTranslationChange}
+                                    idPrefix="mc"
+                                />
                                 
                                 <div className="plain-export-action" style={{ marginTop: '16px' }}>
                                     <Button variant="save" onClick={() => handleExportClick()} style={{ width: '100%', padding: '16px', fontSize: '1.05rem', gap: '8px' }}>
@@ -509,55 +474,13 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                                     Below are prominent Terraria content keys for your conlang mod. The engine automatically scanned your lexicon for matches. Override them below:
                                 </p>
 
-                                <div className="mc-tabs">
-                                    {['Items', 'NPCs', 'Buffs', 'UI'].map(cat => (
-                                        <button
-                                            key={cat}
-                                            className={`mc-tab-btn ${trActiveCategory === cat ? 'active' : ''}`}
-                                            onClick={() => setTrActiveCategory(cat)}
-                                        >
-                                            {cat}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                <div className="mc-keys-scroll">
-                                    <div className="mc-keys-grid">
-                                        {TERRARIA_KEYS.filter(item => item.category === trActiveCategory).map(item => {
-                                            const autoMatched = autoMatchLexicon(item.english, lexicon);
-                                            const isAutoMatched = autoMatched && trCustomTranslations[item.key] === autoMatched;
-
-                                            return (
-                                                <div key={item.key} className="mc-key-card">
-                                                    <div className="mc-key-meta">
-                                                        <span className="mc-eng">{item.english}</span>
-                                                        <span className="mc-key-id">{item.key}</span>
-                                                    </div>
-                                                    <div className="mc-input-wrapper">
-                                                        <input
-                                                            type="text"
-                                                            value={trCustomTranslations[item.key] || ''}
-                                                            onChange={e => setTrCustomTranslations(prev => ({ ...prev, [item.key]: e.target.value }))}
-                                                            placeholder={`Translate: "${item.english}"`}
-                                                            className={isAutoMatched ? 'auto-matched' : ''}
-                                                                list={`lex-tr-${item.key.replace(/\./g, "_")}`}
-                                                        />
-                                                        {isAutoMatched && (
-                                                            <span className="mc-match-badge" title="Automatically pre-filled from your lexicon">
-                                                                Lexicon Match
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <datalist id={`lex-tr-${item.key.replace(/\./g, "_")}`}>
-                                                    {searchLexicon(item.english, lexicon).slice(0, 25).map((c, ci) => (
-                                                    <option key={ci} value={c.word} />
-                                                    ))}
-                                                    </datalist>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
+                                <TranslationGridControls
+                                    grid={trGrid}
+                                    keys={TERRARIA_KEYS}
+                                    translations={trCustomTranslations}
+                                    onChange={handleTrTranslationChange}
+                                    idPrefix="tr"
+                                />
 
                                 <div className="plain-export-action" style={{ marginTop: '16px' }}>
                                     <Button variant="save" onClick={() => handleExportClick()} style={{ width: '100%', padding: '16px', fontSize: '1.05rem', gap: '8px' }}>

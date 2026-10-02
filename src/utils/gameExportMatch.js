@@ -69,6 +69,52 @@ export const autoMatchLexicon = (english, lexicon) => {
 };
 
 /**
+ * Build a lookup index once, then resolve many terms against it.
+ *
+ * Calling autoMatchLexicon per key is O(keys x lexicon): with the generated
+ * Minecraft vocabulary (2,995 terms) and a 5,000-entry lexicon that took ~4.5s
+ * and froze the export modal on open. This reduces it to a single pass by
+ * indexing every entry by each of its gloss candidates.
+ *
+ * The index maps a normalised gloss to the distinct conlang words that claim
+ * it. A gloss claimed by more than one word is deliberately recorded as
+ * ambiguous so autoMatch keeps refusing to guess, exactly as the linear scan
+ * did.
+ */
+export const buildLexiconIndex = (lexicon) => {
+    /** @type {Map<string, { word: string, index: number, entry: object }[]>} */
+    const index = new Map();
+    if (!Array.isArray(lexicon)) return index;
+
+    lexicon.forEach((entry, i) => {
+        const word = conlangForm(entry);
+        if (!word) return;
+        for (const candidate of glossCandidates(entry?.translation)) {
+            if (!index.has(candidate)) index.set(candidate, []);
+            index.get(candidate).push({ word, index: i, entry });
+        }
+    });
+    return index;
+};
+
+/**
+ * autoMatchLexicon, but resolving against a prebuilt index.
+ * Returns { key -> translation } for the given terms.
+ */
+export const autoMatchAll = (terms, lexicon) => {
+    const index = buildLexiconIndex(lexicon);
+    const out = {};
+
+    for (const { key, english } of terms) {
+        const hits = index.get(normalise(english)) || [];
+        // A unique match is a confident answer. Several distinct words mean the
+        // author has to choose, so report nothing.
+        out[key] = hits.length === 0 ? '' : new Set(hits.map((h) => h.word)).size > 1 ? '' : hits[0].word;
+    }
+    return out;
+};
+
+/**
  * Every conlang candidate for a term, for the manual picker in the export
  * modal. Unlike autoMatchLexicon this never returns an empty list, so a
  * missing term can still be filled in from the lexicon by hand.
