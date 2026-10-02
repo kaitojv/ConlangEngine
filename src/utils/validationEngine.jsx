@@ -68,7 +68,7 @@ const validateAlphabetic = (word, consonants, vowels, syllablePattern, otherPhon
 
     // 1. CHARACTER INVENTORY VALIDATION
     // Remove allowed universal characters (spaces, hyphens, apostrophes)
-    let checkWord = word.replace(/[\s\-\*']/g, '');
+    let checkWord = word.replace(/[\s-*']/g, '');
     let tempWord = checkWord;
 
     // Remove valid vowels, consonants, and others to see if any alien characters remain

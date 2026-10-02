@@ -368,7 +368,7 @@ function FillMode({ onExit }) {
                 if (cleanTrans === target || cleanTrans === `to ${target}`) return true;
                 
                 // Match within comma/slash separated lists (e.g. "sun, day", "to run / to jog")
-                const parts = cleanTrans.split(/[,\/;|]+/).map(p => p.trim());
+                const parts = cleanTrans.split(/[,/;|]+/).map(p => p.trim());
                 return parts.some(p => p === target || p === `to ${target}`);
             });
         });
