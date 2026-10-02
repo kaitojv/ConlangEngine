@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
+import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion.jsx';
 import { useLocation } from 'react-router-dom';
 import './floatingBackground.css';
 import { 
@@ -25,15 +26,21 @@ const TYPE_MAP = {
     music: [<Music />, <Headphones />, <Radio />, <Mic />, <Bell />, <Speaker />, <Music />, <Headphones />, <Radio />, <Mic />, <Bell />, <Speaker />]
 };
 
+const EMPTY_LEXICON = [];
+const DEFAULT_BG_CONFIG = { enabled: true, global: false, type: 'greetings' };
+
 export default function FloatingBackground() {
     const containerRef = useRef(null);
     const mouseRef = useRef({ x: 0, y: 0, smoothX: 0, smoothY: 0 });
     const requestRef = useRef();
 
     const location = useLocation();
-    const config = useConfigStore(state => state.floatingBackground) || { enabled: true, global: false, type: 'greetings' };
-    const lexicon = useLexiconStore(state => state.lexicon) || [];
+    const config = useConfigStore(state => state.floatingBackground) || DEFAULT_BG_CONFIG;
+    // Stable identity: a fresh `[]` literal on each render would make the effects
+    // below re-run every render.
+    const lexicon = useLexiconStore(state => state.lexicon) || EMPTY_LEXICON;
     const { transliterate } = useTransliterator();
+    const prefersReducedMotion = usePrefersReducedMotion();
 
     // The words shown are picked in an effect rather than during render.
     // Shuffling inside useMemo meant every unrelated re-render (any config change,
@@ -44,7 +51,9 @@ export default function FloatingBackground() {
 
     useEffect(() => {
         if (config.type !== 'lexicon_words' || lexicon.length === 0) {
-            setLexiconWords([]);
+            // Guard the write: when the array is already empty this would
+            // otherwise schedule a redundant re-render on every lexicon change.
+            setLexiconWords((prev) => (prev.length === 0 ? prev : []));
             return;
         }
         // Pick up to 15 distinct random words.
@@ -68,7 +77,12 @@ export default function FloatingBackground() {
         return TYPE_MAP[config.type] || TYPE_MAP['greetings'];
     }, [config.type, lexiconWords, lexicon, transliterate]);
 
+    // The parallax loop below is decorative continuous motion, so when the user
+    // prefers reduced motion we skip the effect entirely: the words still render
+    // in their starting positions, but nothing animates and no rAF loop runs.
     useEffect(() => {
+        if (prefersReducedMotion) return;
+
         const container = containerRef.current;
         if (!container) return;
 
@@ -164,7 +178,7 @@ export default function FloatingBackground() {
             window.removeEventListener('mousemove', handleMouseMove);
             cancelAnimationFrame(requestRef.current);
         };
-    }, [bgElements, location.pathname]);
+    }, [bgElements, location.pathname, prefersReducedMotion, config.type]);
 
     if (!config.enabled) return null;
     if (!config.global && location.pathname !== '/') return null;

@@ -485,3 +485,66 @@ select option {
     background: var(--s4);
     border-top: 1px solid var(--bd);
 }
+
+/* ============================================================================
+   Accessibility: keyboard focus visibility
+   ----------------------------------------------------------------------------
+   Many component stylesheets set `outline: none` to suppress the default ring.
+   In 29 of those cases there is no matching `:focus` rule to replace it, so
+   those controls were completely invisible to keyboard users.
+
+   Rather than editing each component stylesheet, this restores a visible ring
+   for any focused element that removed its own outline. `:focus-visible`
+   (not `:focus`) is deliberate: it shows the ring for keyboard and assistive
+   -tech interaction while leaving mouse users free of extra chrome.
+   ========================================================================== */
+
+/* These use !important deliberately. Roughly 29 component rules set
+   `outline: none`, and those stylesheets are imported inside lazy-loaded
+   components, so they are injected into <head> AFTER index.css and would
+   otherwise win on source order. A zero-specificity :where() selector would
+   still lose to a single class selector, so the ring needs !important to
+   reliably restore keyboard visibility without editing all 29 files. */
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+    outline: 2px solid var(--acc) !important;
+    outline-offset: 2px !important;
+}
+
+/* Keep the default ring suppressed for mouse users, so clicking does not
+   leave stray outlines on styled controls. */
+a:focus:not(:focus-visible),
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible),
+summary:focus:not(:focus-visible),
+[tabindex]:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* Note on theming: light mode is applied by writing CSS custom properties
+   inline onto documentElement (see useThemeInjector), not via a data-theme
+   attribute, so --acc already resolves to the light-theme value (#6d28d9)
+   there. No separate light-mode focus rule is needed. */
+
+/* Respect the OS "reduce motion" setting. The app uses framer-motion page
+   transitions and a requestAnimationFrame parallax loop; both are disabled
+   below rather than merely shortened, since the parallax is decorative. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+

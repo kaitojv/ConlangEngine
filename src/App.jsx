@@ -10,6 +10,7 @@ import { Routes, Route, NavLink, useLocation, useNavigate } from 'react-router-d
 import { useThemeInjector } from './hooks/useThemeInjector.jsx';
 import { useFontInjector } from './utils/useFontInjector.jsx';
 import { useGlobalHotkeys } from './hooks/useGlobalHotkeys.jsx';
+import { usePrefersReducedMotion } from './hooks/usePrefersReducedMotion.jsx';
 import { useBackupManager } from './hooks/useBackupManager.jsx';
 import { useAutoSync } from './hooks/useAutoSync.jsx';
 import SyncConflictManager from './components/pages/home/SyncConflictManager.jsx';
@@ -49,7 +50,13 @@ const HowToStart = lazy(() => import('./components/pages/howtostart/HowToStart.j
 const TypologyTab = lazy(() => import('./components/pages/typology/TypologyTab.jsx'));
 
 // Animation wrapper for routes
-const AnimatedPage = ({ children }) => (
+const AnimatedPage = ({ children }) => {
+  // Honour the OS reduced-motion setting: drop the slide/fade entirely
+  // rather than shortening it, so no large-area movement is animated.
+  const prefersReducedMotion = usePrefersReducedMotion();
+  if (prefersReducedMotion) return <div style={{ height: '100%' }}>{children}</div>;
+
+  return (
   <motion.div
     initial={{ opacity: 0, y: 15 }}
     animate={{ opacity: 1, y: 0 }}
@@ -59,7 +66,8 @@ const AnimatedPage = ({ children }) => (
   >
     {children}
   </motion.div>
-);
+  );
+};
 
 // Define your allowlist of safe relative routes based on your actual Route paths
 export const ALLOWED_REDIRECTS = [
