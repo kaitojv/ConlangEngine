@@ -701,7 +701,10 @@ const reorderBreakdown = (breakdownArray) => {
         try {
             const regex = new RegExp('(^|[^a-z0-9])' + esc + '($|[^a-z0-9])', 'i');
             if (definitions.some(d => regex.test(d))) return true;
-        } catch(e) {}
+        } catch(e) {
+            // A malformed query can produce an invalid RegExp. The fallback
+            // below handles it, so there is nothing to recover here.
+        }
         
         // Robust fallback: if query is long enough, allow partial inclusion in ANY definition
         if (query.length >= 3) {

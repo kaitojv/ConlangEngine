@@ -72,7 +72,10 @@ export function playCorrect() {
         gain2.connect(ctx.destination);
         osc2.start(now + 0.1);
         osc2.stop(now + 0.35);
-    } catch (e) {}
+    } catch (e) {
+        // Audio is decorative: if the WebAudio context is unavailable or
+        // blocked, silently skip the sound rather than interrupting the lesson.
+    }
 }
 
 /** Low descending buzz for wrong answers */
@@ -92,7 +95,9 @@ export function playIncorrect() {
         gain.connect(ctx.destination);
         osc.start(now);
         osc.stop(now + 0.3);
-    } catch (e) {}
+    } catch (e) {
+        // Audio is decorative; see the note in playCorrect.
+    }
 }
 
 /** Celebratory fanfare for completing a lesson */
@@ -117,7 +122,9 @@ export function playLevelComplete() {
             osc.start(start);
             osc.stop(start + 0.4);
         });
-    } catch (e) {}
+    } catch (e) {
+        // Audio is decorative; see the note in playCorrect.
+    }
 }
 
 /** Subtle UI click */
