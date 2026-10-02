@@ -1,94 +1,10 @@
 import JSZip from 'jszip';
-
-// A carefully curated collection of 55 highly prominent and iconic Minecraft keys.
-export const MINECRAFT_KEYS = [
-    // UI / Menus
-    { key: 'menu.play', english: 'Play', category: 'Interface' },
-    { key: 'menu.options', english: 'Options', category: 'Interface' },
-    { key: 'menu.quit', english: 'Quit Game', category: 'Interface' },
-    { key: 'menu.singleplayer', english: 'Singleplayer', category: 'Interface' },
-    { key: 'menu.multiplayer', english: 'Multiplayer', category: 'Interface' },
-    { key: 'gui.back', english: 'Back', category: 'Interface' },
-    { key: 'gui.done', english: 'Done', category: 'Interface' },
-    { key: 'gui.cancel', english: 'Cancel', category: 'Interface' },
-    { key: 'gui.yes', english: 'Yes', category: 'Interface' },
-    { key: 'gui.no', english: 'No', category: 'Interface' },
-
-    // Blocks
-    { key: 'block.minecraft.stone', english: 'Stone', category: 'Blocks' },
-    { key: 'block.minecraft.dirt', english: 'Dirt', category: 'Blocks' },
-    { key: 'block.minecraft.grass_block', english: 'Grass Block', category: 'Blocks' },
-    { key: 'block.minecraft.cobblestone', english: 'Cobblestone', category: 'Blocks' },
-    { key: 'block.minecraft.sand', english: 'Sand', category: 'Blocks' },
-    { key: 'block.minecraft.gravel', english: 'Gravel', category: 'Blocks' },
-    { key: 'block.minecraft.gold_ore', english: 'Gold Ore', category: 'Blocks' },
-    { key: 'block.minecraft.iron_ore', english: 'Iron Ore', category: 'Blocks' },
-    { key: 'block.minecraft.coal_ore', english: 'Coal Ore', category: 'Blocks' },
-    { key: 'block.minecraft.netherrack', english: 'Netherrack', category: 'Blocks' },
-    { key: 'block.minecraft.obsidian', english: 'Obsidian', category: 'Blocks' },
-    { key: 'block.minecraft.oak_planks', english: 'Oak Planks', category: 'Blocks' },
-    { key: 'block.minecraft.glass', english: 'Glass', category: 'Blocks' },
-    { key: 'block.minecraft.crafting_table', english: 'Crafting Table', category: 'Blocks' },
-    { key: 'block.minecraft.furnace', english: 'Furnace', category: 'Blocks' },
-    { key: 'block.minecraft.chest', english: 'Chest', category: 'Blocks' },
-
-    // Items & Tools
-    { key: 'item.minecraft.diamond', english: 'Diamond', category: 'Items & Tools' },
-    { key: 'item.minecraft.iron_ingot', english: 'Iron Ingot', category: 'Items & Tools' },
-    { key: 'item.minecraft.gold_ingot', english: 'Gold Ingot', category: 'Items & Tools' },
-    { key: 'item.minecraft.coal', english: 'Coal', category: 'Items & Tools' },
-    { key: 'item.minecraft.stick', english: 'Stick', category: 'Items & Tools' },
-    { key: 'item.minecraft.bucket', english: 'Bucket', category: 'Items & Tools' },
-    { key: 'item.minecraft.apple', english: 'Apple', category: 'Items & Tools' },
-    { key: 'item.minecraft.bread', english: 'Bread', category: 'Items & Tools' },
-    { key: 'item.minecraft.wheat', english: 'Wheat', category: 'Items & Tools' },
-    { key: 'item.minecraft.wooden_sword', english: 'Wooden Sword', category: 'Items & Tools' },
-    { key: 'item.minecraft.wooden_pickaxe', english: 'Wooden Pickaxe', category: 'Items & Tools' },
-    { key: 'item.minecraft.stone_sword', english: 'Stone Sword', category: 'Items & Tools' },
-    { key: 'item.minecraft.stone_pickaxe', english: 'Stone Pickaxe', category: 'Items & Tools' },
-    { key: 'item.minecraft.iron_sword', english: 'Iron Sword', category: 'Items & Tools' },
-    { key: 'item.minecraft.iron_pickaxe', english: 'Iron Pickaxe', category: 'Items & Tools' },
-    { key: 'item.minecraft.diamond_sword', english: 'Diamond Sword', category: 'Items & Tools' },
-    { key: 'item.minecraft.diamond_pickaxe', english: 'Diamond Pickaxe', category: 'Items & Tools' },
-    { key: 'item.minecraft.bow', english: 'Bow', category: 'Items & Tools' },
-    { key: 'item.minecraft.arrow', english: 'Arrow', category: 'Items & Tools' },
-
-    // Gameplay
-    { key: 'gameMode.survival', english: 'Survival Mode', category: 'Gameplay' },
-    { key: 'gameMode.creative', english: 'Creative Mode', category: 'Gameplay' },
-    { key: 'gameMode.adventure', english: 'Adventure Mode', category: 'Gameplay' },
-    { key: 'gameMode.spectator', english: 'Spectator Mode', category: 'Gameplay' },
-    { key: 'multiplayer.player.joined', english: '%s joined the game', category: 'Gameplay' },
-    { key: 'multiplayer.player.left', english: '%s left the game', category: 'Gameplay' },
-];
-
-/**
- * Automatically match translation glosses from the active lexicon.
- * Performs exact match, then falls back to matching key substrings to longer lexicon words.
- */
-export const autoMatchLexicon = (english, lexicon) => {
-    if (!lexicon || !Array.isArray(lexicon)) return '';
-    const cleanEng = english.toLowerCase().trim();
-    
-    // First pass: Exact match
-    const exact = lexicon.find(w => w.translation?.toLowerCase().trim() === cleanEng);
-    if (exact) return exact.word.replace(/\*/g, '');
-
-    // Second pass: Search if a lexicon translation is contained within the English term
-    const sorted = [...lexicon]
-        .filter(w => w.translation && w.translation.trim().length > 2)
-        .sort((a, b) => b.translation.length - a.translation.length);
-        
-    for (const entry of sorted) {
-        const cleanTrans = entry.translation.toLowerCase().trim();
-        if (cleanEng.includes(cleanTrans)) {
-            return entry.word.replace(/\*/g, '');
-        }
-    }
-
-    return '';
-};
-
+import {
+    MINECRAFT_KEYS,
+    DEFAULT_MINECRAFT_VERSION,
+    buildPackMcmeta,
+    minecraftLangPath,
+} from './minecraftExportData.js';
 /**
  * Generate a beautiful custom pack.png icon using an HTML5 Canvas.
  * Creates an elegant obsidian-like blocks texture with a glowing neon conlang monogram.
@@ -197,37 +113,13 @@ export const exportMinecraftResourcePack = async (config, customTranslations, op
         langCode = 'art_custom',
         regionName = 'Conlangia',
         bidirectional = false,
-        packFormat = 121
+        versionId = DEFAULT_MINECRAFT_VERSION
     } = options;
-
-    // Formats >= 88 (1.21.9+) use min_format/max_format instead of pack_format
-    const formatNum = parseFloat(packFormat);
-    const usesMinMaxFormat = formatNum >= 88;
 
     const zip = new JSZip();
 
-    // 1. Create pack.mcmeta
-    const packSection = usesMinMaxFormat
-        ? {
-            description: `${langName} Language Pack - Conlang Engine`,
-            min_format: formatNum,
-            max_format: formatNum
-        }
-        : {
-            pack_format: parseInt(packFormat, 10) || 121,
-            description: `${langName} Language Pack - Conlang Engine`
-        };
-
-    const packMcmeta = {
-        pack: packSection,
-        language: {
-            [langCode]: {
-                name: langName,
-                region: regionName,
-                bidirectional: !!bidirectional
-            }
-        }
-    };
+    // 1. pack.mcmeta — the version decides pack_format vs min_format/max_format.
+    const packMcmeta = buildPackMcmeta({ langName, langCode, regionName, bidirectional, versionId });
     zip.file('pack.mcmeta', JSON.stringify(packMcmeta, null, 2));
 
     // 2. Create custom language JSON mapping
@@ -243,9 +135,9 @@ export const exportMinecraftResourcePack = async (config, customTranslations, op
         }
     });
     
-    // Add assets directory structure
-    const langFolder = zip.folder('assets').folder('minecraft').folder('lang');
-    langFolder.file(`${langCode}.json`, JSON.stringify(langJson, null, 2));
+    // Language JSON must sit at assets/minecraft/lang/<code>.json — the
+    // namespace has to be `minecraft`, not the pack's own.
+    zip.file(minecraftLangPath(langCode), JSON.stringify(langJson, null, 2));
 
     // 3. Create stylized pack.png icon
     const dataUrl = generatePackIcon(langName);
