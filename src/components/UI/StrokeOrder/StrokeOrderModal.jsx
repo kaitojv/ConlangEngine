@@ -3,6 +3,7 @@ import Modal from '../Modal/Modal.jsx';
 import StrokeOrderViewer from './StrokeOrderViewer.jsx';
 import { Volume2 } from 'lucide-react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
+import { useShallow } from 'zustand/react/shallow';
 import { playAzureTTS } from '../../../utils/azureTTS.js';
 import toast from 'react-hot-toast';
 
@@ -15,7 +16,10 @@ export default function StrokeOrderModal({
     scriptType,
     translation
 }) {
-    const config = useConfigStore();
+    const { azureTtsUseIpa, azureTtsVoice } = useConfigStore(useShallow(state => ({
+        azureTtsUseIpa: state.azureTtsUseIpa,
+        azureTtsVoice: state.azureTtsVoice
+    })));
     const [isPlaying, setIsPlaying] = useState(false);
     const [isDirty, setIsDirty] = useState(false);
 
@@ -38,12 +42,12 @@ export default function StrokeOrderModal({
         setIsPlaying(true);
         const toastId = toast.loading("Synthesizing audio...");
         try {
-            if (config.azureTtsVoice) {
+            if (azureTtsVoice) {
                 await playAzureTTS({
                     text: word || char || displayTitle,
                     ipa: word || char || displayTitle,
-                    voice: config.azureTtsVoice,
-                    useIpa: config.azureTtsUseIpa
+                    voice: azureTtsVoice,
+                    useIpa: azureTtsUseIpa
                 });
                 toast.success("Audio played successfully", { id: toastId });
             } else if ('speechSynthesis' in window) {

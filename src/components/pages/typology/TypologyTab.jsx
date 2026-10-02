@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
+import { useShallow } from 'zustand/react/shallow';
 import Card from '@/components/UI/Card/Card.jsx';
 import { analyzeTypology, STATUS } from '@/utils/typologyEngine.js';
 import {
@@ -55,13 +56,27 @@ function ScoreRing({ score, color }) {
 }
 
 export default function TypologyTab() {
-    const config = useConfigStore();
+    const conlangName = useConfigStore(state => state.conlangName);
+    // analyzeTypology() reads exactly these ten fields of the config; see
+    // src/utils/typologyEngine.js.
+    const typologyInput = useConfigStore(useShallow(state => ({
+        adjectivePlacement: state.adjectivePlacement,
+        consonants: state.consonants,
+        enableToneAndStress: state.enableToneAndStress,
+        morphologyMode: state.morphologyMode,
+        numeralBase: state.numeralBase,
+        syllablePattern: state.syllablePattern,
+        syntaxOrder: state.syntaxOrder,
+        toneRules: state.toneRules,
+        vowelHarmonySets: state.vowelHarmonySets,
+        vowels: state.vowels,
+    })));
 
     const [reviewOnly, setReviewOnly] = useState(false);
 
     const report = useMemo(
-        () => analyzeTypology(config),
-        [config]
+        () => analyzeTypology(typologyInput),
+        [typologyInput]
     );
 
     const { naturalnessScore, grade, summary, inventory, observations } = report;
@@ -101,7 +116,7 @@ export default function TypologyTab() {
                     <FlaskConical size={26} /> Naturalness &amp; Typology
                 </h1>
                 <p className="typ-description">
-                    See how <b>{config.conlangName || 'your conlang'}</b> compares to the world's natural
+                    See how <b>{conlangName || 'your conlang'}</b> compares to the world's natural
                     languages. Every check is a cross-linguistic tendency drawn from typology (WALS) and
                     Greenbergian universals — <i>guidance, not rules</i>. A boldly alien language is a perfectly
                     valid goal.
