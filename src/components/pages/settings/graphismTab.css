@@ -79,6 +79,144 @@
     line-height: 1;
 }
 
+/* Mandatory-backup gate for the irreversible glyph rewrite. Deliberately
+   plain: this is a blocking warning, not a feature to admire. */
+.gt-backup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.62);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+}
+
+.gt-backup-modal {
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad);
+    padding: 24px;
+    width: 100%;
+    max-width: 520px;
+    max-height: 90vh;
+    overflow-y: auto;
+    color: var(--tx);
+}
+
+.gt-backup-warning {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #f59e0b;
+    margin-bottom: 12px;
+}
+
+.gt-backup-warning h3 {
+    margin: 0;
+    font-size: 1.15rem;
+    color: var(--tx);
+}
+
+.gt-backup-lead {
+    margin: 0 0 16px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--tx2);
+}
+
+.gt-backup-stats {
+    margin: 0 0 16px;
+    padding: 12px;
+    background: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.gt-backup-stats dt {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--tx3);
+}
+
+.gt-backup-stats dd {
+    margin: 2px 0 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.gt-backup-fidelity {
+    margin: 0 0 16px;
+    font-size: 0.78rem;
+    color: var(--tx3);
+    line-height: 1.5;
+}
+
+.gt-backup-download {
+    margin-bottom: 14px;
+}
+
+.gt-backup-done {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--s4);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    color: var(--ok, #10b981);
+}
+
+.gt-backup-done div {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.gt-backup-done strong {
+    font-size: 0.85rem;
+    color: var(--tx);
+}
+
+.gt-backup-done span {
+    font-size: 0.72rem;
+    color: var(--tx3);
+}
+
+.gt-backup-error {
+    margin: 8px 0 0;
+    font-size: 0.8rem;
+    color: #ef4444;
+}
+
+.gt-backup-ack {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 18px;
+    font-size: 0.82rem;
+    color: var(--tx2);
+    cursor: pointer;
+    line-height: 1.5;
+}
+
+.gt-backup-ack input {
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.gt-backup-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
 /* Bulk glyph slimming block, shown next to Apply Settings. Kept visually
    secondary to the main action because it rewrites all stored glyphs. */
 .gt-lighten-block {

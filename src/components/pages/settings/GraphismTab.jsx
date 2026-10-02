@@ -13,6 +13,8 @@ import KeyboardManager from '../../UI/KeyboardManager/KeyboardManager.jsx';
 import { Keyboard, RefreshCw, Wand2, Spline } from 'lucide-react';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
 import { previewSimplification, simplifyGlyphMap } from '../../../utils/glyphSimplify.js';
+import { buildWorkspaceSnapshot, downloadWorkspaceBackup } from '../../../utils/workspaceExport.js';
+import GlyphLightenBackupModal from '../../UI/GlyphLightenBackupModal/GlyphLightenBackupModal.jsx';
 import { SCRIPT_MAPS } from '../../../utils/transliteration.js';
 import toast from 'react-hot-toast';
 import './graphismTab.css';
@@ -201,45 +203,77 @@ export default function TypographyStudio() {
      * large, and it is not obvious to a user that the fix is available. Both
      * the legacy top-level glyphs and every script's own copy are rewritten so
      * the result does not depend on which script happens to be selected.
+     *
+     * Two stages, because the rewrite is irreversible:
+     *   1. analyse, then open the backup modal with the real numbers
+     *   2. only once the user has downloaded a backup and confirmed it, apply
+     * The apply step is deliberately unreachable from anywhere else.
      */
-    const handleLightenAllGlyphs = async () => {
-        const tId = toast.loading('Analysing glyphs...');
+    const [lightenModal, setLightenModal] = useState(null);
+    const [backupInfo, setBackupInfo] = useState(null);
+    const [downloadError, setDownloadError] = useState(null);
+
+    const handleLightenAllGlyphs = () => {
+        const storeState = useConfigStore.getState();
+        const topLevel = storeState.customGlyphs || {};
+        const byScript = {};
+
+        // Collect every script that actually owns glyphs.
+        for (const [scriptId, data] of Object.entries(storeState.scriptDataById || {})) {
+            if (data && data.customGlyphs && Object.keys(data.customGlyphs).length > 0) {
+                byScript[scriptId] = data.customGlyphs;
+            }
+        }
+
+        const all = { ...topLevel, ...Object.assign({}, ...Object.values(byScript)) };
+        if (Object.keys(all).length === 0) {
+            toast.error('No custom glyphs to lighten.');
+            return;
+        }
+
+        const preview = previewSimplification(all, { tolerance: glyphLightenTolerance, precision: 2 });
+        if (preview.byteReduction < 0.01) {
+            toast('Your glyphs are already lightweight.');
+            return;
+        }
+
+        setBackupInfo(null);
+        setDownloadError(null);
+        setLightenModal({ preview, topLevel, byScript });
+    };
+
+    // Builds a full workspace snapshot on demand rather than holding it in
+    // state: at this size keeping a second copy of the config in memory for the
+    // lifetime of the dialog is not worth it, and the store still holds the
+    // original data until the rewrite happens.
+    const handleDownloadBackup = () => {
         try {
+            const snapshot = buildWorkspaceSnapshot({ exportAll: true });
+            const info = downloadWorkspaceBackup(
+                snapshot,
+                `${snapshot.config?.conlangName || 'MyConlang'}_Backup_BeforeLighten.json`
+            );
+            setBackupInfo(info);
+            setDownloadError(null);
+        } catch (err) {
+            console.error('Backup download failed:', err);
+            setDownloadError(
+                'The backup could not be created. Nothing has been changed. Please try again.'
+            );
+        }
+    };
+
+    const handleCloseLightenModal = () => {
+        setLightenModal(null);
+        setBackupInfo(null);
+        setDownloadError(null);
+    };
+
+    const handleConfirmLighten = async () => {
+        const tId = toast.loading('Lightening glyphs...');
+        try {
+            const { topLevel, byScript } = lightenModal;
             const storeState = useConfigStore.getState();
-            const topLevel = storeState.customGlyphs || {};
-            const byScript = {};
-
-            // Collect every script that actually owns glyphs.
-            for (const [scriptId, data] of Object.entries(storeState.scriptDataById || {})) {
-                if (data && data.customGlyphs && Object.keys(data.customGlyphs).length > 0) {
-                    byScript[scriptId] = data.customGlyphs;
-                }
-            }
-
-            const all = { ...topLevel, ...Object.assign({}, ...Object.values(byScript)) };
-            if (Object.keys(all).length === 0) {
-                toast.error('No custom glyphs to lighten.', { id: tId });
-                return;
-            }
-
-            const preview = previewSimplification(all, { tolerance: glyphLightenTolerance, precision: 2 });
-            if (preview.byteReduction < 0.01) {
-                toast('Your glyphs are already lightweight.', { id: tId });
-                return;
-            }
-
-            const toMb = (n) => (n / 1024 / 1024).toFixed(2);
-            if (!window.confirm(
-                `Lighten ${preview.glyphCount} glyph(s)?\n\n` +
-                `Points: ${preview.beforePoints.toLocaleString()} to ${preview.afterPoints.toLocaleString()} ` +
-                `(${Math.round(preview.pointReduction * 100)}% fewer)\n` +
-                `Size: ${toMb(preview.beforeBytes)} MB to ${toMb(preview.afterBytes)} MB\n\n` +
-                `Each glyph keeps its shape within ${glyphLightenTolerance}px. This cannot be undone, ` +
-                `so export a backup first if you want to keep the original point data.`
-            )) {
-                toast.dismiss(tId);
-                return;
-            }
 
             const simplifiedTopLevel = simplifyGlyphMap(topLevel, { tolerance: glyphLightenTolerance, precision: 2 });
             const simplifiedByScript = {};
@@ -255,13 +289,12 @@ export default function TypographyStudio() {
 
             simplifyAllGlyphs(simplifiedTopLevel, simplifiedByScript, base64Font);
 
-            toast.success(
-                `Lightened ${preview.glyphCount} glyph(s), saving ${toMb(preview.beforeBytes - preview.afterBytes)} MB.`,
-                { id: tId }
-            );
+            handleCloseLightenModal();
+            toast.success('Glyphs lightened and font recompiled.', { id: tId });
         } catch (err) {
             console.error('Lighten all glyphs failed:', err);
-            toast.error('Could not lighten glyphs. See the console for details.', { id: tId });
+            toast.error('Could not lighten glyphs. Nothing was changed.', { id: tId });
+            handleCloseLightenModal();
         }
     };
 
@@ -632,7 +665,8 @@ export default function TypographyStudio() {
                                 <p className="gt-lighten-desc">
                                     Font Studio samples strokes densely so drawing stays precise, but that
                                     makes saved glyphs large. This rewrites every glyph in a lighter,
-                                    visually equivalent form. Cannot be undone.
+                                    visually equivalent form. You will be asked to export a backup first,
+                                    since it cannot be undone.
                                 </p>
                             </div>
                             <label className="gt-lighten-tolerance">
@@ -650,10 +684,25 @@ export default function TypographyStudio() {
                             <Button variant="edit" onClick={handleLightenAllGlyphs} style={{ width: '100%' }}>
                                 <Spline size={16} /> Lighten all glyphs
                             </Button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </Card>
+                </Card>
+
+            {/* Backstop for the irreversible glyph rewrite. Rendered last so it
+                sits above the rest of the page. */}
+            {lightenModal && (
+                <GlyphLightenBackupModal
+                    isOpen={!!lightenModal}
+                    preview={lightenModal.preview}
+                    tolerance={glyphLightenTolerance}
+                    backupInfo={backupInfo}
+                    downloadError={downloadError}
+                    onDownloadBackup={handleDownloadBackup}
+                    onCancel={handleCloseLightenModal}
+                    onConfirm={handleConfirmLighten}
+                />
+            )}
 
             {allChars.length > 0 && (
                 <div className="alphabet-table-container">

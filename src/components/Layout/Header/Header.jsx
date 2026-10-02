@@ -17,12 +17,13 @@ import { generateObsidianMarkdown } from '../../../utils/obsidianExporter.jsx';
 import { generateSheetsExport } from '../../../utils/sheetsExporter.jsx';
 import { generateDocxExport } from '../../../utils/docxExporter.jsx';
 import { exportMinecraftResourcePack } from '../../../utils/minecraftExporter.jsx';
+import { buildWorkspaceSnapshot, downloadWorkspaceBackup } from '../../../utils/workspaceExport.js';
 import { exportTerrariaLocalizationPack } from '../../../utils/terrariaExporter.jsx';
 
 import { ExportModal } from './ExportModal.jsx';
 import { CsvImportModal } from './CsvImportModal.jsx';
 import BackupStatus from '../BackupStatus/BackupStatus.jsx';
-import { sanitizeBackup, sanitizeConfig } from '../../../utils/schemaValidator.jsx';
+import { sanitizeBackup } from '../../../utils/schemaValidator.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { renderWordInScript } from '../../../utils/scriptRendering.js';
 
@@ -88,30 +89,13 @@ export default function Header({ openMenu, onBackupNow }) {
 
     // Bundle up the conlang data and trigger a JSON file download
     const handleSave = (exportAll = true) => {
-        const config = sanitizeConfig(useConfigStore.getState(), true);
-        const projectStoreState = useProjectStore.getState();
-        const lexicon = useLexiconStore.getState();
-
-        const project = { ...projectStoreState };
-        if (!exportAll) {
-            project.localProjects = [];
-        }
-
-        const saveData = { config, project, lexicon };
-        const blob = new Blob([JSON.stringify(saveData, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = url;
+        const snapshot = buildWorkspaceSnapshot({ exportAll });
         const suffix = exportAll ? 'All_Workspaces' : 'Workspace';
-        a.download = `${config.conlangName || 'MyConlang'}_${suffix}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        
-        // BUG-FIX: Defer revoking the object URL to allow large downloads to complete
-        setTimeout(() => URL.revokeObjectURL(url), 10000);
-        
+        downloadWorkspaceBackup(
+            snapshot,
+            `${snapshot.config.conlangName || 'MyConlang'}_${suffix}.json`
+        );
+
         // Unlock Archivist badge
         useConfigStore.getState().unlockBadge('archivist', 'Archivist');
     };
