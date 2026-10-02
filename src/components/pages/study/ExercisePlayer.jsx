@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Card from '@/components/UI/Card/Card.jsx';
+import { useShallow } from 'zustand/react/shallow';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
@@ -42,9 +43,27 @@ const renderRichText = (text) => {
 
 const EXERCISE_COUNT = 5;
 
+const EXERCISE_PLAYER_CONFIG_KEYS = [
+    // read by resolveWordStrokes (utils/strokeOrderResolver.js)
+    'activeScriptSystemId', 'blockSettings', 'blockTemplates',
+    'consonants', 'customGlyphs', 'featuralComponents', 'otherPhonemes',
+    'phonologyTypes', 'scriptDataById', 'scriptRules', 'syllabaryMap', 'vowels',
+    // used directly in this component
+    'conlangName', 'azureTtsVoice', 'azureTtsUseIpa',
+];
+
 export default function ExercisePlayer({ levelNode, onComplete, onExit, customLexicon, customConfig }) {
     const storeLexicon = useLexiconStore((state) => state.lexicon);
-    const storeConfig = useConfigStore();
+    // Store fields this component and its callees read. resolveWordStrokes
+    // (utils/strokeOrderResolver.js) reads the first twelve; the rest are used
+    // directly here. Widen if that utility starts reading another field.
+    const storeConfig = useConfigStore(
+        useShallow((state) => {
+            const cfg = {};
+            for (const key of EXERCISE_PLAYER_CONFIG_KEYS) cfg[key] = state[key];
+            return cfg;
+        })
+    );
     
     const lexicon = customLexicon || storeLexicon;
     const config = customConfig || storeConfig;

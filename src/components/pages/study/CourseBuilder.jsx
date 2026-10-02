@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
@@ -235,8 +236,37 @@ const ColorSelect = ({ value, onChange }) => {
     );
 };
 
+// Config fields read by this component and its callees. Union of:
+//   resolveWordStrokes      (utils/strokeOrderResolver.js): 12 keys
+//   generateCourseExercise  (utils/courseGenerator.js):       6 keys
+//   plus customCourse, projectId and updateConfig used directly here.
+// Widen this list if either utility starts reading another field.
+const COURSE_BUILDER_CONFIG_KEYS = [
+    // resolveWordStrokes
+    'activeScriptSystemId', 'blockSettings', 'blockTemplates',
+    'consonants', 'customGlyphs', 'featuralComponents', 'otherPhonemes',
+    'phonologyTypes', 'scriptDataById', 'scriptRules', 'syllabaryMap', 'vowels',
+    // generateCourseExercise
+    'adjectiveAgreement', 'adjectivePlacement', 'grammarRules',
+    'personRules', 'syntaxOrder', 'wordAssistConfig',
+    // used directly in this component
+    'customCourse', 'projectId', 'updateConfig',
+];
+
 export default function CourseBuilder({ onExit }) {
-    const config = useConfigStore();
+    // Select only the config fields this component and its two callees read.
+    // Verified by call graph:
+    //   resolveWordStrokes  (utils/strokeOrderResolver.js) -> 12 keys
+    //   generateCourseExercise (utils/courseGenerator.js)   -> 6 keys
+    // grammarAnalyzer.js pulls what it needs from the store itself and takes
+    // only { lexicon, grammarRules } explicitly, so it needs nothing else here.
+    const config = useConfigStore(
+        useShallow((state) => {
+            const cfg = {};
+            for (const key of COURSE_BUILDER_CONFIG_KEYS) cfg[key] = state[key];
+            return cfg;
+        })
+    );
     const customCourse = config.customCourse || [];
     const updateConfig = config.updateConfig;
     const lexicon = useLexiconStore((state) => state.lexicon);
