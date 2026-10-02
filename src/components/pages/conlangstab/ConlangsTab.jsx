@@ -19,8 +19,9 @@ import './conlangsTab.css';
 export default function ConlangsTab() {
     const navigate = useNavigate();
     
-    // Grab our global state
-    const config = useConfigStore();
+    // Project management actions
+    const projectId = useConfigStore(state => state.projectId);
+    const updateConfig = useConfigStore(state => state.updateConfig);
     const setFullConfig = useConfigStore(state => state.setFullConfig);
     const setLexicon = useLexiconStore(state => state.setLexicon);
     
@@ -126,12 +127,12 @@ export default function ConlangsTab() {
 
     // Auto-save the current workspace to the archive whenever they land on this page
     useEffect(() => {
-        if (!config.projectId) {
-            config.updateConfig({ projectId: `local_${Date.now()}` });
+        if (!projectId) {
+            updateConfig({ projectId: `local_${Date.now()}` });
         } else {
             saveProjectToArchive(useConfigStore.getState(), useLexiconStore.getState().lexicon);
         }
-    }, [config.projectId, saveProjectToArchive]);
+    }, [projectId, saveProjectToArchive]);
 
     const handleCreateNew = () => {
         // Back up whatever they were just working on
@@ -158,7 +159,7 @@ export default function ConlangsTab() {
     };
 
     const handleOpenProject = (id) => {
-        if (config.projectId === id) return;
+        if (projectId === id) return;
 
         const project = localProjects.find(p => p.id === id);
         if (!project) return;
@@ -203,7 +204,7 @@ export default function ConlangsTab() {
         }
         
         // If they deleted the language they were currently viewing, give them a fresh one
-        if (config.projectId === id) {
+        if (projectId === id) {
             const { isProActive, theme, colors, autoReturnToLexicon } = useConfigStore.getState();
             setLexicon([]);
             setFullConfig({ 
@@ -351,7 +352,7 @@ export default function ConlangsTab() {
         newProjectData.config.parentId = selectedParentId === '' ? null : selectedParentId;
 
         // If this is the active project, update it in the store too
-        if (config.projectId === parentTargetProject.id) {
+        if (projectId === parentTargetProject.id) {
             setFullConfig(newProjectData.config);
         }
 
@@ -403,8 +404,8 @@ export default function ConlangsTab() {
                 saveProjectToArchive(updatedConfig, project.project_data.dictionary);
                 
                 // If it's the active project, update the live config store too
-                if (targetingMode === config.projectId) {
-                    config.updateConfig({ worldMap: { x, y } });
+                if (targetingMode === projectId) {
+                    updateConfig({ worldMap: { x, y } });
                 }
             }
             setTargetingMode(null);
@@ -423,8 +424,8 @@ export default function ConlangsTab() {
             updatedConfig.worldMap.y = null;
         }
         saveProjectToArchive(updatedConfig, project.project_data.dictionary);
-        if (project.id === config.projectId) {
-            config.updateConfig({ worldMap: { x: null, y: null } });
+        if (project.id === projectId) {
+            updateConfig({ worldMap: { x: null, y: null } });
         }
         setSelectedPin(null);
     };
@@ -511,7 +512,7 @@ export default function ConlangsTab() {
                                         24, 
                                         { 
                                             style: { 
-                                                color: project.id === config.projectId ? 'var(--ok)' : 'var(--acc)', 
+                                                color: project.id === projectId ? 'var(--ok)' : 'var(--acc)', 
                                                 filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.5))', 
                                                 cursor: 'pointer' 
                                             } 
@@ -556,7 +557,7 @@ export default function ConlangsTab() {
         const roots = localProjects.filter(p => !p.project_data?.config?.parentId || !localProjects.some(parent => parent.id === p.project_data.config.parentId));
         
         const renderNode = (project) => {
-            const isCurrent = project.id === config.projectId;
+            const isCurrent = project.id === projectId;
             const children = localProjects.filter(p => p.project_data?.config?.parentId === project.id);
             
             return (
@@ -660,7 +661,7 @@ export default function ConlangsTab() {
                         </motion.div>
 
                         {localProjects.map((project, idx) => {
-                            const isCurrent = project.id === config.projectId;
+                            const isCurrent = project.id === projectId;
                             
                             return (
                                 <motion.div 

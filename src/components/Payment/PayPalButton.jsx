@@ -2,6 +2,7 @@ import React from 'react';
 import { PayPalButtons } from "@paypal/react-paypal-js";
 import { supabase } from '@/utils/supabaseClient.js';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
+import { useShallow } from 'zustand/react/shallow';
 import { toast } from 'react-hot-toast';
 
 /**
@@ -9,7 +10,10 @@ import { toast } from 'react-hot-toast';
  * Handles PayPal subscription logic and updates the user's profile in Supabase.
  */
 const PayPalButton = () => {
-    const config = useConfigStore();
+    const { logActivity, updateConfig } = useConfigStore(useShallow(state => ({
+        logActivity: state.logActivity,
+        updateConfig: state.updateConfig
+    })));
 
     const handleSuccess = async (data) => {
         const { data: { session } } = await supabase.auth.getSession();
@@ -34,8 +38,8 @@ const PayPalButton = () => {
             if (error) throw error;
 
             // Update local state
-            config.updateConfig({ isProActive: true });
-            config.logActivity("Upgraded to Conlang Engine LIVE via PayPal!");
+            updateConfig({ isProActive: true });
+            logActivity("Upgraded to Conlang Engine LIVE via PayPal!");
             
             toast.success("Welcome to LIVE! Cloud features are now unlocked.", {
                 duration: 5000,
