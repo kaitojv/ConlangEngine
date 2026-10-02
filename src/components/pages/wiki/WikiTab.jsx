@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import DOMPurify from 'dompurify';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
@@ -875,7 +876,13 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
 
     const lexicon = useLexiconStore((state) => state.lexicon);
     const { transliterate, normalizeToBase } = useTransliterator();
-    const config = useConfigStore();
+    // Only used for getUniqueParsings(), which reaches findAllParsings in
+    // morphologyEngine.jsx; that function reads these three fields only.
+    const config = useConfigStore(useShallow(state => ({
+        grammarRules: state.grammarRules,
+        personRules: state.personRules,
+        verbMarker: state.verbMarker,
+    })));
     const personRulesStr   = useConfigStore(state => state.personRules) || "";
     const grammarRules     = useConfigStore(state => state.grammarRules) || [];
     const syntaxOrder      = useConfigStore(state => state.syntaxOrder) || 'SVO';
@@ -1852,7 +1859,21 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
 
 // The Classic Rich Text Editor - Upgraded to TipTap
 function LegacyWikiEditor({ content, onSave }) {
-    const config = useConfigStore();
+    // Fields read here, plus the ten buildScriptConfig() reads in
+    // utils/scriptResolver.js.
+    const config = useConfigStore(useShallow(state => ({
+        scriptSystems: state.scriptSystems,
+        activeScriptSystemId: state.activeScriptSystemId,
+        alphabeticScript: state.alphabeticScript,
+        alphabetNames: state.alphabetNames,
+        blockSettings: state.blockSettings,
+        blockTemplates: state.blockTemplates,
+        phonologyTypes: state.phonologyTypes,
+        scriptName: state.scriptName,
+        scriptRules: state.scriptRules,
+        syllabificationAlgorithm: state.syllabificationAlgorithm,
+        writingDirection: state.writingDirection,
+    })));
     const lexicon = useLexiconStore(state => state.lexicon) || [];
     const scriptSystems = config.scriptSystems || [];
     

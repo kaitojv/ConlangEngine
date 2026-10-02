@@ -25,7 +25,32 @@ import { createPhonoMatcher } from '../../../utils/phonoSearch.js';
 import { reverseDictScore } from '../../../utils/reverseDictionary.js';
 import { createCustomAlphabetCollator, extractFirstCustomLetter } from '../../../utils/customSort.js';
 import StressWave from '../../UI/StressWave/StressWave.jsx';
+import { useShallow } from 'zustand/react/shallow';
 import './lexiconList.css';
+
+// Config fields read by the script helpers LexiconList calls. Union scanned
+// across utils/scriptResolver.js, utils/scriptRendering.js and
+// utils/transliteration.js.
+const LEXICON_SCRIPT_CONFIG_KEYS = [
+    'activeScriptSystemId',
+    'scriptSystems',
+    'scriptRules',
+    'scriptDataById',
+    'scriptName',
+    'phonologyTypes',
+    'alphabeticScript',
+    'alphabetNames',
+    'alphabetGlyphs',
+    'syllabaryMap',
+    'consonants',
+    'vowels',
+    'otherPhonemes',
+    'syllabificationAlgorithm',
+    'writingDirection',
+    'blockSettings',
+    'blockTemplates',
+    'typographySettings',
+];
 
 
 
@@ -70,7 +95,19 @@ export default function LexiconList() {
     };
     const isScriptMode = ['syllabic', 'featural_block', 'logographic', 'featural', 'block'].includes(phonologyTypes);
     const scriptSystems = useConfigStore(state => state.scriptSystems) || [];
-    const configFull = useConfigStore();
+    // Union of the config fields read by the script helpers used below:
+    // getDefaultScriptId, renderWordInScript, resolveWordScriptId and
+    // getScriptSystem. Scanned across utils/scriptResolver.js,
+    // utils/scriptRendering.js and utils/transliteration.js, since
+    // scriptRendering delegates to the other two. Widen if any of them
+    // starts reading another field.
+    const configFull = useConfigStore(
+        useShallow((state) => {
+            const cfg = {};
+            for (const key of LEXICON_SCRIPT_CONFIG_KEYS) cfg[key] = state[key];
+            return cfg;
+        })
+    );
     const defaultScriptId = getDefaultScriptId(configFull);
     
     // Spin up the transliterator to convert base words into the language's custom script
