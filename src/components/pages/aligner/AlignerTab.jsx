@@ -14,10 +14,10 @@ const PRESET_COLORS = [
 ];
 
 export default function AlignerTab() {
-    const config = useConfigStore();
-    const sentenceMaps = config.sentenceMaps || [];
-    const grammarRules = config.grammarRules || [];
-    const updateConfig = config.updateConfig;
+    const sentenceMaps = useConfigStore(state => state.sentenceMaps) || [];
+    const grammarRules = useConfigStore(state => state.grammarRules) || [];
+    const updateConfig = useConfigStore(state => state.updateConfig);
+    const personRulesConfig = useConfigStore(state => state.personRules) || [];
     const lexicon = useLexiconStore(state => state.lexicon) || [];
 
     const [sourceText, setSourceText] = useState('');
@@ -58,7 +58,7 @@ export default function AlignerTab() {
         const safeSurface = surface.toLowerCase().trim();
         const lexEntry = lexicon.find(e => e.word.toLowerCase() === safeSurface);
         if (lexEntry) return { root: lexEntry, rules: [] };
-        const personRules = getPersonRules(config.personRules || []);
+        const personRules = getPersonRules(personRulesConfig);
         const personMatch = personRules.find(r => {
             const cleanFree = r.freeForm?.toLowerCase().replace(/^-|-|'/g, '').trim();
             const cleanAffix = r.affix?.toLowerCase().replace(/^-|-|'/g, '').trim();

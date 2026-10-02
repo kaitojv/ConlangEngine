@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
+import { useShallow } from 'zustand/react/shallow';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import Card from '../Card/Card.jsx';
 import Button from '../Buttons/Buttons.jsx';
@@ -11,27 +12,42 @@ import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
 import './blockManager.css';
 
 export default function BlockManager({ scriptId } = {}) {
-    const config = useConfigStore();
+    const {
+        consonants, vowels, otherPhonemes, updateConfig,
+        scriptRules, scriptSystems, scriptDataById,
+        blockSettings: legacyBlockSettings, blockTemplates: legacyBlockTemplates,
+        featuralComponents: legacyFeaturalComponents
+    } = useConfigStore(useShallow(state => ({
+        consonants: state.consonants,
+        vowels: state.vowels,
+        otherPhonemes: state.otherPhonemes,
+        updateConfig: state.updateConfig,
+        scriptRules: state.scriptRules,
+        scriptSystems: state.scriptSystems,
+        scriptDataById: state.scriptDataById,
+        blockSettings: state.blockSettings,
+        blockTemplates: state.blockTemplates,
+        featuralComponents: state.featuralComponents
+    })));
     const lexicon = useLexiconStore(state => state.lexicon);
-    const { consonants, vowels, otherPhonemes, updateConfig } = config;
     const updateScriptData = useConfigStore(s => s.updateScriptData);
     const updateScriptSystem = useConfigStore(s => s.updateScriptSystem);
-    const defaultScriptId = config.scriptRules?.defaultScriptId || 'default';
+    const defaultScriptId = scriptRules?.defaultScriptId || 'default';
     const targetScriptId = scriptId || defaultScriptId;
     const isDefaultScript = targetScriptId === defaultScriptId;
     // Block settings/templates live on the scriptSystems entry. For the default
     // script, prefer the script entry but fall back to the legacy top-level
     // fields so legacy projects keep rendering.
-    const targetScript = config.scriptSystems?.find(s => s.id === targetScriptId);
+    const targetScript = scriptSystems?.find(s => s.id === targetScriptId);
     const blockSettings = targetScript?.blockSettings
-        || (isDefaultScript ? config.blockSettings : null);
+        || (isDefaultScript ? legacyBlockSettings : null);
     const blockTemplates = (targetScript?.blockTemplates && targetScript.blockTemplates.length)
         ? targetScript.blockTemplates
-        : (isDefaultScript ? config.blockTemplates : null);
+        : (isDefaultScript ? legacyBlockTemplates : null);
     // Read featuralComponents from the selected script's data, falling back to
     // the legacy top-level field only for the default script.
-    const featuralComponents = (config.scriptDataById?.[targetScriptId]?.featuralComponents)
-        || (isDefaultScript ? config.featuralComponents : {})
+    const featuralComponents = (scriptDataById?.[targetScriptId]?.featuralComponents)
+        || (isDefaultScript ? legacyFeaturalComponents : {})
         || {};
     const [drawingForComp, setDrawingForComp] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -156,7 +172,10 @@ export default function BlockManager({ scriptId } = {}) {
             };
             
             // Pass a clean clone of the config state, STRIPPING massive fonts to prevent OOM serialization crashes
-            const cleanConfig = { ...config, lexicon };
+            // Read the full store imperatively here: this snapshot is a one-time
+            // payload for the worker, not reactive render data, so a selector
+            // subscription would only add re-renders for no benefit.
+            const cleanConfig = { ...useConfigStore.getState(), lexicon };
             delete cleanConfig.customFontBase64;
             delete cleanConfig.customFont;
             
