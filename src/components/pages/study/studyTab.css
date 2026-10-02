@@ -267,6 +267,31 @@
     padding: 40px 0;
 }
 
+/*
+ * Branching (DAG) path.
+ *
+ * The linear track above is a flex column: each node is a flow item and the 70px
+ * gap does the vertical spacing. The DAG cannot reuse that, because sibling nodes
+ * on the same row must sit side by side. Giving a flex item a `top` offset only
+ * shifts it visually - it still consumes a full row in the flow - so nodes
+ * overlapped each other and the last ones spilled out of the panel. Absolute
+ * positioning makes the computed coordinates authoritative, which is what the
+ * connector curves in the SVG are drawn against.
+ */
+.path-track.is-dag {
+    display: block;
+    padding: 0;
+}
+
+/* Absolutely placed so `top`/`transform` fully determine the position. */
+.path-node-wrapper.is-dag-node {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 80px;
+    margin-left: -40px;
+}
+
 .path-node-wrapper {
     position: relative;
     width: 100%;

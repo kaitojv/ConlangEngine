@@ -19,6 +19,21 @@ import './studyTab.css';
 
 // We no longer use static PATH_LEVELS. We pull them from user config!
 
+/*
+ * Course path geometry. Both layouts share these so the connecting curves land on
+ * the node centres instead of near them:
+ *   - the SVG spine is positioned at left:50% and every node is centred on that
+ *     same line, so a node's x is simply its offset from the centre;
+ *   - `y` is the node's CENTRE, which is why the row maths adds half the node.
+ */
+const NODE_SIZE = 80;
+const ROW_HEIGHT = 150;
+const FIRST_ROW_Y = 80;
+/** Usable width inside the 600px track, used to keep a wide fork from overflowing. */
+const TRACK_INNER_WIDTH = 520;
+/** Room reserved under the final row for the node label and star row. */
+const LABEL_SPACE = 90;
+
 export default function StudyTab() {
     // Pull in the lexicon and streak settings from our global state
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
@@ -660,17 +675,26 @@ export default function StudyTab() {
                             );
                         }
                         // --- DAG LAYOUT ---
+                        // A node's depth is the longest prerequisite chain reaching it,
+                        // so it always sits below every level it depends on and siblings
+                        // share a row. Siblings are centred on the track, which is what
+                        // makes two or more branches read as a real fork.
                         const nodeDepths = {};
                         pathNodes.forEach(n => { nodeDepths[n.id] = 0; });
+                        // Depth is capped at the node count on purpose. The builder does
+                        // not forbid a prerequisite cycle outright, and without a cap the
+                        // relaxation below would keep re-raising a cyclic pair until the
+                        // loop limit, rendering a path thousands of rows tall.
+                        const depthCap = pathNodes.length;
                         let changed = true;
                         let loopCount = 0;
-                        while (changed && loopCount < 1000) {
+                        while (changed && loopCount <= depthCap) {
                             changed = false;
                             pathNodes.forEach(n => {
                                 if (!n.prerequisites || n.prerequisites.length === 0) return;
                                 const maxPrereqDepth = Math.max(...n.prerequisites.map(pId => nodeDepths[pId] !== undefined ? nodeDepths[pId] : -1));
                                 if (maxPrereqDepth >= 0 && nodeDepths[n.id] <= maxPrereqDepth) {
-                                    nodeDepths[n.id] = maxPrereqDepth + 1;
+                                    nodeDepths[n.id] = Math.min(maxPrereqDepth + 1, depthCap);
                                     changed = true;
                                 }
                             });
@@ -681,18 +705,29 @@ export default function StudyTab() {
                         const pathRows = Array.from({ length: maxDepth + 1 }, () => []);
                         pathNodes.forEach(n => pathRows[nodeDepths[n.id]].push(n));
                         
+                        // Sibling spacing shrinks as a row widens so a wide fork still
+                        // fits the 600px track instead of hanging outside the panel.
+                        const widestRow = Math.max(1, ...pathRows.map(r => r.length));
+                        const siblingGap = widestRow > 1
+                            ? Math.max(90, Math.min(140, (TRACK_INNER_WIDTH - NODE_SIZE) / (widestRow - 1)))
+                            : 140;
+                        
                         const nodePositions = {};
                         pathRows.forEach((row, rIdx) => {
-                            const y = 80 + rIdx * 150;
+                            const y = FIRST_ROW_Y + rIdx * ROW_HEIGHT;
                             const numNodes = row.length;
                             row.forEach((n, colIdx) => {
-                                const xOffset = (colIdx - (numNodes - 1) / 2) * 140; // 140px spacing between siblings
+                                const xOffset = (colIdx - (numNodes - 1) / 2) * siblingGap;
                                 nodePositions[n.id] = { x: xOffset, y };
                             });
                         });
 
+                        // Rows are placed by coordinate, so the track must reserve exactly
+                        // that much height plus the trailing label under the last node.
+                        const trackHeight = FIRST_ROW_Y + maxDepth * ROW_HEIGHT + NODE_SIZE + LABEL_SPACE;
+
                         return (
-                            <div className="path-track" style={{ position: 'relative', minHeight: `${(maxDepth + 1) * 150 + 100}px` }}>
+                            <div className="path-track is-dag" style={{ height: `${trackHeight}px` }}>
                                 <div style={{ position: 'absolute', top: '-40px', right: '0' }}>
                                     <Button variant="default" onClick={() => updateConfig({ courseProgress: [] })}>
                                         Reset Progress
@@ -769,7 +804,11 @@ export default function StudyTab() {
                                     const starCount = nodeScore ? nodeScore.stars : 0;
 
                                     return (
-                                        <div key={node.id} className={`path-node-wrapper center ${isCurrent ? 'current-node' : ''} ${isLocked ? 'locked-node' : ''}`} style={{ transform: `translateX(${pos.x}px)`, top: `${pos.y}px`, left: '50%', marginLeft: '-40px' }}>
+                                        <div
+                                            key={node.id}
+                                            className={`path-node-wrapper is-dag-node ${isCurrent ? 'current-node' : ''} ${isLocked ? 'locked-node' : ''}`}
+                                            style={{ transform: `translateX(${pos.x}px)`, top: `${pos.y - NODE_SIZE / 2}px` }}
+                                        >
                                             <div 
                                                 className="path-node" 
                                                 onClick={() => !isLocked && startQuiz(node)}

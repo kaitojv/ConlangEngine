@@ -249,9 +249,16 @@ export default function CourseBuilder({ onExit }) {
     const [genMode, setGenMode] = useState('theme');
 
     // --- Editor UI state -----------------------------------------------------
-    // Levels and phrases are collapsed by default so a 50-level course is
-    // scannable instead of one endless wall of expanded cards.
-    const [collapsedLevels, setCollapsedLevels] = useState(() => new Set());
+    // Levels are collapsed by default so a 50-level course is scannable instead
+    // of one endless wall of expanded cards. The set is seeded with the ids of
+    // every level that already exists, which is what actually collapses them on
+    // open - an empty set here leaves them all expanded. Ids are only ever added
+    // to this set, so a level the user has expanded stays expanded.
+    const [collapsedLevels, setCollapsedLevels] = useState(
+        () => new Set((customCourse || []).map(l => l.id))
+    );
+    // Phrases start expanded: they are the actual editing surface, and a freshly
+    // added phrase must never be hidden behind a collapsed card.
     const [collapsedPhrases, setCollapsedPhrases] = useState(() => new Set());
     // Audio is opt-in per phrase unless the exercise type needs it.
     const [audioOpen, setAudioOpen] = useState(() => new Set());
@@ -320,6 +327,13 @@ export default function CourseBuilder({ onExit }) {
             const idx = courseData.findIndex(l => l.id === id);
             const newData = [...courseData];
             newData.splice(idx + 1, 0, newLevel);
+            // Mirror the source level's open/closed state so a copy behaves like
+            // the card it came from.
+            setCollapsedLevels(prev => {
+                const next = new Set(prev);
+                if (prev.has(id)) next.add(newLevel.id); else next.delete(newLevel.id);
+                return next;
+            });
             mutate(newData);
         }
     };
@@ -353,6 +367,9 @@ export default function CourseBuilder({ onExit }) {
             try {
                 const parsed = JSON.parse(event.target.result);
                 if (Array.isArray(parsed)) {
+                    // An imported course replaces the level set entirely, so the
+                    // collapse set has to be rebuilt to match the new ids.
+                    setCollapsedLevels(new Set(parsed.map(l => l.id).filter(Boolean)));
                     mutate(parsed);
                 } else {
                     alert("Invalid course format");
@@ -372,6 +389,13 @@ export default function CourseBuilder({ onExit }) {
             lessonNotes: '',
             phrases: []
         };
+        // A brand new level is opened for editing rather than left hidden behind
+        // the collapse that every pre-existing level starts in.
+        setCollapsedLevels(prev => {
+            const next = new Set(prev);
+            next.delete(newLevel.id);
+            return next;
+        });
         mutate([...courseData, newLevel]);
     };
 
@@ -457,6 +481,13 @@ export default function CourseBuilder({ onExit }) {
         }
 
         mutate([...courseData, ...newLevels]);
+        // Auto-generate drops in several levels at once, so they start collapsed
+        // like any other level. Expanding one is a single click.
+        setCollapsedLevels(prev => {
+            const next = new Set(prev);
+            newLevels.forEach(l => next.add(l.id));
+            return next;
+        });
         setIsGenerating(false);
         setShowAutoModal(false);
     };

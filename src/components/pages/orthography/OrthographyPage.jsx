@@ -14,7 +14,8 @@ import ScriptManager from '../../UI/ScriptManager/ScriptManager.jsx';
 import ScriptRulesEditor from '../../UI/ScriptRulesEditor/ScriptRulesEditor.jsx';
 import GlyphDetailsModal from '../../UI/GlyphDetailsModal/GlyphDetailsModal.jsx';
 import GlyphPreviewBadge from '../../UI/Glyph/GlyphPreviewBadge.jsx';
-import { resolveRawGlyph, getGlyphMetrics } from '../../UI/Glyph/resolveGlyphStrokes.js';
+import { getGlyphMetrics } from '../../UI/Glyph/resolveGlyphStrokes.js';
+import { resolveNumeralComponents } from '../../UI/Glyph/resolveNumeralGlyphs.js';
 import GlyphBaselineRow from '../../UI/Glyph/GlyphBaselineRow.jsx';
 import StrokeOrderModal from '../../UI/StrokeOrder/StrokeOrderModal.jsx';
 import toast from 'react-hot-toast';
@@ -546,36 +547,28 @@ const NumbersTab = () => {
         [testNumberValue, generateNumberComponents]
     );
 
-    // Flat list of { char, strokes, sepBefore } in numeral order. sepBefore marks the
-    // first glyph of each component so the separator only appears between components,
-    // never between the glyphs fused inside one.
+    // Flat list of { char, strokes, sepBefore } in numeral order.
     //
-    // Uses the PURE stroke lookup: this runs in a loop, and hooks cannot be called there.
-    const testGlyphParts = useMemo(() => {
-        const parts = [];
-        testComponents.forEach((component, ci) => {
-            if (!component) return;
-            const rendered = transliterate(component, lexicon) || component;
-            const chars = Array.from(rendered);
-            chars.forEach((ch, gi) => {
-                // A separator inside a component is layout, not a glyph to draw.
-                if (/\s/.test(ch)) return;
-                const raw = resolveRawGlyph(ch, { customGlyphs, scriptDataById });
-                const metrics = getGlyphMetrics(raw);
-                parts.push({
-                    char: ch,
-                    label: component,
-                    isComponentStart: gi === 0,
-                    isNewComponent: ci > 0 && gi === 0,
-                    // Full metrics (margins/yOffset/ink) drive the baseline layout, so the
-                    // preview honours the same character gaps as the compiled font.
-                    metrics,
-                    strokes: metrics?.strokes ?? null
-                });
-            });
-        });
-        return parts;
-    }, [testComponents, lexicon, customGlyphs, scriptDataById, transliterate]);
+    // Resolution deliberately does NOT go through transliterate(). A numeral name
+    // is a written *word*, and for a logographic conlang it resolves to a drawn
+    // ideogram via the lexicon - which the logographic branch of transliterateText
+    // only does for real lexicon entries. Numeral names are not lexicon entries, so
+    // transliterate() returned the raw romanized letters ("ō" = U+014D), which have
+    // no drawn glyph anywhere and rendered as a row of empty boxes.
+    //
+    // resolveNumeralComponents() instead tries, in order: the lexicon ideogram, a
+    // direct glyph for the name, then per-character glyphs. Components whose name
+    // has no drawn form are dropped rather than drawn as blanks, so the preview
+    // shows an honest "no glyph" state instead of a broken-looking run.
+    //
+    // sepBefore/label mark the first glyph of each component so the separator only
+    // appears between components, never between glyphs fused inside one.
+    const testGlyphParts = useMemo(() => resolveNumeralComponents(testComponents, {
+        lexicon,
+        customGlyphs,
+        scriptDataById,
+        getMetrics: getGlyphMetrics
+    }), [testComponents, lexicon, customGlyphs, scriptDataById]);
 
     const testHasGlyph = testGlyphParts.some(p => p.strokes && p.strokes.length > 0);
 
