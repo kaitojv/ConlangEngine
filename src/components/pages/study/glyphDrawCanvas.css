@@ -1,0 +1,59 @@
+.gdc-wrapper {
+    width: 100%;
+    max-width: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.gdc-surface {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border: 1px solid var(--bd);
+    background-color: var(--s1);
+    /* Tianzige-style guide grid, drawn behind the canvas element. */
+    background-image:
+        linear-gradient(to right, var(--bd) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--bd) 1px, transparent 1px);
+    background-size: 16.66% 16.66%;
+    background-position: center;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: crosshair;
+    touch-action: none;
+}
+
+.gdc-surface.disabled {
+    cursor: default;
+    opacity: 0.85;
+}
+
+.gdc-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.gdc-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.gdc-count,
+.gdc-guide-toggle {
+    font-size: 0.78rem;
+    color: var(--tx2);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.gdc-guide-toggle {
+    margin-left: auto;
+    opacity: 0.8;
+}

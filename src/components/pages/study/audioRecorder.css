@@ -1,0 +1,78 @@
+.ar-wrapper {
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+    background: var(--s1);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ar-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ar-label {
+    font-size: 0.8rem;
+    color: var(--tx2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ar-badge {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    border: 1px solid var(--acc);
+    color: var(--acc);
+}
+
+.ar-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ar-audio {
+    flex: 1;
+    min-width: 180px;
+    height: 32px;
+}
+
+.ar-timer {
+    margin-left: 6px;
+    font-variant-numeric: tabular-nums;
+    font-weight: bold;
+}
+
+.ar-upload {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--tx);
+    cursor: pointer;
+}
+
+.ar-upload:hover {
+    border-color: var(--acc);
+}
+
+.ar-status {
+    font-size: 0.85rem;
+    color: var(--tx2);
+}
+
+.ar-hint {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--tx2);
+    opacity: 0.85;
+}

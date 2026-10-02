@@ -8,6 +8,10 @@ import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import Mascot from './Mascot.jsx';
 import { X, Share2, Star } from 'lucide-react';
 import { calculateStars, calculateXP } from '@/utils/xpSystem.js';
+import { resolveWordStrokes } from '@/utils/strokeOrderResolver.js';
+import { gradeDrawing } from '@/utils/glyphDrawMatch.js';
+import { getCourseAudioUrl } from '@/utils/courseAudio.js';
+import GlyphDrawCanvas from './GlyphDrawCanvas.jsx';
 import * as LucideIcons from 'lucide-react';
 import './exercisePlayer.css';
 
@@ -58,6 +62,10 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
     const [matchingSelected, setMatchingSelected] = useState({ conlang: null, english: null });
     const [matchedPairs, setMatchedPairs] = useState([]);
 
+    // For glyph drawing
+    const [drawnStrokes, setDrawnStrokes] = useState([]);
+    const [drawResult, setDrawResult] = useState(null);
+
     const [feedback, setFeedback] = useState(null);
     const [isFinished, setIsFinished] = useState(false);
     const [sessionStats, setSessionStats] = useState({ correct: 0, total: 0 });
@@ -103,7 +111,28 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                 } else {
                     ex.type = 'translate_to_english';
                 }
+            } else if (type === 'glyph_drawing') {
+                // The target is whatever the creator typed — a word, syllable or
+                // letter depending on the conlang's writing system. resolveWordStrokes
+                // already branches on config.phonologyTypes, so the same exercise
+                // works for logographic, syllabic, featural and alphabetic scripts.
+                const target = phrase.conlang || phrase.english || '';
+                const resolved = resolveWordStrokes(target, config, lexicon);
+
+                // Flatten per-character strokes into one glyph to draw.
+                const targetStrokes = resolved.characters.flatMap(c => c.strokes || []);
+
+                ex.targetText = target;
+                ex.targetStrokes = targetStrokes;
+                ex.hasStrokes = targetStrokes.length > 0;
+                // Order enforcement is the creator's per-exercise choice.
+                ex.checkOrder = phrase.checkOrder !== false;
+                ex.showGuide = !!phrase.showGuide;
             }
+
+            // Creator-recorded pronunciation clip (any exercise type).
+            if (phrase.audioPath) ex.audioPath = phrase.audioPath;
+
             return ex;
         });
     });
@@ -143,6 +172,8 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
             setSelectedOption(null);
             setMatchingSelected({ conlang: null, english: null });
             setMatchedPairs([]);
+            setDrawnStrokes([]);
+            setDrawResult(null);
         }
     };
 
@@ -154,7 +185,10 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
         }
 
         let isCorrect = false;
-        
+        // Holds this attempt's grade synchronously. Reading the drawResult state
+        // below would be stale, since setState has not flushed yet.
+        let grading = null;
+
         if (currentEx.type === 'translate_to_english' || currentEx.type === 'picture_match' || currentEx.type === 'fill_blank' || currentEx.type === 'conjugation_drill') {
             const expectedOptions = currentEx.englishSentence.toLowerCase().split(',').map(s => s.replace(/[.,!?]/g, '').trim());
             const actual = currentAnswer.toLowerCase().replace(/[.,!?]/g, '').trim();
@@ -174,19 +208,54 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
         } else if (currentEx.type === 'matching_pairs') {
             // For matching pairs, 'Check' is only clicked when all are matched, so if button is active, it's correct
             isCorrect = (matchedPairs.length === currentEx.pairs.length);
+        } else if (currentEx.type === 'glyph_drawing') {
+            // No glyph data for this target means the creator set up an
+            // unanswerable exercise; bypass instead of penalising the student.
+            if (!currentEx.hasStrokes) {
+                isCorrect = true;
+                setDrawResult(null);
+            } else {
+                const result = gradeDrawing(drawnStrokes, currentEx.targetStrokes, {
+                    checkOrder: currentEx.checkOrder
+                });
+                grading = result;
+                setDrawResult(result);
+                isCorrect = result.passed;
+            }
         }
 
         if (isCorrect) {
-            setFeedback({ status: 'correct', message: 'Excellent! Spot on.' });
+            const drawSuffix = currentEx.type === 'glyph_drawing' && grading
+                ? ` (${Math.round(grading.score * 100)}% match)`
+                : '';
+            const noDataSuffix = currentEx.type === 'glyph_drawing' && !currentEx.hasStrokes
+                ? ' — no glyph data was set up for this one.'
+                : '';
+            setFeedback({ status: 'correct', message: `Excellent! Spot on.${drawSuffix}${noDataSuffix}` });
             if (!currentEx.failed && currentEx.type !== 'teach') {
                 setSessionStats(prev => ({ ...prev, correct: prev.correct + 1 }));
             }
         } else {
-            const expectedDisplay = (currentEx.type === 'translate_to_conlang' || currentEx.type === 'listening' || currentEx.type === 'word_bank' || currentEx.type === 'sentence_reorder') 
-                ? currentEx.conlangSentence 
-                : currentEx.type === 'true_false' ? (currentEx.isTrue ? 'True' : 'False') 
+            const expectedDisplay = (currentEx.type === 'translate_to_conlang' || currentEx.type === 'listening' || currentEx.type === 'word_bank' || currentEx.type === 'sentence_reorder')
+                ? currentEx.conlangSentence
+                : currentEx.type === 'glyph_drawing' ? currentEx.targetText
+                : currentEx.type === 'true_false' ? (currentEx.isTrue ? 'True' : 'False')
                 : currentEx.englishSentence;
-            setFeedback({ status: 'incorrect', message: `Oops! Correct answer: ${expectedDisplay}` });
+
+            // Point at the concrete thing that went wrong, not just "wrong".
+            let reason = '';
+            if (grading) {
+                if (grading.drawnCount === 0) reason = ' You did not draw anything.';
+                else if (!grading.strokeCountMatch) {
+                    reason = ` Expected ${grading.targetCount} stroke${grading.targetCount === 1 ? '' : 's'}, you drew ${grading.drawnCount}.`;
+                } else if (grading.reversedCount > 0) {
+                    reason = ` ${grading.reversedCount} stroke${grading.reversedCount === 1 ? ' was' : 's were'} traced backwards.`;
+                } else {
+                    reason = ` Closest match was ${Math.round(grading.score * 100)}%.`;
+                }
+            }
+
+            setFeedback({ status: 'incorrect', message: `Oops! Correct answer: ${expectedDisplay}${reason}` });
             
             // Add current exercise to end of array to force review
             currentEx.failed = true;
@@ -421,11 +490,12 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                         : currentEx.type === 'picture_match' ? 'What does this image represent?'
                         : currentEx.type === 'true_false' ? 'Is this translation correct?'
                         : currentEx.type === 'conjugation_drill' ? 'Follow the instruction:'
+                        : currentEx.type === 'glyph_drawing' ? `Draw this ${currentEx.targetText}:`
                         : 'Match the pairs:'}
                     </h3>
                 )}
 
-                {currentEx.type !== 'matching_pairs' && currentEx.type !== 'teach' && currentEx.type !== 'listening' && (
+                {currentEx.type !== 'matching_pairs' && currentEx.type !== 'teach' && currentEx.type !== 'listening' && currentEx.type !== 'glyph_drawing' && (
                     <div className={`ep-prompt ${currentEx.type === 'picture_match' ? '' : 'custom-font-text notranslate'}`} style={{ fontSize: currentEx.type === 'picture_match' ? '5rem' : currentEx.type === 'translate_to_conlang' ? '1.5rem' : '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
                         {currentEx.type === 'translate_to_english' ? transliterate(currentEx.conlangSentence)
                         : currentEx.type === 'multiple_choice' ? transliterate(currentEx.conlangSentence)
@@ -445,6 +515,12 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                 {currentEx.type === 'listening' && (
                     <div className="ep-prompt" style={{ display: 'flex', justifyContent: 'center' }}>
                          <Button variant="imp" style={{ width: '80px', height: '80px', borderRadius: '50%' }} onClick={() => {
+                             // A creator-recorded clip is authoritative; only fall
+                             // back to TTS when no recording was attached.
+                             if (currentEx.audioPath) {
+                                 const url = getCourseAudioUrl(currentEx.audioPath);
+                                 if (url) { new Audio(url).play(); return; }
+                             }
                              const text = currentEx.conlangSentence.replace(/[.\-*]/g, '');
                              if (config.azureTtsVoice) {
                                  import('../../../utils/azureTTS.js').then(({playAzureTTS}) => {
@@ -457,6 +533,56 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                          }}>
                              <LucideIcons.Volume2 size={40} />
                          </Button>
+                    </div>
+                )}
+
+                {/* Creator-recorded clip. Takes priority over Azure TTS, and is
+                    offered on every exercise type that has one attached. */}
+                {currentEx.audioPath && (
+                    <button
+                        className="ep-audio-chip"
+                        onClick={() => {
+                            const url = getCourseAudioUrl(currentEx.audioPath);
+                            if (url) new Audio(url).play();
+                        }}
+                        title="Play pronunciation"
+                    >
+                        <LucideIcons.Volume2 size={18} />
+                    </button>
+                )}
+
+                {currentEx.type === 'glyph_drawing' && (
+                    <div className="ep-glyph-area">
+                        {!currentEx.hasStrokes ? (
+                            <div className="ep-glyph-missing">
+                                <p>
+                                    No stroke data was found for <strong>{currentEx.targetText}</strong>.
+                                </p>
+                                <p className="ep-glyph-missing-hint">
+                                    Draw or generate this glyph in the Orthography or Font Studio page first,
+                                    then the student will be asked to trace it.
+                                </p>
+                                <Button variant="imp" onClick={() => { if (!feedback) checkAnswer(); else advanceToNext(); }}>
+                                    {feedback ? 'Continue' : 'Skip'}
+                                </Button>
+                            </div>
+                        ) : (
+                            <>
+                                <GlyphDrawCanvas
+                                    drawnStrokes={drawnStrokes}
+                                    onChange={setDrawnStrokes}
+                                    targetStrokes={currentEx.targetStrokes}
+                                    showGuide={currentEx.showGuide && !feedback}
+                                    disabled={!!feedback}
+                                />
+                                {currentEx.checkOrder && (
+                                    <p className="ep-glyph-hint">
+                                        Draw each stroke in the correct order
+                                        {feedback && drawResult?.reversedCount > 0 ? ' — one or more were backwards.' : '.'}
+                                    </p>
+                                )}
+                            </>
+                        )}
                     </div>
                 )}
 

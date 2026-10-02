@@ -677,6 +677,38 @@ input:checked + .slider:before {
     text-align: center;
 }
 
+/* Multi-component numbers (e.g. senary 7) render as one glyph badge per numeral
+   component, joined by the configured separator, in numeral order. */
+.result-glyph-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.result-glyph-sep {
+    color: var(--tx2);
+    font-size: 1.5rem;
+    line-height: 1;
+    user-select: none;
+}
+
+/* A component with no drawn glyph still shows its rendered/romanized form, so a
+   partially-drawn number is legible instead of silently dropping a component. */
+.result-glyph-missing {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 64px;
+    min-height: 64px;
+    padding: 0 0.5rem;
+    border: 1px dashed var(--bd2);
+    border-radius: 8px;
+    color: var(--tx3);
+    font-size: 1.25rem;
+}
+
 .sticky-top { position: sticky; top: 2rem; }
 
 /* --- Number Matrix --- */

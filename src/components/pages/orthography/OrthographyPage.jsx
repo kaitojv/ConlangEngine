@@ -13,7 +13,8 @@ import { getScriptSystem, getDefaultScriptId } from '../../../utils/scriptResolv
 import ScriptManager from '../../UI/ScriptManager/ScriptManager.jsx';
 import ScriptRulesEditor from '../../UI/ScriptRulesEditor/ScriptRulesEditor.jsx';
 import GlyphDetailsModal from '../../UI/GlyphDetailsModal/GlyphDetailsModal.jsx';
-import GlyphPreviewBadge, { useResolvedGlyphStrokes } from '../../UI/Glyph/GlyphPreviewBadge.jsx';
+import GlyphPreviewBadge from '../../UI/Glyph/GlyphPreviewBadge.jsx';
+import { resolveGlyphStrokesPure } from '../../UI/Glyph/resolveGlyphStrokes.js';
 import StrokeOrderModal from '../../UI/StrokeOrder/StrokeOrderModal.jsx';
 import toast from 'react-hot-toast';
 
@@ -360,6 +361,10 @@ const NumbersTab = () => {
     // drawn glyph via the lexicon entry's `ideogram`. Without it the call falls
     // through to `return cleanWord`, i.e. the romanized name instead of the glyph.
     const lexicon = useLexiconStore(state => state.lexicon) || [];
+    // Read here (not via a per-glyph hook) because the number preview resolves MANY
+    // glyphs in a loop, which requires the pure lookup rather than a hook call.
+    const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
+    const scriptDataById = useConfigStore(state => state.scriptDataById) || {};
     const [testNumber, setTestNumber] = useState('');
     // Eye toggle: hides the generated number glyph until explicitly revealed.
     const [showTestResult, setShowTestResult] = useState(false);
@@ -396,24 +401,35 @@ const NumbersTab = () => {
         updateSystem(mapName, newMap);
     };
 
-    const generateNumberName = useCallback((num) => {
-        if (num === 0) return numberSystem.zero || '0';
-        if (numberSystem.irregulars?.[num]) return numberSystem.irregulars[num];
+    /**
+     * Builds a number as an ordered list of components (e.g. senary 7 -> ["one","six"]),
+     * or a single string when `asString` is true.
+     *
+     * Components are the atoms the numeral system is actually defined in — each one
+     * already has its own entry in the Digits / Stems / Powers tables. Keeping them
+     * separate is what lets the glyph preview resolve each glyph individually instead
+     * of failing on a joined multi-glyph string. The joined string form (used for the
+     * written output) is unchanged.
+     */
+    const generateNumberComponents = useCallback((num) => {
+        if (num === 0) return [numberSystem.zero || '0'];
+        if (numberSystem.irregulars?.[num]) return [numberSystem.irregulars[num]];
 
         const base = numeralBase > 1 ? numeralBase : 10;
         const s = numberSystem.settings || {};
-        
-        // Destructure with default values for backwards compatibility
+
+        // Destructure with default values for backwards compatibility.
+        // `globalFusion` and `separator` are applied by generateNumberName when the
+        // components are joined, so they are not needed here.
         const {
             fusion = false,
-            globalFusion = false,
             useStemsForUnits = false,
             separator = ' ',
             internalOrder = 'digit-first',
             magnitudeOrder = 'standard',
             hideOne = false
         } = s;
-        
+
         let remaining = num;
         let components = []; 
         let power = 0;
@@ -489,8 +505,17 @@ const NumbersTab = () => {
             components.reverse();
         }
 
-        return components.filter(Boolean).join(globalFusion ? '' : separator);
+        return components.filter(Boolean);
     }, [numeralBase, numberSystem]);
+
+    // Written form: the components joined with the configured separator. This is the
+    // output that was already correct, so it keeps its exact previous behaviour.
+    const generateNumberName = useCallback(
+        (num) => generateNumberComponents(num).join(
+            numberSystem.settings?.globalFusion ? '' : (numberSystem.settings?.separator ?? ' ')
+        ),
+        [generateNumberComponents, numberSystem.settings]
+    );
 
     const testResult = useMemo(() => {
         const val = parseInt(testNumber);
@@ -498,15 +523,49 @@ const NumbersTab = () => {
         return generateNumberName(val);
     }, [testNumber, generateNumberName]);
 
-    // Glyph form of the previewed number, and whether that glyph is actually drawn.
-    // A composed number (e.g. "pardeko sorum") usually has no lexicon entry, so the
-    // eye must degrade to a clear "no entry" state rather than an empty glyph box.
-    const testGlyph = useMemo(
-        () => (testResult ? (transliterate(testResult, lexicon) || testResult) : ''),
-        [testResult, lexicon]
+    // Glyph form of the previewed number.
+    //
+    // Each numeral component is transliterated and looked up on its own. The previous
+    // code joined the whole number into one string and asked for a single codepoint,
+    // which always failed for multi-component numbers (senary 7 = "one six" is two
+    // glyphs, not one) and showed "No glyph entry for this number" even though both
+    // glyphs were drawn. Resolving per component reuses the same path the digit rows
+    // already use in renderDigitControls().
+    const testNumberValue = parseInt(testNumber);
+    const testComponents = useMemo(
+        () => (isNaN(testNumberValue) ? [] : generateNumberComponents(testNumberValue)),
+        [testNumberValue, generateNumberComponents]
     );
-    const testGlyphStrokes = useResolvedGlyphStrokes(testGlyph);
-    const testHasGlyph = Boolean(testGlyphStrokes && testGlyphStrokes.length > 0);
+
+    // { rendered, strokes, label } per component, in numeral order.
+    // Uses the PURE stroke lookup, not the hook: this runs inside a .map(), and hooks
+    // must never be called in a loop.
+    const testGlyphParts = useMemo(
+        () => testComponents.map((component) => {
+            const rendered = component ? (transliterate(component, lexicon) || component) : '';
+            return {
+                label: component,
+                rendered,
+                strokes: resolveGlyphStrokesPure(rendered, { customGlyphs, scriptDataById })
+            };
+        }),
+        [testComponents, lexicon, customGlyphs, scriptDataById, transliterate]
+    );
+
+    const testHasGlyph = testGlyphParts.some(p => p.strokes && p.strokes.length > 0);
+
+    // Glyphs are joined with the same separator the written form uses, so the two
+    // representations stay visually consistent. Global Fusion means no separator.
+    const testGlyphSeparator = (numberSystem.settings?.globalFusion)
+        ? ''
+        : (numberSystem.settings?.separator ?? ' ');
+
+    // Fallback glyph string for the stroke-order modal: the rendered glyphs only,
+    // with no separator, so resolveWordStrokes() sees pure glyph characters.
+    const testGlyph = useMemo(
+        () => testGlyphParts.map(p => p.rendered).filter(Boolean).join(''),
+        [testGlyphParts]
+    );
 
     const digitIndices = Array.from({ length: Math.max(0, numeralBase - 1) }, (_, i) => i + 1);
 
@@ -854,7 +913,13 @@ const NumbersTab = () => {
                                         <button
                                             type="button"
                                             className="num-icon-btn"
-                                            onClick={() => setSelectedNumberForStroke({ word: testResult, name: `${testNumber || 'Result'}: ${testResult}` })}
+                                            onClick={() => setSelectedNumberForStroke({
+                                                // Prefer the resolved glyphs so the viewer tabs
+                                                // through exactly what the preview shows. Falls
+                                                // back to the written name if none resolved.
+                                                word: testGlyph || testResult,
+                                                name: `${testNumber || 'Result'}: ${testResult}`
+                                            })}
                                             title="View stroke order"
                                         >
                                             <PenTool size={13} />
@@ -877,13 +942,37 @@ const NumbersTab = () => {
                                 {testResult ? (
                                     showTestResult ? (
                                         testHasGlyph ? (
-                                            <GlyphPreviewBadge
-                                                glyph={testGlyph}
-                                                size={64}
-                                                hideOnEmpty
-                                                showCode={false}
-                                                title="Glyph form"
-                                            />
+                                            /* One badge per numeral component, joined by the
+                                               configured separator. A multi-component number
+                                               (senary 7) is several glyphs, not one. */
+                                            <div className="result-glyph-row">
+                                                {testGlyphParts.map((part, i) => (
+                                                    <React.Fragment key={`${part.label}-${i}`}>
+                                                        {i > 0 && (
+                                                            <span className="result-glyph-sep notranslate">
+                                                                {testGlyphSeparator}
+                                                            </span>
+                                                        )}
+                                                        {part.strokes && part.strokes.length > 0 ? (
+                                                            <GlyphPreviewBadge
+                                                                glyph={part.rendered}
+                                                                strokes={part.strokes}
+                                                                size={64}
+                                                                hideOnEmpty
+                                                                showCode={false}
+                                                                title={`Glyph form of "${part.label}"`}
+                                                            />
+                                                        ) : (
+                                                            <span
+                                                                className="result-glyph-missing"
+                                                                title={`No glyph drawn for "${part.label}"`}
+                                                            >
+                                                                {part.rendered || part.label}
+                                                            </span>
+                                                        )}
+                                                    </React.Fragment>
+                                                ))}
+                                            </div>
                                         ) : (
                                             <div className="result-no-glyph">
                                                 <FileXIcon size={24} />

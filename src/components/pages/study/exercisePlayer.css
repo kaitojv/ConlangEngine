@@ -150,6 +150,61 @@
     color: #f87171;
 }
 
+.ep-audio-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    margin-bottom: 20px;
+    border: 1px solid var(--bd);
+    border-radius: 50%;
+    background: var(--s2);
+    color: var(--tx);
+    cursor: pointer;
+}
+
+.ep-audio-chip:hover {
+    border-color: var(--acc);
+    color: var(--acc);
+}
+
+.ep-glyph-area {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.ep-glyph-hint {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--tx2);
+}
+
+.ep-glyph-missing {
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 20px;
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+    background: var(--s1);
+}
+
+.ep-glyph-missing p {
+    margin: 0;
+    color: var(--tx);
+}
+
+.ep-glyph-missing-hint {
+    font-size: 0.85rem;
+    color: var(--tx2);
+}
+
 .finished-screen {
     justify-content: center;
     align-items: center;

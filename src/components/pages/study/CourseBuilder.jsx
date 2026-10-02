@@ -5,6 +5,8 @@ import Input from '@/components/UI/Input/Input.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { generateCourseExercise } from '@/utils/courseGenerator.js';
+import { resolveWordStrokes } from '@/utils/strokeOrderResolver.js';
+import AudioRecorder from './AudioRecorder.jsx';
 import ExercisePlayer from './ExercisePlayer.jsx';
 import { Plus, Trash2, Save, ArrowLeft, GripVertical, Wand2, X, Play, ChevronUp, ChevronDown, Bold, Italic, Underline, Smile, Zap, Star, Crown, Book, Brain, Flame, Dumbbell, Sword, Shield } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
@@ -356,6 +358,9 @@ export default function CourseBuilder({ onExit }) {
                         english: '',
                         options: ['', '', ''],
                         distractors: '',
+                        audioPath: '',
+                        checkOrder: true,
+                        showGuide: false,
                         pairs: [{conlang: '', english: ''}, {conlang: '', english: ''}, {conlang: '', english: ''}, {conlang: '', english: ''}]
                     }]
                 };
@@ -518,6 +523,7 @@ export default function CourseBuilder({ onExit }) {
                                                 <option value="picture_match">Picture Match</option>
                                                 <option value="true_false">True or False</option>
                                                 <option value="conjugation_drill">Conjugation Drill</option>
+                                                <option value="glyph_drawing">Draw the Glyph</option>
                                             </select>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -552,6 +558,7 @@ export default function CourseBuilder({ onExit }) {
                                                          phrase.type === 'conjugation_drill' ? 'Instruction / English Prompt' :
                                                          phrase.type === 'fill_blank' ? 'Conlang Sentence (use ____ for blank)' :
                                                          phrase.type === 'listening' ? 'Conlang Audio Text' :
+                                                         phrase.type === 'glyph_drawing' ? 'Glyph to Draw (word / syllable / letter)' :
                                                          'Conlang Sentence'}
                                                     </label>
                                                     <Input 
@@ -561,6 +568,7 @@ export default function CourseBuilder({ onExit }) {
                                                             phrase.type === 'picture_match' ? "e.g. 🍎" :
                                                             phrase.type === 'conjugation_drill' ? "e.g. Past tense of 'run'" :
                                                             phrase.type === 'fill_blank' ? "e.g. The ____ pays" :
+                                                            phrase.type === 'glyph_drawing' ? "e.g. nuvir or ka or the glyph character itself" :
                                                             "e.g. nuvir'lo zikrifi"
                                                         }
                                                         className={phrase.type !== 'picture_match' ? "custom-font-text notranslate" : ""}
@@ -679,6 +687,50 @@ export default function CourseBuilder({ onExit }) {
                                                 </div>
                                             </div>
                                         )}
+
+                                        {phrase.type === 'glyph_drawing' && (
+                                            <div className="cb-glyph-options">
+                                                <div className="cb-toggle-row">
+                                                    <label className="cb-toggle">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={phrase.checkOrder !== false}
+                                                            onChange={(e) => updatePhrase(level.id, phrase.id, 'checkOrder', e.target.checked)}
+                                                        />
+                                                        <span>Enforce stroke order</span>
+                                                    </label>
+                                                    <label className="cb-toggle">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!!phrase.showGuide}
+                                                            onChange={(e) => updatePhrase(level.id, phrase.id, 'showGuide', e.target.checked)}
+                                                        />
+                                                        <span>Show guide outline</span>
+                                                    </label>
+                                                </div>
+                                                <p className="cb-hint">
+                                                    {(() => {
+                                                        const { characters } = resolveWordStrokes(
+                                                            phrase.conlang || phrase.english || '',
+                                                            config,
+                                                            lexicon
+                                                        );
+                                                        const strokeCount = characters.reduce((n, c) => n + (c.strokes?.length || 0), 0);
+                                                        if (!phrase.conlang && !phrase.english) return 'Enter the glyph to draw above.';
+                                                        if (strokeCount === 0) {
+                                                            return 'No stroke data found for this glyph. Draw it in Font Studio / Orthography first, or the student will just see a notice.';
+                                                        }
+                                                        return `${strokeCount} stroke${strokeCount === 1 ? '' : 's'} detected across ${characters.length} character${characters.length === 1 ? '' : 's'}.`;
+                                                    })()}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        <AudioRecorder
+                                            phrase={phrase}
+                                            projectId={config.projectId}
+                                            onChange={(field, value) => updatePhrase(level.id, phrase.id, field, value)}
+                                        />
                                     </div>
                                 </div>
                             ))}
