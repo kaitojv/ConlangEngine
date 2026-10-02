@@ -525,32 +525,51 @@ const NumbersTab = () => {
 
     // Glyph form of the previewed number.
     //
-    // Each numeral component is transliterated and looked up on its own. The previous
-    // code joined the whole number into one string and asked for a single codepoint,
-    // which always failed for multi-component numbers (senary 7 = "one six" is two
-    // glyphs, not one) and showed "No glyph entry for this number" even though both
-    // glyphs were drawn. Resolving per component reuses the same path the digit rows
-    // already use in renderDigitControls().
+    // Two separate things had to be fixed here:
+    //
+    // 1. The old code joined the whole number into one string and asked for a SINGLE
+    //    codepoint, so any multi-glyph number reported "No glyph entry".
+    // 2. Splitting per numeral component was still not enough. A component is a
+    //    *written* name (e.g. senary "f┼ì" for one), which transliterates to a
+    //    *run* of script characters - and with Internal Fusion on, one component
+    //    fuses power+digit ("n┼½n─½") into several glyphs. A component is therefore
+    //    NOT one glyph.
+    //
+    // So each component is transliterated first, then the RESULT is split into
+    // individual characters, and every character is resolved on its own. That is the
+    // same per-character contract the rest of the app uses, so it works for stems,
+    // fusion, and every script type.
     const testNumberValue = parseInt(testNumber);
     const testComponents = useMemo(
         () => (isNaN(testNumberValue) ? [] : generateNumberComponents(testNumberValue)),
         [testNumberValue, generateNumberComponents]
     );
 
-    // { rendered, strokes, label } per component, in numeral order.
-    // Uses the PURE stroke lookup, not the hook: this runs inside a .map(), and hooks
-    // must never be called in a loop.
-    const testGlyphParts = useMemo(
-        () => testComponents.map((component) => {
-            const rendered = component ? (transliterate(component, lexicon) || component) : '';
-            return {
-                label: component,
-                rendered,
-                strokes: resolveGlyphStrokesPure(rendered, { customGlyphs, scriptDataById })
-            };
-        }),
-        [testComponents, lexicon, customGlyphs, scriptDataById, transliterate]
-    );
+    // Flat list of { char, strokes, sepBefore } in numeral order. sepBefore marks the
+    // first glyph of each component so the separator only appears between components,
+    // never between the glyphs fused inside one.
+    //
+    // Uses the PURE stroke lookup: this runs in a loop, and hooks cannot be called there.
+    const testGlyphParts = useMemo(() => {
+        const parts = [];
+        testComponents.forEach((component, ci) => {
+            if (!component) return;
+            const rendered = transliterate(component, lexicon) || component;
+            const chars = Array.from(rendered);
+            chars.forEach((ch, gi) => {
+                // A separator inside a component is layout, not a glyph to draw.
+                if (/\s/.test(ch)) return;
+                parts.push({
+                    char: ch,
+                    label: component,
+                    isComponentStart: gi === 0,
+                    isNewComponent: ci > 0 && gi === 0,
+                    strokes: resolveGlyphStrokesPure(ch, { customGlyphs, scriptDataById })
+                });
+            });
+        });
+        return parts;
+    }, [testComponents, lexicon, customGlyphs, scriptDataById, transliterate]);
 
     const testHasGlyph = testGlyphParts.some(p => p.strokes && p.strokes.length > 0);
 
@@ -563,7 +582,7 @@ const NumbersTab = () => {
     // Fallback glyph string for the stroke-order modal: the rendered glyphs only,
     // with no separator, so resolveWordStrokes() sees pure glyph characters.
     const testGlyph = useMemo(
-        () => testGlyphParts.map(p => p.rendered).filter(Boolean).join(''),
+        () => testGlyphParts.map(p => p.char).join(''),
         [testGlyphParts]
     );
 
@@ -942,32 +961,33 @@ const NumbersTab = () => {
                                 {testResult ? (
                                     showTestResult ? (
                                         testHasGlyph ? (
-                                            /* One badge per numeral component, joined by the
-                                               configured separator. A multi-component number
-                                               (senary 7) is several glyphs, not one. */
+                                            /* One badge per glyph character, in numeral order. A
+                                               component may hold several glyphs (fused
+                                               power+digit), so the separator only goes
+                                               between components, not between glyphs. */
                                             <div className="result-glyph-row">
                                                 {testGlyphParts.map((part, i) => (
-                                                    <React.Fragment key={`${part.label}-${i}`}>
-                                                        {i > 0 && (
+                                                    <React.Fragment key={`${part.char}-${i}`}>
+                                                        {part.isNewComponent && (
                                                             <span className="result-glyph-sep notranslate">
                                                                 {testGlyphSeparator}
                                                             </span>
                                                         )}
                                                         {part.strokes && part.strokes.length > 0 ? (
                                                             <GlyphPreviewBadge
-                                                                glyph={part.rendered}
+                                                                glyph={part.char}
                                                                 strokes={part.strokes}
                                                                 size={64}
                                                                 hideOnEmpty
                                                                 showCode={false}
-                                                                title={`Glyph form of "${part.label}"`}
+                                                                title={`Glyph for "${part.label}"`}
                                                             />
                                                         ) : (
                                                             <span
                                                                 className="result-glyph-missing"
                                                                 title={`No glyph drawn for "${part.label}"`}
                                                             >
-                                                                {part.rendered || part.label}
+                                                                {part.char}
                                                             </span>
                                                         )}
                                                     </React.Fragment>

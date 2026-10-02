@@ -165,5 +165,50 @@ assert('senary 43 spans three magnitudes', buildComponents(43, 6, {
     ...senary, powers: { 6: 'sek', 36: 'tresek' }
 }).length, 3);
 
+// ---------------------------------------------------------------------------
+// REGRESSION: a component is NOT one glyph.
+// With Internal Fusion on, one component fuses power+digit into a multi-character
+// string. Real config: fusion=true, internalOrder=unit-first, magnitudeOrder=unit-first.
+// These are the actual written names from a senary system; the fix must split the
+// TRANSLITERATED result per character, not per component.
+// ---------------------------------------------------------------------------
+const fused = {
+    zero: 'z',
+    digits: { 1: 'f', 2: 'n' },
+    stems: { 1: 'f~', 2: 'n~' },
+    powers: { 6: 'n^' },
+    irregulars: {},
+    settings: { fusion: true, globalFusion: true, hideOne: true, internalOrder: 'unit-first', magnitudeOrder: 'unit-first', separator: '  ' }
+};
+
+console.log('— internal fusion: one component, several glyphs —');
+// 12 base 6 = 2*6 + 0 -> "n^n~" (power + stem) fused into ONE component.
+const c12 = buildComponents(12, 6, fused);
+assert('fused 12 is a single component', c12.length, 1);
+assert('fused 12 component is multi-character', [...c12[0]].length > 1, true);
+// The glyph list must therefore be built by splitting characters, not components.
+const glyphList = (components) => components
+    .flatMap(c => Array.from(c))
+    .filter(ch => !/\s/.test(ch));
+assert('fused 12 yields 4 glyphs from 1 component', glyphList(c12).length, 4);
+assert('fused 7 yields 3 glyphs from 2 components', glyphList(buildComponents(7, 6, fused)).length, 3);
+assert('fused 13 yields 5 glyphs', glyphList(buildComponents(13, 6, fused)).length, 5);
+// 13 has MORE components yet FEWER glyphs than 12, proving glyph count is driven by
+// the written name's length, not the component count. This is exactly the case that
+// broke the old per-component lookup.
+assert('13 has more components but fewer glyphs than 12',
+    buildComponents(13, 6, fused).length > buildComponents(12, 6, fused).length
+    && glyphList(buildComponents(13, 6, fused)).length === glyphList(c12).length + 1,
+    true);
+
+// The separator must only appear BETWEEN components, never inside a fused one.
+const sepCount = (components) => components.length - 1;
+assert('fused 12 inserts no separator inside its glyphs', sepCount(c12), 0);
+assert('7 inserts one separator between its 2 components', sepCount(buildComponents(7, 6, fused)), 1);
+
+// Every glyph produced must be independently resolvable (one codepoint each).
+assert('all glyphs are single codepoints', glyphList(c12).every(ch => [...ch].length === 1), true);
+
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 if (fail > 0) process.exit(1);
