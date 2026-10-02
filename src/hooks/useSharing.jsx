@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
+import { useShallow } from 'zustand/react/shallow';
 import { supabase } from '@/utils/supabaseClient.js';
 import { sanitizeConfig } from '@/utils/schemaValidator.jsx';
 import toast from 'react-hot-toast';
@@ -9,7 +10,12 @@ import LZString from 'lz-string';
 export function useSharing(session) {
     const [isSharing, setIsSharing] = useState(false);
     const lexicon = useLexiconStore(state => state.lexicon) || [];
-    const config = useConfigStore();
+    const { projectId, updateConfig, wikiPages, logActivity } = useConfigStore(useShallow(state => ({
+        projectId: state.projectId,
+        updateConfig: state.updateConfig,
+        wikiPages: state.wikiPages,
+        logActivity: state.logActivity
+    })));
 
     const handlePushToCloud = async (isManualSync = true, versionName = null) => {
         // Only enforce session for manual "Push to Cloud" button
@@ -18,10 +24,10 @@ export function useSharing(session) {
             return false;
         }
         
-        let currentProjectId = config.projectId;
+        let currentProjectId = projectId;
         if (!currentProjectId) {
             currentProjectId = 'proj_' + crypto.randomUUID();
-            config.updateConfig({ projectId: currentProjectId });
+            updateConfig({ projectId: currentProjectId });
         }
 
         const configData = sanitizeConfig(useConfigStore.getState(), true);
@@ -35,7 +41,7 @@ export function useSharing(session) {
         const payload = { 
             dictionary: lexicon, 
             config: configData, 
-            wiki: config.wikiPages || {},
+            wiki: wikiPages || {},
             wordCount: lexicon.length,
             last_updated: new Date().toISOString()
         };
@@ -49,7 +55,7 @@ export function useSharing(session) {
                 // Use native CompressionStream for superior JSON compression
                 const stream = new Blob([JSON.stringify({
                     dictionary: lexicon,
-                    wiki: config.wikiPages || {}
+                    wiki: wikiPages || {}
                 })]).stream();
                 const compressedStream = stream.pipeThrough(new CompressionStream('gzip'));
                 const compressedResponse = new Response(compressedStream);
@@ -81,7 +87,7 @@ export function useSharing(session) {
                 try {
                     const compressedString = LZString.compressToBase64(JSON.stringify({
                         dictionary: lexicon,
-                        wiki: config.wikiPages || {}
+                        wiki: wikiPages || {}
                     }));
                     let cleanConfigForCloud = { ...configData };
                     delete cleanConfigForCloud.wikiPages;
@@ -139,7 +145,7 @@ export function useSharing(session) {
                     // Project belongs to someone else! (e.g., imported from a different account)
                     // Generate a new project ID to fork it instead of overwriting
                     currentProjectId = 'proj_' + crypto.randomUUID();
-                    config.updateConfig({ projectId: currentProjectId });
+                    updateConfig({ projectId: currentProjectId });
                     toast('Forked project to avoid overwriting another account.');
                 }
             }
@@ -197,10 +203,10 @@ export function useSharing(session) {
             
             if (isManualSync) {
                 toast.success('Cloud Sync Complete!');
-                config.logActivity('Pushed dictionary to the cloud.');
+                logActivity('Pushed dictionary to the cloud.');
             }
             
-            config.updateConfig({ lastCloudSync: new Date().toISOString() });
+            updateConfig({ lastCloudSync: new Date().toISOString() });
             return true;
         } catch (err) {
             console.error("Supabase Error Context:", { 
@@ -231,7 +237,7 @@ export function useSharing(session) {
                 return;
             }
             
-            const currentProjectId = config.projectId || useConfigStore.getState().projectId;
+            const currentProjectId = projectId || useConfigStore.getState().projectId;
             if (!currentProjectId) {
                 toast.error("Error generating project ID.", { id: toastId });
                 return;

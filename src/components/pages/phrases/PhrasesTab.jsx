@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
+import { useShallow } from 'zustand/react/shallow';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
@@ -14,7 +15,10 @@ import toast from 'react-hot-toast';
 export default function PhrasesTab() {
     const phrases = useLexiconStore(state => state.phrases || []);
     const deletePhrase = useLexiconStore(state => state.deletePhrase);
-    const config = useConfigStore();
+    const { azureTtsUseIpa, azureTtsVoice } = useConfigStore(useShallow(state => ({
+        azureTtsUseIpa: state.azureTtsUseIpa,
+        azureTtsVoice: state.azureTtsVoice
+    })));
     const { transliterate } = useTransliterator();
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -45,7 +49,7 @@ export default function PhrasesTab() {
     };
 
     const handleReadAloud = async (text) => {
-        if (!config.azureTtsVoice) {
+        if (!azureTtsVoice) {
             toast.error("Please configure Azure TTS voice in Settings first.");
             return;
         }
@@ -53,8 +57,8 @@ export default function PhrasesTab() {
         try {
             await playAzureTTS({
                 text: text.replace(/[.\-*]/g, ''),
-                voice: config.azureTtsVoice,
-                useIpa: config.azureTtsUseIpa
+                voice: azureTtsVoice,
+                useIpa: azureTtsUseIpa
             });
             toast.dismiss(toastId);
         } catch(err) {

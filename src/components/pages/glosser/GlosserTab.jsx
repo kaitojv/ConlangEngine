@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
+import { useShallow } from 'zustand/react/shallow';
 import { stripAffix, getPersonRules, segmentToken, getUniqueParsings } from '@/utils/morphologyEngine.jsx';
 import { findParticleBySurface, resolveSense, getNeighborPOS } from '@/utils/particleEngine.js';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
@@ -30,7 +31,27 @@ export default function GlosserTab() {
     // Store Data
     const rawLexicon = useLexiconStore((state) => state.lexicon);
     const lexicon = Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []);
-    const config = useConfigStore();
+    const {
+        azureTtsUseIpa, azureTtsVoice,
+        logActivity, unlockedBadges, unlockBadge,
+        // Passed through to segmentToken / getUniqueParsings, which reach
+        // findAllParsings in morphologyEngine.jsx. That function reads only
+        // these three config fields.
+        grammarRules, personRules, verbMarker
+    } = useConfigStore(useShallow(state => ({
+        azureTtsUseIpa: state.azureTtsUseIpa,
+        azureTtsVoice: state.azureTtsVoice,
+        logActivity: state.logActivity,
+        unlockedBadges: state.unlockedBadges,
+        unlockBadge: state.unlockBadge,
+        grammarRules: state.grammarRules,
+        personRules: state.personRules,
+        verbMarker: state.verbMarker
+    })));
+
+    // Minimal config object handed to the morphology helpers above.
+    const morphologyConfig = useMemo(() => ({ grammarRules, personRules, verbMarker }),
+        [grammarRules, personRules, verbMarker]);
     const particleDatabase = useConfigStore((state) => state.particleDatabase) || [];
     const compositeParticles = useConfigStore((state) => state.compositeParticles) || [];
     const usesParticles = useConfigStore((state) => state.usesParticles) || false;
@@ -61,10 +82,10 @@ export default function GlosserTab() {
 
             // Perform Lexicon-Aware Segmentation
             const cleanToken = token.replace(/[.,!?]/g, '').replace(/[‘’]/g, "'");
-            const segments = segmentToken(cleanToken, lexicon, config, normalizeToBase, (t) => getUniqueParsings(t, lexicon, config, normalizeToBase));
+            const segments = segmentToken(cleanToken, lexicon, morphologyConfig, normalizeToBase, (t) => getUniqueParsings(t, lexicon, morphologyConfig, normalizeToBase));
 
             segments.forEach(seg => {
-                const parsings = getUniqueParsings(seg, lexicon, config, normalizeToBase);
+                const parsings = getUniqueParsings(seg, lexicon, morphologyConfig, normalizeToBase);
 
                 // If no lexicon match, check if it's a particle
                 if (parsings.length === 0 && usesParticles && particleDatabase.length > 0) {
@@ -97,9 +118,9 @@ export default function GlosserTab() {
         setIsModalOpen(true);
 
         // Unlock Storyteller achievement
-        if (inputText.trim() && !config.unlockedBadges?.includes('storyteller')) {
-            config.unlockBadge('storyteller', 'Storyteller');
-            config.logActivity('Glossed a text using the Reader!');
+        if (inputText.trim() && !unlockedBadges?.includes('storyteller')) {
+            unlockBadge('storyteller', 'Storyteller');
+            logActivity('Glossed a text using the Reader!');
         }
     };
 
@@ -282,15 +303,15 @@ export default function GlosserTab() {
 
     const handleReadAloud = async () => {
         if (!inputText.trim()) return toast.error("Nothing to read.");
-        if (!config.azureTtsVoice) return toast.error("Please configure Azure TTS voice in Settings first.");
+        if (!azureTtsVoice) return toast.error("Please configure Azure TTS voice in Settings first.");
         
         const toastId = toast.loading("Generating audio...");
         try {
             const cleanText = inputText.replace(/[.\-*]/g, '');
             await playAzureTTS({
                 text: cleanText,
-                voice: config.azureTtsVoice,
-                useIpa: config.azureTtsUseIpa
+                voice: azureTtsVoice,
+                useIpa: azureTtsUseIpa
             });
             toast.dismiss(toastId);
         } catch(err) {
