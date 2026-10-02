@@ -125,15 +125,15 @@ const calculateLayout = (node, depth = 0, currentX = 0) => {
 };
 
 export default function SyntaxTreeRenderer({ processedWords }) {
-    const syntaxOrder = useConfigStore((state) => state.syntaxOrder);
+    const config = useConfigStore();
     const { transliterate } = useTransliterator();
     const svgRef = useRef(null);
 
     const treeData = useMemo(() => {
-        const order = syntaxOrder || 'SVO';
-        const rawTree = buildTree(processedWords, order);
+        const syntaxOrder = config.syntaxOrder || 'SVO';
+        const rawTree = buildTree(processedWords, syntaxOrder);
         return calculateLayout(rawTree);
-    }, [processedWords, syntaxOrder]);
+    }, [processedWords, config.syntaxOrder]);
 
     if (!treeData) return <p style={{ color: 'var(--tx3)', textAlign: 'center', padding: '20px' }}>Not enough words to build a syntax tree.</p>;
 
