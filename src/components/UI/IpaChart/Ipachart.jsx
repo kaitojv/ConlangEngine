@@ -127,10 +127,15 @@ export default function IpaChart({ consonants = '', setConsonants, vowels = '', 
                 <div className="ipa-map-wrap">
                     {/* PULMONIC CONSONANTS */}
                     <div className="ipa-collapsible-section">
-                        <div className="ipa-section-header" onClick={() => toggleSection('pulmonic')}>
+                        <button
+                            type="button"
+                            className="ipa-section-header"
+                            aria-expanded={!collapsed.pulmonic}
+                            onClick={() => toggleSection('pulmonic')}
+                        >
                             {collapsed.pulmonic ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
-                            <h3 className="ipa-section-title">Pulmonic Consonants</h3>
-                        </div>
+                            <span className="ipa-section-title">Pulmonic Consonants</span>
+                        </button>
                         
                         {!collapsed.pulmonic && (
                             <div className="ipa-wrapper">
@@ -167,10 +172,15 @@ export default function IpaChart({ consonants = '', setConsonants, vowels = '', 
 
                     {/* NON-PULMONIC & OTHER */}
                     <div className="ipa-collapsible-section">
-                        <div className="ipa-section-header" onClick={() => toggleSection('nonPulmonic')}>
+                        <button
+                            type="button"
+                            className="ipa-section-header"
+                            aria-expanded={!collapsed.nonPulmonic}
+                            onClick={() => toggleSection('nonPulmonic')}
+                        >
                             {collapsed.nonPulmonic ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
-                            <h3 className="ipa-section-title">Non-Pulmonic & Co-articulated</h3>
-                        </div>
+                            <span className="ipa-section-title">Non-Pulmonic &amp; Co-articulated</span>
+                        </button>
                         
                         {!collapsed.nonPulmonic && (
                             <div className="ipa-extra-sections">
@@ -200,10 +210,15 @@ export default function IpaChart({ consonants = '', setConsonants, vowels = '', 
 
                     {/* VOWEL TRAPEZOID */}
                     <div className="ipa-collapsible-section">
-                        <div className="ipa-section-header" onClick={() => toggleSection('vowels')}>
+                        <button
+                            type="button"
+                            className="ipa-section-header"
+                            aria-expanded={!collapsed.vowels}
+                            onClick={() => toggleSection('vowels')}
+                        >
                             {collapsed.vowels ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
-                            <h3 className="ipa-section-title">Vowels</h3>
-                        </div>
+                            <span className="ipa-section-title">Vowels</span>
+                        </button>
                         
                         {!collapsed.vowels && (
                             <div className="ipa-vowel-container">
@@ -263,10 +278,15 @@ export default function IpaChart({ consonants = '', setConsonants, vowels = '', 
 
                     {/* SUPRASEGMENTALS & DIACRITICS */}
                     <div className="ipa-collapsible-section">
-                        <div className="ipa-section-header" onClick={() => toggleSection('suprasegmentals')}>
+                        <button
+                            type="button"
+                            className="ipa-section-header"
+                            aria-expanded={!collapsed.suprasegmentals}
+                            onClick={() => toggleSection('suprasegmentals')}
+                        >
                             {collapsed.suprasegmentals ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
-                            <h3 className="ipa-section-title">Suprasegmentals & Diacritics</h3>
-                        </div>
+                            <span className="ipa-section-title">Suprasegmentals &amp; Diacritics</span>
+                        </button>
 
                         {!collapsed.suprasegmentals && (
                             <div className="ipa-extra-sections">

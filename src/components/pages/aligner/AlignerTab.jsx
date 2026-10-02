@@ -27,6 +27,17 @@ export default function AlignerTab() {
     const [selectedTarget, setSelectedTarget] = useState(null);
     const [activeColor, setActiveColor] = useState(PRESET_COLORS[0]);
     const [viewingMap, setViewingMap] = useState(null);
+
+    // Escape closes the map modal, matching the backdrop click and the
+    // close button so the dialog is fully keyboard-dismissible.
+    useEffect(() => {
+        if (!viewingMap) return;
+        const onKey = (e) => {
+            if (e.key === 'Escape') setViewingMap(null);
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [viewingMap]);
     const [tooltip, setTooltip] = useState({ visible: false, content: '', x: 0, y: 0 });
     const [hoveredWord, setHoveredWord] = useState(null);
 
@@ -209,7 +220,19 @@ export default function AlignerTab() {
                 </summary>
                 <div className="maps-container">
                     {sentenceMaps.map(map => (
-                        <div key={map.id} className="map-card-clickable" onClick={() => setViewingMap(map)}>
+                        <div
+                            key={map.id}
+                            className="map-card-clickable"
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setViewingMap(map)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    setViewingMap(map);
+                                }
+                            }}
+                        >
                             <div className="map-card-preview">
                                 <span className="source-preview custom-font-text">{map.sourceText}</span>
                                 <ArrowRight size={16} />

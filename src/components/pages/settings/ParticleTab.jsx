@@ -420,7 +420,20 @@ export default function ParticleTab() {
                     )}
 
                     {!isEditingPrimitive && particleDatabase.map(p => (
-                        <div key={p.id} className="particle-card" onClick={() => setExpandedParticle(expandedParticle === p.id ? null : p.id)}>
+                        <div
+                            key={p.id}
+                            className="particle-card"
+                            role="button"
+                            tabIndex={0}
+                            aria-expanded={expandedParticle === p.id}
+                            onClick={() => setExpandedParticle(expandedParticle === p.id ? null : p.id)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    setExpandedParticle(expandedParticle === p.id ? null : p.id);
+                                }
+                            }}
+                        >
                             <div className="particle-card-header">
                                 <span className="particle-surface custom-font-text notranslate">{p.surface}</span>
                                 <span className="particle-meta">{p.position} • priority {p.priority}</span>
@@ -472,7 +485,20 @@ export default function ParticleTab() {
                     )}
 
                     {!isEditingComposite && compositeParticles.map(c => (
-                        <div key={c.id} className="particle-card composite-card" onClick={() => setExpandedComposite(expandedComposite === c.id ? null : c.id)}>
+                        <div
+                            key={c.id}
+                            className="particle-card composite-card"
+                            role="button"
+                            tabIndex={0}
+                            aria-expanded={expandedComposite === c.id}
+                            onClick={() => setExpandedComposite(expandedComposite === c.id ? null : c.id)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    setExpandedComposite(expandedComposite === c.id ? null : c.id);
+                                }
+                            }}
+                        >
                             <div className="particle-card-header">
                                 <span className="particle-surface custom-font-text notranslate">{c.surface}</span>
                                 <span className="particle-meta">{c.meaning}</span>

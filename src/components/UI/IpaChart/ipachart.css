@@ -27,6 +27,18 @@
     transition: color 0.2s;
 }
 
+/* The header is a real <button> so it is reachable and operable by keyboard.
+   Reset the browser button defaults; the rule above already supplies the
+   layout, colour and underline. */
+button.ipa-section-header {
+    width: 100%;
+    background: none;
+    border: none;
+    border-bottom: 2px solid var(--bd);
+    font-family: inherit;
+    text-align: left;
+}
+
 .ipa-section-header:hover {
     color: var(--acc);
 }

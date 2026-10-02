@@ -358,6 +358,20 @@ select option {
     font-weight: 600;
 }
 
+/* These chips are real <button> elements so they are reachable by keyboard.
+   Reset the browser button defaults, which would otherwise add a border,
+   shift the background on :active, and inherit a different font. */
+button.tag-chip {
+    border: none;
+    font-family: inherit;
+    line-height: inherit;
+    cursor: pointer;
+}
+
+button.tag-chip:hover {
+    filter: brightness(1.1);
+}
+
 .tag-remove-icon {
     cursor: pointer;
     opacity: 0.8;

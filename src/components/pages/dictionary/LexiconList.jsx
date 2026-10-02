@@ -545,13 +545,13 @@ export default function LexiconList() {
                     <div className="active-filters-bar">
                         <span className="filters-label">Active Filters:</span>
                         {filters.tag !== 'all' && (
-                            <span className="tag-chip" onClick={() => updateFilter('tag', 'all')}>#{filters.tag} <X size={12} /></span>
+                            <button type="button" className="tag-chip" aria-label={`Remove tag filter ${filters.tag}`} onClick={() => updateFilter('tag', 'all')}>#{filters.tag} <X size={12} /></button>
                         )}
                         {filters.type !== 'all' && (
-                            <span className="tag-chip type-filter-chip" onClick={() => updateFilter('type', 'all')}>{filters.type} <X size={12} /></span>
+                            <button type="button" className="tag-chip type-filter-chip" aria-label={`Remove type filter ${filters.type}`} onClick={() => updateFilter('type', 'all')}>{filters.type} <X size={12} /></button>
                         )}
                         {filters.letter !== 'all' && (
-                            <span className="tag-chip letter-filter-chip" onClick={() => updateFilter('letter', 'all')}>
+                            <button type="button" className="tag-chip letter-filter-chip" aria-label="Remove starting-letter filter" onClick={() => updateFilter('letter', 'all')}>
                                 Starts with{' '}
                                 <span className={`letter-filter-val notranslate custom-font-text conlang-script-${defaultScriptId}`}>
                                     <GlyphPreviewBadge 
@@ -563,7 +563,7 @@ export default function LexiconList() {
                                     />
                                 </span>
                                 {' '}<X size={12} />
-                            </span>
+                            </button>
                         )}
                         <button 
                             className="btn-v btn-sec-v clear-filters-btn" 

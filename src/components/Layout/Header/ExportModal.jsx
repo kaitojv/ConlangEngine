@@ -98,6 +98,17 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
         }
     }, [isOpen, type, config.conlangName, lexicon]);
 
+    // The modal can only be dismissed by clicking the backdrop, which is not
+    // reachable by keyboard. Allow Escape to close it.
+    useEffect(() => {
+        if (!isOpen) return;
+        const onKey = (e) => {
+            if (e.key === 'Escape' && !isProcessing) onClose();
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [isOpen, isProcessing, onClose]);
+
 
     if (!isOpen) return null;
 
