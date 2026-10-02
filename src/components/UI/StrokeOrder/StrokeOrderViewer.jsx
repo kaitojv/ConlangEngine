@@ -3,6 +3,7 @@ import { Play, Pause, RotateCcw, ChevronLeft, ChevronRight, ChevronDown, PenTool
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { resolveWordStrokes, cleanStrokes, calculateStrokeArrowAndNumber } from '../../../utils/strokeOrderResolver.js';
+import { buildScriptConfig } from '../../../utils/scriptResolver.js';
 import GlyphPreviewBadge from '../Glyph/GlyphPreviewBadge.jsx';
 import Modal from '../Modal/Modal.jsx';
 import FontStudioModal from '../Fontstudio/FontStudio.jsx';
@@ -61,20 +62,41 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
     const scriptRules = useConfigStore(state => state.scriptRules);
     const scriptSystems = useConfigStore(state => state.scriptSystems);
     const activeScriptSystemId = useConfigStore(state => state.activeScriptSystemId);
+    // Orthography inputs for the active script. These are stored per script (not at the
+    // config root), so they are read through scriptDataById below rather than directly
+    // from the store — subscribing to the root fields would always yield empty maps for
+    // non-default scripts.
     const addCustomGlyph = useConfigStore(state => state.addCustomGlyph);
+    const typographySettings = useConfigStore(state => state.typographySettings) || {};
 
     const rawLexicon = useLexiconStore(state => state.lexicon);
     const lexicon = useMemo(() => Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []), [rawLexicon]);
 
     const targetInput = char || word || '';
-    const activeConfig = useMemo(() => ({
-        phonologyTypes: explicitScriptType || phonologyTypes || 'alphabetic',
-        customGlyphs,
-        scriptDataById,
-        scriptRules,
-        scriptSystems,
-        activeScriptSystemId
-    }), [explicitScriptType, phonologyTypes, customGlyphs, scriptDataById, scriptRules, scriptSystems, activeScriptSystemId]);
+    // Resolve the active script's own data (alphabetGlyphs / syllabaryMap /
+    // featuralComponents / blockSettings / blockTemplates …). Stroke lookup is keyed by
+    // script codepoints, so it must be fed the active script's mapping — the root config
+    // fields are empty for non-default scripts. buildScriptConfig is the canonical
+    // resolver and guarantees every field the resolver reads is populated.
+    const activeScriptId = activeScriptSystemId || scriptRules?.defaultScriptId || 'default';
+    const activeConfig = useMemo(() => {
+        const base = {
+            ...useConfigStore.getState(),
+            phonologyTypes,
+            customGlyphs,
+            scriptDataById,
+            scriptRules,
+            scriptSystems,
+            activeScriptSystemId: activeScriptId,
+            typographySettings
+        };
+        const resolved = buildScriptConfig(base, activeScriptId) || base;
+        // An explicit scriptType prop (e.g. opening a specific writing system) wins over
+        // whatever the active script says, since the caller told us what to render.
+        return explicitScriptType
+            ? { ...resolved, phonologyTypes: explicitScriptType, customGlyphs }
+            : resolved;
+    }, [explicitScriptType, phonologyTypes, customGlyphs, scriptDataById, scriptRules, scriptSystems, activeScriptId, typographySettings]);
 
     // Local override for edits made directly in this viewer
     const [customStrokesOverride, setCustomStrokesOverride] = useState(null);

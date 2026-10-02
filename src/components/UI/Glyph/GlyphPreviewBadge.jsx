@@ -4,6 +4,53 @@ import { cleanStrokes } from '../../../utils/strokeOrderResolver.js';
 import './glyphPreviewBadge.css';
 
 /**
+ * Resolves drawn strokes for a glyph from the config store, mirroring the lookup the
+ * badge itself performs (explicit strokes prop, then root customGlyphs, then any
+ * script's customGlyphs). Exported so callers can decide whether a glyph exists at all
+ * — e.g. to render a "no entry" state instead of an empty placeholder box.
+ */
+export function useResolvedGlyphStrokes(glyph, strokes = null) {
+    const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
+    const scriptDataById = useConfigStore(state => state.scriptDataById) || {};
+
+    return React.useMemo(() => {
+        if (strokes && Array.isArray(strokes)) return cleanStrokes(strokes);
+        if (!glyph) return null;
+
+        let code = null;
+        if (typeof glyph === 'number') {
+            code = glyph;
+        } else if (typeof glyph === 'string' && glyph.length > 0) {
+            const chars = [...glyph];
+            if (chars.length === 1) code = glyph.codePointAt(0);
+        }
+
+        let rawStrokes = null;
+        if (code != null) {
+            rawStrokes = customGlyphs[code] || customGlyphs[String(code)] || customGlyphs[glyph];
+        } else {
+            rawStrokes = customGlyphs[glyph];
+        }
+
+        if (!rawStrokes && scriptDataById) {
+            for (const scriptData of Object.values(scriptDataById)) {
+                const sg = scriptData?.customGlyphs;
+                if (!sg) continue;
+                if (code != null && (sg[code] || sg[String(code)] || sg[glyph])) {
+                    rawStrokes = sg[code] || sg[String(code)] || sg[glyph];
+                    break;
+                } else if (sg[glyph]) {
+                    rawStrokes = sg[glyph];
+                    break;
+                }
+            }
+        }
+
+        return rawStrokes ? cleanStrokes(rawStrokes) : null;
+    }, [glyph, strokes, customGlyphs, scriptDataById]);
+}
+
+/**
  * Renders a visual preview of a glyph.
  * If strokes exist in customGlyphs (or passed via props), renders vector SVG strokes.
  * This guarantees that custom PUA characters (e.g. U+E000) NEVER render as tofu boxes.

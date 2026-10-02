@@ -1,4 +1,5 @@
 import { compileBlockStrokes, parseList } from './blockFontGenerator.jsx';
+import { transliterateText } from './transliteration.js';
 
 /**
  * Filter out metadata and invalid dummy markers from a stroke array.
@@ -284,6 +285,53 @@ export const calculateStrokeArrowAndNumber = (stroke, strokeIndex) => {
 };
 
 /**
+ * Maps a romanized word into the characters the active script would actually render,
+ * each paired with its original base letter. Used by the alphabetic/abjad/abugida
+ * fallback in resolveWordStrokes so stroke lookups hit the same codepoints that
+ * customGlyphs is keyed by (i.e. the transliterator's output), while still exposing the
+ * romanized letter as the per-character label.
+ *
+ * Returns one entry per rendered character: { char, base, label }.
+ */
+const resolveScriptChars = (word, config) => {
+    const out = [];
+    let rendered = '';
+
+    try {
+        rendered = transliterateText(word, config, []) || '';
+    } catch (e) {
+        rendered = '';
+    }
+
+    // If transliteration produced nothing usable (no phonology configured, or the text
+    // was already in the script), fall back to the input characters verbatim.
+    if (!rendered) {
+        return Array.from(word).map(ch => ({ char: ch, base: ch, label: ch }));
+    }
+
+    // Pair each rendered character with the base letter it came from. The transliterator
+    // consumes variable numbers of characters per grapheme (digraphs like "sh"), so we
+    // align greedily against the source word and let unmatched positions share the last
+    // known base rather than dropping the label.
+    const sourceChars = Array.from(word);
+    let srcIdx = 0;
+    let lastBase = '';
+
+    for (const ch of rendered) {
+        const consumed = sourceChars[srcIdx];
+        if (consumed && !/[\uE000-\uF8FF]/.test(ch)) {
+            lastBase = consumed;
+            srcIdx++;
+        } else if (ch === consumed) {
+            srcIdx++;
+        }
+        out.push({ char: ch, base: consumed || lastBase, label: consumed || lastBase || ch });
+    }
+
+    return out.length ? out : Array.from(word).map(ch => ({ char: ch, base: ch, label: ch }));
+};
+
+/**
  * Resolves stroke data for a given word or character based on writing system.
  * Returns an array of character stroke representations.
  */
@@ -488,9 +536,21 @@ export const resolveWordStrokes = (wordOrChar, config = {}, lexicon = []) => {
     // 4. FALLBACK (Alphabetic / Other)
     // ─────────────────────────────────────────────────────────────────────────
     else {
-        // Try resolving custom strokes for whatever characters were passed
-        Array.from(cleanWord).forEach(ch => {
+        // Alphabetic / abjad / abugida and anything else unmapped.
+        // The incoming text is usually the ROMANIZED form ("kǔ"), while customGlyphs is
+        // keyed by the *rendered* script codepoint the transliterator would produce. Looking
+        // strokes up by the romanized character therefore always missed, showing
+        // "No Stroke Data Found" for perfectly valid glyphs. Transliterate first, then
+        // resolve strokes per resulting character.
+        const scriptChars = resolveScriptChars(cleanWord, config);
+
+        scriptChars.forEach((entry) => {
+            const ch = entry.char;
             let strokes = getStrokesForChar(ch);
+            if (strokes.length === 0) {
+                // Try the romanized base as well, in case glyphs were drawn against it.
+                strokes = getStrokesForChar(entry.base);
+            }
             if (strokes.length === 0 && featuralComponents[ch]) {
                 strokes = cleanStrokes(featuralComponents[ch]);
             }
@@ -498,7 +558,7 @@ export const resolveWordStrokes = (wordOrChar, config = {}, lexicon = []) => {
             characters.push({
                 char: ch,
                 charCode: ch.codePointAt(0),
-                label: ch,
+                label: entry.label,
                 strokes,
                 arrows,
                 hasStrokes: strokes.length > 0

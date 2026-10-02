@@ -595,28 +595,86 @@ input:checked + .slider:before {
     transform: translateY(-2px);
 }
 
+/* Preview card: number input + its icon controls. The input flexes so the buttons
+   never overflow the card, mirroring .digit-stem-cell. */
+.preview-input-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.preview-input-row > .test-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-bottom: 0;
+}
+
 .test-input { 
     font-size: 1.5rem; 
-    font-weight: 700; 
+    font-weight: 700;
     text-align: center; 
-    margin-bottom: 1.5rem; 
     background: var(--s4);
     border-radius: 1rem;
 }
 
+/* Result box. The label used to be a bare <label> in a centred block, which left it
+   baseline-aligned against the first line of the glyph. A dedicated label span in a
+   centred column keeps "Result:" stacked cleanly above the value. */
 .result-display { 
+    /* Breathing room between the number input row and the dashed result box; the
+       input no longer carries its own bottom margin now that it lives in a flex row. */
+    margin-top: 1.25rem;
     background: var(--s4); 
     padding: 1.5rem; 
     border-radius: 1rem; 
-    border: 1px dashed var(--acc);
+    border: 1px dashed var(--acc); 
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.result-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--tx2);
 }
 
 .result-value { 
     font-size: 2rem; 
     font-weight: 800; 
     color: var(--acc); 
-    margin-top: 0.5rem; 
+    line-height: 1.15;
+    /* A generated number is one long glyph run; let it wrap instead of blowing out
+       the card, and allow it to shrink as a flex item. */
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+.result-value-empty {
+    color: var(--tx3);
+    opacity: 0.6;
+}
+
+/* Revealed the eye toggle but no drawn glyph exists for this composed number
+   (typically because it has no lexicon entry). Shown instead of an empty box. */
+.result-no-glyph {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.25rem 1rem;
+    border: 1px dashed var(--bd2);
+    border-radius: 0.75rem;
+    color: var(--tx3);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
 }
 
 .sticky-top { position: sticky; top: 2rem; }

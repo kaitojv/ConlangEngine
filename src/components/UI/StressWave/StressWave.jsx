@@ -54,36 +54,44 @@ export default function StressWave({ word, stress, tone, customVowelsStr, width 
 
     const W = 100 / Math.max(1, syllableCount);
     let path = `M 0 15 `;
+    // When the stressed syllable is flat, every point sits on the baseline and the whole
+    // curve collapses into a featureless horizontal rule. Draw those syllables just above
+    // the baseline instead, so the trace still reads as a curve rather than a solid bar.
+    const BASELINE = 15;
+    const FLAT = 12;
+
     for (let i = 0; i < syllableCount; i++) {
         const startX = i * W;
-        const endX = (i + 1) * W;
+        const endX = i + 1 * W;
         const midX = i * W + W / 2;
         
         if (i === stressIndex) {
             if (tone) {
                 const t = tone.toLowerCase();
                 if (t === 'high') {
-                    path += `L ${startX} 2 L ${endX} 2 L ${endX} 15 `;
+                    path += `L ${startX} 2 L ${endX} 2 L ${endX} ${BASELINE} `;
                 } else if (t === 'low') {
-                    path += `L ${startX} 12 L ${endX} 12 L ${endX} 15 `;
+                    path += `L ${startX} ${FLAT} L ${endX} ${FLAT} L ${endX} ${BASELINE} `;
                 } else if (t === 'mid') {
-                    path += `L ${startX} 8 L ${endX} 8 L ${endX} 15 `;
+                    path += `L ${startX} 8 L ${endX} 8 L ${endX} ${BASELINE} `;
                 } else if (t === 'rising') {
-                    path += `L ${endX} 2 L ${endX} 15 `;
+                    path += `L ${endX} 2 L ${endX} ${BASELINE} `;
                 } else if (t === 'falling') {
-                    path += `L ${startX} 2 L ${endX} 15 `;
+                    path += `L ${startX} 2 L ${endX} ${BASELINE} `;
                 } else if (t === 'dipping') {
-                    path += `L ${startX} 2 L ${midX} 15 L ${endX} 2 L ${endX} 15 `;
+                    path += `L ${startX} 2 L ${midX} ${BASELINE} L ${endX} 2 L ${endX} ${BASELINE} `;
                 } else if (t === 'peaking') {
-                    path += `L ${midX} 2 L ${endX} 15 `;
+                    path += `L ${midX} 2 L ${endX} ${BASELINE} `;
                 } else {
-                    path += `Q ${midX} -5, ${endX} 15 `;
+                    path += `Q ${midX} -5, ${endX} ${BASELINE} `;
                 }
             } else {
-                path += `Q ${midX} -5, ${endX} 15 `;
+                path += `Q ${midX} -5, ${endX} ${BASELINE} `;
             }
         } else {
-            path += `L ${endX} 15 `;
+            // Unstressed syllables sit slightly above the baseline rather than exactly on
+            // it; drawing them at the same y makes the stroke look like a filled block.
+            path += `L ${endX} ${FLAT} `;
         }
     }
 

@@ -4,7 +4,7 @@ import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
-import { Languages, Hash, Plus, Trash2, Calculator, Settings, Edit2, Check, Table2, BookA, Type, Mic2, PenTool, ListChecks, Rows, Eye, EyeOff } from 'lucide-react';
+import { Languages, Hash, Plus, Trash2, Calculator, Settings, Edit2, Check, Table2, BookA, Type, Mic2, PenTool, ListChecks, Rows, Eye, EyeOff, FileX as FileXIcon } from 'lucide-react';
 import IpaReferencePage from './IpaReferencePage.jsx';
 import './orthographyPage.css';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
@@ -13,7 +13,7 @@ import { getScriptSystem, getDefaultScriptId } from '../../../utils/scriptResolv
 import ScriptManager from '../../UI/ScriptManager/ScriptManager.jsx';
 import ScriptRulesEditor from '../../UI/ScriptRulesEditor/ScriptRulesEditor.jsx';
 import GlyphDetailsModal from '../../UI/GlyphDetailsModal/GlyphDetailsModal.jsx';
-import GlyphPreviewBadge from '../../UI/Glyph/GlyphPreviewBadge.jsx';
+import GlyphPreviewBadge, { useResolvedGlyphStrokes } from '../../UI/Glyph/GlyphPreviewBadge.jsx';
 import StrokeOrderModal from '../../UI/StrokeOrder/StrokeOrderModal.jsx';
 import toast from 'react-hot-toast';
 
@@ -361,6 +361,8 @@ const NumbersTab = () => {
     // through to `return cleanWord`, i.e. the romanized name instead of the glyph.
     const lexicon = useLexiconStore(state => state.lexicon) || [];
     const [testNumber, setTestNumber] = useState('');
+    // Eye toggle: hides the generated number glyph until explicitly revealed.
+    const [showTestResult, setShowTestResult] = useState(false);
     const [viewMode, setViewMode] = useState('basic');
     const [listCols, setListCols] = useState(1);
     const [selectedNumberForStroke, setSelectedNumberForStroke] = useState(null);
@@ -495,6 +497,16 @@ const NumbersTab = () => {
         if (isNaN(val)) return '';
         return generateNumberName(val);
     }, [testNumber, generateNumberName]);
+
+    // Glyph form of the previewed number, and whether that glyph is actually drawn.
+    // A composed number (e.g. "pardeko sorum") usually has no lexicon entry, so the
+    // eye must degrade to a clear "no entry" state rather than an empty glyph box.
+    const testGlyph = useMemo(
+        () => (testResult ? (transliterate(testResult, lexicon) || testResult) : ''),
+        [testResult, lexicon]
+    );
+    const testGlyphStrokes = useResolvedGlyphStrokes(testGlyph);
+    const testHasGlyph = Boolean(testGlyphStrokes && testGlyphStrokes.length > 0);
 
     const digitIndices = Array.from({ length: Math.max(0, numeralBase - 1) }, (_, i) => i + 1);
 
@@ -829,7 +841,7 @@ const NumbersTab = () => {
                             Preview
                         </h2>
                         <div className="preview-body">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <div className="preview-input-row">
                                 <input
                                     type="number"
                                     className="fi test-input"
@@ -838,42 +850,60 @@ const NumbersTab = () => {
                                     placeholder="42"
                                 />
                                 {testResult && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedNumberForStroke({ word: testResult, name: `${testNumber || 'Result'}: ${testResult}` })}
-                                        title="View stroke order"
-                                        style={{
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            height: '40px',
-                                            width: '40px',
-                                            flexShrink: 0,
-                                            background: 'var(--s2)',
-                                            border: '1px solid var(--bd)',
-                                            borderRadius: '6px',
-                                            color: 'var(--acc)',
-                                            cursor: 'pointer'
-                                        }}
-                                    >
-                                        <PenTool size={16} />
-                                    </button>
+                                    <>
+                                        <button
+                                            type="button"
+                                            className="num-icon-btn"
+                                            onClick={() => setSelectedNumberForStroke({ word: testResult, name: `${testNumber || 'Result'}: ${testResult}` })}
+                                            title="View stroke order"
+                                        >
+                                            <PenTool size={13} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`num-icon-btn ${showTestResult ? 'active' : ''}`}
+                                            onClick={() => setShowTestResult(prev => !prev)}
+                                            title={showTestResult ? 'Hide glyph' : 'Show glyph'}
+                                        >
+                                            {showTestResult ? <EyeOff size={13} /> : <Eye size={13} />}
+                                        </button>
+                                    </>
                                 )}
                             </div>
                             <div className="result-display">
-                                <label>Result:</label>
-                                <div
-                                    className={`result-value custom-font-text notranslate ${testResult ? 'result-value-clickable' : ''}`}
-                                    onClick={() => {
-                                        if (testResult) {
-                                            setSelectedNumberForStroke({ word: testResult, name: `${testNumber || 'Result'}: ${testResult}` });
-                                        }
-                                    }}
-                                    title={testResult ? "Click to view stroke order" : ""}
-                                >
-                                    <span>{transliterate(testResult || '') || '—'}</span>
-                                    {testResult && <PenTool size={16} style={{ color: 'var(--acc)', opacity: 0.8 }} />}
-                                </div>
+                                <span className="result-label">Result:</span>
+                                {/* Default: the written (romanized) form. The eye toggle
+                                    swaps this for the drawn glyph. */}
+                                {testResult ? (
+                                    showTestResult ? (
+                                        testHasGlyph ? (
+                                            <GlyphPreviewBadge
+                                                glyph={testGlyph}
+                                                size={64}
+                                                hideOnEmpty
+                                                showCode={false}
+                                                title="Glyph form"
+                                            />
+                                        ) : (
+                                            <div className="result-no-glyph">
+                                                <FileXIcon size={24} />
+                                                <span>No glyph entry for this number</span>
+                                            </div>
+                                        )
+                                    ) : (
+                                        <div
+                                            className="result-value custom-font-text notranslate result-value-clickable"
+                                            onClick={() => setSelectedNumberForStroke({ word: testResult, name: `${testNumber || 'Result'}: ${testResult}` })}
+                                            title="Click to view stroke order"
+                                        >
+                                            <span>{testResult}</span>
+                                        </div>
+                                    )
+                                ) : (
+                                    <div className="result-value result-value-empty">
+                                        <span>—</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </Card>

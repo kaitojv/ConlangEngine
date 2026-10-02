@@ -24,7 +24,9 @@
 
 .glyph-large {
     font-size: 8rem;
-    line-height: 1.1;
+    /* Tall script glyphs need room between wrapped lines; 1.1 made consecutive lines
+       of a long word collide. */
+    line-height: 1.35;
     color: var(--tx);
     text-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     max-width: 100%;
