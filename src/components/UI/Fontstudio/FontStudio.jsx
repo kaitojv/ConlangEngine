@@ -7,6 +7,7 @@ import Button from '../Buttons/Buttons.jsx';
 import { RotateCcw, RotateCw, Trash2, Download, Pencil, Minus, Spline, Eraser, Feather, FlipHorizontal, FlipVertical, Grid, Square, Circle, Triangle, SquareDashed, PenTool, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ZoomIn, ZoomOut, MousePointer, Maximize2, Sliders, Move, Crosshair, Brush, Type, Plus, Pointer } from 'lucide-react';
 import { exportStrokesAsSVG } from '../../../utils/svgExporter.jsx';
 import { parseSVGToStrokes } from '../../../utils/svgImporter.jsx';
+import { simplifyGlyph, countGlyphPoints } from '../../../utils/glyphSimplify.js';
 import './fontStudio.css';
 
 const generateCurvePoints = (p0, p1, p2) => {
@@ -1127,6 +1128,27 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         }));
     };
 
+    // Reduce the point count of the glyph currently on the canvas.
+    //
+    // Strokes are sampled densely so drawing and erasing stay accurate, but
+    // that density is what makes saved glyphs huge. This rewrites the current
+    // drawing in a lighter, visually equivalent form; it only affects the
+    // canvas until the user saves, so it is safe to try and compare.
+    const [simplifyTolerance, setSimplifyTolerance] = useState(0.5);
+
+    const handleSimplifyStrokes = () => {
+        const withMeta = [{ isMeta: true, scale: glyphScale, leftMargin, rightMargin, yOffset }, ...strokes];
+        const simplified = simplifyGlyph(withMeta, {
+            tolerance: simplifyTolerance,
+            precision: 2,
+        });
+        // Strip the placeholder metadata back out; the canvas state never
+        // includes it and the real meta object is built at save time.
+        setStrokes(simplified.filter((entry) => Array.isArray(entry)));
+    };
+
+    const canvasPointCount = useMemo(() => countGlyphPoints(strokes), [strokes]);
+
     const handleSave = async () => {
         if (strokes.length === 0) return alert("Draw something before saving!");
 
@@ -1232,6 +1254,27 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                             <Button variant="default" className="btn-sm" onClick={() => setBackgroundStrokes([])} title="Clear background tracing guide" style={{ color: 'var(--tx2)' }}>
                                 <Trash2 size={14} style={{ marginRight: '4px' }} /> Clear Bg
                             </Button>
+                        )}
+                        <Button variant="default" className="btn-sm" onClick={handleSimplifyStrokes} disabled={strokes.length === 0} title="Reduce the number of points in this glyph so it saves much smaller. Visually equivalent.">
+                            <Spline size={14} style={{ marginRight: '4px' }} /> Lighten
+                        </Button>
+                        <label className="fs-simplify-tolerance" title="Higher tolerance means fewer points and a smaller file, but a slightly looser outline">
+                            Tolerance
+                            <input
+                                type="range"
+                                className="range range-xs range-primary"
+                                min="0.1"
+                                max="3"
+                                step="0.1"
+                                value={simplifyTolerance}
+                                onChange={(e) => setSimplifyTolerance(parseFloat(e.target.value))}
+                            />
+                            <span>{simplifyTolerance.toFixed(1)}px</span>
+                        </label>
+                        {canvasPointCount > 0 && (
+                            <span className="fs-simplify-count" title="Points in the current drawing">
+                                {canvasPointCount.toLocaleString()} pts
+                            </span>
                         )}
                     </div>
                 </div>

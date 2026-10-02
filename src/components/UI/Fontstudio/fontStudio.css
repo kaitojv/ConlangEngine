@@ -388,6 +388,33 @@
     gap: 8px;
 }
 
+/* Glyph "Lighten" controls: tolerance slider plus a live point counter, so the
+   effect of simplification is visible before saving. */
+.fs-simplify-tolerance {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    color: var(--tx3);
+    white-space: nowrap;
+}
+
+.fs-simplify-tolerance input[type="range"] {
+    width: 90px;
+}
+
+.fs-simplify-tolerance span {
+    font-variant-numeric: tabular-nums;
+    min-width: 34px;
+}
+
+.fs-simplify-count {
+    font-size: 0.72rem;
+    color: var(--tx3);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
 .fs-ref-select {
     padding: 6px 10px;
     border-radius: 6px;
