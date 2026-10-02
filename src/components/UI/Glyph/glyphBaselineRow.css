@@ -3,12 +3,13 @@
     align-items: center;
     justify-content: center;
     max-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
     padding: 4px 0;
 }
 
 .gbr-svg {
     display: block;
-    max-width: none;
+    /* Long runs shrink to the panel instead of pushing a scrollbar; the viewBox
+       keeps the aspect ratio, so the glyphs stay in step with the real font. */
+    max-width: 100%;
+    height: auto;
 }

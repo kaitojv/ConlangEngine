@@ -1,119 +1,104 @@
 // src/components/UI/Glyph/GlyphBaselineRow.jsx
-// Renders a run of glyphs on a shared baseline, honouring each glyph's own
-// character gaps (left/right margins) and yOffset, the same values the font
-// compiler uses for advance width. This keeps the preview typographically
-// faithful to the rendered script - important for connected/baseline scripts
-// where glyphs visually join.
+// Renders a run of glyphs on a shared baseline using the very metrics
+// fontCompiler bakes into the compiled font - per-glyph character gaps, yOffset,
+// ink scale and trace width - and then charges the Graphism "Letter Spacing"
+// between them exactly like the CSS letter-spacing the real font receives.
+// Reading those settings straight from the store is what keeps a drawn run in
+// step with the rendered script at all times, which matters most for connected
+// scripts where a mismatched gap breaks the word apart.
 import React from 'react';
-import { BASELINE_Y } from './resolveGlyphStrokes.js';
+import { useConfigStore } from '../../../store/useConfigStore.jsx';
+import { layoutRun } from './glyphRunLayout.js';
 import './glyphBaselineRow.css';
 
-/** Authoring space each glyph is authored in. */
-const SPACE = 300;
-
-/** Visual stroke weight, in authoring units. */
-const STROKE_W = 14;
-
-/**
- * Lays out one glyph and returns the pen advance, matching fontCompiler's formula:
- *   advance = leftMargin + inkWidth * 2.85 * scale + rightMargin + strokeWidth * scale
- * Using the same maths here means the gaps shown match the real font metrics.
- */
-const layoutGlyph = (metrics) => {
-    const scale = metrics?.scale ?? 1;
-    const width = metrics ? metrics.ink.width * 2.85 * scale : SPACE;
-    const left = metrics ? metrics.leftMargin : 0;
-    const right = metrics ? metrics.rightMargin : 0;
-    const advance = left + width + right + STROKE_W * scale;
-    // Shift so the glyph's ink starts just after its left bearing.
-    const offsetX = left - (metrics ? metrics.ink.minX * scale : 0);
-    return { advance, offsetX, offsetY: metrics?.yOffset ?? 0 };
-};
-
-/**
- * Walks the run once, advancing a pen by each glyph's own advance width and
- * inserting the separator only at component boundaries. Pure: returns the
- * finished positions so the render pass never mutates state.
- */
-const layoutRun = (parts, separator) => {
-    const out = [];
-    let pen = 0;
-    parts.forEach((part, i) => {
-        const layout = layoutGlyph(part.metrics);
-        if (part.isNewComponent && i > 0 && separator) {
-            pen += separator.length * 6;
-        }
-        out.push({
-            part,
-            key: `${part.char}-${i}`,
-            gx: pen + layout.offsetX,
-            gy: layout.offsetY,
-            midX: pen + layout.advance / 2
-        });
-        pen += layout.advance;
-    });
-    return { items: out, total: pen };
-};
+/** Font-unit padding so the dashed baseline is never clipped by the viewBox. */
+const BASELINE_PAD = 12;
 
 const GlyphBaselineRow = ({
     parts = [],
     separator = '',
     strokeColor = 'var(--acc)',
-    strokeWidth = STROKE_W,
     height = 96,
     showBaseline = true,
-    className = ''
+    className = '',
+    // Optional overrides; by default the Graphism settings are the source of truth.
+    letterSpacing,
+    fontScale,
+    traceWidth
 }) => {
+    const settings = useConfigStore(state => state.typographySettings) || {};
+
+    const spacing = Number.isFinite(letterSpacing)
+        ? letterSpacing
+        : (settings.letterSpacing ?? 0);
+    const scaleSetting = Number.isFinite(fontScale)
+        ? fontScale
+        : (settings.customFontScale ?? 1);
+    const traceSetting = Number.isFinite(traceWidth)
+        ? traceWidth
+        : (settings.traceWidth ?? 30);
+
     if (parts.length === 0) return null;
 
-    const { items, total } = layoutRun(parts, separator);
-    if (total <= 0) return null;
+    const { items, box } = layoutRun(parts, {
+        separator,
+        traceWidth: traceSetting,
+        letterSpacing: spacing,
+        fontScale: scaleSetting
+    });
+    if (!box || box.width <= 0 || box.height <= 0) return null;
 
-    const viewHeight = height;
-    const viewWidth = total;
-    const scale = viewHeight / SPACE;
+    // The font baseline sits at fontY 0, i.e. below the whole ink box.
+    const top = showBaseline ? Math.min(box.y, -BASELINE_PAD) : box.y;
+    const bottom = showBaseline
+        ? Math.max(box.y + box.height, BASELINE_PAD)
+        : box.y + box.height;
+    const viewHeight = bottom - top;
+
+    const scale = height / viewHeight;
+    const viewWidth = box.width * scale;
 
     return (
-        <div className={`gbr-wrapper ${className}`} style={{ width: viewWidth * scale, height: viewHeight }}>
+        <div className={`gbr-wrapper ${className}`} style={{ width: viewWidth, height }}>
             <svg
                 className="gbr-svg"
-                viewBox={`0 0 ${viewWidth} ${viewHeight}`}
-                width={viewWidth * scale}
-                height={viewHeight}
+                viewBox={`${box.x} ${top} ${box.width} ${viewHeight}`}
+                width={viewWidth}
+                height={height}
                 role="img"
             >
                 {showBaseline && (
                     <line
-                        x1={0}
-                        y1={BASELINE_Y}
-                        x2={viewWidth}
-                        y2={BASELINE_Y}
+                        x1={box.x}
+                        y1={0}
+                        x2={box.x + box.width}
+                        y2={0}
                         stroke="var(--bd)"
                         strokeWidth={1.5}
                         strokeDasharray="6 5"
+                        vectorEffect="non-scaling-stroke"
                     />
                 )}
 
                 {items.map((item) => {
-                        const { part, gx, gy, midX } = item;
-                        if (!part.metrics || part.metrics.strokes.length === 0) {
+                        if (!item.hasInk) {
                             return (
                                 <text
                                     key={item.key}
-                                    x={midX}
-                                    y={BASELINE_Y - 12}
+                                    x={item.centerX}
+                                    y={0}
                                     textAnchor="middle"
                                     fill="var(--tx3)"
-                                    fontSize="26"
+                                    fontSize={item.fontSize}
                                 >
-                                    {part.char}
+                                    {item.part.char}
                                 </text>
                             );
                         }
 
                         return (
-                            <g key={item.key} transform={`translate(${gx} ${gy})`}>
-                                {part.metrics.strokes.map((stroke, si) => {
+                            <g key={item.key} transform={item.transform}>
+                                {item.part.metrics.strokes.map((stroke, si) => {
                                     if (!stroke.length) return null;
                                     if (stroke.length === 1) {
                                         return (
@@ -121,7 +106,7 @@ const GlyphBaselineRow = ({
                                                 key={si}
                                                 cx={stroke[0].x}
                                                 cy={stroke[0].y}
-                                                r={strokeWidth / 2}
+                                                r={item.strokeWidth / 2}
                                                 fill={strokeColor}
                                             />
                                         );
@@ -133,7 +118,7 @@ const GlyphBaselineRow = ({
                                             key={si}
                                             d={d + (stroke.isFilled ? ' Z' : '')}
                                             stroke={strokeColor}
-                                            strokeWidth={stroke.isFilled ? 0 : strokeWidth}
+                                            strokeWidth={stroke.isFilled ? 0 : item.strokeWidth}
                                             strokeLinecap="round"
                                             strokeLinejoin="round"
                                             fill={stroke.isFilled ? strokeColor : 'none'}

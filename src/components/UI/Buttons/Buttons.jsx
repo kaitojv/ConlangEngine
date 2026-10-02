@@ -14,7 +14,12 @@ export default function Button({ variant = 'save', children, className = '', ...
     import: 'import',
     toggle: 'toggle',
     'toggle-active': 'toggle-active',
-    default: 'default'
+    default: 'default',
+    // `imp` = generic prominent/primary CTA. Historically it fell through to
+    // the `save` mapping, so it is deliberately kept visually identical to
+    // avoid changing ~45 existing call sites app-wide.
+    imp: 'imp',
+    accent: 'accent'
   })[variant] || 'save';
   
   return (

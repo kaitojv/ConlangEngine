@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
@@ -8,11 +8,78 @@ import { generateCourseExercise } from '@/utils/courseGenerator.js';
 import { resolveWordStrokes } from '@/utils/strokeOrderResolver.js';
 import AudioRecorder from './AudioRecorder.jsx';
 import ExercisePlayer from './ExercisePlayer.jsx';
-import { Plus, Trash2, Save, ArrowLeft, GripVertical, Wand2, X, Play, ChevronUp, ChevronDown, Bold, Italic, Underline, Smile, Zap, Star, Crown, Book, Brain, Flame, Dumbbell, Sword, Shield } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowLeft, ArrowRight, ArrowUp, Wand2, X, Play, ChevronUp, ChevronDown, ChevronRight, Search, Mic, Volume2, AlertTriangle, Bold, Italic, Underline, Smile, Zap, Star, Crown, Book, Brain, Flame, Dumbbell, Sword, Shield, Check } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import './courseBuilder.css';
 
 const COMMON_ICONS = ['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'Heart', 'Star', 'Check', 'X', 'AlertCircle', 'Info', 'Book', 'Brain', 'Volume2', 'Ear', 'Eye', 'Pencil', 'Flame', 'Sparkles', 'ThumbsUp', 'Coffee', 'Globe', 'Music', 'MessageCircle', 'Lightbulb', 'Zap', 'Shield', 'Smile'];
+
+const PHRASE_TYPES = [
+    'translate_to_english', 'translate_to_conlang', 'word_bank', 'multiple_choice',
+    'matching_pairs', 'teach', 'listening', 'fill_blank', 'sentence_reorder',
+    'picture_match', 'true_false', 'conjugation_drill', 'glyph_drawing'
+];
+
+const TYPE_LABELS = {
+    translate_to_english: 'English Typing',
+    translate_to_conlang: 'Conlang Typing',
+    word_bank: 'Word Bank',
+    multiple_choice: 'Multiple Choice',
+    matching_pairs: 'Matching Pairs',
+    teach: 'Teaching Card',
+    listening: 'Listening Exercise',
+    fill_blank: 'Fill-in-the-Blank',
+    sentence_reorder: 'Sentence Reorder',
+    picture_match: 'Picture Match',
+    true_false: 'True or False',
+    conjugation_drill: 'Conjugation Drill',
+    glyph_drawing: 'Draw the Glyph'
+};
+
+// Pronunciation only makes sense where the learner actually reads/hears the
+// conlang text. Info cards, pair grids and emoji prompts have nothing to speak.
+const AUDIO_NEVER_TYPES = new Set(['teach', 'matching_pairs', 'picture_match']);
+// These exercise types are pointless to the learner without hearing them.
+const AUDIO_ALWAYS_TYPES = new Set(['listening', 'glyph_drawing']);
+
+const supportsAudio = (phrase) => !AUDIO_NEVER_TYPES.has(phrase?.type || 'translate_to_english');
+
+// A short, single-line summary of a phrase for its collapsed row.
+const phraseSummary = (phrase) => {
+    const type = phrase.type || 'translate_to_english';
+    if (type === 'teach') return (phrase.english || 'Empty teaching card').replace(/\s+/g, ' ').slice(0, 70);
+    if (type === 'matching_pairs') {
+        const filled = (phrase.pairs || []).filter(p => p?.conlang || p?.english).length;
+        return `${filled} of 4 pairs filled`;
+    }
+    const left = (phrase.conlang || '—').trim();
+    const right = (phrase.english || '').trim();
+    return right ? `${left} → ${right}` : left;
+};
+
+// Flags content a learner would find broken if it shipped as-is.
+const phraseIssues = (phrase) => {
+    const issues = [];
+    const type = phrase.type || 'translate_to_english';
+    if (type === 'teach') {
+        if (!(phrase.english || '').trim()) issues.push('No teaching content');
+    } else if (type === 'matching_pairs') {
+        if (!(phrase.pairs || []).every(p => (p?.conlang || '').trim() && (p?.english || '').trim())) {
+            issues.push('Incomplete pairs');
+        }
+    } else if (type === 'multiple_choice') {
+        if (!(phrase.options || []).filter(Boolean).length) issues.push('No distractor options');
+    } else if (type === 'picture_match') {
+        if (!(phrase.conlang || '').trim()) issues.push('No image/emoji');
+    } else {
+        if (!(phrase.conlang || '').trim()) issues.push('Missing conlang text');
+        // A blank target makes the exercise unanswerable.
+        if (['translate_to_english', 'true_false', 'listening'].includes(type) && !(phrase.english || '').trim()) {
+            issues.push('Missing answer');
+        }
+    }
+    return issues;
+};
 
 const TextcardEditor = ({ value, onChange }) => {
     const textareaRef = React.useRef(null);
@@ -181,6 +248,66 @@ export default function CourseBuilder({ onExit }) {
     const [previewLevel, setPreviewLevel] = useState(null);
     const [genMode, setGenMode] = useState('theme');
 
+    // --- Editor UI state -----------------------------------------------------
+    // Levels and phrases are collapsed by default so a 50-level course is
+    // scannable instead of one endless wall of expanded cards.
+    const [collapsedLevels, setCollapsedLevels] = useState(() => new Set());
+    const [collapsedPhrases, setCollapsedPhrases] = useState(() => new Set());
+    // Audio is opt-in per phrase unless the exercise type needs it.
+    const [audioOpen, setAudioOpen] = useState(() => new Set());
+    const [search, setSearch] = useState('');
+    const [isDirty, setIsDirty] = useState(false);
+
+    const toggleInSet = (setter, id) => {
+        setter(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const toggleLevel = (id) => toggleInSet(setCollapsedLevels, id);
+    const togglePhrase = (id) => toggleInSet(setCollapsedPhrases, id);
+
+    const allCollapsed = courseData.length > 0 && courseData.every(l => collapsedLevels.has(l.id));
+
+    const toggleAllLevels = () => {
+        setCollapsedLevels(prev => {
+            const everyClosed = courseData.length > 0 && courseData.every(l => prev.has(l.id));
+            return everyClosed ? new Set() : new Set(courseData.map(l => l.id));
+        });
+    };
+
+    // Search filters both levels and the phrases inside them, so a phrase can be
+    // found without expanding the level that holds it.
+    const visibleData = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) return courseData;
+        return courseData
+            .map(level => ({
+                ...level,
+                phrases: (level.phrases || []).filter(p =>
+                    phraseSummary(p).toLowerCase().includes(q) ||
+                    TYPE_LABELS[p.type || 'translate_to_english'].toLowerCase().includes(q)
+                )
+            }))
+            .filter(level =>
+                (level.title || '').toLowerCase().includes(q) ||
+                (level.phrases || []).length > 0
+            );
+    }, [courseData, search]);
+
+    const totalIssues = useMemo(
+        () => courseData.reduce((n, l) => n + (l.phrases || []).filter(p => phraseIssues(p).length).length, 0),
+        [courseData]
+    );
+
+    // Any mutation marks the course dirty so Save can advertise unsaved work.
+    const mutate = (updater) => {
+        setCourseData(updater);
+        setIsDirty(true);
+    };
+
     const duplicateLevel = (id) => {
         const levelToCopy = courseData.find(l => l.id === id);
         if (levelToCopy) {
@@ -193,7 +320,7 @@ export default function CourseBuilder({ onExit }) {
             const idx = courseData.findIndex(l => l.id === id);
             const newData = [...courseData];
             newData.splice(idx + 1, 0, newLevel);
-            setCourseData(newData);
+            mutate(newData);
         }
     };
 
@@ -203,10 +330,10 @@ export default function CourseBuilder({ onExit }) {
         const newData = [...courseData];
         if (direction === 'up' && idx > 0) {
             [newData[idx - 1], newData[idx]] = [newData[idx], newData[idx - 1]];
-            setCourseData(newData);
+            mutate(newData);
         } else if (direction === 'down' && idx < newData.length - 1) {
             [newData[idx + 1], newData[idx]] = [newData[idx], newData[idx + 1]];
-            setCourseData(newData);
+            mutate(newData);
         }
     };
 
@@ -226,7 +353,7 @@ export default function CourseBuilder({ onExit }) {
             try {
                 const parsed = JSON.parse(event.target.result);
                 if (Array.isArray(parsed)) {
-                    setCourseData(parsed);
+                    mutate(parsed);
                 } else {
                     alert("Invalid course format");
                 }
@@ -245,7 +372,7 @@ export default function CourseBuilder({ onExit }) {
             lessonNotes: '',
             phrases: []
         };
-        setCourseData([...courseData, newLevel]);
+        mutate([...courseData, newLevel]);
     };
 
     const handleAutoGenerate = async () => {
@@ -329,30 +456,45 @@ export default function CourseBuilder({ onExit }) {
             });
         }
 
-        setCourseData([...courseData, ...newLevels]);
+        mutate([...courseData, ...newLevels]);
         setIsGenerating(false);
         setShowAutoModal(false);
     };
 
     const deleteLevel = (id) => {
-        setCourseData(courseData.filter(l => l.id !== id));
+        const level = courseData.find(l => l.id === id);
+        const label = level?.title || 'Untitled Level';
+        const count = level?.phrases?.length || 0;
+        const detail = count
+            ? ` and its ${count} phrase${count === 1 ? '' : 's'}`
+            : '';
+        // Deleting a level is unrecoverable without a save/reload, so confirm.
+        if (!window.confirm(`Delete "${label}"${detail}?`)) return;
+        mutate(courseData.filter(l => l.id !== id));
     };
 
     const updateLevelTitle = (id, newTitle) => {
-        setCourseData(courseData.map(l => l.id === id ? { ...l, title: newTitle } : l));
+        mutate(courseData.map(l => l.id === id ? { ...l, title: newTitle } : l));
     };
 
     const updateLevelField = (id, field, value) => {
-        setCourseData(courseData.map(l => l.id === id ? { ...l, [field]: value } : l));
+        mutate(courseData.map(l => l.id === id ? { ...l, [field]: value } : l));
     };
 
     const addPhrase = (levelId) => {
-        setCourseData(courseData.map(l => {
+        // A freshly added phrase is opened for editing rather than left hidden.
+        const id = `phrase-${Date.now()}`;
+        setCollapsedPhrases(prev => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+        });
+        mutate(courseData.map(l => {
             if (l.id === levelId) {
                 return {
                     ...l,
                     phrases: [...l.phrases, { 
-                        id: `phrase-${Date.now()}`, 
+                        id,
                         type: 'translate_to_english', 
                         conlang: '', 
                         english: '',
@@ -370,7 +512,7 @@ export default function CourseBuilder({ onExit }) {
     };
 
     const deletePhrase = (levelId, phraseId) => {
-        setCourseData(courseData.map(l => {
+        mutate(courseData.map(l => {
             if (l.id === levelId) {
                 return {
                     ...l,
@@ -382,7 +524,7 @@ export default function CourseBuilder({ onExit }) {
     };
 
     const movePhrase = (levelId, pIdx, direction) => {
-        setCourseData(courseData.map(l => {
+        mutate(courseData.map(l => {
             if (l.id === levelId) {
                 const newPhrases = [...l.phrases];
                 if (direction === 'up' && pIdx > 0) {
@@ -397,7 +539,7 @@ export default function CourseBuilder({ onExit }) {
     };
 
     const updatePhrase = (levelId, phraseId, field, value) => {
-        setCourseData(courseData.map(l => {
+        mutate(courseData.map(l => {
             if (l.id === levelId) {
                 return {
                     ...l,
@@ -410,6 +552,7 @@ export default function CourseBuilder({ onExit }) {
 
     const saveCourse = () => {
         updateConfig({ customCourse: courseData });
+        setIsDirty(false);
         onExit(); // return to map
     };
 
@@ -417,38 +560,121 @@ export default function CourseBuilder({ onExit }) {
         <Card className="course-builder">
             <div className="cb-header">
                 <div className="cb-header-title">
-                    <Button variant="default" onClick={onExit} style={{ padding: '8px' }}>
+                    <Button variant="default" onClick={onExit} style={{ padding: '8px' }} title="Back to learning path">
                         <ArrowLeft size={18} />
                     </Button>
                     <h2 className="flex sg-title mb-0">Course Builder</h2>
                 </div>
-                <Button variant="imp" onClick={saveCourse}>
-                    <Save size={16} style={{marginRight: '8px'}} /> Save Course
-                </Button>
+                <div className="cb-header-actions">
+                    {isDirty && (
+                        <span className="cb-dirty-badge" title="You have unsaved changes">
+                            <span className="cb-dirty-dot" /> Unsaved changes
+                        </span>
+                    )}
+                    <Button variant="imp" onClick={saveCourse}>
+                        <Save size={16} /> Save Course
+                    </Button>
+                </div>
             </div>
 
             <div className="cb-intro">
                 <p>Create your own Duolingo-style learning path! Add levels, and define the specific sentence translations you want to teach.</p>
             </div>
 
+            <div className="cb-toolbar">
+                <div className="cb-search">
+                    <Search size={16} className="cb-search-icon" />
+                    <input
+                        type="text"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search levels and phrases..."
+                        className="cb-search-input notranslate"
+                    />
+                    {search && (
+                        <button
+                            type="button"
+                            className="cb-search-clear"
+                            onClick={() => setSearch('')}
+                            title="Clear search"
+                        >
+                            <X size={14} />
+                        </button>
+                    )}
+                </div>
+                <div className="cb-toolbar-right">
+                    {totalIssues > 0 && (
+                        <span className="cb-issue-badge" title="Phrases with missing or incomplete content">
+                            <AlertTriangle size={14} /> {totalIssues} incomplete
+                        </span>
+                    )}
+                    <Button
+                        variant="default"
+                        onClick={toggleAllLevels}
+                        disabled={courseData.length === 0}
+                        className="cb-toolbar-btn"
+                    >
+                        {allCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                        {allCollapsed ? 'Expand all' : 'Collapse all'}
+                    </Button>
+                </div>
+            </div>
+
+            {visibleData.length === 0 && (
+                <div className="cb-empty">
+                    {search
+                        ? `No levels or phrases match "${search}".`
+                        : 'No levels yet. Create your first level to get started.'}
+                </div>
+            )}
+
             <div className="cb-levels">
-                {courseData.map((level) => (
-                    <div key={level.id} className="cb-level-card">
+                {visibleData.map((level) => {
+                    const realIndex = courseData.findIndex(l => l.id === level.id);
+                    // A search must always reveal its matches, never leave them
+                    // hidden behind a collapsed card.
+                    const levelCollapsed = !search && collapsedLevels.has(level.id);
+                    const levelIssues = (level.phrases || []).filter(p => phraseIssues(p).length).length;
+                    return (
+                    <div key={level.id} className={`cb-level-card ${levelCollapsed ? 'is-collapsed' : ''}`}>
                         <div className="cb-level-header">
                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <button onClick={() => moveLevel(level.id, 'up')} style={{ background: 'none', border: 'none', color: 'var(--tx2)', cursor: 'pointer', padding: '5px', display: 'flex' }} title="Move Up">
+                                <button onClick={() => moveLevel(level.id, 'up')} className="cb-move-phrase" title="Move Up">
                                     <ChevronUp size={18} />
                                 </button>
-                                <button onClick={() => moveLevel(level.id, 'down')} style={{ background: 'none', border: 'none', color: 'var(--tx2)', cursor: 'pointer', padding: '5px', display: 'flex' }} title="Move Down">
+                                <button onClick={() => moveLevel(level.id, 'down')} className="cb-move-phrase" title="Move Down">
                                     <ChevronDown size={18} />
                                 </button>
                             </div>
-                            <Input 
-                                value={level.title}
-                                onChange={(e) => updateLevelTitle(level.id, e.target.value)}
-                                placeholder="Level Title (e.g. Basics 1)"
-                                style={{ flex: 1, margin: 0 }}
-                            />
+                            <button
+                                type="button"
+                                className="cb-level-toggle"
+                                onClick={() => toggleLevel(level.id)}
+                                aria-expanded={!levelCollapsed}
+                                aria-controls={`cb-level-body-${level.id}`}
+                            >
+                                <span className="cb-level-chevron">
+                                    {levelCollapsed ? <ChevronRight size={18} /> : <ChevronDown size={18} />}
+                                </span>
+                                <span className="cb-level-num">{realIndex + 1}</span>
+                                <span className="cb-level-name">{level.title || 'Untitled Level'}</span>
+                                <span className="cb-level-badges">
+                                    <span className="cb-badge">
+                                        {(level.phrases || []).length} phrase{(level.phrases || []).length === 1 ? '' : 's'}
+                                    </span>
+                                    {(level.prerequisites || []).length > 0 && (
+                                        <span className="cb-badge cb-badge-muted">
+                                            {(level.prerequisites || []).length} prereq
+                                        </span>
+                                    )}
+                                    {levelIssues > 0 && (
+                                        <span className="cb-badge cb-badge-warn">
+                                            <AlertTriangle size={12} /> {levelIssues}
+                                        </span>
+                                    )}
+                                </span>
+                            </button>
+                            <div className="cb-level-controls">
                             <IconSelect 
                                 value={level.icon || 'Zap'}
                                 onChange={(val) => updateLevelField(level.id, 'icon', val)}
@@ -463,35 +689,54 @@ export default function CourseBuilder({ onExit }) {
                             <Button variant="default" onClick={() => setPreviewLevel(level)} style={{ padding: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                                 <Play size={16} /> Preview
                             </Button>
-                            <Button variant="error" onClick={() => deleteLevel(level.id)} style={{ padding: '8px' }}>
+                            <Button variant="error" onClick={() => deleteLevel(level.id)} style={{ padding: '8px' }} title="Delete level">
                                 <Trash2 size={16} />
                             </Button>
+                            </div>
                         </div>
-                        
-                        <div style={{ padding: '10px 15px', background: 'var(--s1)', borderBottom: '1px solid var(--bd)' }}>
-                            <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '8px' }}>
+
+                        {!levelCollapsed && (
+                        <div className="cb-level-body" id={`cb-level-body-${level.id}`}>
+                        <div className="cb-level-settings">
+                            <div className="cb-level-title-field">
+                                <label htmlFor={`cb-level-title-${level.id}`}>Level Title</label>
+                                <Input
+                                    id={`cb-level-title-${level.id}`}
+                                    value={level.title || ''}
+                                    onChange={(e) => updateLevelTitle(level.id, e.target.value)}
+                                    placeholder="Level Title (e.g. Basics 1)"
+                                    className="notranslate"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="cb-prereq-panel">
+                            <label className="cb-prereq-title">
                                 Prerequisites (Used for branching paths)
                             </label>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            <div className="cb-prereq-list">
                                 {courseData.filter(l => l.id !== level.id).length === 0 ? (
-                                    <span style={{ color: 'var(--tx2)', fontSize: '0.85rem' }}>No other levels available.</span>
+                                    <span className="cb-hint">No other levels available.</span>
                                 ) : (
-                                    courseData.filter(l => l.id !== level.id).map(l => (
-                                        <label key={l.id} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--bg)', padding: '6px 12px', borderRadius: '20px', border: '1px solid var(--bd)', cursor: 'pointer', fontSize: '0.85rem', color: (level.prerequisites || []).includes(l.id) ? 'var(--acc)' : 'var(--tx)', userSelect: 'none' }}>
-                                            <input 
-                                                type="checkbox" 
-                                                checked={(level.prerequisites || []).includes(l.id)}
+                                    courseData.filter(l => l.id !== level.id).map(l => {
+                                        const isPrereq = (level.prerequisites || []).includes(l.id);
+                                        return (
+                                        <label key={l.id} className={`cb-prereq-chip ${isPrereq ? 'selected' : ''}`}>
+                                            <input
+                                                type="checkbox"
+                                                checked={isPrereq}
                                                 onChange={(e) => {
                                                     const current = level.prerequisites || [];
                                                     const newPrereqs = e.target.checked ? [...current, l.id] : current.filter(id => id !== l.id);
                                                     updateLevelField(level.id, 'prerequisites', newPrereqs.length > 0 ? newPrereqs : undefined);
                                                 }}
-                                                style={{ display: 'none' }}
+                                                className="cb-prereq-input"
                                             />
-                                            {(level.prerequisites || []).includes(l.id) ? <Check size={14} /> : null}
+                                            {isPrereq && <Check size={14} />}
                                             {l.title || 'Untitled Level'}
                                         </label>
-                                    ))
+                                        );
+                                    })
                                 )}
                             </div>
                         </div>
@@ -499,17 +744,60 @@ export default function CourseBuilder({ onExit }) {
                         {/* Removed lesson notes textbox as per user request to use teaching cards instead */}
 
                         <div className="cb-phrases">
-                            {level.phrases.map((phrase, pIdx) => (
-                                <div key={phrase.id} className="cb-phrase-card">
+                            {(level.phrases || []).length === 0 && (
+                                <div className="cb-empty cb-empty-inline">No phrases yet. Add the first one below.</div>
+                            )}
+                            {(level.phrases || []).map((phrase, pIdx) => {
+                                const phraseCollapsed = !search && collapsedPhrases.has(phrase.id);
+                                const issues = phraseIssues(phrase);
+                                const phraseType = phrase.type || 'translate_to_english';
+                                // Audio opens by default only where the learner must
+                                // hear the word, or when a clip already exists.
+                                const audioDefaultsOpen = AUDIO_ALWAYS_TYPES.has(phraseType) || !!phrase.audioPath;
+                                const audioVisible = supportsAudio(phrase) && (audioOpen.has(phrase.id) || audioDefaultsOpen);
+                                return (
+                                <div key={phrase.id} className={`cb-phrase-card ${phraseCollapsed ? 'is-collapsed' : ''}`}>
                                     <div className="cb-phrase-header">
-                                        <div className="cb-phrase-type-select">
-                                            <span style={{ fontWeight: 'bold', color: 'var(--tx2)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                                {pIdx + 1}. Type:
+                                        <button
+                                            type="button"
+                                            className="cb-phrase-toggle"
+                                            onClick={() => togglePhrase(phrase.id)}
+                                            aria-expanded={!phraseCollapsed}
+                                            aria-controls={`cb-phrase-body-${phrase.id}`}
+                                        >
+                                            <span className="cb-phrase-chevron">
+                                                {phraseCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                                             </span>
-                                            <select 
-                                                value={phrase.type || 'translate_to_english'} 
+                                            <span className="cb-phrase-num">{pIdx + 1}</span>
+                                            <span className="cb-phrase-type-chip">{TYPE_LABELS[phraseType]}</span>
+                                            <span className="cb-phrase-summary custom-font-text notranslate">{phraseSummary(phrase)}</span>
+                                            {issues.length > 0 && (
+                                                <span className="cb-phrase-issue" title={issues.join(', ')}>
+                                                    <AlertTriangle size={13} /> {issues.length}
+                                                </span>
+                                            )}
+                                            {phrase.audioPath && (
+                                                <span className="cb-phrase-has-audio" title="Audio attached"><Volume2 size={13} /></span>
+                                            )}
+                                        </button>
+                                        <div className="cb-phrase-actions">
+                                            {supportsAudio(phrase) && (
+                                                <button
+                                                    type="button"
+                                                    className={`cb-audio-chip ${audioVisible ? 'open' : ''}`}
+                                                    onClick={() => toggleInSet(setAudioOpen, phrase.id)}
+                                                    title={audioVisible ? 'Hide pronunciation audio' : 'Add pronunciation audio'}
+                                                >
+                                                    {audioVisible ? <ChevronDown size={14} /> : <Mic size={14} />}
+                                                    Audio
+                                                    {phrase.audioPath && <span className="cb-audio-dot" />}
+                                                </button>
+                                            )}
+                                            <select
+                                                value={phraseType}
                                                 onChange={(e) => updatePhrase(level.id, phrase.id, 'type', e.target.value)}
-                                                style={{ padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--bd)', background: 'var(--bg)', color: 'var(--tx)', outline: 'none', fontWeight: '500', cursor: 'pointer' }}
+                                                className="cb-type-select"
+                                                aria-label="Exercise type"
                                             >
                                                 <option value="translate_to_english">English Typing</option>
                                                 <option value="translate_to_conlang">Conlang Typing</option>
@@ -525,21 +813,23 @@ export default function CourseBuilder({ onExit }) {
                                                 <option value="conjugation_drill">Conjugation Drill</option>
                                                 <option value="glyph_drawing">Draw the Glyph</option>
                                             </select>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                            <button className="cb-move-phrase" onClick={() => movePhrase(level.id, pIdx, 'up')} disabled={pIdx === 0} style={{ background: 'none', border: 'none', color: pIdx === 0 ? 'var(--bd)' : 'var(--tx2)', cursor: pIdx === 0 ? 'default' : 'pointer', padding: '5px', display: 'flex' }} title="Move Up">
-                                                <ChevronUp size={18} />
-                                            </button>
-                                            <button className="cb-move-phrase" onClick={() => movePhrase(level.id, pIdx, 'down')} disabled={pIdx === level.phrases.length - 1} style={{ background: 'none', border: 'none', color: pIdx === level.phrases.length - 1 ? 'var(--bd)' : 'var(--tx2)', cursor: pIdx === level.phrases.length - 1 ? 'default' : 'pointer', padding: '5px', display: 'flex' }} title="Move Down">
-                                                <ChevronDown size={18} />
-                                            </button>
-                                            <button className="cb-delete-phrase" onClick={() => deletePhrase(level.id, phrase.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '5px', display: 'flex' }} title="Delete Phrase">
-                                                <Trash2 size={18} />
-                                            </button>
+                                            <div className="cb-move-buttons">
+                                                <button className="cb-move-phrase" onClick={() => movePhrase(level.id, pIdx, 'up')} disabled={pIdx === 0} title="Move phrase up">
+                                                    <ChevronUp size={18} />
+                                                </button>
+                                                <button className="cb-move-phrase" onClick={() => movePhrase(level.id, pIdx, 'down')} disabled={pIdx === (level.phrases || []).length - 1} title="Move phrase down">
+                                                    <ChevronDown size={18} />
+                                                </button>
+                                                <button className="cb-delete-phrase" onClick={() => deletePhrase(level.id, phrase.id)} title="Delete phrase">
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                    
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+
+                                    {!phraseCollapsed && (
+                                    <div className="cb-phrase-body" id={`cb-phrase-body-${phrase.id}`}>
+                                        <div className="cb-phrase-fields">
                                         {phrase.type === 'teach' && (
                                             <div>
                                                 <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>Teaching Content</label>
@@ -726,20 +1016,28 @@ export default function CourseBuilder({ onExit }) {
                                             </div>
                                         )}
 
-                                        <AudioRecorder
-                                            phrase={phrase}
-                                            projectId={config.projectId}
-                                            onChange={(field, value) => updatePhrase(level.id, phrase.id, field, value)}
-                                        />
+                                        {audioVisible && (
+                                            <AudioRecorder
+                                                phrase={phrase}
+                                                projectId={config.projectId}
+                                                onChange={(field, value) => updatePhrase(level.id, phrase.id, field, value)}
+                                            />
+                                        )}
+                                        </div>
                                     </div>
+                                    )}
                                 </div>
-                            ))}
-                            <Button variant="default" onClick={() => addPhrase(level.id)} style={{ width: '100%' }}>
-                                <Plus size={16} style={{marginRight: '5px'}}/> Add Phrase to Level
+                                );
+                                })}
+                            <Button variant="default" onClick={() => addPhrase(level.id)} className="cb-add-phrase">
+                                <Plus size={16} /> Add Phrase to Level
                             </Button>
                         </div>
+                        </div>
+                        )}
                     </div>
-                ))}
+                );
+                })}
             </div>
 
             <div className="cb-add-level">

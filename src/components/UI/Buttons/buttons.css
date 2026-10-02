@@ -43,6 +43,23 @@
 }
 .btn-save:hover { transform: translateY(-2px); box-shadow: 0 4px 12px color-mix(in srgb, var(--ok) 30%, transparent); }
 
+.btn-imp {
+    background: var(--ok);
+    color: #fff;
+}
+.btn-imp:hover { transform: translateY(-2px); box-shadow: 0 4px 12px color-mix(in srgb, var(--ok) 30%, transparent); }
+
+.btn-accent {
+    background: color-mix(in srgb, var(--acc) 18%, transparent);
+    color: var(--tx);
+    border: 1px solid var(--acc);
+}
+.btn-accent:hover {
+    background: color-mix(in srgb, var(--acc) 28%, transparent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--acc) 25%, transparent);
+}
+
 .btn-edit {
     background: var(--acc);
     color: white;
