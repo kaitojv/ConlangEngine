@@ -26,7 +26,7 @@ export const fetchFullDictionary = async (word) => {
             senses,
             totalSenses: senses.reduce((acc, s) => acc + s.definitions.length, 0)
         };
-    } catch (e) {
+    } catch {
         return null;
     }
 }
@@ -56,7 +56,7 @@ export async function fetchSynsets(word) {
                 pos: item.tags?.[0] || 'n'
             };
         }));
-    } catch (err) {
+    } catch {
         return [];
     }
 }
@@ -85,7 +85,7 @@ export async function fetchHypernymOptions(word) {
                 pos: 'n',
                 type: 'hypernym'
             })).slice(0, 15);
-    } catch (e) {
+    } catch {
         return [];
     }
 }
@@ -104,7 +104,7 @@ export async function fetchHyponymOptions(word) {
             pos: 'n',
             type: 'hyponym'
         }));
-    } catch (e) {
+    } catch {
         return [];
     }
 }
@@ -121,7 +121,7 @@ export async function fetchHypernymChain(synset) {
                 chain.unshift({ id: `gen-${data[0].word}`, lemma: data[0].word, pos: 'n' });
                 currentWord = data[0].word;
             } else break;
-        } catch (e) { break; }
+        } catch { break; }
     }
     return chain;
 }
@@ -140,7 +140,7 @@ export async function fetchSynonymOptions(word) {
             pos: 'n',
             type: 'synonym'
         }));
-    } catch (e) {
+    } catch {
         return [];
     }
 }
@@ -159,7 +159,7 @@ export async function fetchHolonymOptions(word) {
             pos: 'n',
             type: 'holonym'
         }));
-    } catch (e) {
+    } catch {
         return [];
     }
 }
@@ -178,7 +178,7 @@ export async function fetchMeronymOptions(word) {
             pos: 'n',
             type: 'meronym'
         }));
-    } catch (e) {
+    } catch {
         return [];
     }
 }
@@ -243,7 +243,7 @@ export async function fetchWordFamily(synset) {
         return data
             .filter(item => item.word.toLowerCase() !== synset.lemma.toLowerCase()) // Don't include the exact root word in its own children
             .map(item => ({ id: `fam-${item.word}`, lemma: item.word, pos: 'n' }));
-    } catch (e) { return []; }
+    } catch { return []; }
 }
 
 /**
@@ -261,7 +261,7 @@ export async function fetchAntonymOptions(word) {
             pos: 'n',
             type: 'antonym'
         }));
-    } catch (e) {
+    } catch {
         return [];
     }
 }
@@ -277,7 +277,7 @@ export async function fetchRhymeOptions(word) {
             pos: 'n',
             type: 'rhyme'
         }));
-    } catch (e) {
+    } catch {
         return [];
     }
 }
@@ -293,7 +293,7 @@ export async function fetchModifierOptions(word) {
             pos: 'adj',
             type: 'modifier'
         }));
-    } catch (e) {
+    } catch {
         return [];
     }
 }
@@ -309,7 +309,7 @@ export async function fetchFollowerOptions(word) {
             pos: 'n',
             type: 'follower'
         }));
-    } catch (e) {
+    } catch {
         return [];
     }
 }
@@ -317,8 +317,8 @@ export async function fetchFollowerOptions(word) {
 /**
  * Fetches a concise English definition for a word.
  * Strategy:
- *   1. Datamuse (?sp=<word>&md=d&max=1) — fast, returns defs inline
- *   2. Wiktionary via fetchFullDictionary() — richer, but slower
+ *   1. Datamuse (?sp=<word>&md=d&max=1) â€” fast, returns defs inline
+ *   2. Wiktionary via fetchFullDictionary() â€” richer, but slower
  * 
  * @param {string} translation  The English translation/gloss (e.g. "water", "to run")
  * @param {string} [wordClass]  Optional POS to prefer matching definitions (e.g. "noun")
@@ -327,7 +327,7 @@ export async function fetchFollowerOptions(word) {
 export async function fetchDefinitionForWord(translation, wordClass) {
     if (!translation) return null;
 
-    // Extract core word: "to run away" → "run", "an apple" → "apple"
+    // Extract core word: "to run away" â†’ "run", "an apple" â†’ "apple"
     let core = translation.toLowerCase().trim();
     if (core.startsWith('to ')) core = core.substring(3);
     if (core.startsWith('a ')) core = core.substring(2);
@@ -346,7 +346,7 @@ export async function fetchDefinitionForWord(translation, wordClass) {
     };
     const targetPrefix = POS_MAP[posNorm] || null;
 
-    // ── 1. Datamuse (fast) ──────────────────────────────────────
+    // â”€â”€ 1. Datamuse (fast) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000);
@@ -369,9 +369,9 @@ export async function fetchDefinitionForWord(translation, wordClass) {
                 return exact.defs[0].split('\t')[1];
             }
         }
-    } catch (e) { /* fall through to Wiktionary */ }
+    } catch { /* fall through to Wiktionary */ }
 
-    // ── 2. Wiktionary (richer, slower) ──────────────────────────
+    // â”€â”€ 2. Wiktionary (richer, slower) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 4000);
@@ -402,7 +402,7 @@ export async function fetchDefinitionForWord(translation, wordClass) {
                 }
             }
         }
-    } catch (e) { /* no definition found */ }
+    } catch { /* no definition found */ }
 
     return null;
 }
