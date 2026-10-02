@@ -218,8 +218,8 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
     const missingCount = totalKeyCount - translatedCount;
 
     return ReactDOM.createPortal(
-        <div className="export-modal-overlay" onClick={isProcessing ? undefined : onClose}>
-            <div className={`export-modal ${(type === 'minecraft' || type === 'terraria') ? 'minecraft-modal-wide' : ''}`} onClick={e => e.stopPropagation()}>
+        <div className="export-modal-overlay" role="presentation" onClick={isProcessing ? undefined : onClose}>
+            <div className={`export-modal ${(type === 'minecraft' || type === 'terraria') ? 'minecraft-modal-wide' : ''}`} role="dialog" aria-modal="true" aria-label="Export conlang" onClick={e => e.stopPropagation()}>
                 
                 {isProcessing && (
                     <div className="export-processing-overlay">
@@ -627,7 +627,14 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                                     <p className="export-hint">Finally, choose a visual style for your document:</p>
                                     <div className="template-grid">
                                         {templates.map(tmp => (
-                                            <div key={tmp.id} className="template-card" onClick={() => handleExportClick(tmp.id)}>
+                                            <div
+                                                key={tmp.id}
+                                                className="template-card"
+                                                role="button"
+                                                tabIndex={0}
+                                                onClick={() => handleExportClick(tmp.id)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleExportClick(tmp.id); } }}
+                                            >
                                                 <div className="template-icon" style={{ background: `${tmp.color}22`, color: tmp.color }}>
                                                     <tmp.icon size={24} />
                                                 </div>

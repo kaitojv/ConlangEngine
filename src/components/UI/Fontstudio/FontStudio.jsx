@@ -1459,18 +1459,38 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                             <div className="fs-status-item">
                                 <Grid size={12} style={{ marginRight: '4px', opacity: isSnapToGrid ? 1 : 0.3 }}/> 
-                                <span style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => setIsSnapToGrid(!isSnapToGrid)}>
+                                <span
+                                    role="switch"
+                                    tabIndex={0}
+                                    aria-checked={isSnapToGrid}
+                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                    onClick={() => setIsSnapToGrid(!isSnapToGrid)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsSnapToGrid(!isSnapToGrid); } }}
+                                >
                                     Grid Snap {isSnapToGrid ? 'ON' : 'OFF'}
                                 </span>
                             </div>
                             <div className="fs-status-item">
                                 <Maximize2 size={12} style={{ marginRight: '4px', opacity: isSnapToMetrics ? 1 : 0.3 }}/> 
-                                <span style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => setIsSnapToMetrics(!isSnapToMetrics)}>
+                                <span
+                                    role="switch"
+                                    tabIndex={0}
+                                    aria-checked={isSnapToMetrics}
+                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                    onClick={() => setIsSnapToMetrics(!isSnapToMetrics)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsSnapToMetrics(!isSnapToMetrics); } }}
+                                >
                                     Metric Snap {isSnapToMetrics ? 'ON' : 'OFF'}
                                 </span>
                             </div>
                             <div className="fs-status-item" style={{ visibility: zoom !== 1.0 ? 'visible' : 'hidden' }}>
-                                <span style={{ cursor: 'pointer', color: 'var(--acc)' }} onClick={() => setZoom(1.0)}>
+                                <span
+                                    role="button"
+                                    tabIndex={0}
+                                    style={{ cursor: 'pointer', color: 'var(--acc)' }}
+                                    onClick={() => setZoom(1.0)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setZoom(1.0); } }}
+                                >
                                     Reset Zoom ({(zoom * 100).toFixed(0)}%)
                                 </span>
                             </div>

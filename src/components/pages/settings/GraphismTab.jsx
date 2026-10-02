@@ -598,7 +598,14 @@ export default function TypographyStudio() {
                                                     </span>
                                                 </td>
                                                 
-                                                <td className="name-cell" onClick={() => editingCharName !== char && setEditingCharName(char)} style={{ cursor: 'pointer' }}>
+                                                <td
+                                                    className="name-cell"
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    style={{ cursor: 'pointer' }}
+                                                    onClick={() => editingCharName !== char && setEditingCharName(char)}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); editingCharName !== char && setEditingCharName(char); } }}
+                                                >
                                                     {editingCharName === char ? (
                                                         <div className="char-edit-wrapper" onClick={e => e.stopPropagation()}>
                                                             <input 

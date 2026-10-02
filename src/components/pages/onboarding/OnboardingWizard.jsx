@@ -176,17 +176,38 @@ export default function OnboardingWizard() {
                 <div>
                     <label className="generator-label">Writing System Type</label>
                     <div className="script-grid">
-                        <div className={`script-card ${scriptType === 'alphabetic' ? 'active' : ''}`} onClick={() => setScriptType('alphabetic')}>
+                        <div
+                            className={`script-card ${scriptType === 'alphabetic' ? 'active' : ''}`}
+                            role="radio"
+                            tabIndex={0}
+                            aria-checked={scriptType === 'alphabetic'}
+                            onClick={() => setScriptType('alphabetic')}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setScriptType('alphabetic'); } }}
+                        >
                             <Type className="script-icon" />
                             <h4>Alphabetic</h4>
                             <p>Letters represent sounds (like English)</p>
                         </div>
-                        <div className={`script-card ${scriptType === 'syllabary' ? 'active' : ''}`} onClick={() => setScriptType('syllabary')}>
+                        <div
+                            className={`script-card ${scriptType === 'syllabary' ? 'active' : ''}`}
+                            role="radio"
+                            tabIndex={0}
+                            aria-checked={scriptType === 'syllabary'}
+                            onClick={() => setScriptType('syllabary')}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setScriptType('syllabary'); } }}
+                        >
                             <LayoutTemplate className="script-icon" />
                             <h4>Syllabary</h4>
                             <p>Symbols represent full syllables (like Japanese)</p>
                         </div>
-                        <div className={`script-card ${scriptType === 'featural_block' ? 'active' : ''}`} onClick={() => setScriptType('featural_block')}>
+                        <div
+                            className={`script-card ${scriptType === 'featural_block' ? 'active' : ''}`}
+                            role="radio"
+                            tabIndex={0}
+                            aria-checked={scriptType === 'featural_block'}
+                            onClick={() => setScriptType('featural_block')}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setScriptType('featural_block'); } }}
+                        >
                             <BoxSelect className="script-icon" />
                             <h4>Featural Block</h4>
                             <p>Symbols built from phonetic features (like Korean)</p>

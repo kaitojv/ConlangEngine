@@ -254,8 +254,8 @@ export default function CommandPalette() {
     if (!isOpen) return null;
 
     return (
-        <div className="command-palette-overlay" onClick={() => setIsOpen(false)}>
-            <div className="command-palette" onClick={e => e.stopPropagation()}>
+        <div className="command-palette-overlay" role="presentation" onClick={() => setIsOpen(false)}>
+            <div className="command-palette" role="dialog" aria-modal="true" aria-label="Command palette" onClick={e => e.stopPropagation()}>
                 <div className="cp-header">
                     <Search className="cp-search-icon" size={20} />
                     <input 

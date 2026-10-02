@@ -110,8 +110,8 @@ export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "",
     if (!isOpen) return null;
 
     return ReactDOM.createPortal(
-        <div className="vrb-overlay" onClick={onClose}>
-            <div className="vrb-modal" onClick={e => e.stopPropagation()}>
+        <div className="vrb-overlay" role="presentation" onClick={onClose}>
+            <div className="vrb-modal" role="dialog" aria-modal="true" aria-label="Visual Rule Builder" onClick={e => e.stopPropagation()}>
                 
                 <div className="vrb-header">
                     <Wand2 size={20} className="text-purple-400" />

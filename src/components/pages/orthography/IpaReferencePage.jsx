@@ -84,7 +84,7 @@ function PhonemePopover({ phoneme, anchorRect, onClose, isInCons, isInVows, onTo
 
     return (
         <>
-            <div className="ipa-detail-overlay" onClick={onClose} />
+            <div className="ipa-detail-overlay" role="presentation" onClick={onClose} />
             <div className="ipa-detail-popover" style={style} ref={ref}>
                 {/* Header */}
                 <div className="ipa-popover-header">

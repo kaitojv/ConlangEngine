@@ -738,7 +738,14 @@ export default function ProfileTab() {
             <Modal isOpen={isProjectSelectorOpen} onClose={() => setProjectSelectorOpen(false)} title="Select a Cloud Project to Load">
                 <div className="project-selector-list">
                     {cloudProjects.map(p => (
-                        <div key={p.project_id} className="project-selector-item" onClick={() => handleSelectProject(p)}>
+                        <div
+                            key={p.project_id}
+                            className="project-selector-item"
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => handleSelectProject(p)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelectProject(p); } }}
+                        >
                             <h4>{p.project_data.config?.conlangName || 'Untitled Project'}</h4>
                             <p>{p.project_data.wordCount !== undefined ? p.project_data.wordCount : (p.project_data.dictionary || []).length} words</p>
                             <span className="project-selector-id">ID: {p.project_id}</span>

@@ -834,7 +834,15 @@ function WordAssistTutorial({ onClose }) {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
                         <div style={{ display: 'flex', gap: '4px' }}>
                             {[1, 2, 3].map(s => (
-                                <div key={s} onClick={() => setStep(s)} style={{ width: '8px', height: '8px', borderRadius: '50%', background: step === s ? 'var(--acc)' : 'var(--bd)', cursor: 'pointer' }} />
+                                <div
+                                    key={s}
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-label={`Go to step ${s}`}
+                                    onClick={() => setStep(s)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setStep(s); } }}
+                                    style={{ width: '8px', height: '8px', borderRadius: '50%', background: step === s ? 'var(--acc)' : 'var(--bd)', cursor: 'pointer' }}
+                                />
                             ))}
                         </div>
                         <div>
@@ -2315,7 +2323,13 @@ export default function WikiTab() {
                                     
                                     return (
                                         <div key={nbId} className="wiki-notebook-container">
-                                            <div className="wiki-notebook-header" onClick={(e) => toggleNotebook(nbId, e)}>
+                                            <div
+                                                className="wiki-notebook-header"
+                                                role="button"
+                                                tabIndex={0}
+                                                onClick={(e) => toggleNotebook(nbId, e)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleNotebook(nbId, e); } }}
+                                            >
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
                                                     <div style={{ flexShrink: 0, display: 'flex', color: 'var(--acc)' }}>
                                                         <NbIcon size={16} />

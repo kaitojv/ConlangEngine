@@ -122,8 +122,8 @@ export default function AlignerTab() {
         <div className="aligner-tab-container">
             {/* Modal first for z-index safety */}
             {viewingMap && (
-                <div className="aligner-modal-overlay" onClick={() => setViewingMap(null)}>
-                    <div className="aligner-modal" onClick={e => e.stopPropagation()}>
+                <div className="aligner-modal-overlay" role="presentation" onClick={() => setViewingMap(null)}>
+                    <div className="aligner-modal" role="dialog" aria-modal="true" aria-label="Sentence Mapping View" onClick={e => e.stopPropagation()}>
                         <button className="close-modal-btn" onClick={() => setViewingMap(null)}><X size={24} /></button>
                         <div className="modal-header"><h3>Sentence Mapping View</h3></div>
                         <div className="modal-content">

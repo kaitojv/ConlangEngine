@@ -145,7 +145,14 @@ export default function PublicFlashcards({ lexicon = [], config = {} }) {
                     </div>
 
                     {/* The interactive card itself */}
-                    <div className="fc-scene" onClick={handleFlip}>
+                    <div
+                        className="fc-scene"
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Flashcard, activate to flip"
+                        onClick={handleFlip}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleFlip(); } }}
+                    >
                         <div className={`fc-inner ${isFlipped && !hasFinished ? 'is-flipped' : ''}`}>
                             
                             <div className="fc-face">

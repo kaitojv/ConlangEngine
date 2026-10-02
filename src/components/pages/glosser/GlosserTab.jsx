@@ -337,9 +337,17 @@ export default function GlosserTab() {
             <div style={{ position: 'relative' }}>
                 <Input value={builderSearch} onChange={(e) => setBuilderSearch(e.target.value)} placeholder="Search lexicon to add word..." />
                 {builderSearch && filteredLexicon.length > 0 && (
-                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--card)', border: '1px solid var(--bd)', borderRadius: 'var(--rad)', zIndex: 100, maxHeight: '200px', overflowY: 'auto', boxShadow: 'var(--shadow)' }}>
+                    <div role="listbox" aria-label="Lexicon search results" style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--card)', border: '1px solid var(--bd)', borderRadius: 'var(--rad)', zIndex: 100, maxHeight: '200px', overflowY: 'auto', boxShadow: 'var(--shadow)' }}>
                         {filteredLexicon.map(entry => (
-                            <div key={entry.id} style={{ padding: '10px 12px', cursor: 'pointer', borderBottom: '1px solid var(--bd)', display: 'flex', justifyContent: 'space-between' }} onClick={() => { appendToBuilder(entry); setBuilderSearch(''); }}>
+                            <div
+                                key={entry.id}
+                                role="option"
+                                tabIndex={0}
+                                aria-selected={false}
+                                style={{ padding: '10px 12px', cursor: 'pointer', borderBottom: '1px solid var(--bd)', display: 'flex', justifyContent: 'space-between' }}
+                                onClick={() => { appendToBuilder(entry); setBuilderSearch(''); }}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); appendToBuilder(entry); setBuilderSearch(''); } }}
+                            >
                                 <span className="custom-font-text notranslate" style={{ color: 'var(--acc)', fontWeight: 'bold' }}>{transliterate(entry.word)}</span>
                                 <span style={{ color: 'var(--tx2)', fontSize: '0.9rem' }}>{entry.translation}</span>
                             </div>
