@@ -14,7 +14,8 @@ import ScriptManager from '../../UI/ScriptManager/ScriptManager.jsx';
 import ScriptRulesEditor from '../../UI/ScriptRulesEditor/ScriptRulesEditor.jsx';
 import GlyphDetailsModal from '../../UI/GlyphDetailsModal/GlyphDetailsModal.jsx';
 import GlyphPreviewBadge from '../../UI/Glyph/GlyphPreviewBadge.jsx';
-import { resolveGlyphStrokesPure } from '../../UI/Glyph/resolveGlyphStrokes.js';
+import { resolveRawGlyph, getGlyphMetrics } from '../../UI/Glyph/resolveGlyphStrokes.js';
+import GlyphBaselineRow from '../../UI/Glyph/GlyphBaselineRow.jsx';
 import StrokeOrderModal from '../../UI/StrokeOrder/StrokeOrderModal.jsx';
 import toast from 'react-hot-toast';
 
@@ -559,12 +560,17 @@ const NumbersTab = () => {
             chars.forEach((ch, gi) => {
                 // A separator inside a component is layout, not a glyph to draw.
                 if (/\s/.test(ch)) return;
+                const raw = resolveRawGlyph(ch, { customGlyphs, scriptDataById });
+                const metrics = getGlyphMetrics(raw);
                 parts.push({
                     char: ch,
                     label: component,
                     isComponentStart: gi === 0,
                     isNewComponent: ci > 0 && gi === 0,
-                    strokes: resolveGlyphStrokesPure(ch, { customGlyphs, scriptDataById })
+                    // Full metrics (margins/yOffset/ink) drive the baseline layout, so the
+                    // preview honours the same character gaps as the compiled font.
+                    metrics,
+                    strokes: metrics?.strokes ?? null
                 });
             });
         });
@@ -961,38 +967,15 @@ const NumbersTab = () => {
                                 {testResult ? (
                                     showTestResult ? (
                                         testHasGlyph ? (
-                                            /* One badge per glyph character, in numeral order. A
-                                               component may hold several glyphs (fused
-                                               power+digit), so the separator only goes
-                                               between components, not between glyphs. */
-                                            <div className="result-glyph-row">
-                                                {testGlyphParts.map((part, i) => (
-                                                    <React.Fragment key={`${part.char}-${i}`}>
-                                                        {part.isNewComponent && (
-                                                            <span className="result-glyph-sep notranslate">
-                                                                {testGlyphSeparator}
-                                                            </span>
-                                                        )}
-                                                        {part.strokes && part.strokes.length > 0 ? (
-                                                            <GlyphPreviewBadge
-                                                                glyph={part.char}
-                                                                strokes={part.strokes}
-                                                                size={64}
-                                                                hideOnEmpty
-                                                                showCode={false}
-                                                                title={`Glyph for "${part.label}"`}
-                                                            />
-                                                        ) : (
-                                                            <span
-                                                                className="result-glyph-missing"
-                                                                title={`No glyph drawn for "${part.label}"`}
-                                                            >
-                                                                {part.char}
-                                                            </span>
-                                                        )}
-                                                    </React.Fragment>
-                                                ))}
-                                            </div>
+                                            /* Glyphs sit on a shared baseline and are spaced by
+                                               each glyph's own character gaps, matching the
+                                               compiled font. Not one badge per glyph - connected
+                                               scripts must read as a continuous run. */
+                                            <GlyphBaselineRow
+                                                parts={testGlyphParts}
+                                                separator={testGlyphSeparator}
+                                                height={110}
+                                            />
                                         ) : (
                                             <div className="result-no-glyph">
                                                 <FileXIcon size={24} />
