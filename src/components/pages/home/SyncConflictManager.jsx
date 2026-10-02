@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useSharing } from '@/hooks/useSharing.jsx';
@@ -10,7 +11,16 @@ import toast from 'react-hot-toast';
 import { CloudDownload, HardDriveUpload, AlertTriangle } from 'lucide-react';
 
 export default function SyncConflictManager() {
-    const config = useConfigStore();
+    const {
+        projectId, lastCloudSync, syncConflictStatus,
+        updateConfig, setFullConfig,
+    } = useConfigStore(useShallow(state => ({
+        projectId: state.projectId,
+        lastCloudSync: state.lastCloudSync,
+        syncConflictStatus: state.syncConflictStatus,
+        updateConfig: state.updateConfig,
+        setFullConfig: state.setFullConfig,
+    })));
     const setLexicon = useLexiconStore((state) => state.setLexicon);
     const [session, setSession] = useState(null);
     const { handlePushToCloud } = useSharing(session);
@@ -31,26 +41,26 @@ export default function SyncConflictManager() {
     }, []);
 
     const checkForConflicts = async () => {
-        if (!session || !config.projectId || !config.lastCloudSync || config.projectId.startsWith('local_')) return;
+        if (!session || !projectId || !lastCloudSync || projectId.startsWith('local_')) return;
 
         try {
             // Fetch the latest snapshot from the cloud
             const { data, error } = await supabase
                 .from('conlang_snapshots')
                 .select('created_at, project_data')
-                .eq('project_id', config.projectId)
+                .eq('project_id', projectId)
                 .maybeSingle();
 
             if (error || !data) return;
 
             const projectData = await decompressPayloadAsync(data.project_data);
             const cloudTimestamp = projectData?.last_updated ? new Date(projectData.last_updated).getTime() : new Date(data.created_at).getTime();
-            const localTimestamp = new Date(config.lastCloudSync).getTime();
+            const localTimestamp = new Date(lastCloudSync).getTime();
 
             // Give a 5-second buffer to account for minor clock desyncs during the actual push
             if (cloudTimestamp > localTimestamp + 5000) {
                 setCloudPayload(projectData);
-                config.updateConfig({ syncConflictStatus: 'conflict' });
+                updateConfig({ syncConflictStatus: 'conflict' });
             }
         } catch (err) {
             console.warn('Could not check for sync conflicts:', err);
@@ -65,7 +75,7 @@ export default function SyncConflictManager() {
         window.addEventListener('focus', handleFocus);
 
         return () => window.removeEventListener('focus', handleFocus);
-    }, [session, config.projectId, config.lastCloudSync]);
+    }, [session, projectId, lastCloudSync]);
 
 
     const handlePullCloud = () => {
@@ -75,13 +85,13 @@ export default function SyncConflictManager() {
         const safeLexicon = sanitizeLexicon(cloudPayload.dictionary || []);
         
         setLexicon(safeLexicon);
-        config.setFullConfig({ ...safeConfig, projectId: config.projectId });
+        setFullConfig({ ...safeConfig, projectId: projectId });
         
         if (cloudPayload.wiki) {
-            config.updateConfig({ wikiPages: cloudPayload.wiki });
+            updateConfig({ wikiPages: cloudPayload.wiki });
         }
         
-        config.updateConfig({ 
+        updateConfig({ 
             syncConflictStatus: 'resolved',
             lastCloudSync: new Date().toISOString() // Update local timestamp to match cloud
         });
@@ -94,7 +104,7 @@ export default function SyncConflictManager() {
         // Pushing to cloud will naturally update `lastCloudSync`
         const success = await handlePushToCloud(true, `Conflict Resolution: Overwrite`);
         if (success) {
-            config.updateConfig({ syncConflictStatus: 'resolved' });
+            updateConfig({ syncConflictStatus: 'resolved' });
             setCloudPayload(null);
             toast.success("Kept local changes and overwrote cloud.");
         } else {
@@ -104,9 +114,9 @@ export default function SyncConflictManager() {
 
     return (
         <Modal 
-            isOpen={config.syncConflictStatus === 'conflict'} 
+            isOpen={syncConflictStatus === 'conflict'} 
             onClose={() => {
-                config.updateConfig({ syncConflictStatus: 'ignored' });
+                updateConfig({ syncConflictStatus: 'ignored' });
                 setCloudPayload(null);
             }} 
             title={<><AlertTriangle color="var(--err)" style={{ position: 'relative', top: '2px', marginRight: '5px' }}/> Sync Conflict Detected</>}

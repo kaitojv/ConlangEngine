@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
@@ -39,7 +40,21 @@ export default function StudyTab() {
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
     const addWord = useLexiconStore((state) => state.addWord);
     const checkDuplicate = useLexiconStore((state) => state.checkDuplicate);
-    const { streak, lastStudyDate, conlangName, customCourse, courseProgress = [], studyXP = 0, courseLevelScores = {}, dailyChallengeDate, dailyChallengeCompleted } = useConfigStore();
+    const {
+        streak, lastStudyDate, conlangName, customCourse,
+        courseProgress = [], studyXP = 0, courseLevelScores = {},
+        dailyChallengeDate, dailyChallengeCompleted
+    } = useConfigStore(useShallow(state => ({
+        streak: state.streak,
+        lastStudyDate: state.lastStudyDate,
+        conlangName: state.conlangName,
+        customCourse: state.customCourse,
+        courseProgress: state.courseProgress,
+        studyXP: state.studyXP,
+        courseLevelScores: state.courseLevelScores,
+        dailyChallengeDate: state.dailyChallengeDate,
+        dailyChallengeCompleted: state.dailyChallengeCompleted,
+    })));
     const updateConfig = useConfigStore((state) => state.updateConfig);
     const { transliterate } = useTransliterator();
     

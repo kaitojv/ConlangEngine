@@ -1,5 +1,6 @@
 // src/components/UI/Modal/FontStudioModal.jsx
 import React, { useRef, useState, useEffect, useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
 import Button from '../Buttons/Buttons.jsx';
@@ -157,7 +158,18 @@ const extractInitialGlyphData = (existingCharCode, customGlyphs) => {
 
 export default function FontStudioModal({ targetLabel, onSave, onCancel, existingCharCode }) {
     const canvasRef = useRef(null);
-    const { customGlyphs, puaCounter, addCustomGlyph, incrementPuaCounter, alphabetGlyphs, alphabetNames, featuralComponents } = useConfigStore();
+    const {
+        customGlyphs, puaCounter, addCustomGlyph, incrementPuaCounter,
+        alphabetGlyphs, alphabetNames, featuralComponents
+    } = useConfigStore(useShallow(state => ({
+        customGlyphs: state.customGlyphs,
+        puaCounter: state.puaCounter,
+        addCustomGlyph: state.addCustomGlyph,
+        incrementPuaCounter: state.incrementPuaCounter,
+        alphabetGlyphs: state.alphabetGlyphs,
+        alphabetNames: state.alphabetNames,
+        featuralComponents: state.featuralComponents,
+    })));
 
     const initialData = useMemo(() => {
         return extractInitialGlyphData(existingCharCode, customGlyphs);

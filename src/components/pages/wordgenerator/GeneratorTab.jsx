@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useNavigate } from 'react-router';
 import Card from '@/components/UI/Card/Card.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
@@ -338,7 +339,20 @@ function FillMode({ onExit }) {
     const addWord = useLexiconStore((state) => state.addWord);
     const checkDuplicate = useLexiconStore((state) => state.checkDuplicate);
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
-    const configData = useConfigStore();
+    // Fields read directly here, plus the nine validateNewWord() destructures
+    // from its configStoreData parameter (src/utils/validationEngine.jsx).
+    const configData = useConfigStore(useShallow(state => ({
+        phonologyTypes: state.phonologyTypes,
+        consonants: state.consonants,
+        vowels: state.vowels,
+        syllablePattern: state.syllablePattern,
+        syllabaryMap: state.syllabaryMap,
+        otherPhonemes: state.otherPhonemes,
+        otherPhonemeMapping: state.otherPhonemeMapping,
+        skipSyllableValidation: state.skipSyllableValidation,
+        ipaMappingRules: state.ipaMappingRules,
+        vowelHarmonyMode: state.vowelHarmonyMode,
+    })));
     const { normalizeToBase } = useTransliterator();
 
     const availableWords = useMemo(() => {

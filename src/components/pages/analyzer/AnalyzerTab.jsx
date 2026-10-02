@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { stripAffix, getPersonRules, segmentToken } from '@/utils/morphologyEngine.jsx';
@@ -20,7 +21,29 @@ export default function AnalyzerTab() {
     // Store Data
         const rawLexicon = useLexiconStore((state) => state.lexicon);
     const lexicon = Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []);
-    const config = useConfigStore();
+    const {
+        phonologyTypes, syllabaryMap, personRulesConfig, verbMarker,
+        grammarRules, unlockedBadges, unlockBadge, logActivity,
+        adjectivePlacement, syntaxOrder,
+    } = useConfigStore(useShallow(state => ({
+        phonologyTypes: state.phonologyTypes,
+        syllabaryMap: state.syllabaryMap,
+        personRules: state.personRules,
+        verbMarker: state.verbMarker,
+        grammarRules: state.grammarRules,
+        unlockedBadges: state.unlockedBadges,
+        unlockBadge: state.unlockBadge,
+        logActivity: state.logActivity,
+        adjectivePlacement: state.adjectivePlacement,
+        syntaxOrder: state.syntaxOrder,
+    })));
+
+    // Passed to segmentToken, which reaches findAllParsings in
+    // morphologyEngine.jsx; that function reads only these three fields.
+    const morphologyConfig = useMemo(
+        () => ({ grammarRules, personRules: personRulesConfig, verbMarker }),
+        [grammarRules, personRulesConfig, verbMarker]
+    );
     const particleDatabase = useConfigStore((state) => state.particleDatabase) || [];
     const compositeParticles = useConfigStore((state) => state.compositeParticles) || [];
     const usesParticles = useConfigStore((state) => state.usesParticles) || false;
@@ -38,15 +61,15 @@ export default function AnalyzerTab() {
 
     // Let's check if a word perfectly follows the rules of our syllabary (if the language uses one)
     const isStrictlySyllabic = (word) => {
-        if (config.phonologyTypes !== 'syllabic' || !config.syllabaryMap) return true;
+        if (phonologyTypes !== 'syllabic' || !syllabaryMap) return true;
 
         const clean = normalizeToBase(word.toLowerCase());
-        const syllables = Object.keys(config.syllabaryMap).sort((a, b) => b.length - a.length);
+        const syllables = Object.keys(syllabaryMap).sort((a, b) => b.length - a.length);
         if (syllables.length === 0) return true;
 
         let i = 0;
         while (i < clean.length) {
-            const match = syllables.find(s => clean.startsWith(s, i) && config.syllabaryMap[s]);
+            const match = syllables.find(s => clean.startsWith(s, i) && syllabaryMap[s]);
             if (!match) return false;
             i += match.length;
         }
@@ -64,7 +87,7 @@ export default function AnalyzerTab() {
         lexicon.filter(e => normalizeToBase(e.word.toLowerCase()) === safeSurface)
                .forEach(m => parsings.push({ root: m, rules: [] }));
 
-        const personRules = getPersonRules(config.personRules);
+        const personRules = getPersonRules(personRulesConfig);
         personRules.forEach(rule => {
             const cleanAffix = rule.affix ? rule.affix.replace(/^-|-$/g, '').toLowerCase() : null;
             const normFree = rule.freeForm ? normalizeToBase(rule.freeForm.toLowerCase()) : null;
@@ -92,8 +115,8 @@ export default function AnalyzerTab() {
         });
 
         // What if it's a bare verb root, but verbs normally require an infinitive marker in the dictionary?
-        if (config.verbMarker) {
-            const markers = config.verbMarker.split(',').map(m => m.trim().replace(/^-/g, ''));
+        if (verbMarker) {
+            const markers = verbMarker.split(',').map(m => m.trim().replace(/^-/g, ''));
             markers.forEach(marker => {
                 lexicon.filter(e => normalizeToBase(e.word.toLowerCase()) === safeSurface + normalizeToBase(marker) && e.wordClass === 'verb')
                        .forEach(m => parsings.push({ root: m, rules: [] }));
@@ -102,7 +125,7 @@ export default function AnalyzerTab() {
 
         // Finally, start stripping off grammar affixes one by one to see what's underneath
         const allRules = [
-            ...(config.grammarRules || []),
+            ...(grammarRules || []),
             ...personRules.filter(p => p.affix).map(p => ({ ...p, appliesTo: p.appliesTo || 'all' }))
         ];
 
@@ -159,7 +182,7 @@ export default function AnalyzerTab() {
         // 2. Perform Lexicon-Aware Segmentation on each token
         initialTokens.forEach(token => {
             const cleanToken = token.replace(/[.,!?]/g, '');
-            const segments = segmentToken(cleanToken, lexicon, config, normalizeToBase, getUniqueParsings);
+            const segments = segmentToken(cleanToken, lexicon, morphologyConfig, normalizeToBase, getUniqueParsings);
 
             segments.forEach(seg => {
                 const parsings = getUniqueParsings(seg);
@@ -202,9 +225,9 @@ export default function AnalyzerTab() {
         setIsModalOpen(true);
 
         // Unlock Translator achievement
-        if (inputText.trim() && !config.unlockedBadges?.includes('translator')) {
-            config.unlockBadge('translator', 'Translator');
-            config.logActivity('Analyzed a sentence in the Syntax Analyzer!');
+        if (inputText.trim() && !unlockedBadges?.includes('translator')) {
+            unlockBadge('translator', 'Translator');
+            logActivity('Analyzed a sentence in the Syntax Analyzer!');
         }
     };
 
@@ -249,11 +272,11 @@ export default function AnalyzerTab() {
                     const n = r.name.toUpperCase();
                     if (n.match(/^[123][SP]/)) return true;
                     // personRules can be a legacy string or a modern array of objects
-                    if (typeof config.personRules === 'string') {
-                        return config.personRules.toUpperCase().includes(n);
+                    if (typeof personRulesConfig === 'string') {
+                        return personRulesConfig.toUpperCase().includes(n);
                     }
-                    if (Array.isArray(config.personRules)) {
-                        return config.personRules.some(p =>
+                    if (Array.isArray(personRulesConfig)) {
+                        return personRulesConfig.some(p =>
                             (p.name && p.name.toUpperCase().includes(n)) ||
                             (p.person && p.person.toUpperCase().includes(n))
                         );
@@ -265,7 +288,7 @@ export default function AnalyzerTab() {
 
             // Validate Adjective Placement
             if (parse.root.wordClass === 'adjective') {
-                const adjPlacement = config.adjectivePlacement || 'pre-nominal';
+                const adjPlacement = adjectivePlacement || 'pre-nominal';
                 if (adjPlacement === 'post-nominal') {
                     let foundNoun = false;
                     for (let j = idx - 1; j >= 0; j--) {
@@ -311,7 +334,7 @@ export default function AnalyzerTab() {
         if (pattern.length === 0 && adjPlacementValid) return null;
 
         let cleanedPattern = pattern.filter((v, i, a) => v !== a[i - 1]).join('');
-        const targetOrder = config.syntaxOrder || 'SVO';
+        const targetOrder = syntaxOrder || 'SVO';
         let isValid = cleanedPattern === targetOrder || cleanedPattern.includes(targetOrder);
         
         if (pattern.length === 0) isValid = true;
@@ -325,7 +348,7 @@ export default function AnalyzerTab() {
         }
 
         return { isValid, cleanedPattern, targetOrder, adjPlacementValid, adjErrorMsg };
-    }, [analyzedWords, config.syntaxOrder, config.personRules, config.adjectivePlacement]);
+    }, [analyzedWords, syntaxOrder, personRulesConfig, adjectivePlacement]);
 
     // Spin up a rough English translation based on the found roots and grammar tags
     const handleTranslate = () => {
@@ -408,7 +431,7 @@ export default function AnalyzerTab() {
             };
         });
 
-        const adjPlacement = config.adjectivePlacement || 'pre-nominal';
+        const adjPlacement = adjectivePlacement || 'pre-nominal';
         tokenData.forEach((td, i) => {
             if (td.wordClass === 'adjective' && !td.consumed) {
                 if (adjPlacement === 'post-nominal') {
