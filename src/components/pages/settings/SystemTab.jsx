@@ -24,12 +24,6 @@ export default function SystemTab() {
     const navigate = useNavigate();
 
     const colors = useConfigStore((state) => state.colors) || {};
-    const conlangName = useConfigStore((state) => state.conlangName) || 'MyConlang';
-    const authorName = useConfigStore((state) => state.authorName) || '';
-    const description = useConfigStore((state) => state.description) || '';
-    const customFontBase64 = useConfigStore((state) => state.customFontBase64);
-    const customFont = useConfigStore((state) => state.customFont);
-    const customGlyphs = useConfigStore((state) => state.customGlyphs) || {};
     const autoReturnToLexicon = useConfigStore((state) => state.autoReturnToLexicon);
     const suppressDuplicateWarnings = useConfigStore((state) => state.suppressDuplicateWarnings);
     const isPublic = useConfigStore((state) => state.isPublic) || false;

@@ -28,7 +28,6 @@ export default function PhonologyTab() {
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const syllabificationAlgorithm = useConfigStore((state) => state.syllabificationAlgorithm) || 'ltr';
     const azureTtsVoice = useConfigStore((state) => state.azureTtsVoice) || 'en-US-JennyNeural';
-    const azureTtsUseIpa = useConfigStore((state) => state.azureTtsUseIpa) ?? true;
     const vowelHarmonyMode = useConfigStore((state) => state.vowelHarmonyMode) || 'complete';
     const vowelHarmonySets = useConfigStore((state) => state.vowelHarmonySets) || [];
     const vowelHarmonyOverrideWordClasses = useConfigStore((state) => state.vowelHarmonyOverrideWordClasses) || [];

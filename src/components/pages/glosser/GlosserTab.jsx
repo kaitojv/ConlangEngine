@@ -53,7 +53,6 @@ export default function GlosserTab() {
     const morphologyConfig = useMemo(() => ({ grammarRules, personRules, verbMarker }),
         [grammarRules, personRules, verbMarker]);
     const particleDatabase = useConfigStore((state) => state.particleDatabase) || [];
-    const compositeParticles = useConfigStore((state) => state.compositeParticles) || [];
     const usesParticles = useConfigStore((state) => state.usesParticles) || false;
     const { normalizeToBase, transliterate } = useTransliterator();
 

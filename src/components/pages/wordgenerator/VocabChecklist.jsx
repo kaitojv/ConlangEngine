@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router';
 import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import { useWordGenerator } from '@/hooks/useWordGenerator.jsx';
-import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { fetchDefinitionOptions } from '@/utils/semanticUtils.js';

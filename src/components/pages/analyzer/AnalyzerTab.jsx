@@ -45,7 +45,6 @@ export default function AnalyzerTab() {
         [grammarRules, personRulesConfig, verbMarker]
     );
     const particleDatabase = useConfigStore((state) => state.particleDatabase) || [];
-    const compositeParticles = useConfigStore((state) => state.compositeParticles) || [];
     const usesParticles = useConfigStore((state) => state.usesParticles) || false;
     const { normalizeToBase, transliterate } = useTransliterator();
 

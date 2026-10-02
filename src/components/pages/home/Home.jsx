@@ -37,7 +37,6 @@ const RollingNumber = ({ endValue, duration = 2000 }) => {
 
 export default function Home() {
     const authorName = useConfigStore((state) => state.authorName) || "Creator";
-    const conlangName = useConfigStore((state) => state.conlangName) || "your conlang";
     const streak = useConfigStore((state) => state.streak) || 0;
     const lastStudyDate = useConfigStore((state) => state.lastStudyDate);
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
