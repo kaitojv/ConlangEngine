@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
@@ -14,7 +14,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ALLOWED_REDIRECTS } from '../../../App.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
 import toast from 'react-hot-toast';
-import { sanitizeConfig, sanitizeLexicon, decompressPayload, decompressPayloadAsync } from '@/utils/schemaValidator.jsx';
+import { sanitizeConfig, sanitizeLexicon, decompressPayloadAsync } from '@/utils/schemaValidator.jsx';
 import { useSharing } from '@/hooks/useSharing.jsx';
 import PayPalButton from '@/components/Payment/PayPalButton.jsx';
 

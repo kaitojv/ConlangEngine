@@ -12,7 +12,7 @@ import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
 import { commonWords } from '@/components/pages/wordgenerator/commonWords.jsx';
 import { Wand2, Send, Dna, BookCopy, SkipForward, Check, Settings2, Download, SlidersHorizontal, ListChecks, Dice5, Loader2 } from 'lucide-react';
-import { fetchDefinitionForWord, fetchDefinitionOptions, fetchSynonymOptions } from '@/utils/semanticUtils.js';
+import { fetchSynonymOptions } from '@/utils/semanticUtils.js';
 import DefinitionSelectModal from '@/components/UI/Modal/DefinitionSelectModal.jsx';
 import toast from 'react-hot-toast';
 import VocabChecklist from '@/components/pages/wordgenerator/VocabChecklist.jsx';

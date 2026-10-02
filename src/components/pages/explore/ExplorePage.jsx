@@ -5,8 +5,7 @@ import { Globe, BookA, User, Loader2, Heart, Trash2, Library, Map as MapIcon, Se
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import toast from 'react-hot-toast';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
-import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
-import { sanitizeConfig, decompressPayloadAsync } from '../../../utils/schemaValidator.jsx';
+import { decompressPayloadAsync } from '../../../utils/schemaValidator.jsx';
 import { transliterateText } from '../../../utils/transliteration.js';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
 import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
