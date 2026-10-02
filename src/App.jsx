@@ -19,6 +19,7 @@ import FloatingBackground from './components/pages/home/FloatingBackground.jsx';
 import PWAInstallPrompt from './components/UI/PWAInstallPrompt/PWAInstallPrompt.jsx';
 import CommandPalette from './components/UI/CommandPalette/CommandPalette.jsx';
 import PageSkeleton from './components/UI/PageSkeleton/PageSkeleton.jsx';
+import ErrorBoundary from './components/UI/ErrorBoundary/ErrorBoundary.jsx';
 import { AnimatePresence, motion } from 'framer-motion';
 
 import { Toaster } from 'react-hot-toast';
@@ -216,11 +217,13 @@ function App(){
 
     {/* PUBLIC VIEWER — standalone route with no app shell */}
     {isPublicView ? (
-      <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0b0f19', color: '#94a3b8' }}>Loading...</div>}>
-        <Routes>
+      <ErrorBoundary label="page">
+        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0b0f19', color: '#94a3b8' }}>Loading...</div>}>
+          <Routes>
           <Route path="/view/:projectId" element={<PublicViewer />} />
-        </Routes>
-      </Suspense>
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
     ) : (
       <>
       {isRehydrating && (
@@ -244,8 +247,11 @@ function App(){
       <FloatingBackground />
 
       <main className={`content ${location.pathname === '/wiki' ? 'wide-content' : ''}`}>
-        <Suspense fallback={<PageSkeleton />}>
-          <AnimatePresence mode="wait">
+        {/* Boundary sits OUTSIDE the Suspense so it also catches a failed lazy chunk,
+            not just throws during render. */}
+        <ErrorBoundary label="page">
+          <Suspense fallback={<PageSkeleton />}>
+            <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
               <Route path="/" element={<AnimatedPage><Home /></AnimatedPage>} />
               <Route path="/explore" element={<AnimatedPage><ExplorePage /></AnimatedPage>} />
@@ -279,8 +285,9 @@ function App(){
                 </AnimatedPage>
               } />
             </Routes>
-          </AnimatePresence>
-        </Suspense>
+            </AnimatePresence>
+          </Suspense>
+        </ErrorBoundary>
       </main>
       <Footer />
       <FloatingKeyboard />

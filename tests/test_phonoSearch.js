@@ -1,6 +1,6 @@
 // test_phonoSearch.js — run with: node test_phonoSearch.js
-import { tokenizeIPA, buildInventories, createPhonoMatcher } from './src/utils/phonoSearch.js';
-import { reverseDictScore } from './src/utils/reverseDictionary.js';
+import { tokenizeIPA, buildInventories, createPhonoMatcher } from '../src/utils/phonoSearch.js';
+import { reverseDictScore } from '../src/utils/reverseDictionary.js';
 
 let pass = 0;
 let fail = 0;

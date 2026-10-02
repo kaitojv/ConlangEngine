@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node tests/runAll.js"
   },
   "dependencies": {
     "@aws-sdk/client-polly": "^3.1030.0",
