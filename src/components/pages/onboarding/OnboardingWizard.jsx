@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
@@ -49,22 +50,36 @@ const STARTER_MEANINGS = [
 
 export default function OnboardingWizard() {
     const navigate = useNavigate();
-    const config = useConfigStore();
+    const {
+        conlangName, authorName, conlangIcon, phonologyTypes,
+        // Prefixed because this component declares local `consonants` and
+        // `vowels` state below; the store values are only the seed values.
+        initialConsonants, initialVowels, syllablePattern, updateConfig,
+    } = useConfigStore(useShallow(state => ({
+        conlangName: state.conlangName,
+        authorName: state.authorName,
+        conlangIcon: state.conlangIcon,
+        phonologyTypes: state.phonologyTypes,
+        initialConsonants: state.consonants,
+        initialVowels: state.vowels,
+        syllablePattern: state.syllablePattern,
+        updateConfig: state.updateConfig,
+    })));
     const setLexicon = useLexiconStore(state => state.setLexicon);
     const { generateWord } = useWordGenerator();
 
     const [step, setStep] = useState(1);
     
     // Step 1 State
-    const [name, setName] = useState(config.conlangName === 'My New Conlang' ? '' : config.conlangName);
-    const [author, setAuthor] = useState(config.authorName === 'Author Name' ? '' : config.authorName);
-    const [icon, setIcon] = useState(config.conlangIcon || 'Globe');
-    const [scriptType, setScriptType] = useState(config.phonologyTypes || 'alphabetic');
+    const [name, setName] = useState(conlangName === 'My New Conlang' ? '' : conlangName);
+    const [author, setAuthor] = useState(authorName === 'Author Name' ? '' : authorName);
+    const [icon, setIcon] = useState(conlangIcon || 'Globe');
+    const [scriptType, setScriptType] = useState(phonologyTypes || 'alphabetic');
 
     // Step 2 State
-    const [consonants, setConsonants] = useState(config.consonants || PHONOLOGY_PRESETS.standard.consonants);
-    const [vowels, setVowels] = useState(config.vowels || PHONOLOGY_PRESETS.standard.vowels);
-    const [pattern, setPattern] = useState(config.syllablePattern || PHONOLOGY_PRESETS.standard.pattern);
+    const [consonants, setConsonants] = useState(initialConsonants || PHONOLOGY_PRESETS.standard.consonants);
+    const [vowels, setVowels] = useState(initialVowels || PHONOLOGY_PRESETS.standard.vowels);
+    const [pattern, setPattern] = useState(syllablePattern || PHONOLOGY_PRESETS.standard.pattern);
     const [activePreset, setActivePreset] = useState('standard');
 
     // Step 3 State
@@ -95,7 +110,7 @@ export default function OnboardingWizard() {
             });
         }
 
-        config.updateConfig({
+        updateConfig({
             conlangName: name || 'Untitled Conlang',
             authorName: author || 'Unknown',
             conlangIcon: icon,
@@ -147,12 +162,12 @@ export default function OnboardingWizard() {
         const existingLexicon = useLexiconStore.getState().lexicon || [];
         setLexicon([...existingLexicon, ...starterWords]);
         
-        config.updateConfig({ hasCompletedOnboarding: true });
+        updateConfig({ hasCompletedOnboarding: true });
         navigate('/lexicon');
     };
 
     const handleSkip = () => {
-        config.updateConfig({ hasCompletedOnboarding: true });
+        updateConfig({ hasCompletedOnboarding: true });
         navigate('/lexicon');
     };
 

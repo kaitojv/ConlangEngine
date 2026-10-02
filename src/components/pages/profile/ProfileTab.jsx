@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useProjectStore } from '@/store/useProjectStore.jsx';
@@ -46,7 +47,6 @@ export default function ProfileTab() {
 
     const [cloudProjects, setCloudProjects] = useState([]);
     const [isProjectSelectorOpen, setProjectSelectorOpen] = useState(false);
-    const config = useConfigStore();
     const localProjects = useProjectStore(state => state.localProjects);
     const { transliterate } = useTransliterator();
     
@@ -75,7 +75,7 @@ export default function ProfileTab() {
     useEffect(() => {
         const checkLiveStatus = async (currentSession) => {
             if (!currentSession) {
-                config.updateConfig({ isProActive: false });
+                updateConfig({ isProActive: false });
                 return;
             }
 
@@ -98,10 +98,10 @@ export default function ProfileTab() {
                     }
                 }
                 
-                config.updateConfig({ isProActive: activeLive });
+                updateConfig({ isProActive: activeLive });
             } catch (err) {
                 console.error('Error verifying LIVE status:', err);
-                config.updateConfig({ isProActive: false });
+                updateConfig({ isProActive: false });
             }
         };
 
@@ -131,17 +131,39 @@ export default function ProfileTab() {
         }
     }, [session, location.search, navigate]);
 
-    // BUG-5: Extract specific values to avoid re-running when unrelated config changes
-    const grammarRules = config.grammarRules;
-    const configStreak = config.streak;
-    const configWikiPages = config.wikiPages;
-    const configSyntaxOrder = config.syntaxOrder;
-    const configPhonologyTypes = config.phonologyTypes;
-    const configCustomFont = config.customFont;
-    const configCustomGlyphs = config.customGlyphs;
-    const configUnlockedBadges = config.unlockedBadges;
-    const unlockBadge = config.unlockBadge;
-    const logActivity = config.logActivity;
+    // BUG-5 (proper fix): selecting only the fields this component reads, so
+    // unrelated config changes no longer re-render it. The previous version
+    // of this code destructured the values below but still held a broad
+    // subscription to the whole store, so the component re-rendered anyway and
+    // the extraction achieved nothing.
+    const {
+        grammarRules, streak: configStreak, wikiPages: configWikiPages,
+        syntaxOrder: configSyntaxOrder, phonologyTypes: configPhonologyTypes,
+        customFont: configCustomFont, customGlyphs: configCustomGlyphs,
+        unlockedBadges: configUnlockedBadges, unlockBadge, logActivity,
+        isProActive, isAutoSyncEnabled, authorName,
+        vowels, activity, projectId,
+        updateConfig, setFullConfig,
+    } = useConfigStore(useShallow(state => ({
+        grammarRules: state.grammarRules,
+        streak: state.streak,
+        wikiPages: state.wikiPages,
+        syntaxOrder: state.syntaxOrder,
+        phonologyTypes: state.phonologyTypes,
+        customFont: state.customFont,
+        customGlyphs: state.customGlyphs,
+        unlockedBadges: state.unlockedBadges,
+        unlockBadge: state.unlockBadge,
+        logActivity: state.logActivity,
+        isProActive: state.isProActive,
+        isAutoSyncEnabled: state.isAutoSyncEnabled,
+        authorName: state.authorName,
+        vowels: state.vowels,
+        activity: state.activity,
+        projectId: state.projectId,
+        updateConfig: state.updateConfig,
+        setFullConfig: state.setFullConfig,
+    })));
 
     // Check the user's progress and unlock any achievements they've earned
     useEffect(() => {
@@ -175,8 +197,8 @@ export default function ProfileTab() {
         const phonemeCount = new Set(lexicon.map(w => w.word.toLowerCase()).join('').split('')).size;
         if (phonemeCount >= 20) unlock('phonologist', 'Phonologist');
         
-        if (config.isProActive) unlock('patron', 'Patron');
-    }, [lexicon, grammarRules, configStreak, configUnlockedBadges, configWikiPages, configSyntaxOrder, localProjects.length, configPhonologyTypes, configCustomFont, configCustomGlyphs, config.isProActive, unlockBadge, logActivity]);
+        if (isProActive) unlock('patron', 'Patron');
+    }, [lexicon, grammarRules, configStreak, configUnlockedBadges, configWikiPages, configSyntaxOrder, localProjects.length, configPhonologyTypes, configCustomFont, configCustomGlyphs, isProActive, unlockBadge, logActivity]);
 
     // Crunch the numbers for the overall dictionary statistics
     const analytics = useMemo(() => {
@@ -206,7 +228,7 @@ export default function ProfileTab() {
     // Analyze the actual letters and sounds being used in the language
     const phonotactics = useMemo(() => {
         const text = lexicon.map(w => w.word.replace(/\*/g, '').toLowerCase()).join('');
-        const vowelsList = (config.vowels || "a,e,i,o,u").split(',').map(v => v.split('=')[0].trim().toLowerCase());
+        const vowelsList = (vowels || "a,e,i,o,u").split(',').map(v => v.split('=')[0].trim().toLowerCase());
         
         let vCount = 0; 
         let cCount = 0; 
@@ -231,7 +253,7 @@ export default function ProfileTab() {
         const maxFreq = topPhonemes.length ? topPhonemes[0][1] : 1;
 
         return { vRatio, cRatio, topPhonemes, maxFreq, total };
-    }, [lexicon, config.vowels]);
+    }, [lexicon, vowels]);
 
 
     // Sign up or log into the Cloud network
@@ -285,19 +307,19 @@ export default function ProfileTab() {
             );
 
             setLexicon(safeLexicon);
-            config.setFullConfig({
+            setFullConfig({
                 ...safeConfig, 
                 projectId: project.project_id,
                 lastCloudSync: new Date().toISOString()
             });
             
             if (projectData.wiki) {
-                config.updateConfig({ wikiPages: projectData.wiki });
+                updateConfig({ wikiPages: projectData.wiki });
             }
             setProjectSelectorOpen(false);
             const projectName = safeConfig.conlangName || 'Untitled Project';
             setSyncStatus(`✅ Loaded project: ${projectName}`);
-            config.logActivity(`Pulled project '${projectName}' from cloud.`);
+            logActivity(`Pulled project '${projectName}' from cloud.`);
             setTimeout(() => setSyncStatus(''), 3000);
         }
     };
@@ -453,7 +475,7 @@ export default function ProfileTab() {
                 .from('conlang_versions')
                 .select('id, created_at, version_name, project_data')
                 .eq('user_id', session.user.id)
-                .eq('project_id', config.projectId)
+                .eq('project_id', projectId)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -485,14 +507,14 @@ export default function ProfileTab() {
             const safeLexicon = sanitizeLexicon(projectData.dictionary || []);
             
             setLexicon(safeLexicon);
-            config.setFullConfig({ ...safeConfig, projectId: config.projectId });
+            setFullConfig({ ...safeConfig, projectId: projectId });
             
             if (projectData.wiki) {
-                config.updateConfig({ wikiPages: projectData.wiki });
+                updateConfig({ wikiPages: projectData.wiki });
             }
             
             setVersionHistoryOpen(false);
-            config.logActivity(`Restored past version: ${version.version_name}`);
+            logActivity(`Restored past version: ${version.version_name}`);
             toast.success("Version restored successfully!", { id: 'restore-toast' });
         } catch (err) {
             console.error(err);
@@ -510,7 +532,7 @@ export default function ProfileTab() {
                             <User /> {session ? 'Account Status' : 'Sign In / Register'}
                         </h2>
                         <div className="account-subtitle">
-                            {session ? `Logged in as: ${config.authorName !== 'Author Name' ? config.authorName : session.user.email}` : 'Local Workspace (Not Signed In)'}
+                            {session ? `Logged in as: ${authorName !== 'Author Name' ? authorName : session.user.email}` : 'Local Workspace (Not Signed In)'}
                         </div>
                     </div>
                     
@@ -523,7 +545,7 @@ export default function ProfileTab() {
                                         {isSharing ? ' Generating...' : ' Share Link'}
                                     </div>
                                 </Button>
-                                {config.isProActive && (
+                                {isProActive && (
                                     <>
                                         <Button variant="default" className="push-btn" onClick={handlePushToCloud}>
                                             <div className="btn-content"><CloudUpload size={16}/> Push to Cloud</div>
@@ -588,26 +610,26 @@ export default function ProfileTab() {
                     <div>
                         <Input
                             label="Display Name / Alias"
-                            value={config.authorName || ''}
-                            onChange={(e) => config.updateConfig({ authorName: e.target.value })}
+                            value={authorName || ''}
+                            onChange={(e) => updateConfig({ authorName: e.target.value })}
                             placeholder="Your author name..."
                         />
                         <p className="profile-settings-hint">This name appears on the homepage greeting and exported PDFs.</p>
                     </div>
-                    {session && config.isProActive && (
+                    {session && isProActive && (
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                                 <label style={{ fontSize: '0.9rem', color: 'var(--tx)', fontWeight: 'bold' }}><RefreshCw size={14} style={{ marginRight: '6px', position: 'relative', top: '2px' }}/> Auto-Sync to Cloud</label>
                                 <div 
                                     style={{ 
-                                        width: '40px', height: '22px', borderRadius: '20px', background: config.isAutoSyncEnabled ? 'var(--acc)' : 'var(--s3)', 
+                                        width: '40px', height: '22px', borderRadius: '20px', background: isAutoSyncEnabled ? 'var(--acc)' : 'var(--s3)', 
                                         position: 'relative', cursor: 'pointer', transition: 'background 0.3s ease' 
                                     }}
-                                    onClick={() => config.updateConfig({ isAutoSyncEnabled: !config.isAutoSyncEnabled })}
+                                    onClick={() => updateConfig({ isAutoSyncEnabled: !isAutoSyncEnabled })}
                                 >
                                     <div style={{
                                         width: '18px', height: '18px', background: '#fff', borderRadius: '50%',
-                                        position: 'absolute', top: '2px', left: config.isAutoSyncEnabled ? '20px' : '2px',
+                                        position: 'absolute', top: '2px', left: isAutoSyncEnabled ? '20px' : '2px',
                                         transition: 'left 0.3s ease'
                                     }}/>
                                 </div>
@@ -618,7 +640,7 @@ export default function ProfileTab() {
                 </div>
             </Card>
 
-            {!config.isProActive && (
+            {!isProActive && (
                 <Card>
                     <div className="free-tier-wrapper">
                         <div className="free-tier-icon">
@@ -698,10 +720,10 @@ export default function ProfileTab() {
                 <Card className="card-no-margin">
                     <h3 className="section-title mb-20"><Activity /> Recent Activity</h3>
                     <div className="activity-timeline">
-                        {(!config.activity || config.activity.filter(a => !a.text.includes('isProActive')).length === 0) ? (
+                        {(!activity || activity.filter(a => !a.text.includes('isProActive')).length === 0) ? (
                             <div className="activity-empty">No activity yet. Start building!</div>
                         ) : (
-                            config.activity.filter(a => !a.text.includes('isProActive')).map((item, idx) => {
+                            activity.filter(a => !a.text.includes('isProActive')).map((item, idx) => {
                                 const date = new Date(item.time);
                                 const { Icon, cleanText } = getActivityDetails(item.text);
                                 return (
@@ -724,7 +746,7 @@ export default function ProfileTab() {
                     <h3 className="section-title mb-20"><Trophy /> Achievements</h3>
                     <div className="badges-grid">
                         {BADGES.map(badge => {
-                            const isUnlocked = config.unlockedBadges?.includes(badge.id);
+                            const isUnlocked = configUnlockedBadges?.includes(badge.id);
                             return (
                                 <div key={badge.id} className={`badge-item ${isUnlocked ? 'unlocked' : ''}`} title={`${badge.name}: ${badge.desc}`}>
                                     <span className="badge-icon-wrapper"><badge.Icon size={28} /></span>
