@@ -9,18 +9,37 @@ import IpaReferencePage from './IpaReferencePage.jsx';
 import './orthographyPage.css';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
-import { getScriptSystem, getDefaultScriptId } from '../../../utils/scriptResolver.js';
+import { getScriptSystem, getDefaultScriptId, buildScriptConfig } from '../../../utils/scriptResolver.js';
+import { transliterateText } from '../../../utils/transliteration.js';
+import { useShallow } from 'zustand/react/shallow';
 import ScriptManager from '../../UI/ScriptManager/ScriptManager.jsx';
 import ScriptRulesEditor from '../../UI/ScriptRulesEditor/ScriptRulesEditor.jsx';
 import GlyphDetailsModal from '../../UI/GlyphDetailsModal/GlyphDetailsModal.jsx';
 import GlyphPreviewBadge from '../../UI/Glyph/GlyphPreviewBadge.jsx';
 import { getGlyphMetrics } from '../../UI/Glyph/resolveGlyphStrokes.js';
-import { resolveNumeralComponents } from '../../UI/Glyph/resolveNumeralGlyphs.js';
+import {
+    resolveNumeralComponents,
+    buildNumeralAtoms,
+    numeralName,
+    buildLexiconIndex,
+    resolveWordGlyphs
+} from '../../UI/Glyph/resolveNumeralGlyphs.js';
 import GlyphBaselineRow from '../../UI/Glyph/GlyphBaselineRow.jsx';
 import StrokeOrderModal from '../../UI/StrokeOrder/StrokeOrderModal.jsx';
 import toast from 'react-hot-toast';
 
 // --- SUB-COMPONENTS ---
+
+// Every config field buildScriptConfig() and transliterateText() read. Selected
+// with useShallow so the numerals preview only recomputes when one of them changes.
+const SCRIPT_CONFIG_KEYS = [
+    'scriptSystems', 'scriptRules', 'scriptDataById', 'activeScriptSystemId',
+    'phonologyTypes', 'alphabeticScript', 'writingDirection', 'syllabificationAlgorithm',
+    'blockSettings', 'blockTemplates', 'alphabetNames',
+    'customGlyphs', 'syllabaryMap', 'featuralComponents', 'alphabetGlyphs',
+    'customFontBase64', 'customFont', 'puaCounter',
+    'consonants', 'vowels', 'otherPhonemes', 'typographySettings'
+];
 
 // Returns large glyph/font data scoped to a specific script. Falls back to the
 // legacy global fields ONLY for the default script, so a non-default script
@@ -338,7 +357,7 @@ const MeasurementSystemView = () => {
     );
 };
 
-const NumbersTab = () => {
+const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
     const numeralBase = useConfigStore(state => state.numeralBase) || 10;
     const numberSystem = useConfigStore(state => state.numberSystem) || {
         zero: '',
@@ -363,10 +382,34 @@ const NumbersTab = () => {
     // drawn glyph via the lexicon entry's `ideogram`. Without it the call falls
     // through to `return cleanWord`, i.e. the romanized name instead of the glyph.
     const lexicon = useLexiconStore(state => state.lexicon) || [];
+
+    // Numeral glyphs are resolved through the ACTIVE script only. Every script
+    // allocates its own PUA codepoints from U+E000, so looking a codepoint up in
+    // "any script" (or transliterating with the root config while another script
+    // is active) drew glyphs from the wrong script - the "random letters" bug.
+    const scriptState = useConfigStore(useShallow(state => {
+        const cfg = {};
+        for (const key of SCRIPT_CONFIG_KEYS) cfg[key] = state[key];
+        return cfg;
+    }));
+    const activeScriptId = scriptState.activeScriptSystemId || getDefaultScriptId(scriptState);
+    const scriptConfig = useMemo(
+        () => buildScriptConfig(scriptState, activeScriptId),
+        [scriptState, activeScriptId]
+    );
+    const activeScriptType = scriptConfig.phonologyTypes || phonologyTypes || 'alphabetic';
+    const lexiconIndex = useMemo(() => buildLexiconIndex(lexicon), [lexicon]);
     // Read here (not via a per-glyph hook) because the number preview resolves MANY
     // glyphs in a loop, which requires the pure lookup rather than a hook call.
-    const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
-    const scriptDataById = useConfigStore(state => state.scriptDataById) || {};
+    const glyphOpts = useMemo(() => ({
+        scriptType: activeScriptType,
+        customGlyphs: scriptConfig.customGlyphs || {},
+        lexiconIndex,
+        // Numeral names are not lexicon words, so no lexicon is passed: a syllabic
+        // transliteration would otherwise substitute another script's ideogram.
+        transliterate: (word) => transliterateText(word, scriptConfig, []),
+        getMetrics: getGlyphMetrics
+    }), [activeScriptType, scriptConfig, lexiconIndex]);
     const [testNumber, setTestNumber] = useState('');
     // Eye toggle: hides the generated number glyph until explicitly revealed.
     const [showTestResult, setShowTestResult] = useState(false);
@@ -403,127 +446,13 @@ const NumbersTab = () => {
         updateSystem(mapName, newMap);
     };
 
-    /**
-     * Builds a number as an ordered list of components (e.g. senary 7 -> ["one","six"]),
-     * or a single string when `asString` is true.
-     *
-     * Components are the atoms the numeral system is actually defined in — each one
-     * already has its own entry in the Digits / Stems / Powers tables. Keeping them
-     * separate is what lets the glyph preview resolve each glyph individually instead
-     * of failing on a joined multi-glyph string. The joined string form (used for the
-     * written output) is unchanged.
-     */
-    const generateNumberComponents = useCallback((num) => {
-        if (num === 0) return [numberSystem.zero || '0'];
-        if (numberSystem.irregulars?.[num]) return [numberSystem.irregulars[num]];
-
-        const base = numeralBase > 1 ? numeralBase : 10;
-        const s = numberSystem.settings || {};
-
-        // Destructure with default values for backwards compatibility.
-        // `globalFusion` and `separator` are applied by generateNumberName when the
-        // components are joined, so they are not needed here.
-        const {
-            fusion = false,
-            useStemsForUnits = false,
-            separator = ' ',
-            internalOrder = 'digit-first',
-            magnitudeOrder = 'standard',
-            hideOne = false
-        } = s;
-
-        let remaining = num;
-        let components = []; 
-        let power = 0;
-
-        while (remaining > 0) {
-            const digit = remaining % base;
-            if (digit > 0) {
-                const powerVal = Math.pow(base, power);
-                const componentVal = digit * powerVal;
-                
-                if (numberSystem.irregulars?.[componentVal]) {
-                    // Only use component-level irregulars when the component equals the full original number.
-                    // This prevents overrides like "20 → vingt" from bleeding into 21, 22, etc.
-                    if (componentVal === num) {
-                        components.push(numberSystem.irregulars[componentVal]);
-                    } else if (power === 0) {
-                        const dName = (useStemsForUnits && numberSystem.stems?.[digit])
-                            ? numberSystem.stems[digit]
-                            : (numberSystem.digits?.[digit] || `(${digit})`);
-                        components.push(dName);
-                    } else {
-                        const pName = numberSystem.powers?.[powerVal] || `[Base^${power}]`;
-                        let dName = '';
-                        
-                        if (!(hideOne && digit === 1)) {
-                            dName = (fusion && numberSystem.stems?.[digit]) 
-                                ? numberSystem.stems[digit] 
-                                : (numberSystem.digits?.[digit] || `(${digit})`);
-                        }
-
-                        let word;
-                        if (!dName) {
-                            word = pName;
-                        } else {
-                            word = internalOrder === 'unit-first' 
-                                ? `${pName}${fusion ? '' : separator}${dName}`
-                                : `${dName}${fusion ? '' : separator}${pName}`;
-                        }
-                        components.push(word);
-                    }
-                } else if (power === 0) {
-                    const dName = (useStemsForUnits && numberSystem.stems?.[digit])
-                        ? numberSystem.stems[digit]
-                        : (numberSystem.digits?.[digit] || `(${digit})`);
-                    components.push(dName);
-                } else {
-                    const pName = numberSystem.powers?.[powerVal] || `[Base^${power}]`;
-                    let dName = '';
-                    
-                    if (!(hideOne && digit === 1)) {
-                        dName = (fusion && numberSystem.stems?.[digit]) 
-                            ? numberSystem.stems[digit] 
-                            : (numberSystem.digits?.[digit] || `(${digit})`);
-                    }
-
-                    let word;
-                    if (!dName) {
-                        word = pName;
-                    } else {
-                        word = internalOrder === 'unit-first' 
-                            ? `${pName}${fusion ? '' : separator}${dName}`
-                            : `${dName}${fusion ? '' : separator}${pName}`;
-                    }
-                    components.push(word);
-                }
-            }
-            remaining = Math.floor(remaining / base);
-            power++;
-            if (power > 20) break; 
-        }
-
-        if (magnitudeOrder === 'standard') {
-            components.reverse();
-        }
-
-        return components.filter(Boolean);
-    }, [numeralBase, numberSystem]);
-
-    // Written form: the components joined with the configured separator. This is the
-    // output that was already correct, so it keeps its exact previous behaviour.
     const generateNumberName = useCallback(
-        (num) => generateNumberComponents(num).join(
-            numberSystem.settings?.globalFusion ? '' : (numberSystem.settings?.separator ?? ' ')
-        ),
-        [generateNumberComponents, numberSystem.settings]
+        (num) => {
+            const atoms = buildNumeralAtoms(num, numberSystem, numeralBase);
+            return numeralName(atoms, numberSystem.settings);
+        },
+        [numberSystem, numeralBase]
     );
-
-    const testResult = useMemo(() => {
-        const val = parseInt(testNumber);
-        if (isNaN(val)) return '';
-        return generateNumberName(val);
-    }, [testNumber, generateNumberName]);
 
     // Glyph form of the previewed number.
     //
@@ -542,33 +471,24 @@ const NumbersTab = () => {
     // same per-character contract the rest of the app uses, so it works for stems,
     // fusion, and every script type.
     const testNumberValue = parseInt(testNumber);
-    const testComponents = useMemo(
-        () => (isNaN(testNumberValue) ? [] : generateNumberComponents(testNumberValue)),
-        [testNumberValue, generateNumberComponents]
+    const testAtoms = useMemo(
+        () => (isNaN(testNumberValue) ? [] : buildNumeralAtoms(testNumberValue, numberSystem, numeralBase)),
+        [testNumberValue, numberSystem, numeralBase]
     );
 
+    const testResult = useMemo(() => {
+        if (isNaN(testNumberValue)) return '';
+        return numeralName(testAtoms, numberSystem.settings);
+    }, [testNumberValue, testAtoms, numberSystem.settings]);
+
     // Flat list of { char, strokes, sepBefore } in numeral order.
-    //
-    // Resolution deliberately does NOT go through transliterate(). A numeral name
-    // is a written *word*, and for a logographic conlang it resolves to a drawn
-    // ideogram via the lexicon - which the logographic branch of transliterateText
-    // only does for real lexicon entries. Numeral names are not lexicon entries, so
-    // transliterate() returned the raw romanized letters ("ō" = U+014D), which have
-    // no drawn glyph anywhere and rendered as a row of empty boxes.
-    //
-    // resolveNumeralComponents() instead tries, in order: the lexicon ideogram, a
-    // direct glyph for the name, then per-character glyphs. Components whose name
-    // has no drawn form are dropped rather than drawn as blanks, so the preview
-    // shows an honest "no glyph" state instead of a broken-looking run.
-    //
-    // sepBefore/label mark the first glyph of each component so the separator only
-    // appears between components, never between glyphs fused inside one.
-    const testGlyphParts = useMemo(() => resolveNumeralComponents(testComponents, {
-        lexicon,
-        customGlyphs,
-        scriptDataById,
+    // Built from atoms and resolved through the active script's customGlyphs,
+    // so stems legitimately fall back to their digit's ideogram and alphabetic
+    // scripts resolve via transliteration rather than checking the lexicon.
+    const testGlyphParts = useMemo(() => resolveNumeralComponents(testAtoms, {
+        ...glyphOpts,
         getMetrics: getGlyphMetrics
-    }), [testComponents, lexicon, customGlyphs, scriptDataById]);
+    }), [testAtoms, glyphOpts]);
 
     const testHasGlyph = testGlyphParts.some(p => p.strokes && p.strokes.length > 0);
 
@@ -602,7 +522,7 @@ const NumbersTab = () => {
     // while the row is revealed — previously the badge rendered unconditionally, which
     // leaked the answer before the eye toggle was ever pressed.
     const renderDigitControls = (key, name) => {
-        const rendered = name ? transliterate(name, lexicon) : '';
+        const resolved = name ? resolveWordGlyphs(name, glyphOpts) : null;
         return (
             <div className="digit-number-cell">
                 {name && (
@@ -610,7 +530,11 @@ const NumbersTab = () => {
                         <button
                             type="button"
                             className="num-icon-btn"
-                            onClick={() => setSelectedNumberForStroke({ word: name, name: `${key} (${name})` })}
+                            onClick={() => setSelectedNumberForStroke({
+                                word: name,
+                                name: `${key} (${name})`,
+                                scriptType: activeScriptType
+                            })}
                             title="Edit / view stroke order"
                         >
                             <PenTool size={13} />
@@ -623,14 +547,26 @@ const NumbersTab = () => {
                         >
                             {revealedNumbers[key] ? <EyeOff size={13} /> : <Eye size={13} />}
                         </button>
-                        {revealedNumbers[key] && rendered && (
-                            <GlyphPreviewBadge
-                                glyph={rendered}
-                                size={26}
-                                hideOnEmpty
-                                showCode={false}
-                                title="Custom glyph"
-                            />
+                        {revealedNumbers[key] && resolved && (
+                            resolved.complete ? (
+                                <span className="digit-glyphs-inline" style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                                    {resolved.chars.map((c, i) => (
+                                        <GlyphPreviewBadge
+                                            key={i}
+                                            glyph={c.char}
+                                            strokes={c.raw}
+                                            scriptId={activeScriptId}
+                                            size={26}
+                                            showCode={false}
+                                            title="Custom glyph"
+                                        />
+                                    ))}
+                                </span>
+                            ) : (
+                                <span className="custom-font-text notranslate" style={{ fontSize: '0.9rem', color: 'var(--tx2)' }}>
+                                    {resolved.chars.map(c => c.char).join('') || name}
+                                </span>
+                            )
                         )}
                     </>
                 )}
@@ -640,6 +576,11 @@ const NumbersTab = () => {
 
     return (
         <div className="tab-pane-container">
+            {activeScriptDropdown && (
+                <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'flex-start' }}>
+                    {activeScriptDropdown}
+                </div>
+            )}
             <div className="matrix-toggle-container" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
                 <div className="tabs tabs-boxed page-subnav">
                     <button className={`tab ${viewMode === 'basic' ? 'tab-active' : ''}`} onClick={() => setViewMode('basic')}>
@@ -936,7 +877,8 @@ const NumbersTab = () => {
                                                 // through exactly what the preview shows. Falls
                                                 // back to the written name if none resolved.
                                                 word: testGlyph || testResult,
-                                                name: `${testNumber || 'Result'}: ${testResult}`
+                                                name: `${testNumber || 'Result'}: ${testResult}`,
+                                                scriptType: activeScriptType
                                             })}
                                             title="View stroke order"
                                         >
@@ -978,7 +920,11 @@ const NumbersTab = () => {
                                     ) : (
                                         <div
                                             className="result-value custom-font-text notranslate result-value-clickable"
-                                            onClick={() => setSelectedNumberForStroke({ word: testResult, name: `${testNumber || 'Result'}: ${testResult}` })}
+                                            onClick={() => setSelectedNumberForStroke({
+                                                word: testResult,
+                                                name: `${testNumber || 'Result'}: ${testResult}`,
+                                                scriptType: activeScriptType
+                                            })}
                                             title="Click to view stroke order"
                                         >
                                             <span>{testResult}</span>
@@ -1007,7 +953,7 @@ const NumbersTab = () => {
                     onClose={() => setSelectedNumberForStroke(null)}
                     word={selectedNumberForStroke.word}
                     name={selectedNumberForStroke.name}
-                    scriptType={phonologyTypes}
+                    scriptType={selectedNumberForStroke.scriptType || activeScriptType}
                 />
             )}
         </div>
@@ -1059,7 +1005,7 @@ const AlphabeticShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
                             <div 
                                 key={char} 
                                 className="char-card glass interactive-card" 
-                                onClick={() => onGlyphClick && onGlyphClick({ char, glyph: customGlyph, type: 'alphabetic', name: charName })}
+                                onClick={() => onGlyphClick && onGlyphClick({ char, glyph: customGlyph || char, type: 'alphabetic', name: charName, scriptId })}
                             >
                                 <div className="char-display custom-font-text" style={{ fontSize: customGlyph ? '3rem' : '2rem', marginBottom: customGlyph ? '0' : '0.5rem' }}>
                                     {customGlyph || char}
@@ -1177,7 +1123,7 @@ const SyllabaryShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
                         <div 
                             key={key} 
                             className="showcase-syl-card glass interactive-card"
-                            onClick={() => onGlyphClick && onGlyphClick({ char: displayLabel, glyph: renderSymbol(symbol), type: 'syllabic', name: displayLabel })}
+                            onClick={() => onGlyphClick && onGlyphClick({ char: displayLabel, glyph: symbol || displayLabel, type: 'syllabic', name: displayLabel, scriptId })}
                         >
                             <div className="showcase-syl-symbol">{renderSymbol(symbol)}</div>
                             <div className="showcase-syl-label">{displayLabel}</div>
@@ -1275,7 +1221,7 @@ const LogographicShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
                         <div 
                             key={word.id} 
                             className="char-card glass interactive-card"
-                            onClick={() => onGlyphClick && onGlyphClick({ char: word.ideogram, glyph: renderGlyph(word.ideogram), type: 'logographic', name: word.translation || word.word })}
+                            onClick={() => onGlyphClick && onGlyphClick({ char: word.ideogram, glyph: word.ideogram, type: 'logographic', name: word.translation || word.word, scriptId })}
                         >
                             <div className="char-display" style={{ height: 'auto', marginBottom: '0.5rem' }}>
                                 {renderGlyph(word.ideogram)}
@@ -1411,7 +1357,14 @@ const BlockShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
                             <div 
                                 key={comp} 
                                 className="showcase-block-base-card glass interactive-card"
-                                onClick={() => onGlyphClick && onGlyphClick({ char: comp, glyph: <span className="custom-font-text">{phonemeToChar[comp] || comp}</span>, type: 'featural_block', name: phonemeToChar[comp] || comp })}
+                                onClick={() => onGlyphClick && onGlyphClick({ 
+                                    char: comp, 
+                                    glyph: phonemeToChar[comp] || comp, 
+                                    strokes: featuralComponents[comp], 
+                                    type: 'featural_block', 
+                                    name: phonemeToChar[comp] || comp, 
+                                    scriptId 
+                                })}
                             >
                                 <svg viewBox="0 0 300 300" width="64" height="64" className="showcase-block-svg">
                                     {featuralComponents[comp]
@@ -1447,7 +1400,13 @@ const BlockShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
                             <div 
                                 key={key} 
                                 className="showcase-syl-card glass interactive-card"
-                                onClick={() => onGlyphClick && onGlyphClick({ char: toMorphemeLabel(key), glyph: renderBlockSymbol(val), type: 'featural_block', name: toMorphemeLabel(key) })}
+                                onClick={() => onGlyphClick && onGlyphClick({ 
+                                    char: toMorphemeLabel(key), 
+                                    glyph: val || toMorphemeLabel(key), 
+                                    type: 'featural_block', 
+                                    name: toMorphemeLabel(key), 
+                                    scriptId 
+                                })}
                             >
                                 <div className="showcase-syl-symbol">{renderBlockSymbol(val)}</div>
                                 <div className="showcase-syl-label">{toMorphemeLabel(key)}</div>
@@ -1485,8 +1444,8 @@ export default function OrthographyPage() {
     const activeScript = getScriptSystem({ scriptSystems, scriptRules, phonologyTypes }, activeScriptSystemId || defaultScriptId);
     const scriptType = activeScript?.type || phonologyTypes || 'alphabetic';
 
-    // Active script selector bar (shown on script-editing tabs)
-    const showScriptPicker = scriptSystems.length > 1 && (activeTab === 'script' || activeTab === 'rules');
+    // Active script selector bar (shown on script-editing tabs and numbers tab)
+    const showScriptPicker = scriptSystems.length > 1 && (activeTab === 'script' || activeTab === 'rules' || activeTab === 'numbers');
 
     const renderActiveScriptDropdown = () => {
         if (!showScriptPicker) return null;
@@ -1611,7 +1570,7 @@ export default function OrthographyPage() {
                         <ScriptRulesEditor />
                     </div>
                 )}
-                {activeTab === 'numbers' && <NumbersTab />}
+                {activeTab === 'numbers' && <NumbersTab activeScriptDropdown={renderActiveScriptDropdown()} />}
                 {activeTab === 'ipa'     && <IpaReferencePage />}
             </main>
         </div>

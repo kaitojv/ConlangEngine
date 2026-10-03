@@ -20,9 +20,14 @@ export default function GlyphPreviewBadge({
     title,
     plain = false,
     hideOnEmpty = false,
+    scriptId = null,
 }) {
     const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
     const scriptDataById = useConfigStore(state => state.scriptDataById) || {};
+    const rootAlphabetGlyphs = useConfigStore(state => state.alphabetGlyphs) || {};
+    const rootSyllabaryMap = useConfigStore(state => state.syllabaryMap) || {};
+    const activeScriptSystemId = useConfigStore(state => state.activeScriptSystemId);
+    const defaultScriptId = useConfigStore(state => state.scriptRules?.defaultScriptId) || 'default';
 
     let resolvedStrokes = null;
     let codePointHex = null;
@@ -30,13 +35,28 @@ export default function GlyphPreviewBadge({
     if (strokes && Array.isArray(strokes)) {
         resolvedStrokes = cleanStrokes(strokes);
     } else if (glyph) {
+        const targetScriptId = scriptId || activeScriptSystemId || defaultScriptId;
+        const targetScriptData = scriptDataById?.[targetScriptId];
+
+        // Resolve aliases if glyph is a letter/syllable rather than a PUA char
+        let effectiveGlyph = glyph;
+        if (typeof glyph === 'string') {
+            const agMap = targetScriptData?.alphabetGlyphs || rootAlphabetGlyphs;
+            const sylMap = targetScriptData?.syllabaryMap || rootSyllabaryMap;
+            if (agMap?.[glyph]) {
+                effectiveGlyph = agMap[glyph];
+            } else if (sylMap?.[glyph]) {
+                effectiveGlyph = sylMap[glyph];
+            }
+        }
+
         let code = null;
-        if (typeof glyph === 'number') {
-            code = glyph;
-        } else if (typeof glyph === 'string' && glyph.length > 0) {
-            const chars = [...glyph];
+        if (typeof effectiveGlyph === 'number') {
+            code = effectiveGlyph;
+        } else if (typeof effectiveGlyph === 'string' && effectiveGlyph.length > 0) {
+            const chars = [...effectiveGlyph];
             if (chars.length === 1) {
-                code = glyph.codePointAt(0);
+                code = effectiveGlyph.codePointAt(0);
             }
         }
 
@@ -44,24 +64,33 @@ export default function GlyphPreviewBadge({
             codePointHex = `U+${code.toString(16).toUpperCase().padStart(4, '0')}`;
         }
 
-        let rawStrokes = null;
-        if (code != null) {
-            rawStrokes = customGlyphs[code] || customGlyphs[String(code)] || customGlyphs[glyph];
-        } else {
-            rawStrokes = customGlyphs[glyph];
+        const lookupInMap = (map) => {
+            if (!map) return null;
+            if (code != null) {
+                return map[code] || map[String(code)] || map[effectiveGlyph] || map[glyph] || null;
+            }
+            return map[effectiveGlyph] || map[glyph] || null;
+        };
+
+        // 1. Scoped script customGlyphs
+        let rawStrokes = lookupInMap(targetScriptData?.customGlyphs);
+
+        // 2. Root customGlyphs
+        if (!rawStrokes) {
+            rawStrokes = lookupInMap(customGlyphs);
         }
 
+        // 3. Fallback to default script if different
+        if (!rawStrokes && targetScriptId !== defaultScriptId && scriptDataById?.[defaultScriptId]) {
+            rawStrokes = lookupInMap(scriptDataById[defaultScriptId]?.customGlyphs);
+        }
+
+        // 4. Fallback to any script ONLY if still not found
         if (!rawStrokes && scriptDataById) {
-            for (const scriptData of Object.values(scriptDataById)) {
-                const sg = scriptData?.customGlyphs;
-                if (!sg) continue;
-                if (code != null && (sg[code] || sg[String(code)] || sg[glyph])) {
-                    rawStrokes = sg[code] || sg[String(code)] || sg[glyph];
-                    break;
-                } else if (sg[glyph]) {
-                    rawStrokes = sg[glyph];
-                    break;
-                }
+            for (const [sId, sData] of Object.entries(scriptDataById)) {
+                if (sId === targetScriptId || sId === defaultScriptId) continue;
+                rawStrokes = lookupInMap(sData?.customGlyphs);
+                if (rawStrokes) break;
             }
         }
 

@@ -98,6 +98,12 @@ export const layoutRun = (parts = [], {
 
         const hasInk = Boolean(part.metrics && part.metrics.strokes && part.metrics.strokes.length);
         const layout = layoutGlyph(hasInk ? part.metrics : null, traceWidth);
+        if (!hasInk) {
+            // An inkless part is drawn as its text (e.g. an undrawn numeral name
+            // such as "nī"), so reserve room for every character of it.
+            const len = [...String(part.char ?? '')].length;
+            layout.advance = Math.max(BLANK_ADVANCE, len * FALLBACK_FONT_SIZE * 0.62);
+        }
         const tx = pen + layout.x;
         const item = { part, key: `${part.char}-${i}`, hasInk, centerX: pen + layout.advance / 2 };
 

@@ -21,7 +21,10 @@ import {
     hasDrawnGlyph,
     buildLexiconIndex,
     resolveNumeralName,
-    resolveNumeralComponents
+    resolveNumeralComponents,
+    buildNumeralAtoms,
+    joinNumeralComponents,
+    numeralName
 } from '../src/components/UI/Glyph/resolveNumeralGlyphs.js';
 
 let pass = 0, fail = 0;
@@ -137,5 +140,58 @@ const dupIndex = buildLexiconIndex([
 ]);
 assert('drawn duplicate wins', dupIndex.get('x').ideogram, puaChar(3));
 
+console.log('\n— REGRESSION: 12 and 13 with atoms (stems fall back to digit) —');
+const senarySystem = {
+    zero: 'zě',
+    digits: { 1: 'fō', 2: 'nì', 3: 'sǎ', 4: 'feì', 5: 'gō' },
+    stems: { 1: 'fǒ', 2: 'nī', 3: 'sà', 4: 'feī', 5: 'gǒ' },
+    powers: { 6: 'nū' },
+    settings: {
+        fusion: true,
+        globalFusion: true,
+        internalOrder: 'unit-first',
+        magnitudeOrder: 'unit-first',
+        hideOne: true
+    }
+};
+// 12 in base 6 is 20: 2 * 6^1 -> Power nū + Stem nī
+const atoms12 = buildNumeralAtoms(12, senarySystem, 6);
+assert('atoms for 12: power nū + stem nī', atoms12[0].map(a => a.name), ['nū', 'nī']);
+assert('written name of 12 is nūnī', numeralName(atoms12, senarySystem.settings), 'nūnī');
+
+const parts12 = resolveNumeralComponents(atoms12, {
+    lexiconIndex,
+    customGlyphs,
+    scriptDataById,
+    getMetrics: getGlyphMetrics
+});
+assert('12 resolves both parts: power nū and stem nī (via digit nì)', parts12.length, 2);
+assert('part 0 is nū ideogram', parts12[0].char, puaChar(4));
+assert('part 1 is nì ideogram (stem fallback)', parts12[1].char, puaChar(2));
+assert('source of stem is stem-digit', parts12[1].source, 'stem-digit');
+
+// 13 in base 6 is 21: 1 + 2 * 6^1 -> Unit fō + (Power nū + Stem nī)
+const atoms13 = buildNumeralAtoms(13, senarySystem, 6);
+const parts13Full = resolveNumeralComponents(atoms13, {
+    lexiconIndex,
+    customGlyphs,
+    scriptDataById,
+    getMetrics: getGlyphMetrics
+});
+assert('13 resolves all 3 parts (fō, nū, nī->nì)', parts13Full.length, 3);
+assert('part 0 is fō', parts13Full[0].char, puaChar(1));
+assert('part 1 is nū', parts13Full[1].char, puaChar(4));
+assert('part 2 is nì', parts13Full[2].char, puaChar(2));
+
+console.log('\n— Alphabetic script ignores lexicon ideograms —');
+const alphaCfg = {
+    scriptType: 'alphabetic',
+    customGlyphs: { 115: ink(), 97: ink() }, // 's', 'a'
+    lexiconIndex, // contains sǎ -> puaChar(3)
+};
+const alphaSa = resolveNumeralName('sa', alphaCfg);
+assert('sa in alphabetic resolves to chars "sa", NOT lexicon ideogram', alphaSa, { text: 'sa', source: 'chars' });
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 if (fail > 0) process.exit(1);
+

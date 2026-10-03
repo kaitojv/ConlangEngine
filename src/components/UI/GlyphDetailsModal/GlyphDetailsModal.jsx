@@ -10,7 +10,7 @@ import GlyphPreviewBadge from '../Glyph/GlyphPreviewBadge.jsx';
 import toast from 'react-hot-toast';
 import './glyphDetailsModal.css';
 
-export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, name, isWord }) {
+export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, name, isWord, scriptId = null, strokes = null }) {
     const rawLexicon = useLexiconStore(state => state.lexicon);
     const lexicon = useMemo(() => Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []), [rawLexicon]);
     const config = useConfigStore.getState();
@@ -174,7 +174,7 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                 )}
 
                 {activeTab === 'stroke_order' && isConscript ? (
-                    <StrokeOrderViewer word={char} char={char} scriptType={type} />
+                    <StrokeOrderViewer word={char} char={char} scriptType={type} rawStrokes={strokes} />
                 ) : (
                     <>
                         <div className="glyph-display-card glass">
@@ -183,7 +183,13 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                                 style={{ fontSize: dynamicFontSize }}
                             >
                                 {isWord ? displayStr : (
-                                    <GlyphPreviewBadge glyph={char || glyph} size={180} />
+                                    React.isValidElement(glyph) ? (
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            {glyph}
+                                        </div>
+                                    ) : (
+                                        <GlyphPreviewBadge plain strokes={strokes} glyph={glyph || char} scriptId={scriptId} size={180} />
+                                    )
                                 )}
                             </div>
                             <button 
