@@ -88,8 +88,9 @@ const GlyphBaselineRow = ({
                                     x={item.centerX}
                                     y={0}
                                     textAnchor="middle"
-                                    fill="var(--tx3)"
+                                    fill="var(--tx)"
                                     fontSize={item.fontSize}
+                                    className="custom-font-text notranslate"
                                 >
                                     {item.part.char}
                                 </text>

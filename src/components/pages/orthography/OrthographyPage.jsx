@@ -490,7 +490,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
         getMetrics: getGlyphMetrics
     }), [testAtoms, glyphOpts]);
 
-    const testHasGlyph = testGlyphParts.some(p => p.strokes && p.strokes.length > 0);
+    const testHasGlyph = testGlyphParts.length > 0;
 
     // Glyphs are joined with the same separator the written form uses, so the two
     // representations stay visually consistent. Global Fusion means no separator.

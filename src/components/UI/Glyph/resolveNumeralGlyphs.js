@@ -124,22 +124,20 @@ export function resolveNumeralName(name, opts = {}) {
         return { text: raw, source: 'glyph' };
     }
 
-    // 3. For alphabetic/syllabic scripts with a transliterate function:
-    if (transliterate && scriptType && scriptType !== 'logographic') {
+    // 3. For scripts with a transliterate function (works for all script types, including logographic fallback):
+    if (transliterate) {
         const transliterated = transliterate(raw);
         if (transliterated) {
             const tChars = Array.from(transliterated).filter((ch) => !/\s/.test(ch));
-            if (tChars.length && tChars.every((ch) => findCharGlyph(ch, { customGlyphs, scriptDataById }))) {
+            if (tChars.length) {
                 return { text: tChars.join(''), source: 'chars' };
             }
         }
     }
 
-    // 4. Per character, for conlangs whose letters are the glyphs. Only meaningful
-    // once every character has a glyph, otherwise the name would render as a
-    // mix of drawn and blank boxes.
+    // 4. Per character, for conlangs whose letters are the glyphs.
     const chars = Array.from(raw).filter((ch) => !/\s/.test(ch));
-    if (chars.length && chars.every((ch) => findCharGlyph(ch, { customGlyphs, scriptDataById }))) {
+    if (chars.length) {
         return { text: chars.join(''), source: 'chars' };
     }
 
