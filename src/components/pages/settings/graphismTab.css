@@ -246,7 +246,37 @@
 .gt-lighten-tolerance {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     font-size: 0.78rem;
     color: var(--tx2);
+}
+
+.gt-lighten-tolerance-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.gt-lighten-tolerance-input {
+    width: 65px;
+    padding: 2px 6px;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    color: var(--tx);
+    font-size: 0.82rem;
+    text-align: right;
+    outline: none;
+}
+
+.gt-lighten-tolerance-input:focus {
+    border-color: var(--acc);
+}
+
+.gt-lighten-tolerance-ticks {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--tx3);
+    margin-top: 2px;
 }

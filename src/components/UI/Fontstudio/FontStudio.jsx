@@ -1264,7 +1264,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                                 type="range"
                                 className="range range-xs range-primary"
                                 min="0.1"
-                                max="3"
+                                max="25"
                                 step="0.1"
                                 value={simplifyTolerance}
                                 onChange={(e) => setSimplifyTolerance(parseFloat(e.target.value))}

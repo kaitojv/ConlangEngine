@@ -651,6 +651,7 @@ export const useConfigStore = create(
                     customGlyphs: simplifiedTopLevel,
                     ...(base64Font ? { customFontBase64: base64Font, customFont: base64Font } : {}),
                     scriptDataById: nextScriptDataById,
+                    lastGlyphUpdate: Date.now(),
                 }));
             },
 

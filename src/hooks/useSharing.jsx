@@ -7,44 +7,52 @@ import { sanitizeConfig } from '@/utils/schemaValidator.jsx';
 import toast from 'react-hot-toast';
 import LZString from 'lz-string';
 
-export function useSharing(session) {
-    const [isSharing, setIsSharing] = useState(false);
-    const lexicon = useLexiconStore(state => state.lexicon) || [];
-    const { projectId, updateConfig, wikiPages, logActivity } = useConfigStore(useShallow(state => ({
-        projectId: state.projectId,
-        updateConfig: state.updateConfig,
-        wikiPages: state.wikiPages,
-        logActivity: state.logActivity
-    })));
+/**
+ * Pushes the current workspace state to Supabase (snapshots, versions, conlangs).
+ * Can be called standalone or from useSharing hook.
+ */
+export async function pushProjectToCloud(session = null, isManualSync = false, versionName = null) {
+    let activeSession = session;
+    if (!activeSession) {
+        try {
+            const { data } = await supabase.auth.getSession();
+            activeSession = data?.session;
+        } catch (sErr) {
+            console.warn("Could not fetch session:", sErr);
+        }
+    }
 
-    const handlePushToCloud = async (isManualSync = true, versionName = null) => {
-        // Only enforce session for manual "Push to Cloud" button
-        if (isManualSync && !session) {
-            toast.error("You must be logged in to sync!");
-            return false;
-        }
-        
-        let currentProjectId = projectId;
-        if (!currentProjectId) {
-            currentProjectId = 'proj_' + crypto.randomUUID();
-            updateConfig({ projectId: currentProjectId });
-        }
+    // Only enforce session for manual "Push to Cloud" button
+    if (isManualSync && !activeSession) {
+        toast.error("You must be logged in to sync!");
+        return false;
+    }
 
-        const configData = sanitizeConfig(useConfigStore.getState(), true);
-        
-        // SEC/PERF: Strip exceptionally massive base64 font (> 2MB) from cloud payload to prevent Supabase statement timeouts
-        if (typeof configData.customFontBase64 === 'string' && configData.customFontBase64.length > 2000000) {
-            delete configData.customFontBase64;
-            delete configData.customFont;
-        }
-        
-        const payload = { 
-            dictionary: lexicon, 
-            config: configData, 
-            wiki: wikiPages || {},
-            wordCount: lexicon.length,
-            last_updated: new Date().toISOString()
-        };
+    const state = useConfigStore.getState();
+    const updateConfig = state.updateConfig;
+    let currentProjectId = state.projectId;
+    if (!currentProjectId) {
+        currentProjectId = 'proj_' + crypto.randomUUID();
+        updateConfig({ projectId: currentProjectId });
+    }
+
+    const lexicon = useLexiconStore.getState().lexicon || [];
+    const wikiPages = state.wikiPages || {};
+    const configData = sanitizeConfig(state, true);
+
+    // SEC/PERF: Strip exceptionally massive base64 font (> 2MB) from cloud payload to prevent Supabase statement timeouts
+    if (typeof configData.customFontBase64 === 'string' && configData.customFontBase64.length > 2000000) {
+        delete configData.customFontBase64;
+        delete configData.customFont;
+    }
+
+    const payload = { 
+        dictionary: lexicon, 
+        config: configData, 
+        wiki: wikiPages || {},
+        wordCount: lexicon.length,
+        last_updated: new Date().toISOString()
+    };
         
         // SEC/PERF: Compress massive payloads to prevent database exhaustion
         const payloadSizeStr = JSON.stringify(payload);
@@ -170,10 +178,11 @@ export function useSharing(session) {
                 });
                 if (versionError) console.warn("Failed to save version history:", versionError);
 
-                // --- NEW CODE: CLEANUP OLD VERSIONS ---
-                // We don't want the database to blow up. Keep fewer versions for massive projects.
+                // --- CLEANUP OLD VERSIONS ---
+                // Keep fewer versions for massive projects or after lightening to free database space.
                 try {
-                    const keepCount = isMassivePayload ? 3 : 10;
+                    const isLighten = Boolean(versionName && versionName.includes('Lightened'));
+                    const keepCount = (isLighten || isMassivePayload) ? 3 : 10;
                     const { data: oldVersions } = await supabase
                         .from('conlang_versions')
                         .select('id')
@@ -203,7 +212,7 @@ export function useSharing(session) {
             
             if (isManualSync) {
                 toast.success('Cloud Sync Complete!');
-                logActivity('Pushed dictionary to the cloud.');
+                state.logActivity?.('Pushed dictionary to the cloud.');
             }
             
             updateConfig({ lastCloudSync: new Date().toISOString() });
@@ -214,7 +223,7 @@ export function useSharing(session) {
                 message: err.message, 
                 details: err.details,
                 hint: err.hint,
-                session: !!session 
+                session: !!activeSession 
             });
             
             if (isManualSync) {
@@ -222,6 +231,14 @@ export function useSharing(session) {
             }
             return false;
         }
+}
+
+export function useSharing(session) {
+    const [isSharing, setIsSharing] = useState(false);
+    const projectId = useConfigStore(state => state.projectId);
+
+    const handlePushToCloud = async (isManualSync = true, versionName = null) => {
+        return pushProjectToCloud(session, isManualSync, versionName);
     };
 
     const handleShareLink = async () => {

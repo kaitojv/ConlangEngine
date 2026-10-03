@@ -16,6 +16,8 @@ import { previewSimplification, simplifyGlyphMap } from '../../../utils/glyphSim
 import { buildWorkspaceSnapshot, downloadWorkspaceBackup } from '../../../utils/workspaceExport.js';
 import GlyphLightenBackupModal from '../../UI/GlyphLightenBackupModal/GlyphLightenBackupModal.jsx';
 import { SCRIPT_MAPS } from '../../../utils/transliteration.js';
+import { pushProjectToCloud } from '../../../hooks/useSharing.jsx';
+import { useProjectStore } from '../../../store/useProjectStore.jsx';
 import toast from 'react-hot-toast';
 import './graphismTab.css';
 
@@ -232,8 +234,8 @@ export default function TypographyStudio() {
         }
 
         const preview = previewSimplification(all, { tolerance: glyphLightenTolerance, precision: 2 });
-        if (preview.byteReduction < 0.01) {
-            toast('Your glyphs are already lightweight.');
+        if (preview.beforePoints <= preview.afterPoints || preview.byteReduction <= 0) {
+            toast('Your glyphs cannot be reduced further at this tolerance level.');
             return;
         }
 
@@ -270,7 +272,7 @@ export default function TypographyStudio() {
     };
 
     const handleConfirmLighten = async () => {
-        const tId = toast.loading('Lightening glyphs...');
+        const tId = toast.loading('Lightening glyphs and syncing to database...');
         try {
             const { topLevel, byScript } = lightenModal;
             const storeState = useConfigStore.getState();
@@ -287,10 +289,28 @@ export default function TypographyStudio() {
             const settings = storeState.typographySettings || {};
             const base64Font = await compileFont(fontSource, settings.traceWidth ?? 30, settings.customFontScale ?? 1.0);
 
+            // 1. Update active Zustand store and IndexedDB
             simplifyAllGlyphs(simplifiedTopLevel, simplifiedByScript, base64Font);
 
+            // 2. Update local project archive so local storage space is freed
+            useProjectStore.getState().saveProjectToArchive(
+                useConfigStore.getState(),
+                useLexiconStore.getState().lexicon
+            );
+
+            // 3. Immediately persist reduced size to cloud database (Supabase: conlangs, conlang_snapshots, conlang_versions)
+            const cloudSynced = await pushProjectToCloud(
+                null,
+                false,
+                `Glyphs Lightened (${glyphLightenTolerance}px tolerance)`
+            );
+
             handleCloseLightenModal();
-            toast.success('Glyphs lightened and font recompiled.', { id: tId });
+            if (cloudSynced) {
+                toast.success('Glyphs lightened & database storage freed!', { id: tId });
+            } else {
+                toast.success('Glyphs lightened and saved to local database.', { id: tId });
+            }
         } catch (err) {
             console.error('Lighten all glyphs failed:', err);
             toast.error('Could not lighten glyphs. Nothing was changed.', { id: tId });
@@ -669,18 +689,44 @@ export default function TypographyStudio() {
                                     since it cannot be undone.
                                 </p>
                             </div>
-                            <label className="gt-lighten-tolerance">
-                                Fidelity tolerance: {glyphLightenTolerance.toFixed(1)}px
+                            <div className="gt-lighten-tolerance">
+                                <div className="gt-lighten-tolerance-header">
+                                    <span style={{ fontWeight: 600, color: 'var(--tx)' }}>
+                                        Fidelity tolerance:
+                                    </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <input
+                                            type="number"
+                                            min="0.1"
+                                            max="50"
+                                            step="0.1"
+                                            value={glyphLightenTolerance}
+                                            onChange={(e) => {
+                                                const val = parseFloat(e.target.value);
+                                                if (!isNaN(val) && val > 0) setGlyphLightenTolerance(val);
+                                            }}
+                                            className="gt-lighten-tolerance-input"
+                                            title="Type any tolerance up to 50px"
+                                        />
+                                        <span style={{ fontSize: '0.82rem', color: 'var(--tx2)' }}>px</span>
+                                    </div>
+                                </div>
                                 <input
                                     type="range"
                                     className="range range-xs range-primary"
                                     min="0.1"
-                                    max="3"
+                                    max="25"
                                     step="0.1"
-                                    value={glyphLightenTolerance}
+                                    value={Math.min(glyphLightenTolerance, 25)}
                                     onChange={(e) => setGlyphLightenTolerance(parseFloat(e.target.value))}
                                 />
-                            </label>
+                                <div className="gt-lighten-tolerance-ticks">
+                                    <span>0.1px (Subtle)</span>
+                                    <span>3.0px</span>
+                                    <span>10.0px</span>
+                                    <span>25.0px (Ultra light)</span>
+                                </div>
+                            </div>
                             <Button variant="edit" onClick={handleLightenAllGlyphs} style={{ width: '100%' }}>
                                 <Spline size={16} /> Lighten all glyphs
                             </Button>

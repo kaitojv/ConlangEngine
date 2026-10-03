@@ -106,9 +106,11 @@ export function resolveNumeralName(name, opts = {}) {
     const raw = (name || '').trim();
     if (!raw) return { text: '', source: 'none' };
 
+    const isLogographic = scriptType === 'logographic' || (!scriptType && (opts.lexiconIndex?.size > 0 || (opts.lexicon && opts.lexicon.length > 0)));
+
     // 1. The logographic path: this word is a known conlang word with a drawn form.
-    // Only used when scriptType is logographic (or not specified).
-    if (scriptType === 'logographic' || !scriptType) {
+    // Only used when scriptType is logographic (or not specified when lexicon is available).
+    if (isLogographic) {
         const index = opts.lexiconIndex || (opts.lexicon?.length ? buildLexiconIndex(opts.lexicon) : null);
         const entry = index?.get(normWord(raw));
         if (entry?.ideogram) {
@@ -124,20 +126,34 @@ export function resolveNumeralName(name, opts = {}) {
         return { text: raw, source: 'glyph' };
     }
 
-    // 3. For scripts with a transliterate function (works for all script types, including logographic fallback):
-    if (transliterate) {
+    // Also support multi-character ideogram strings where EVERY character is a drawn glyph:
+    if (isLogographic && Array.from(raw).length > 1 && Array.from(raw).every((ch) => findCharGlyph(ch, { customGlyphs, scriptDataById }))) {
+        return { text: raw, source: 'glyph' };
+    }
+
+    // In logographic scripts, words and numbers are represented by ideograms.
+    // We must NEVER decompose romanized names into Latin letters or transliterate phonetically,
+    // because logographic characters represent morphemes/concepts, not phonetic Latin spellings.
+    if (isLogographic) {
+        return { text: '', source: 'none' };
+    }
+
+    // 3. For alphabetic / syllabic / featural scripts with a transliterate function:
+    if (transliterate && scriptType !== 'logographic') {
         const transliterated = transliterate(raw);
         if (transliterated) {
             const tChars = Array.from(transliterated).filter((ch) => !/\s/.test(ch));
-            if (tChars.length) {
+            if (tChars.length && tChars.every((ch) => findCharGlyph(ch, { customGlyphs, scriptDataById }))) {
                 return { text: tChars.join(''), source: 'chars' };
             }
         }
     }
 
-    // 4. Per character, for conlangs whose letters are the glyphs.
+    // 4. Per character, for conlangs whose letters are the glyphs. Only meaningful
+    // once every character has a glyph, otherwise the name would render as a
+    // mix of drawn and blank boxes.
     const chars = Array.from(raw).filter((ch) => !/\s/.test(ch));
-    if (chars.length) {
+    if (chars.length && chars.every((ch) => findCharGlyph(ch, { customGlyphs, scriptDataById }))) {
         return { text: chars.join(''), source: 'chars' };
     }
 
@@ -242,15 +258,45 @@ export function numeralName(components = [], settings = {}) {
  */
 function resolveAtom(atom, opts) {
     if (!atom) return null;
+    const isStem = typeof atom === 'object' && atom.kind === 'stem';
+    const isLogographic = opts.scriptType === 'logographic' || (!opts.scriptType && (opts.lexiconIndex?.size > 0 || (opts.lexicon && opts.lexicon.length > 0)));
+
+    if (isStem) {
+        // 1. In logographic scripts, stems are spoken readings and are written with the digit's ideogram.
+        // If the stem has an explicit ideogram in the lexicon or drawn glyph, use it:
+        if (atom.name) {
+            const stemRes = resolveNumeralName(atom.name, opts);
+            if (stemRes && stemRes.text && (stemRes.source === 'lexicon' || stemRes.source === 'glyph')) {
+                return stemRes;
+            }
+            if (!isLogographic && stemRes && stemRes.text && stemRes.source !== 'none') {
+                return stemRes;
+            }
+        }
+
+        // 2. The standard logographic & phonetic fallback: stems are written with their base digit's glyph!
+        if (atom.fallbackName) {
+            const digitRes = resolveNumeralName(atom.fallbackName, opts);
+            if (digitRes && digitRes.text && digitRes.source !== 'none') {
+                return { ...digitRes, source: 'stem-digit' };
+            }
+        }
+
+        // 3. If neither resolved:
+        if (isLogographic) {
+            return null;
+        }
+        if (atom.name) {
+            const fallback = resolveNumeralName(atom.name, opts);
+            return (fallback && fallback.text) ? fallback : null;
+        }
+        return null;
+    }
+
     const name = typeof atom === 'string' ? atom : atom.name;
     const res = resolveNumeralName(name, opts);
-    if (res && res.text) return res;
+    if (res && res.text && res.source !== 'none') return res;
 
-    // A stem is a spoken variant of its digit and is written with the digit's glyph.
-    if (typeof atom === 'object' && atom.kind === 'stem' && atom.fallbackName) {
-        const viaDigit = resolveNumeralName(atom.fallbackName, opts);
-        if (viaDigit && viaDigit.text) return { text: viaDigit.text, source: 'stem-digit' };
-    }
     return null;
 }
 
