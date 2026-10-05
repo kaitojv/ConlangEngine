@@ -14,7 +14,7 @@ import ProtoRootModal from './ProtoRootModal.jsx';
 import GlyphDetailsModal from '../../UI/GlyphDetailsModal/GlyphDetailsModal.jsx';
 import GlyphPreviewBadge from '../../UI/Glyph/GlyphPreviewBadge.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
-import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download, X, Share2, Music, Zap, LayoutGrid, List, ChevronUp, ChevronDown, PenTool } from 'lucide-react';
+import { Search, Filter, Hash, Trash2, Edit, Volume2, Table2, PlusCircle, Settings2, Download, X, Share2, Music, Zap, LayoutGrid, List, ChevronUp, ChevronDown, PenTool, Star } from 'lucide-react';
 import { exportTextAsSVG } from '../../../utils/svgExporter.jsx';
 import { playAzureTTS } from '../../../utils/azureTTS.js';
 import toast from 'react-hot-toast';
@@ -59,6 +59,7 @@ export default function LexiconList() {
     const rawLexicon = useLexiconStore((state) => state.lexicon);
     const lexicon = Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []);
     const deleteWord = useLexiconStore((state) => state.deleteWord);
+    const updateWord = useLexiconStore((state) => state.updateWord);
     const phonologyTypes = useConfigStore(state => state.phonologyTypes);
     const consonants = useConfigStore(state => state.consonants) || '';
     const vowels = useConfigStore(state => state.vowels) || '';
@@ -369,20 +370,76 @@ export default function LexiconList() {
         return result;
     }, [lexicon, filters, transliterate, showBoundMorphemes, grammarRules, normalizeToBase, consonants, vowels, otherPhonemes, customAlphabet, configFull]);
 
-    // Group identical conlang words visually so the user can see multiple senses under 1 dictionary entry
+    // Group identical conlang words visually so the user can see multiple senses under 1 dictionary entry.
+    // Homophones with different ideograms or different scripts remain separate cards so distinct
+    // characters are not obscured or collapsed.
     const groupedLexicon = useMemo(() => {
         const groups = new Map();
-        
+        const wordGroupMap = new Map();
+
         filteredLexicon.forEach(entry => {
-            const key = (entry.word || '').replace(/\*/g, '').toLowerCase().trim();
-            if (!groups.has(key)) {
-                groups.set(key, { baseEntry: entry, senses: [] });
+            const wordKey = (entry.word || '').replace(/\*/g, '').toLowerCase().trim();
+            const scriptKey = entry.scriptOverride || '';
+            const ideogramKey = (entry.ideogram || '').trim();
+            // Distinct ideogram or distinct script = distinct card
+            const groupKey = `${wordKey}::${scriptKey}::${ideogramKey}`;
+
+            if (!groups.has(groupKey)) {
+                groups.set(groupKey, {
+                    groupKey,
+                    wordKey,
+                    baseEntry: entry,
+                    senses: [],
+                    isHomophone: false,
+                    hasPrimary: false
+                });
             }
-            groups.get(key).senses.push(entry);
+            const grp = groups.get(groupKey);
+            grp.senses.push(entry);
+            if (entry.isPrimary) {
+                grp.hasPrimary = true;
+            }
+
+            if (!wordGroupMap.has(wordKey)) {
+                wordGroupMap.set(wordKey, new Set());
+            }
+            wordGroupMap.get(wordKey).add(groupKey);
         });
-        
+
+        // Mark groups that share a romanized word with other groups as homophones
+        for (const grp of groups.values()) {
+            const siblingGroups = wordGroupMap.get(grp.wordKey);
+            grp.isHomophone = siblingGroups ? siblingGroups.size > 1 : false;
+        }
+
         return Array.from(groups.values());
     }, [filteredLexicon]);
+
+    // Sets or toggles an entry as the primary/main homophone reading for this sound
+    const handleSetPrimaryWord = (baseEntry) => {
+        const wordKey = (baseEntry.word || '').replace(/\*/g, '').toLowerCase().trim();
+        if (!wordKey) return;
+
+        const isCurrentlyPrimary = Boolean(baseEntry.isPrimary);
+        const newStatus = !isCurrentlyPrimary;
+
+        lexicon.forEach(item => {
+            const itemKey = (item.word || '').replace(/\*/g, '').toLowerCase().trim();
+            if (itemKey === wordKey) {
+                if (item.id === baseEntry.id) {
+                    updateWord(item.id, { isPrimary: newStatus });
+                } else if (newStatus && item.isPrimary) {
+                    updateWord(item.id, { isPrimary: false });
+                }
+            }
+        });
+
+        if (newStatus) {
+            toast.success(`Set as main reading for "${baseEntry.word}".`);
+        } else {
+            toast.success(`Removed main reading status.`);
+        }
+    };
 
     // Quick action to bin a word
     const handleDelete = (id) => {
@@ -781,6 +838,17 @@ export default function LexiconList() {
                                                 {getScriptSystem(configFull, baseEntry.scriptOverride).name}
                                             </span>
                                         )}
+                                        {group.isHomophone && (
+                                            group.baseEntry.isPrimary ? (
+                                                <span className="homophone-primary-badge-inline" title="This word is set as the main / primary reading for this pronunciation">
+                                                    ★ Main
+                                                </span>
+                                            ) : (
+                                                <span className="homophone-badge-inline" title="Multiple words share this pronunciation">
+                                                    Homophone
+                                                </span>
+                                            )
+                                        )}
                                     </div>
 
                                     {/* Romanized form — shown as a dedicated readable line when toggle is on */}
@@ -836,6 +904,16 @@ export default function LexiconList() {
                                 </div>
                                 
                                 <div className="entry-actions-top">
+                                    {group.isHomophone && (
+                                        <Button 
+                                            variant={baseEntry.isPrimary ? "accent" : "default"} 
+                                            className={`btn-icon-only ${baseEntry.isPrimary ? 'active-star-btn' : ''}`}
+                                            onClick={() => handleSetPrimaryWord(baseEntry)} 
+                                            title={baseEntry.isPrimary ? "Main reading for this pronunciation (click to unset)" : "Set as main reading / primary homophone"}
+                                        >
+                                            <Star size={16} fill={baseEntry.isPrimary ? "currentColor" : "none"} />
+                                        </Button>
+                                    )}
                                     <Button variant="default" className="btn-icon-only" onClick={() => setSelectedWordForProto(baseEntry)} title="Convert to Proto-Root">
                                         <Hash size={16} />
                                     </Button>

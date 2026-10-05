@@ -108,6 +108,7 @@ export const INITIAL_CONFIG = {
         stems: {},
         powers: {},
         irregulars: {},
+        digitGlyphs: {},
         settings: {
             fusion: false,
             separator: ' ',

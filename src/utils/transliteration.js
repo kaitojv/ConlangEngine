@@ -241,7 +241,9 @@ export function transliterateText(word, config, lexicon = []) {
         const fallbackMap = SCRIPT_MAPS[alphabeticScript] || {};
         const effectiveSyllabaryMap = { ...fallbackMap, ...syllabaryMap };
         const syllables = Object.keys(effectiveSyllabaryMap).sort((a, b) => b.length - a.length);
-        const dictEntry = lexicon.find(e => e.word.replace(/\*/g, '').toLowerCase() === cleanWord);
+        const cleanWordLower = cleanWord.toLowerCase();
+        const dictEntry = lexicon.find(e => e.isPrimary && e.word && e.word.replace(/\*/g, '').toLowerCase() === cleanWordLower)
+            || lexicon.find(e => e.word && e.word.replace(/\*/g, '').toLowerCase() === cleanWordLower);
         let sourceStr = (dictEntry && dictEntry.ideogram) ? dictEntry.ideogram : cleanWord;
 
         // Apply Tone Mapping preprocessing so the text matches the generated blocks
@@ -332,7 +334,9 @@ export function transliterateText(word, config, lexicon = []) {
 
     if (phonologyTypes === 'logographic') {
         const fallbackMap = SCRIPT_MAPS[alphabeticScript] || {};
-        const dictEntry = lexicon.find(e => e.word.replace(/\*/g, '').toLowerCase() === cleanWord.toLowerCase());
+        const cleanWordLower = cleanWord.toLowerCase();
+        const dictEntry = lexicon.find(e => e.isPrimary && e.word && e.word.replace(/\*/g, '').toLowerCase() === cleanWordLower)
+            || lexicon.find(e => e.word && e.word.replace(/\*/g, '').toLowerCase() === cleanWordLower);
         
         if (dictEntry && dictEntry.ideogram) {
             return dictEntry.ideogram;

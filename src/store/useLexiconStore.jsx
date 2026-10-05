@@ -39,6 +39,7 @@ export const useLexiconStore = create(
                         scriptRole: typeof newWordData.scriptRole === 'string' ? newWordData.scriptRole : '',
                         etymology: newWordData.etymology || null,
                         isProtoRoot: newWordData.isProtoRoot || false,
+                        isPrimary: Boolean(newWordData.isPrimary),
                     };
                     return { lexicon: [...(state.lexicon || []), newEntry] };
                 }),

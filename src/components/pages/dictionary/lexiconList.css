@@ -650,6 +650,47 @@
     line-height: 1.2;
 }
 
+/* Homophone and Primary indicator badges */
+.homophone-badge-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    background: var(--s3);
+    color: var(--tx2);
+    border: 1px solid var(--bd);
+    vertical-align: middle;
+    margin-left: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+}
+
+.homophone-primary-badge-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--acc) 15%, transparent);
+    color: var(--acc);
+    border: 1px solid color-mix(in srgb, var(--acc) 35%, transparent);
+    vertical-align: middle;
+    margin-left: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+}
+
+.active-star-btn {
+    color: #eab308 !important;
+}
+
 /* Layout Toggle Styles */
 .layout-toggle-group {
     display: flex;

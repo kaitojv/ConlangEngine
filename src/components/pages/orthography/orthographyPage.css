@@ -358,6 +358,30 @@
     color: #ffffff;
 }
 
+.num-icon-btn.pinned {
+    background: color-mix(in srgb, var(--acc) 18%, var(--s3));
+    border-color: var(--acc);
+    color: var(--acc);
+}
+
+.digit-glyphs-inline {
+    position: relative;
+    padding: 2px 4px;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+}
+
+.digit-glyphs-inline:hover {
+    background: var(--s3);
+}
+
+.pinned-dot {
+    font-size: 0.75rem;
+    color: #eab308;
+    margin-left: 2px;
+    align-self: flex-start;
+}
+
 @media (max-width: 600px) {
     .digit-entry-header { display: none; }
     .digit-row-entry { grid-template-columns: 1fr; gap: 0.5rem; padding: 1rem; }

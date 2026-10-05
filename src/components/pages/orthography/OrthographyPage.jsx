@@ -4,7 +4,7 @@ import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
-import { Languages, Hash, Plus, Trash2, Calculator, Settings, Edit2, Check, Table2, BookA, Type, Mic2, PenTool, ListChecks, Rows, Eye, EyeOff, FileX as FileXIcon } from 'lucide-react';
+import { Languages, Hash, Plus, Trash2, Calculator, Settings, Edit2, Check, Table2, BookA, Type, Mic2, PenTool, ListChecks, Rows, Eye, EyeOff, FileX as FileXIcon, Sparkles } from 'lucide-react';
 import IpaReferencePage from './IpaReferencePage.jsx';
 import './orthographyPage.css';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
@@ -26,6 +26,7 @@ import {
 } from '../../UI/Glyph/resolveNumeralGlyphs.js';
 import GlyphBaselineRow from '../../UI/Glyph/GlyphBaselineRow.jsx';
 import StrokeOrderModal from '../../UI/StrokeOrder/StrokeOrderModal.jsx';
+import NumeralGlyphPickerModal from './NumeralGlyphPickerModal.jsx';
 import toast from 'react-hot-toast';
 
 // --- SUB-COMPONENTS ---
@@ -405,17 +406,20 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
         scriptType: activeScriptType,
         customGlyphs: scriptConfig.customGlyphs || {},
         lexiconIndex,
+        lexicon,
+        numberSystem,
         // Numeral names are not lexicon words, so no lexicon is passed: a syllabic
         // transliteration would otherwise substitute another script's ideogram.
         transliterate: (word) => transliterateText(word, scriptConfig, []),
         getMetrics: getGlyphMetrics
-    }), [activeScriptType, scriptConfig, lexiconIndex]);
+    }), [activeScriptType, scriptConfig, lexiconIndex, lexicon, numberSystem]);
     const [testNumber, setTestNumber] = useState('');
     // Eye toggle: hides the generated number glyph until explicitly revealed.
     const [showTestResult, setShowTestResult] = useState(false);
     const [viewMode, setViewMode] = useState('basic');
     const [listCols, setListCols] = useState(1);
     const [selectedNumberForStroke, setSelectedNumberForStroke] = useState(null);
+    const [selectedNumberForGlyphPicker, setSelectedNumberForGlyphPicker] = useState(null);
     // Which digit rows have their (rendered) number revealed via the eye toggle.
     const [revealedNumbers, setRevealedNumbers] = useState({});
     
@@ -517,12 +521,24 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
         }
     };
 
-    // Shared trailing controls for each number row: a pen button to edit the glyph and
-    // an eye button that reveals the rendered glyph. The glyph itself is only shown
-    // while the row is revealed — previously the badge rendered unconditionally, which
-    // leaked the answer before the eye toggle was ever pressed.
-    const renderDigitControls = (key, name) => {
+    // Shared trailing controls for each number row: a pen button to edit the glyph,
+    // an eye button that reveals the rendered glyph, and a sparkles button to pick or define the main glyph.
+    const renderDigitControls = (key, name, val) => {
         const resolved = name ? resolveWordGlyphs(name, glyphOpts) : null;
+        const isPinned = Boolean(numberSystem.digitGlyphs?.[key]);
+        const itemLabel = key.startsWith('power-')
+            ? `Base^${key.replace('power-', '')}`
+            : key === '0'
+            ? 'Digit 0'
+            : `Digit ${key}`;
+
+        const openPicker = () => setSelectedNumberForGlyphPicker({
+            key,
+            name,
+            value: val !== undefined ? val : (key.startsWith('power-') ? Number(key.replace('power-', '')) : Number(key)),
+            label: itemLabel
+        });
+
         return (
             <div className="digit-number-cell">
                 {name && (
@@ -547,9 +563,22 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                         >
                             {revealedNumbers[key] ? <EyeOff size={13} /> : <Eye size={13} />}
                         </button>
+                        <button
+                            type="button"
+                            className={`num-icon-btn ${isPinned ? 'active pinned' : ''}`}
+                            onClick={openPicker}
+                            title={isPinned ? `Pinned main glyph: "${numberSystem.digitGlyphs[key]}". Click to change.` : "Choose or pin main glyph"}
+                        >
+                            <Sparkles size={13} />
+                        </button>
                         {revealedNumbers[key] && resolved && (
                             resolved.complete ? (
-                                <span className="digit-glyphs-inline" style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                                <span 
+                                    className="digit-glyphs-inline" 
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', cursor: 'pointer' }}
+                                    onClick={openPicker}
+                                    title="Click to choose / customize main glyph"
+                                >
                                     {resolved.chars.map((c, i) => (
                                         <GlyphPreviewBadge
                                             key={i}
@@ -558,13 +587,20 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                             scriptId={activeScriptId}
                                             size={26}
                                             showCode={false}
-                                            title="Custom glyph"
+                                            title={isPinned ? `Pinned: ${c.char}` : "Custom glyph"}
                                         />
                                     ))}
+                                    {isPinned && <span className="pinned-dot" title="User-chosen main glyph">★</span>}
                                 </span>
                             ) : (
-                                <span className="custom-font-text notranslate" style={{ fontSize: '0.9rem', color: 'var(--tx2)' }}>
+                                <span 
+                                    className="custom-font-text notranslate digit-glyphs-inline" 
+                                    style={{ fontSize: '0.9rem', color: 'var(--tx2)', cursor: 'pointer' }}
+                                    onClick={openPicker}
+                                    title="Click to choose / customize main glyph"
+                                >
                                     {resolved.chars.map(c => c.char).join('') || name}
+                                    {isPinned && <span className="pinned-dot" title="User-chosen main glyph">★</span>}
                                 </span>
                             )
                         )}
@@ -651,7 +687,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                     placeholder="e.g. Zero"
                                 />
                                 <div className="digit-stem-cell">
-                                    {renderDigitControls('0', numberSystem.zero)}
+                                    {renderDigitControls('0', numberSystem.zero, 0)}
                                 </div>
                             </div>
                             {digitIndices.map(d => (
@@ -670,7 +706,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                             onChange={(e) => updateMap('stems', d, e.target.value)}
                                             placeholder="Stem"
                                         />
-                                        {renderDigitControls(String(d), numberSystem.digits?.[d])}
+                                        {renderDigitControls(String(d), numberSystem.digits?.[d], d)}
                                     </div>
                                 </div>
                             ))}
@@ -697,7 +733,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                                 onChange={(e) => updateMap('powers', val, e.target.value)}
                                                 placeholder={`Name for ${labelVal}`}
                                             />
-                                            {renderDigitControls(`power-${val}`, numberSystem.powers?.[val])}
+                                            {renderDigitControls(`power-${val}`, numberSystem.powers?.[val], val)}
                                             {p === powerCount && p > 6 && (
                                                 <button 
                                                     type="button"
@@ -954,6 +990,27 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                     word={selectedNumberForStroke.word}
                     name={selectedNumberForStroke.name}
                     scriptType={selectedNumberForStroke.scriptType || activeScriptType}
+                />
+            )}
+
+            {selectedNumberForGlyphPicker && (
+                <NumeralGlyphPickerModal
+                    isOpen={!!selectedNumberForGlyphPicker}
+                    onClose={() => setSelectedNumberForGlyphPicker(null)}
+                    item={selectedNumberForGlyphPicker}
+                    scriptId={activeScriptId}
+                    scriptConfig={scriptConfig}
+                    lexicon={lexicon}
+                    currentOverride={numberSystem.digitGlyphs?.[selectedNumberForGlyphPicker.key]}
+                    onSelectGlyph={(glyph) => {
+                        const newOverrides = { ...(numberSystem.digitGlyphs || {}) };
+                        if (glyph) {
+                            newOverrides[selectedNumberForGlyphPicker.key] = glyph;
+                        } else {
+                            delete newOverrides[selectedNumberForGlyphPicker.key];
+                        }
+                        updateSystem('digitGlyphs', newOverrides);
+                    }}
                 />
             )}
         </div>

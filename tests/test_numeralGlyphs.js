@@ -24,7 +24,8 @@ import {
     resolveNumeralComponents,
     buildNumeralAtoms,
     joinNumeralComponents,
-    numeralName
+    numeralName,
+    findNumeralGlyphCandidates
 } from '../src/components/UI/Glyph/resolveNumeralGlyphs.js';
 
 let pass = 0, fail = 0;
@@ -191,6 +192,44 @@ const alphaCfg = {
 };
 const alphaSa = resolveNumeralName('sa', alphaCfg);
 assert('sa in alphabetic resolves to chars "sa", NOT lexicon ideogram', alphaSa, { text: 'sa', source: 'chars' });
+
+console.log('\n— Explicit numberSystem.digitGlyphs overrides —');
+const overrideSystem = {
+    ...senarySystem,
+    digitGlyphs: {
+        '2': '二',
+        'power-6': '六'
+    }
+};
+const partsOverride = resolveNumeralComponents(atoms13, {
+    lexiconIndex,
+    customGlyphs,
+    scriptDataById,
+    numberSystem: overrideSystem,
+    getMetrics: getGlyphMetrics
+});
+assert('part 1 (power 6) uses override 六', partsOverride[1].char, '六');
+assert('part 2 (digit 2 via stem) uses override 二', partsOverride[2].char, '二');
+
+console.log('\n— Homophone ranking & isPrimary priority —');
+const homophoneLexicon = [
+    { word: 'sǎ', translation: 'unrelated concept', ideogram: puaChar(1) },
+    { word: 'sǎ', translation: 'three', ideogram: puaChar(3), isPrimary: true },
+    { word: 'nì', translation: 'random', ideogram: puaChar(1) },
+    { word: 'nì', translation: 'two', ideogram: puaChar(2) } // has number semantic match
+];
+const homophoneIndex = buildLexiconIndex(homophoneLexicon);
+assert('sǎ resolves to primary-starred ideogram', homophoneIndex.get('sǎ').ideogram, puaChar(3));
+assert('nì resolves to number-gloss ideogram', homophoneIndex.get('nì').ideogram, puaChar(2));
+
+console.log('\n— findNumeralGlyphCandidates helper —');
+const candidates = findNumeralGlyphCandidates('2', 'nì', 2, {
+    lexicon: homophoneLexicon,
+    scriptConfig: { customGlyphs: { [PUA + 9]: ink() } }
+});
+assert('finds lexicon candidates', candidates.lexiconCandidates.length >= 2, true);
+assert('first lexicon candidate is the number match', candidates.lexiconCandidates[0].glyph, puaChar(2));
+assert('finds custom script glyphs', candidates.scriptGlyphs.length, 1);
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
 if (fail > 0) process.exit(1);

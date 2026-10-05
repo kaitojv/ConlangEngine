@@ -77,17 +77,40 @@ export function hasDrawnGlyph(text, opts = {}) {
 /**
  * Builds a word -> entry index once, so a run of numeral atoms does not re-scan
  * the whole lexicon per lookup. The lexicon can hold 500+ entries.
+ *
+ * Disambiguation logic:
+ * When homophones exist (multiple entries sharing the same word/reading),
+ * this ranks them to pick the best default:
+ *   1. User-starred primary homophone (`isPrimary: true`) -> +100
+ *   2. Has an ideogram drawn/assigned -> +20
+ *   3. Translation contains a number keyword or digit -> +15
+ *   4. Tagged `#number`, `#numeral`, or `#math` -> +15
  */
 export function buildLexiconIndex(lexicon = []) {
     const byWord = new Map();
+
+    const scoreEntry = (e) => {
+        if (!e) return 0;
+        let s = 0;
+        if (e.isPrimary) s += 100;
+        if (e.ideogram && e.ideogram.trim()) s += 20;
+        const trans = (e.translation || '').toLowerCase();
+        if (/\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|hundred|thousand|\d+)\b/.test(trans)) s += 15;
+        if (Array.isArray(e.tags) && e.tags.some(t => {
+            const tl = String(t).toLowerCase();
+            return tl === 'number' || tl === 'numeral' || tl === 'math' || tl === 'digit';
+        })) s += 15;
+        return s;
+    };
+
     for (const entry of lexicon) {
         if (!entry) continue;
         const key = normWord(entry.word);
         if (!key) continue;
         const existing = byWord.get(key);
-        // Prefer an entry that actually has a drawn form, so a bare duplicate
-        // never shadows a usable one.
-        if (!existing || (entry.ideogram && !existing.ideogram)) byWord.set(key, entry);
+        if (!existing || scoreEntry(entry) > scoreEntry(existing)) {
+            byWord.set(key, entry);
+        }
     }
     return byWord;
 }
@@ -258,6 +281,31 @@ export function numeralName(components = [], settings = {}) {
  */
 function resolveAtom(atom, opts) {
     if (!atom) return null;
+
+    // 0. Explicit user glyph override configured in numberSystem.digitGlyphs
+    const digitGlyphs = opts.numberSystem?.digitGlyphs;
+    if (digitGlyphs && typeof digitGlyphs === 'object') {
+        const atomVal = typeof atom === 'object' ? atom.value : undefined;
+        const atomKind = typeof atom === 'object' ? atom.kind : undefined;
+        let overrideKey = null;
+
+        if (atomKind === 'power' && atomVal !== undefined) {
+            overrideKey = `power-${atomVal}`;
+        } else if (atomKind === 'irregular' && atomVal !== undefined) {
+            overrideKey = `irregular-${atomVal}`;
+        } else if (atomKind === 'stem' && atomVal !== undefined) {
+            overrideKey = digitGlyphs[`stem-${atomVal}`] ? `stem-${atomVal}` : String(atomVal);
+        } else if (atomVal !== undefined) {
+            overrideKey = String(atomVal);
+        } else if (typeof atom === 'string') {
+            overrideKey = atom;
+        }
+
+        if (overrideKey && digitGlyphs[overrideKey]) {
+            return { text: digitGlyphs[overrideKey], source: 'override' };
+        }
+    }
+
     const isStem = typeof atom === 'object' && atom.kind === 'stem';
     const isLogographic = opts.scriptType === 'logographic' || (!opts.scriptType && (opts.lexiconIndex?.size > 0 || (opts.lexicon && opts.lexicon.length > 0)));
 
@@ -375,4 +423,79 @@ export function resolveNumeralComponents(components = [], opts = {}) {
     });
 
     return parts;
+}
+
+/**
+ * Finds candidate glyphs for a numeral row (digit, stem, power, irregular).
+ * Gathers:
+ *   1. Lexicon entries matching word name, translation digits, or #number tags.
+ *   2. Drawn custom glyphs from the active script.
+ */
+export function findNumeralGlyphCandidates(key, name, value, opts = {}) {
+    const { lexicon = [], scriptConfig = {}, customGlyphs = {} } = opts;
+    const candidates = [];
+    const seen = new Set();
+
+    const addCand = (cand) => {
+        if (!cand || !cand.glyph) return;
+        const k = `${cand.glyph}::${cand.label || ''}`;
+        if (seen.has(k)) return;
+        seen.add(k);
+        candidates.push(cand);
+    };
+
+    const cleanName = normWord(name);
+    const valStr = value !== undefined ? String(value) : '';
+    const numberWords = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+    const targetWord = !isNaN(Number(valStr)) ? numberWords[Number(valStr)] : null;
+
+    // 1. Lexicon entries with ideograms
+    lexicon.forEach(entry => {
+        if (!entry || !entry.ideogram || !entry.ideogram.trim()) return;
+        const eWord = normWord(entry.word);
+        const eTrans = (entry.translation || '').toLowerCase();
+        const eTags = Array.isArray(entry.tags) ? entry.tags.map(t => String(t).toLowerCase()) : [];
+
+        const isExactName = Boolean(cleanName && eWord === cleanName);
+        const isValMatch = Boolean(valStr && (eTrans === valStr || new RegExp(`\\b${valStr}\\b`).test(eTrans)));
+        const isWordMatch = Boolean(targetWord && (eTrans === targetWord || new RegExp(`\\b${targetWord}\\b`).test(eTrans)));
+        const isNumberTagged = eTags.includes('number') || eTags.includes('numeral') || eTags.includes('math') || eTags.includes('digit');
+
+        if (isExactName || isValMatch || isWordMatch || isNumberTagged) {
+            let score = 0;
+            if (entry.isPrimary) score += 50;
+            if (isExactName) score += 40;
+            if (isValMatch || isWordMatch) score += 30;
+            if (isNumberTagged) score += 20;
+
+            addCand({
+                glyph: entry.ideogram.trim(),
+                label: `${entry.word} (${entry.translation || 'no gloss'})`,
+                entry,
+                isPrimary: Boolean(entry.isPrimary),
+                isExactName,
+                source: 'lexicon',
+                score
+            });
+        }
+    });
+
+    // Sort lexicon candidates by score descending
+    candidates.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+    // 2. Custom drawn glyphs from active script
+    const glyphsMap = scriptConfig.customGlyphs || customGlyphs || {};
+    const drawnGlyphs = [];
+    for (const [gKey, strokes] of Object.entries(glyphsMap)) {
+        if (!strokes || (Array.isArray(strokes) && strokes.length === 0)) continue;
+        const ch = isNaN(Number(gKey)) ? gKey : String.fromCodePoint(Number(gKey));
+        drawnGlyphs.push({
+            glyph: ch,
+            label: `Codepoint ${gKey}`,
+            strokes,
+            source: 'script'
+        });
+    }
+
+    return { lexiconCandidates: candidates, scriptGlyphs: drawnGlyphs };
 }

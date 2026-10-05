@@ -386,6 +386,11 @@ export const resolveWordStrokes = (wordOrChar, config = {}, lexicon = []) => {
     // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (scriptType === 'logographic') {
         const dictEntry = lexicon.find(e => 
+            e.isPrimary && (
+                (e.word && e.word.replace(/\*/g, '').toLowerCase() === cleanWordLower) || 
+                (e.ideogram && e.ideogram === strInput)
+            )
+        ) || lexicon.find(e => 
             (e.word && e.word.replace(/\*/g, '').toLowerCase() === cleanWordLower) || 
             (e.ideogram && e.ideogram === strInput)
         );
