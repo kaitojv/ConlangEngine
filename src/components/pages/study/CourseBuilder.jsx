@@ -53,6 +53,9 @@ const phraseSummary = (phrase) => {
         const filled = (phrase.pairs || []).filter(p => p?.conlang || p?.english).length;
         return `${filled} of 4 pairs filled`;
     }
+    if (type === 'glyph_drawing') {
+        return (phrase.conlang || '—').trim();
+    }
     const left = (phrase.conlang || '—').trim();
     const right = (phrase.english || '').trim();
     return right ? `${left} → ${right}` : left;
@@ -72,6 +75,8 @@ const phraseIssues = (phrase) => {
         if (!(phrase.options || []).filter(Boolean).length) issues.push('No distractor options');
     } else if (type === 'picture_match') {
         if (!(phrase.conlang || '').trim()) issues.push('No image/emoji');
+    } else if (type === 'glyph_drawing') {
+        if (!(phrase.conlang || '').trim()) issues.push('Missing glyph to draw');
     } else {
         if (!(phrase.conlang || '').trim()) issues.push('Missing conlang text');
         // A blank target makes the exercise unanswerable.
@@ -161,25 +166,29 @@ const IconSelect = ({ value, onChange }) => {
     const CurrentIcon = currentOpt.icon;
 
     return (
-        <div ref={ref} style={{ position: 'relative', minWidth: '120px' }}>
-            <div 
+        <div ref={ref} className={`cb-select-wrapper ${isOpen ? 'is-open' : ''}`}>
+            <button 
+                type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--bd)', background: 'var(--bg)', color: 'var(--tx)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', height: '100%', userSelect: 'none' }}
+                className="cb-select-trigger"
                 title="Node Icon"
             >
-                <CurrentIcon size={16} color="var(--acc)" /> <span style={{flex: 1}}>{currentOpt.value}</span> <ChevronDown size={14} style={{ opacity: 0.5 }} />
-            </div>
+                <CurrentIcon size={15} color="var(--acc)" />
+                <span className="cb-select-label">{currentOpt.value}</span>
+                <ChevronDown size={14} className="cb-select-chevron" />
+            </button>
             {isOpen && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg)', border: '1px solid var(--bd)', borderRadius: '6px', zIndex: 10, marginTop: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', maxHeight: '200px', overflowY: 'auto' }}>
+                <div className="cb-select-menu">
                     {options.map(opt => {
                         const OptIcon = opt.icon;
                         return (
                             <div 
                                 key={opt.value}
                                 onClick={() => { onChange(opt.value); setIsOpen(false); }}
-                                style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: value === opt.value ? 'var(--s1)' : 'transparent', userSelect: 'none' }}
+                                className={`cb-select-item ${value === opt.value ? 'selected' : ''}`}
                             >
-                                <OptIcon size={16} color="var(--acc)" /> {opt.value}
+                                <OptIcon size={15} color="var(--acc)" />
+                                <span>{opt.value}</span>
                             </div>
                         )
                     })}
@@ -211,23 +220,33 @@ const ColorSelect = ({ value, onChange }) => {
     const currentOpt = options.find(o => o.value === value) || options[0];
 
     return (
-        <div ref={ref} style={{ position: 'relative', minWidth: '130px' }}>
-            <div 
+        <div ref={ref} className={`cb-select-wrapper ${isOpen ? 'is-open' : ''}`}>
+            <button 
+                type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--bd)', background: 'var(--bg)', color: 'var(--tx)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', height: '100%', userSelect: 'none' }}
+                className="cb-select-trigger"
                 title="Node Color"
             >
-                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: currentOpt.value === 'var(--acc)' ? 'var(--acc)' : currentOpt.value }} /> <span style={{flex: 1}}>{currentOpt.label}</span> <ChevronDown size={14} style={{ opacity: 0.5 }} />
-            </div>
+                <div 
+                    className="cb-color-dot" 
+                    style={{ background: currentOpt.value === 'var(--acc)' ? 'var(--acc)' : currentOpt.value }} 
+                />
+                <span className="cb-select-label">{currentOpt.label}</span>
+                <ChevronDown size={14} className="cb-select-chevron" />
+            </button>
             {isOpen && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg)', border: '1px solid var(--bd)', borderRadius: '6px', zIndex: 10, marginTop: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+                <div className="cb-select-menu">
                     {options.map(opt => (
                         <div 
                             key={opt.value}
                             onClick={() => { onChange(opt.value); setIsOpen(false); }}
-                            style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: value === opt.value ? 'var(--s1)' : 'transparent', userSelect: 'none' }}
+                            className={`cb-select-item ${value === opt.value ? 'selected' : ''}`}
                         >
-                            <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: opt.value === 'var(--acc)' ? 'var(--acc)' : opt.value }} /> {opt.label}
+                            <div 
+                                className="cb-color-dot" 
+                                style={{ background: opt.value === 'var(--acc)' ? 'var(--acc)' : opt.value }} 
+                            />
+                            <span>{opt.label}</span>
                         </div>
                     ))}
                 </div>
@@ -292,6 +311,8 @@ export default function CourseBuilder({ onExit }) {
     const [collapsedPhrases, setCollapsedPhrases] = useState(() => new Set());
     // Audio is opt-in per phrase unless the exercise type needs it.
     const [audioOpen, setAudioOpen] = useState(() => new Set());
+    // Prerequisites panel accordion state per level
+    const [openPrereqs, setOpenPrereqs] = useState(() => new Set());
     const [search, setSearch] = useState('');
     const [isDirty, setIsDirty] = useState(false);
 
@@ -699,12 +720,24 @@ export default function CourseBuilder({ onExit }) {
                     return (
                     <div key={level.id} className={`cb-level-card ${levelCollapsed ? 'is-collapsed' : ''}`}>
                         <div className="cb-level-header">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <button onClick={() => moveLevel(level.id, 'up')} className="cb-move-phrase" title="Move Up">
-                                    <ChevronUp size={18} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <button 
+                                    type="button"
+                                    onClick={() => moveLevel(level.id, 'up')} 
+                                    className="cb-move-phrase" 
+                                    disabled={realIndex === 0}
+                                    title="Move Up"
+                                >
+                                    <ChevronUp size={16} />
                                 </button>
-                                <button onClick={() => moveLevel(level.id, 'down')} className="cb-move-phrase" title="Move Down">
-                                    <ChevronDown size={18} />
+                                <button 
+                                    type="button"
+                                    onClick={() => moveLevel(level.id, 'down')} 
+                                    className="cb-move-phrase" 
+                                    disabled={realIndex === courseData.length - 1}
+                                    title="Move Down"
+                                >
+                                    <ChevronDown size={16} />
                                 </button>
                             </div>
                             <button
@@ -728,31 +761,41 @@ export default function CourseBuilder({ onExit }) {
                                             {(level.prerequisites || []).length} prereq
                                         </span>
                                     )}
-                                    {levelIssues > 0 && (
-                                        <span className="cb-badge cb-badge-warn">
-                                            <AlertTriangle size={12} /> {levelIssues}
-                                        </span>
-                                    )}
                                 </span>
                             </button>
                             <div className="cb-level-controls">
-                            <IconSelect 
-                                value={level.icon || 'Zap'}
-                                onChange={(val) => updateLevelField(level.id, 'icon', val)}
-                            />
-                            <ColorSelect 
-                                value={level.color || 'var(--acc)'}
-                                onChange={(val) => updateLevelField(level.id, 'color', val)}
-                            />
-                            <Button variant="default" onClick={() => duplicateLevel(level.id)} style={{ padding: '8px' }} title="Duplicate Level">
-                                <Plus size={16} />
-                            </Button>
-                            <Button variant="default" onClick={() => setPreviewLevel(level)} style={{ padding: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                <Play size={16} /> Preview
-                            </Button>
-                            <Button variant="error" onClick={() => deleteLevel(level.id)} style={{ padding: '8px' }} title="Delete level">
-                                <Trash2 size={16} />
-                            </Button>
+                                <IconSelect 
+                                    value={level.icon || 'Zap'}
+                                    onChange={(val) => updateLevelField(level.id, 'icon', val)}
+                                />
+                                <ColorSelect 
+                                    value={level.color || 'var(--acc)'}
+                                    onChange={(val) => updateLevelField(level.id, 'color', val)}
+                                />
+                                <button 
+                                    type="button"
+                                    className="cb-ctrl-btn cb-ctrl-btn-icon" 
+                                    onClick={() => duplicateLevel(level.id)} 
+                                    title="Duplicate Level"
+                                >
+                                    <Plus size={16} />
+                                </button>
+                                <button 
+                                    type="button"
+                                    className="cb-ctrl-btn" 
+                                    onClick={() => setPreviewLevel(level)} 
+                                    title="Preview Level"
+                                >
+                                    <Play size={14} /> Preview
+                                </button>
+                                <button 
+                                    type="button"
+                                    className="cb-ctrl-btn-danger" 
+                                    onClick={() => deleteLevel(level.id)} 
+                                    title="Delete Level"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
                             </div>
                         </div>
 
@@ -771,36 +814,69 @@ export default function CourseBuilder({ onExit }) {
                             </div>
                         </div>
 
-                        <div className="cb-prereq-panel">
-                            <label className="cb-prereq-title">
-                                Prerequisites (Used for branching paths)
-                            </label>
-                            <div className="cb-prereq-list">
-                                {courseData.filter(l => l.id !== level.id).length === 0 ? (
-                                    <span className="cb-hint">No other levels available.</span>
-                                ) : (
-                                    courseData.filter(l => l.id !== level.id).map(l => {
-                                        const isPrereq = (level.prerequisites || []).includes(l.id);
-                                        return (
-                                        <label key={l.id} className={`cb-prereq-chip ${isPrereq ? 'selected' : ''}`}>
-                                            <input
-                                                type="checkbox"
-                                                checked={isPrereq}
-                                                onChange={(e) => {
-                                                    const current = level.prerequisites || [];
-                                                    const newPrereqs = e.target.checked ? [...current, l.id] : current.filter(id => id !== l.id);
-                                                    updateLevelField(level.id, 'prerequisites', newPrereqs.length > 0 ? newPrereqs : undefined);
-                                                }}
-                                                className="cb-prereq-input"
-                                            />
-                                            {isPrereq && <Check size={14} />}
-                                            {l.title || 'Untitled Level'}
-                                        </label>
-                                        );
-                                    })
+                        {courseData.filter(l => l.id !== level.id).length > 0 && (
+                            <div className="cb-prereq-collapsible">
+                                <button
+                                    type="button"
+                                    className={`cb-prereq-trigger ${(level.prerequisites || []).length > 0 ? 'has-prereqs' : ''}`}
+                                    onClick={() => toggleInSet(setOpenPrereqs, level.id)}
+                                >
+                                    <span className="cb-prereq-trigger-left">
+                                        <span className="cb-prereq-icon">⑂</span>
+                                        <span className="cb-prereq-label">Branching / Prerequisites:</span>
+                                        <span className="cb-prereq-status">
+                                            {(level.prerequisites || []).length > 0 
+                                                ? `${(level.prerequisites || []).length} required (${courseData.filter(l => (level.prerequisites || []).includes(l.id)).map(l => l.title || 'Untitled').join(', ')})`
+                                                : 'Linear progression (Default)'}
+                                        </span>
+                                    </span>
+                                    <span className="cb-prereq-action">
+                                        {openPrereqs.has(level.id) ? 'Done' : (level.prerequisites || []).length > 0 ? 'Edit' : 'Configure'}
+                                        {openPrereqs.has(level.id) ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                    </span>
+                                </button>
+
+                                {openPrereqs.has(level.id) && (
+                                    <div className="cb-prereq-body">
+                                        <p className="cb-prereq-desc">
+                                            By default, this level unlocks sequentially after the previous level. Select specific earlier levels below only if you want a custom branching path:
+                                        </p>
+                                        <div className="cb-prereq-list">
+                                            {courseData.filter(l => l.id !== level.id).map(l => {
+                                                const isPrereq = (level.prerequisites || []).includes(l.id);
+                                                return (
+                                                    <label key={l.id} className={`cb-prereq-chip ${isPrereq ? 'selected' : ''}`}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isPrereq}
+                                                            onChange={(e) => {
+                                                                const current = level.prerequisites || [];
+                                                                const newPrereqs = e.target.checked ? [...current, l.id] : current.filter(id => id !== l.id);
+                                                                updateLevelField(level.id, 'prerequisites', newPrereqs.length > 0 ? newPrereqs : undefined);
+                                                            }}
+                                                            className="cb-prereq-input"
+                                                        />
+                                                        <span className={`cb-prereq-check-box ${isPrereq ? 'checked' : ''}`}>
+                                                            {isPrereq && <Check size={12} />}
+                                                        </span>
+                                                        <span>{l.title || 'Untitled Level'}</span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                        {(level.prerequisites || []).length > 0 && (
+                                            <button
+                                                type="button"
+                                                className="cb-prereq-reset-btn"
+                                                onClick={() => updateLevelField(level.id, 'prerequisites', undefined)}
+                                            >
+                                                Reset to linear progression (no branching)
+                                            </button>
+                                        )}
+                                    </div>
                                 )}
                             </div>
-                        </div>
+                        )}
 
                         {/* Removed lesson notes textbox as per user request to use teaching cards instead */}
 
@@ -830,7 +906,6 @@ export default function CourseBuilder({ onExit }) {
                                                 {phraseCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                                             </span>
                                             <span className="cb-phrase-num">{pIdx + 1}</span>
-                                            <span className="cb-phrase-type-chip">{TYPE_LABELS[phraseType]}</span>
                                             <span className="cb-phrase-summary custom-font-text notranslate">{phraseSummary(phrase)}</span>
                                             {issues.length > 0 && (
                                                 <span className="cb-phrase-issue" title={issues.join(', ')}>
@@ -926,28 +1001,30 @@ export default function CourseBuilder({ onExit }) {
                                                         style={{ width: '100%' }}
                                                     />
                                                 </div>
-                                                <div style={{ flex: 1 }}>
-                                                    <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>
-                                                        {phrase.type === 'multiple_choice' ? "Correct Answer" : 
-                                                         phrase.type === 'fill_blank' ? "Missing Word (Conlang)" :
-                                                         phrase.type === 'true_false' ? "Displayed Translation (to judge)" :
-                                                         phrase.type === 'conjugation_drill' ? "Conlang Answer" :
-                                                         phrase.type === 'listening' ? "Reference English (Optional)" :
-                                                         "Target English Translation"}
-                                                    </label>
-                                                    <Input 
-                                                        value={phrase.english || ''}
-                                                        onChange={(e) => updatePhrase(level.id, phrase.id, 'english', e.target.value)}
-                                                        placeholder={
-                                                            phrase.type === 'multiple_choice' ? "e.g. The garlic pays" : 
-                                                            phrase.type === 'fill_blank' ? "e.g. garlic" :
-                                                            phrase.type === 'conjugation_drill' ? "e.g. ran" :
-                                                            "e.g. Hi, Hello (comma separated)"
-                                                        }
-                                                        className="custom-font-text notranslate"
-                                                        style={{ width: '100%' }}
-                                                    />
-                                                </div>
+                                                {phrase.type !== 'glyph_drawing' && (
+                                                    <div style={{ flex: 1 }}>
+                                                        <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>
+                                                            {phrase.type === 'multiple_choice' ? "Correct Answer" : 
+                                                             phrase.type === 'fill_blank' ? "Missing Word (Conlang)" :
+                                                             phrase.type === 'true_false' ? "Displayed Translation (to judge)" :
+                                                             phrase.type === 'conjugation_drill' ? "Conlang Answer" :
+                                                             phrase.type === 'listening' ? "Reference English (Optional)" :
+                                                             "Target English Translation"}
+                                                        </label>
+                                                        <Input 
+                                                            value={phrase.english || ''}
+                                                            onChange={(e) => updatePhrase(level.id, phrase.id, 'english', e.target.value)}
+                                                            placeholder={
+                                                                phrase.type === 'multiple_choice' ? "e.g. The garlic pays" : 
+                                                                phrase.type === 'fill_blank' ? "e.g. garlic" :
+                                                                phrase.type === 'conjugation_drill' ? "e.g. ran" :
+                                                                "e.g. Hi, Hello (comma separated)"
+                                                            }
+                                                            className="custom-font-text notranslate"
+                                                            style={{ width: '100%' }}
+                                                        />
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
 
