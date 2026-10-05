@@ -335,7 +335,8 @@ export default function SyllabaryManager({ scriptId } = {}) {
             title="Draw Custom Symbol"
         >
             <FontStudioModal 
-                targetLabel={drawingForSyl} 
+                targetLabel={drawingForSyl}
+                scriptId={targetScriptId}
                 onSave={(newChar) => {
                     handleUpdateSyllable(drawingForSyl, newChar);
                     setDrawingForSyl(null);

@@ -1187,6 +1187,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                 <FontStudioModal
                     targetLabel={word || 'Ideogram'}
                     existingCharCode={ideogram ? ideogram.codePointAt(0) : undefined}
+                    scriptId={scriptOverride}
                     onSave={(newChar) => {
                         updateField('ideogram', newChar);
                         setIsFontStudioOpen(false);

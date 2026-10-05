@@ -822,20 +822,27 @@ export default function LexiconList() {
                                 <div className="entry-words">
                                     <div className="entry-word-with-wave">
                                         {filters.showTones && <StressWave word={safeWord} stress={displayStress} tone={displayTone} customVowelsStr={useConfigStore.getState().vowels} />}
-                                        <span 
-                                            className={`notranslate entry-main-word custom-font-text conlang-script-${wordScriptId} ${phonologyTypes === 'featural_block' ? 'featural-block-render' : ''}`} 
-                                            style={{ textAlign: 'center', cursor: 'pointer', transition: 'color 0.2s' }}
-                                            onClick={() => setSelectedGlyphDetails({ 
-                                                char: phonologyTypes === 'logographic' ? baseEntry.ideogram : safeWord, 
-                                                glyph: displayWord, 
-                                                type: phonologyTypes, 
-                                                name: baseEntry.translation || baseEntry.word,
-                                                isWord: true
-                                            })}
-                                            title="Click to analyze"
-                                        >
-                                            {displayWord}
-                                        </span>
+                                        {(() => {
+                                            const wordScript = getScriptSystem(configFull, wordScriptId);
+                                            const resolvedScriptType = wordScript?.type || phonologyTypes || 'alphabetic';
+                                            return (
+                                                <span 
+                                                    className={`notranslate entry-main-word custom-font-text conlang-script-${wordScriptId} ${resolvedScriptType === 'featural_block' ? 'featural-block-render' : ''}`} 
+                                                    style={{ textAlign: 'center', cursor: 'pointer', transition: 'color 0.2s' }}
+                                                    onClick={() => setSelectedGlyphDetails({ 
+                                                        char: resolvedScriptType === 'logographic' ? (baseEntry.ideogram || safeWord) : safeWord, 
+                                                        glyph: displayWord, 
+                                                        type: resolvedScriptType, 
+                                                        scriptId: wordScriptId,
+                                                        name: baseEntry.translation || baseEntry.word,
+                                                        isWord: true
+                                                    })}
+                                                    title="Click to analyze"
+                                                >
+                                                    {displayWord}
+                                                </span>
+                                            );
+                                        })()}
                                         {baseEntry.scriptOverride && scriptSystems.length > 1 && (
                                             <span className="script-badge-inline" title={`Script: ${getScriptSystem(configFull, baseEntry.scriptOverride).name}`}>
                                                 {getScriptSystem(configFull, baseEntry.scriptOverride).name}
@@ -928,20 +935,27 @@ export default function LexiconList() {
                                     </Button>
                                     {(!['alphabetic', 'abjad', 'abugida'].includes(phonologyTypes || 'alphabetic')) && (
                                         <>
-                                            <Button 
-                                                variant="default" 
-                                                onClick={() => setSelectedGlyphDetails({ 
-                                                    char: phonologyTypes === 'logographic' ? (baseEntry.ideogram || safeWord) : safeWord, 
-                                                    glyph: displayWord, 
-                                                    type: phonologyTypes, 
-                                                    name: baseEntry.translation || baseEntry.word,
-                                                    isWord: true
-                                                })} 
-                                                title="View Stroke Order" 
-                                                className="btn-icon-only"
-                                            >
-                                                <PenTool size={16} />
-                                            </Button>
+                                            {(() => {
+                                                const wordScript = getScriptSystem(configFull, wordScriptId);
+                                                const resolvedScriptType = wordScript?.type || phonologyTypes || 'alphabetic';
+                                                return (
+                                                    <Button 
+                                                        variant="default" 
+                                                        onClick={() => setSelectedGlyphDetails({ 
+                                                            char: resolvedScriptType === 'logographic' ? (baseEntry.ideogram || safeWord) : safeWord, 
+                                                            glyph: displayWord, 
+                                                            type: resolvedScriptType, 
+                                                            scriptId: wordScriptId,
+                                                            name: baseEntry.translation || baseEntry.word,
+                                                            isWord: true
+                                                        })} 
+                                                        title="View Stroke Order" 
+                                                        className="btn-icon-only"
+                                                    >
+                                                        <PenTool size={16} />
+                                                    </Button>
+                                                );
+                                            })()}
                                             <Button variant="default" onClick={() => exportTextAsSVG(displayWord, `${safeWord}.svg`)} title="Download SVG" className="btn-icon-only">
                                                 <Download size={16} />
                                             </Button>

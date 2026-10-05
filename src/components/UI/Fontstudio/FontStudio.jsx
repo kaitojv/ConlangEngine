@@ -157,20 +157,26 @@ const extractInitialGlyphData = (existingCharCode, customGlyphs) => {
     return { actualStrokes, meta };
 };
 
-export default function FontStudioModal({ targetLabel, onSave, onCancel, existingCharCode }) {
+export default function FontStudioModal({ targetLabel, onSave, onCancel, existingCharCode, scriptId = null }) {
     const canvasRef = useRef(null);
+    const resolvedScriptId = scriptId;
     const {
         customGlyphs, puaCounter, addCustomGlyph, incrementPuaCounter,
         alphabetGlyphs, alphabetNames, featuralComponents
-    } = useConfigStore(useShallow(state => ({
-        customGlyphs: state.customGlyphs,
-        puaCounter: state.puaCounter,
-        addCustomGlyph: state.addCustomGlyph,
-        incrementPuaCounter: state.incrementPuaCounter,
-        alphabetGlyphs: state.alphabetGlyphs,
-        alphabetNames: state.alphabetNames,
-        featuralComponents: state.featuralComponents,
-    })));
+    } = useConfigStore(useShallow(state => {
+        const rootGlyphs = state.customGlyphs || {};
+        const scriptData = (resolvedScriptId && state.scriptDataById?.[resolvedScriptId]) || {};
+        const scriptGlyphs = scriptData.customGlyphs || {};
+        return {
+            customGlyphs: { ...rootGlyphs, ...scriptGlyphs },
+            puaCounter: scriptData.puaCounter || state.puaCounter,
+            addCustomGlyph: state.addCustomGlyph,
+            incrementPuaCounter: state.incrementPuaCounter,
+            alphabetGlyphs: scriptData.alphabetGlyphs || state.alphabetGlyphs,
+            alphabetNames: scriptData.alphabetNames || state.alphabetNames,
+            featuralComponents: scriptData.featuralComponents || state.featuralComponents,
+        };
+    }));
 
     const initialData = useMemo(() => {
         return extractInitialGlyphData(existingCharCode, customGlyphs);
@@ -1186,7 +1192,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         
         // 3. Save everything to Zustand
         if (base64Font) {
-            addCustomGlyph(charCode, strokesToSave, base64Font);
+            addCustomGlyph(charCode, strokesToSave, base64Font, resolvedScriptId);
             
             // 4. Give the generated Unicode character and the strokes back to the parent component!
             const newChar = String.fromCodePoint(charCode);

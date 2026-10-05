@@ -179,7 +179,7 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                     <>
                         <div className="glyph-display-card glass">
                             <div 
-                                className="glyph-large custom-font-text notranslate"
+                                className={`glyph-large custom-font-text notranslate ${scriptId ? `conlang-script-${scriptId}` : ''}`}
                                 style={{ fontSize: dynamicFontSize }}
                             >
                                 {isWord ? displayStr : (

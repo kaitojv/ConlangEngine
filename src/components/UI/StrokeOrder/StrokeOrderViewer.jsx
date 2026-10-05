@@ -950,6 +950,7 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
                     <FontStudioModal
                         targetLabel={baseCharData.label || baseCharData.char}
                         existingCharCode={baseCharData.charCode}
+                        scriptId={activeScriptId}
                         onSave={() => {
                             // Font Studio already persisted via addCustomGlyph, so simply
                             // clear any local draft and show the freshly saved glyph.

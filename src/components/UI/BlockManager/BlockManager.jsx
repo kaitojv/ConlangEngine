@@ -451,6 +451,7 @@ export default function BlockManager({ scriptId } = {}) {
             >
                 <FontStudioModal 
                     targetLabel={drawingForComp} 
+                    scriptId={targetScriptId}
                     onSave={(newChar, strokes) => {
                         // The default FontStudio calls onSave with just newChar. We need to modify it to pass strokes!
                         handleSaveDrawing(strokes);

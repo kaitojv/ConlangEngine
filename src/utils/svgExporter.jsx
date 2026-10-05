@@ -45,6 +45,11 @@ export const exportTextAsSVG = (transliteratedText, fileName = 'conlang_script.s
         
         // 1. Try standard custom glyphs (Logograms / Syllabics)
         if (customGlyphs[code]) return customGlyphs[code];
+        if (state.scriptDataById) {
+            for (const sData of Object.values(state.scriptDataById)) {
+                if (sData?.customGlyphs?.[code]) return sData.customGlyphs[code];
+            }
+        }
         
         // 2. Try reconstructing Featural Blocks
         const syllableStr = reverseSyllabaryMap[char];
