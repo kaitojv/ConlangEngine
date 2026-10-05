@@ -27,7 +27,9 @@ export default function PhonologyTab() {
     const historicalRules = useConfigStore((state) => state.historicalRules) || '';
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const syllabificationAlgorithm = useConfigStore((state) => state.syllabificationAlgorithm) || 'ltr';
-    const azureTtsVoice = useConfigStore((state) => state.azureTtsVoice) || 'en-US-JennyNeural';
+    const azureTtsVoice = useConfigStore((state) => state.azureTtsVoice) || 'ipa-default';
+    const azureTtsKey = useConfigStore((state) => state.azureTtsKey) || '';
+    const azureTtsRegion = useConfigStore((state) => state.azureTtsRegion) || 'brazilsouth';
     const vowelHarmonyMode = useConfigStore((state) => state.vowelHarmonyMode) || 'complete';
     const vowelHarmonySets = useConfigStore((state) => state.vowelHarmonySets) || [];
     const vowelHarmonyOverrideWordClasses = useConfigStore((state) => state.vowelHarmonyOverrideWordClasses) || [];
@@ -498,9 +500,9 @@ export default function PhonologyTab() {
             <ProsodyRulesCard />
 
             <Card>
-                <h2 className="flex sg-title"><Headphones /> Text-to-Speech (Azure)</h2>
-                <Infobox title="SSML Phonetic Pronunciation">
-                    The app uses Microsoft's Neural voices to read the exact <b>IPA</b> of your conlang instead of guessing the pronunciation from its spelling. Select the base accent for your language below.
+                <h2 className="flex sg-title"><Headphones /> Text-to-Speech & IPA Pronunciation</h2>
+                <Infobox title="Phonetic IPA Pronunciation">
+                    The app reads the exact <b>IPA</b> of your conlang. By default, it uses your browser's speech synthesizer with phonetic IPA translation (100% free & offline). You can also optionally connect a Microsoft Azure Speech key below for high-fidelity Neural voices.
                 </Infobox>
 
                 <div className="settings-section-wrapper" style={{ marginTop: '15px' }}>
@@ -514,6 +516,29 @@ export default function PhonologyTab() {
                             <option key={voice.value} value={voice.value}>{voice.label}</option>
                         ))}
                     </select>
+                </div>
+
+                <div className="settings-section-wrapper" style={{ marginTop: '15px' }}>
+                    <label className="form-label settings-label-block">Azure Speech Key (Optional)</label>
+                    <Input
+                        type="password"
+                        placeholder="Leave blank to use free browser IPA speech engine"
+                        value={azureTtsKey}
+                        onChange={(e) => updateConfig({ azureTtsKey: e.target.value })}
+                    />
+                    <small style={{ color: 'var(--tx3)', marginTop: '4px', display: 'block' }}>
+                        Optional. If you have an Azure Speech resource, paste its subscription key here. If empty or invalid, the app automatically uses browser phonetic synthesis without errors.
+                    </small>
+                </div>
+
+                <div className="settings-section-wrapper" style={{ marginTop: '15px' }}>
+                    <label className="form-label settings-label-block">Azure Region</label>
+                    <Input
+                        type="text"
+                        placeholder="e.g. brazilsouth, eastus, westeurope"
+                        value={azureTtsRegion}
+                        onChange={(e) => updateConfig({ azureTtsRegion: e.target.value })}
+                    />
                 </div>
             </Card>
 

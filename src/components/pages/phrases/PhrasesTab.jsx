@@ -49,21 +49,20 @@ export default function PhrasesTab() {
     };
 
     const handleReadAloud = async (text) => {
-        if (!azureTtsVoice) {
-            toast.error("Please configure Azure TTS voice in Settings first.");
-            return;
-        }
         const toastId = toast.loading("Generating audio...");
         try {
             await playAzureTTS({
                 text: text.replace(/[.\-*]/g, ''),
-                voice: azureTtsVoice,
-                useIpa: azureTtsUseIpa
+                voice: azureTtsVoice || 'ipa-default',
+                useIpa: azureTtsUseIpa ?? true
             });
             toast.dismiss(toastId);
         } catch {
             toast.dismiss(toastId);
-            toast.error("Failed to play audio.");
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.speak(new SpeechSynthesisUtterance(text.replace(/[.\-*]/g, '')));
+            }
         }
     };
 

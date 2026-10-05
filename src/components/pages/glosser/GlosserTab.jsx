@@ -302,20 +302,22 @@ export default function GlosserTab() {
 
     const handleReadAloud = async () => {
         if (!inputText.trim()) return toast.error("Nothing to read.");
-        if (!azureTtsVoice) return toast.error("Please configure Azure TTS voice in Settings first.");
         
         const toastId = toast.loading("Generating audio...");
         try {
             const cleanText = inputText.replace(/[.\-*]/g, '');
             await playAzureTTS({
                 text: cleanText,
-                voice: azureTtsVoice,
-                useIpa: azureTtsUseIpa
+                voice: azureTtsVoice || 'ipa-default',
+                useIpa: azureTtsUseIpa ?? true
             });
             toast.dismiss(toastId);
         } catch {
             toast.dismiss(toastId);
-            toast.error("Failed to play audio.");
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.speak(new SpeechSynthesisUtterance(inputText.replace(/[.\-*]/g, '')));
+            }
         }
     };
 

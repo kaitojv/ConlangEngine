@@ -484,32 +484,26 @@ export default function LexiconList() {
         const cleanIpa = wordObj.ipa ? wordObj.ipa.replace(/[.\-*]/g, '') : undefined;
 
         const config = useConfigStore.getState();
-        if (config.azureTtsVoice) {
-            const toastId = toast.loading("Generating audio...");
-            try {
-                await playAzureTTS({
-                    text: cleanText,
-                    ipa: cleanIpa, // This might be undefined, but Azure TTS utility handles it
-                    voice: config.azureTtsVoice,
-                    useIpa: config.azureTtsUseIpa
-                });
-                toast.dismiss(toastId);
-            } catch (err) {
-                toast.error("Azure TTS failed: " + err.message, { id: toastId });
-                console.error(err);
+        const toastId = toast.loading("Playing pronunciation...");
+        try {
+            await playAzureTTS({
+                text: cleanText,
+                ipa: cleanIpa,
+                voice: config.azureTtsVoice || 'ipa-default',
+                useIpa: config.azureTtsUseIpa ?? true
+            });
+            toast.dismiss(toastId);
+            useConfigStore.getState().unlockBadge('vocalist', 'Vocalist');
+        } catch (err) {
+            toast.dismiss(toastId);
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.speak(new SpeechSynthesisUtterance(cleanText));
+                useConfigStore.getState().unlockBadge('vocalist', 'Vocalist');
+            } else {
+                toast.error("Audio playback unavailable: " + (err.message || 'Unknown error'));
             }
-            return;
         }
-
-        // Fallback to browser TTS
-        if (!('speechSynthesis' in window)) {
-            return toast.error("Sorry, your browser doesn't support text-to-speech.");
-        }
-
-        // Interrupt any ongoing speech so it doesn't queue up a dozen words if the user spams the button
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(new SpeechSynthesisUtterance(cleanText));
-        useConfigStore.getState().unlockBadge('vocalist', 'Vocalist');
     };
 
     return (

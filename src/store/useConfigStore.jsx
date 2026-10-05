@@ -118,6 +118,8 @@ export const INITIAL_CONFIG = {
     },
     azureTtsUseIpa: true,
     azureTtsVoice: '',
+    azureTtsKey: '',
+    azureTtsRegion: 'brazilsouth',
     numberMatrix: {},
     numberDerivedRules: {
         ordinal: '',

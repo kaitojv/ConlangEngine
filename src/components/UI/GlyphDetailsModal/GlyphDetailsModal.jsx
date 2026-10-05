@@ -126,20 +126,16 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
         setIsPlaying(true);
         const toastId = toast.loading("Synthesizing audio...");
         try {
-            if (config.azureTtsVoice) {
-                await playAzureTTS({
-                    text: char,
-                    ipa: char, // Assuming the char is closely tied to IPA for this feature
-                    voice: config.azureTtsVoice,
-                    useIpa: config.azureTtsUseIpa
-                });
-                toast.success("Audio played successfully", { id: toastId });
-            } else {
-                toast.error("Azure TTS voice not configured in settings.", { id: toastId });
-            }
+            await playAzureTTS({
+                text: char,
+                ipa: char,
+                voice: config.azureTtsVoice || 'ipa-default',
+                useIpa: config.azureTtsUseIpa ?? true
+            });
+            toast.dismiss(toastId);
         } catch (err) {
             console.error(err);
-            toast.error("Azure TTS failed: " + err.message, { id: toastId });
+            toast.dismiss(toastId);
         } finally {
             setIsPlaying(false);
         }

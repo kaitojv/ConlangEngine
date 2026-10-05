@@ -243,8 +243,8 @@ export default function StudyTab() {
                     useIpa: globalConfig.azureTtsUseIpa
                 });
                 toast.dismiss(toastId);
-            } catch (err) {
-                toast.error("Azure TTS failed: " + err.message, { id: toastId });
+            } catch {
+                toast.dismiss(toastId);
             }
             return;
         }

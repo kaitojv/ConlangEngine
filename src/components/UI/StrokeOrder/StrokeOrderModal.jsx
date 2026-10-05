@@ -42,23 +42,19 @@ export default function StrokeOrderModal({
         setIsPlaying(true);
         const toastId = toast.loading("Synthesizing audio...");
         try {
-            if (azureTtsVoice) {
-                await playAzureTTS({
-                    text: word || char || displayTitle,
-                    ipa: word || char || displayTitle,
-                    voice: azureTtsVoice,
-                    useIpa: azureTtsUseIpa
-                });
-                toast.success("Audio played successfully", { id: toastId });
-            } else if ('speechSynthesis' in window) {
+            await playAzureTTS({
+                text: word || char || displayTitle,
+                ipa: word || char || displayTitle,
+                voice: azureTtsVoice || 'ipa-default',
+                useIpa: azureTtsUseIpa ?? true
+            });
+            toast.dismiss(toastId);
+        } catch {
+            toast.dismiss(toastId);
+            if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
                 window.speechSynthesis.speak(new SpeechSynthesisUtterance(word || char || displayTitle));
-                toast.success("Audio played", { id: toastId });
-            } else {
-                toast.error("Audio synthesis not available.", { id: toastId });
             }
-        } catch (err) {
-            toast.error("Audio failed: " + err.message, { id: toastId });
         } finally {
             setIsPlaying(false);
         }

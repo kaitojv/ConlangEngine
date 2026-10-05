@@ -27,7 +27,7 @@ const VALID_CONFIG_KEYS = new Set([
     'pronounMatrixData', 'pronounMatrixSettings',
     'vowelHarmonyMode', 'vowelHarmonySets', 'vowelHarmonyOverrideWordClasses', 'vowelHarmonyOverrideTags',
     'backupSettings',
-    'evolutionEpochs', 'worldMap', 'customLabels', 'ipaMappingRules', 'typographySettings', 'azureTtsUseIpa', 'azureTtsVoice',
+    'evolutionEpochs', 'worldMap', 'customLabels', 'ipaMappingRules', 'typographySettings', 'azureTtsUseIpa', 'azureTtsVoice', 'azureTtsKey', 'azureTtsRegion',
     // Multi-script fields
     'scriptSystems', 'scriptRules', 'activeScriptSystemId', 'configVersion', 'scriptDataById',
     // Particle fields
