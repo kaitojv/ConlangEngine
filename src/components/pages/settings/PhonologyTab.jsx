@@ -11,10 +11,11 @@ import applySoundChanges from '../../../utils/applysoundchanges.jsx';
 import { VisualRuleBuilder } from './grammarMatrix/VisualRuleBuilder.jsx';
 import ProsodyRulesCard from './ProsodyRulesCard.jsx';
 import MultiSelectDropdown from '../../UI/MultiSelectDropdown/MultiSelectDropdown.jsx';
-import { Info, AudioLines, Headphones, Music, Hourglass, Wand2, BookCheck, Eye, Trash2, SquarePen } from 'lucide-react';
+import { Info, AudioLines, Headphones, Music, Hourglass, Wand2, BookCheck, Eye, Trash2, SquarePen, Volume2, Play } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../../UI/Modal/Modal.jsx';
-import './phonologyTab.css'
+import { playTTS } from '../../../utils/azureTTS.js';
+import './phonologyTab.css';
 
 export default function PhonologyTab() {
     // Grab all our phonology and orthography settings from the global store
@@ -27,14 +28,75 @@ export default function PhonologyTab() {
     const historicalRules = useConfigStore((state) => state.historicalRules) || '';
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const syllabificationAlgorithm = useConfigStore((state) => state.syllabificationAlgorithm) || 'ltr';
+
+    // Multi-engine TTS & IPA Reader settings
+    const ttsEngine = useConfigStore((state) => state.ttsEngine) || 'browser';
+    const ttsVoice = useConfigStore((state) => state.ttsVoice) || '';
+    const ttsSpeed = useConfigStore((state) => state.ttsSpeed) ?? 1.0;
+    const formantF0 = useConfigStore((state) => state.formantF0) ?? 130;
+    const kokoroUrl = useConfigStore((state) => state.kokoroUrl) || 'http://localhost:8880/v1/audio/speech';
+    const kokoroVoice = useConfigStore((state) => state.kokoroVoice) || 'af_heart';
+    const kokoroSpeed = useConfigStore((state) => state.kokoroSpeed) ?? 1.0;
+    const kokoroSendIpa = useConfigStore((state) => state.kokoroSendIpa) ?? true;
+    const openTtsUrl = useConfigStore((state) => state.openTtsUrl) || 'http://localhost:5500';
+    const openTtsVoice = useConfigStore((state) => state.openTtsVoice) || 'espeak:en';
+    const customTtsUrl = useConfigStore((state) => state.customTtsUrl) || '';
+    const customTtsKey = useConfigStore((state) => state.customTtsKey) || '';
+    const customTtsVoice = useConfigStore((state) => state.customTtsVoice) || '';
     const azureTtsVoice = useConfigStore((state) => state.azureTtsVoice) || 'ipa-default';
     const azureTtsKey = useConfigStore((state) => state.azureTtsKey) || '';
     const azureTtsRegion = useConfigStore((state) => state.azureTtsRegion) || 'brazilsouth';
+
+    // Interactive pronunciation test state
+    const [testWord, setTestWord] = useState('satewa');
+    const [testIpa, setTestIpa] = useState('/sǎtēwà/');
+    const [isTestingTts, setIsTestingTts] = useState(false);
+
+    const handleTestTts = async () => {
+        setIsTestingTts(true);
+        try {
+            await playTTS({
+                text: testWord,
+                ipa: testIpa,
+                useIpa: true,
+                engine: ttsEngine
+            });
+            toast.success("Playing pronunciation test");
+        } catch (err) {
+            toast.error("Test failed: " + (err.message || 'Check your settings'));
+        } finally {
+            setIsTestingTts(false);
+        }
+    };
+
     const vowelHarmonyMode = useConfigStore((state) => state.vowelHarmonyMode) || 'complete';
     const vowelHarmonySets = useConfigStore((state) => state.vowelHarmonySets) || [];
     const vowelHarmonyOverrideWordClasses = useConfigStore((state) => state.vowelHarmonyOverrideWordClasses) || [];
     const vowelHarmonyOverrideTags = useConfigStore((state) => state.vowelHarmonyOverrideTags) || [];
     const updateConfig = useConfigStore((state) => state.updateConfig);
+
+    const KOKORO_VOICES = [
+        { value: 'af_heart', label: 'Heart (American Female - Warm & Expressive ⭐)' },
+        { value: 'af_bella', label: 'Bella (American Female - Crisp)' },
+        { value: 'af_nicole', label: 'Nicole (American Female - Whispery)' },
+        { value: 'af_sarah', label: 'Sarah (American Female - Bright)' },
+        { value: 'af_sky', label: 'Sky (American Female - Soft)' },
+        { value: 'am_adam', label: 'Adam (American Male - Clear narrator)' },
+        { value: 'am_michael', label: 'Michael (American Male - Deep)' },
+        { value: 'bf_emma', label: 'Emma (British Female - Standard)' },
+        { value: 'bf_isabella', label: 'Isabella (British Female - Soft)' },
+        { value: 'bm_george', label: 'George (British Male - Warm)' },
+        { value: 'bm_lewis', label: 'Lewis (British Male - Resonant)' },
+        { value: 'ef_dora', label: 'Dora (Spanish Female)' },
+        { value: 'em_alex', label: 'Alex (Spanish Male)' },
+        { value: 'ff_siwis', label: 'Siwis (French Female)' },
+        { value: 'if_sara', label: 'Sara (Italian Female)' },
+        { value: 'jf_alpha', label: 'Alpha (Japanese Female)' },
+        { value: 'jm_kento', label: 'Kento (Japanese Male)' },
+        { value: 'pf_dora', label: 'Dora (Portuguese Female)' },
+        { value: 'pm_alex', label: 'Alex (Portuguese Male)' },
+        { value: 'zf_xiaobei', label: 'Xiaobei (Mandarin Female)' }
+    ];
 
     const AZURE_VOICES = [
         { value: 'ipa-default', label: 'IPA Reading (US Base - Fluid)' },
@@ -500,45 +562,271 @@ export default function PhonologyTab() {
             <ProsodyRulesCard />
 
             <Card>
-                <h2 className="flex sg-title"><Headphones /> Text-to-Speech & IPA Pronunciation</h2>
-                <Infobox title="Phonetic IPA Pronunciation">
-                    The app reads the exact <b>IPA</b> of your conlang. By default, it uses your browser's speech synthesizer with phonetic IPA translation (100% free & offline). You can also optionally connect a Microsoft Azure Speech key below for high-fidelity Neural voices.
+                <h2 className="flex sg-title"><Headphones /> Text-to-Speech & IPA Engine</h2>
+                <Infobox title="Configurable IPA Speech Synthesis">
+                    Conlang Engine can vocalize your language and exact <b>IPA</b> phonetics using multiple speech engines. Select your preferred engine below—including 100% open-source and offline options.
                 </Infobox>
 
+                {/* 1. Engine Selector */}
                 <div className="settings-section-wrapper" style={{ marginTop: '15px' }}>
-                    <label className="form-label settings-label-block">Base Accent (Voice Model)</label>
+                    <label className="form-label settings-label-block">Speech Engine Provider</label>
                     <select
                         className="settings-select-full"
-                        value={azureTtsVoice}
-                        onChange={(e) => updateConfig({ azureTtsVoice: e.target.value })}
+                        value={ttsEngine}
+                        onChange={(e) => updateConfig({ ttsEngine: e.target.value })}
                     >
-                        {AZURE_VOICES.map(voice => (
-                            <option key={voice.value} value={voice.value}>{voice.label}</option>
-                        ))}
+                        <option value="browser">🌐 Browser Speech Synthesizer (Enhanced Phonetic IPA - Built-in & Free)</option>
+                        <option value="formant">🔬 Acoustic Formant Synthesizer (Pure Open-Source IPA - Web Audio)</option>
+                        <option value="kokoro">🌸 Kokoro-TTS (Open-Source 82M Neural Model - High Fidelity IPA)</option>
+                        <option value="opentts">🐧 OpenTTS / eSpeak-NG (Self-Hosted Open Source Server)</option>
+                        <option value="custom">⚡ Custom Audio API (Piper / LocalAI / OpenAI-compatible)</option>
+                        <option value="azure">☁️ Microsoft Azure Speech (Neural SSML IPA)</option>
                     </select>
                 </div>
 
-                <div className="settings-section-wrapper" style={{ marginTop: '15px' }}>
-                    <label className="form-label settings-label-block">Azure Speech Key (Optional)</label>
-                    <Input
-                        type="password"
-                        placeholder="Leave blank to use free browser IPA speech engine"
-                        value={azureTtsKey}
-                        onChange={(e) => updateConfig({ azureTtsKey: e.target.value })}
-                    />
-                    <small style={{ color: 'var(--tx3)', marginTop: '4px', display: 'block' }}>
-                        Optional. If you have an Azure Speech resource, paste its subscription key here. If empty or invalid, the app automatically uses browser phonetic synthesis without errors.
-                    </small>
-                </div>
+                {/* 2. Provider-Specific Configurations */}
+                {ttsEngine === 'browser' && (
+                    <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div className="settings-section-wrapper">
+                            <label className="form-label settings-label-block">Base Language Accent</label>
+                            <select
+                                className="settings-select-full"
+                                value={azureTtsVoice}
+                                onChange={(e) => updateConfig({ azureTtsVoice: e.target.value })}
+                            >
+                                {AZURE_VOICES.map(voice => (
+                                    <option key={voice.value} value={voice.value}>{voice.label}</option>
+                                ))}
+                            </select>
+                            <small style={{ color: 'var(--tx3)', marginTop: '4px', display: 'block' }}>
+                                Converts conlang IPA phonemes into natural speech using your device's native speech engine.
+                            </small>
+                        </div>
+                    </div>
+                )}
 
-                <div className="settings-section-wrapper" style={{ marginTop: '15px' }}>
-                    <label className="form-label settings-label-block">Azure Region</label>
-                    <Input
-                        type="text"
-                        placeholder="e.g. brazilsouth, eastus, westeurope"
-                        value={azureTtsRegion}
-                        onChange={(e) => updateConfig({ azureTtsRegion: e.target.value })}
-                    />
+                {ttsEngine === 'formant' && (
+                    <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <Infobox title="Acoustic Formant Synthesis">
+                            Models human vocal tract formants (F1, F2, F3) directly from acoustic phonetics via the Web Audio API. 
+                            Synthesizes pure vowels, nasal murmurs, and fricative bandpass filters without any external language bias or network requests. 100% open-source & offline.
+                        </Infobox>
+                        <div className="settings-section-wrapper">
+                            <label className="form-label settings-label-block">Voice Pitch (Fundamental Frequency: {formantF0} Hz)</label>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                <input
+                                    type="range"
+                                    min="80"
+                                    max="260"
+                                    step="5"
+                                    value={formantF0}
+                                    onChange={(e) => updateConfig({ formantF0: Number(e.target.value) })}
+                                    style={{ flex: 1 }}
+                                />
+                                <span style={{ minWidth: '70px', textAlign: 'right', fontSize: '0.85rem', color: 'var(--tx2)' }}>
+                                    {formantF0 < 120 ? 'Deep' : formantF0 < 180 ? 'Mid' : 'High'} ({formantF0}Hz)
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {ttsEngine === 'kokoro' && (
+                    <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <Infobox title="Kokoro-TTS (Open-Source 82M Neural Model)">
+                            Kokoro is a lightweight, high-fidelity open-source neural TTS model featuring direct IPA phoneme input.
+                            Run it locally with Docker: <code>docker run -p 8880:8880 ghcr.io/remsky/kokoro-fastapi-cpu:latest</code>
+                        </Infobox>
+                        <div className="settings-section-wrapper">
+                            <label className="form-label settings-label-block">Kokoro Server Endpoint</label>
+                            <Input
+                                type="text"
+                                placeholder="http://localhost:8880/v1/audio/speech"
+                                value={kokoroUrl}
+                                onChange={(e) => updateConfig({ kokoroUrl: e.target.value })}
+                            />
+                        </div>
+                        <div className="settings-section-wrapper">
+                            <label className="form-label settings-label-block">Neural Voice</label>
+                            <select
+                                className="settings-select-full"
+                                value={kokoroVoice}
+                                onChange={(e) => updateConfig({ kokoroVoice: e.target.value })}
+                            >
+                                {KOKORO_VOICES.map(voice => (
+                                    <option key={voice.value} value={voice.value}>{voice.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="settings-section-wrapper">
+                            <label className="form-label settings-label-block">Voice Speed ({kokoroSpeed}x)</label>
+                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                                <input
+                                    type="range"
+                                    min="0.5"
+                                    max="1.75"
+                                    step="0.05"
+                                    value={kokoroSpeed}
+                                    onChange={(e) => updateConfig({ kokoroSpeed: Number(e.target.value) })}
+                                    style={{ flex: 1 }}
+                                />
+                                <span style={{ minWidth: '50px', textAlign: 'right', fontSize: '0.85rem', color: 'var(--tx2)' }}>
+                                    {kokoroSpeed}x
+                                </span>
+                            </div>
+                        </div>
+                        <div className="settings-section-wrapper">
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={kokoroSendIpa}
+                                    onChange={(e) => updateConfig({ kokoroSendIpa: e.target.checked })}
+                                />
+                                <span>Send direct IPA symbols to Kokoro phonetic tokenizer</span>
+                            </label>
+                            <small style={{ color: 'var(--tx3)', marginTop: '4px', display: 'block', marginLeft: '24px' }}>
+                                Feeds clean IPA phonemes straight into Kokoro, bypassing English orthography bias.
+                            </small>
+                        </div>
+                    </div>
+                )}
+
+                {ttsEngine === 'opentts' && (
+                    <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <Infobox title="Self-Hosted OpenTTS / eSpeak-NG">
+                            Connects to an open-source <a href="https://github.com/synesthesiam/opentts" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>OpenTTS</a> or eSpeak-NG server. 
+                            Run it locally with Docker: <code>docker run -it -p 5500:5500 synesthesiam/opentts</code>
+                        </Infobox>
+                        <div className="settings-section-wrapper">
+                            <label className="form-label settings-label-block">OpenTTS Server URL</label>
+                            <Input
+                                type="text"
+                                placeholder="e.g. http://localhost:5500"
+                                value={openTtsUrl}
+                                onChange={(e) => updateConfig({ openTtsUrl: e.target.value })}
+                            />
+                        </div>
+                        <div className="settings-section-wrapper">
+                            <label className="form-label settings-label-block">Voice ID</label>
+                            <Input
+                                type="text"
+                                placeholder="e.g. espeak:en, espeak:fr, piper:en_US-lessac-medium"
+                                value={openTtsVoice}
+                                onChange={(e) => updateConfig({ openTtsVoice: e.target.value })}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {ttsEngine === 'custom' && (
+                    <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <Infobox title="Custom Audio API Endpoint">
+                            Connect to any OpenAI-compatible audio speech endpoint, Piper HTTP server, or local Kokoro-TTS instance.
+                        </Infobox>
+                        <div className="settings-section-wrapper">
+                            <label className="form-label settings-label-block">Endpoint URL</label>
+                            <Input
+                                type="text"
+                                placeholder="e.g. http://localhost:8880/v1/audio/speech"
+                                value={customTtsUrl}
+                                onChange={(e) => updateConfig({ customTtsUrl: e.target.value })}
+                            />
+                        </div>
+                        <div className="settings-section-wrapper">
+                            <label className="form-label settings-label-block">Voice / Model Name</label>
+                            <Input
+                                type="text"
+                                placeholder="e.g. alloy, kokoro, piper"
+                                value={customTtsVoice}
+                                onChange={(e) => updateConfig({ customTtsVoice: e.target.value })}
+                            />
+                        </div>
+                        <div className="settings-section-wrapper">
+                            <label className="form-label settings-label-block">API Key / Token (Optional)</label>
+                            <Input
+                                type="password"
+                                placeholder="Bearer token (if required by your server)"
+                                value={customTtsKey}
+                                onChange={(e) => updateConfig({ customTtsKey: e.target.value })}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {ttsEngine === 'azure' && (
+                    <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div className="settings-section-wrapper">
+                            <label className="form-label settings-label-block">Neural Voice Model</label>
+                            <select
+                                className="settings-select-full"
+                                value={azureTtsVoice}
+                                onChange={(e) => updateConfig({ azureTtsVoice: e.target.value })}
+                            >
+                                {AZURE_VOICES.map(voice => (
+                                    <option key={voice.value} value={voice.value}>{voice.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="settings-section-wrapper">
+                            <label className="form-label settings-label-block">Azure Speech Key</label>
+                            <Input
+                                type="password"
+                                placeholder="Paste your Azure Speech subscription key"
+                                value={azureTtsKey}
+                                onChange={(e) => updateConfig({ azureTtsKey: e.target.value })}
+                            />
+                        </div>
+                        <div className="settings-section-wrapper">
+                            <label className="form-label settings-label-block">Azure Region</label>
+                            <Input
+                                type="text"
+                                placeholder="e.g. brazilsouth, eastus, westeurope"
+                                value={azureTtsRegion}
+                                onChange={(e) => updateConfig({ azureTtsRegion: e.target.value })}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {/* 3. Interactive Test Pronunciation Widget */}
+                <div style={{ marginTop: '20px', padding: '14px', borderRadius: '8px', background: 'var(--bg2)', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <strong style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Volume2 size={16} /> Test IPA Pronunciation
+                        </strong>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--tx3)' }}>
+                            Active Engine: <strong style={{ color: 'var(--accent)' }}>{ttsEngine}</strong>
+                        </span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', alignItems: 'flex-end' }}>
+                        <div>
+                            <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '4px', display: 'block' }}>Sample Word</label>
+                            <Input
+                                type="text"
+                                value={testWord}
+                                onChange={(e) => setTestWord(e.target.value)}
+                                placeholder="Word"
+                            />
+                        </div>
+                        <div>
+                            <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '4px', display: 'block' }}>Sample IPA</label>
+                            <Input
+                                type="text"
+                                value={testIpa}
+                                onChange={(e) => setTestIpa(e.target.value)}
+                                placeholder="/IPA/"
+                            />
+                        </div>
+                        <Button
+                            variant="imp"
+                            onClick={handleTestTts}
+                            disabled={isTestingTts}
+                            style={{ height: '38px', padding: '0 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                            title="Hear pronunciation"
+                        >
+                            <Play size={15} /> {isTestingTts ? 'Playing…' : 'Test'}
+                        </Button>
+                    </div>
                 </div>
             </Card>
 

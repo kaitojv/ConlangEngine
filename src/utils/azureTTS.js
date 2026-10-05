@@ -1,7 +1,12 @@
 // src/utils/azureTTS.js
-// Text-to-Speech utility supporting Azure Neural Speech (SSML + IPA phonemes)
-// with automatic fallback to Web Speech API phonetic synthesis when Azure
-// is offline, unauthorized, or not configured.
+// Multi-provider speech synthesis engine supporting:
+// 1. Browser Web Speech (enhanced phonetic IPA transliteration)
+// 2. Open-source Acoustic Formant Synthesizer (pure Web Audio client-side IPA)
+// 3. OpenTTS / eSpeak-NG (self-hosted open-source server)
+// 4. Custom Audio Endpoint (Kokoro / Piper / OpenAI-compatible audio API)
+// 5. Microsoft Azure Neural Speech (SSML + IPA phonemes)
+
+import { playFormantIPA } from './formantSynth.js';
 
 let cachedConfigStore = null;
 if (typeof window !== 'undefined') {
@@ -89,7 +94,7 @@ export const ipaToPhoneticText = (ipa) => {
 };
 
 /**
- * Fallback synthesizer using browser Web Speech API with phonetic IPA conversion.
+ * Provider 1: Browser Web Speech API with phonetic IPA conversion.
  */
 export const speakWithWebSpeech = ({ text, ipa, voice, useIpa = false }) => {
     return new Promise((resolve) => {
@@ -113,7 +118,6 @@ export const speakWithWebSpeech = ({ text, ipa, voice, useIpa = false }) => {
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(speechText);
 
-            // Determine best matching language accent
             let lang = 'en-US';
             const v = String(voice || '').toLowerCase();
             if (v === 'ipa-uk' || v.startsWith('en-gb')) lang = 'en-GB';
@@ -154,6 +158,115 @@ export const speakWithWebSpeech = ({ text, ipa, voice, useIpa = false }) => {
     });
 };
 
+/**
+ * Provider 2: OpenTTS / eSpeak-NG (Self-hosted open source server)
+ */
+export const speakWithOpenTTS = async ({ text, ipa, url = 'http://localhost:5500', voice = 'espeak:en' }) => {
+    const input = ipa || text;
+    if (!input) return;
+    const cleanUrl = url.replace(/\/+$/, '');
+    const ttsUrl = `${cleanUrl}/api/tts?voice=${encodeURIComponent(voice)}&text=${encodeURIComponent(input)}`;
+    const response = await fetch(ttsUrl);
+    if (!response.ok) {
+        throw new Error(`OpenTTS returned HTTP ${response.status}`);
+    }
+    const blob = await response.blob();
+    const audioUrl = URL.createObjectURL(blob);
+    const audio = new Audio(audioUrl);
+    return new Promise((resolve, reject) => {
+        audio.onended = () => { URL.revokeObjectURL(audioUrl); resolve(); };
+        audio.onerror = (e) => { URL.revokeObjectURL(audioUrl); reject(e); };
+        audio.play().catch(reject);
+    });
+};
+
+/**
+ * Provider 3: Kokoro-TTS (Open-Source 82M Neural Model)
+ * Connects to Kokoro-FastAPI (ghcr.io/remsky/kokoro-fastapi) or any OpenAI-compatible Kokoro instance.
+ * Supports direct phonetic/IPA inputs and high-fidelity neural voices.
+ */
+export const speakWithKokoro = async ({
+    text,
+    ipa,
+    url = 'http://localhost:8880/v1/audio/speech',
+    voice = 'af_heart',
+    speed = 1.0,
+    sendIpa = true
+} = {}) => {
+    let targetUrl = (url || 'http://localhost:8880/v1/audio/speech').trim().replace(/\/+$/, '');
+    if (!targetUrl.includes('/speech') && !targetUrl.includes('/tts')) {
+        targetUrl += '/v1/audio/speech';
+    }
+
+    let input = '';
+    if (sendIpa && ipa) {
+        input = ipa.replace(/[\/\\\[\]]/g, '').trim();
+    }
+    if (!input) {
+        input = text || (ipa ? ipaToPhoneticText(ipa) : '');
+    }
+    if (!input) return;
+
+    const response = await fetch(targetUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            model: 'kokoro',
+            input,
+            voice: voice || 'af_heart',
+            speed: Number(speed) || 1.0,
+            response_format: 'mp3'
+        })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text().catch(() => '');
+        throw new Error(`Kokoro-TTS server returned HTTP ${response.status}: ${errorText}`);
+    }
+
+    const blob = await response.blob();
+    const audioUrl = URL.createObjectURL(blob);
+    const audio = new Audio(audioUrl);
+    return new Promise((resolve, reject) => {
+        audio.onended = () => { URL.revokeObjectURL(audioUrl); resolve(); };
+        audio.onerror = (e) => { URL.revokeObjectURL(audioUrl); reject(e); };
+        audio.play().catch(reject);
+    });
+};
+
+/**
+ * Provider 4: Custom API Endpoint (OpenAI-compatible / Piper server)
+ */
+export const speakWithCustomEndpoint = async ({ text, ipa, url, key, voice }) => {
+    if (!url) throw new Error('Custom TTS endpoint URL is required.');
+    const input = ipa || text;
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(key ? { 'Authorization': `Bearer ${key}` } : {})
+        },
+        body: JSON.stringify({
+            model: voice || 'tts-1',
+            input,
+            voice: voice || 'alloy'
+        })
+    });
+    if (!response.ok) {
+        throw new Error(`Custom endpoint returned HTTP ${response.status}`);
+    }
+    const blob = await response.blob();
+    const audioUrl = URL.createObjectURL(blob);
+    const audio = new Audio(audioUrl);
+    return new Promise((resolve, reject) => {
+        audio.onended = () => { URL.revokeObjectURL(audioUrl); resolve(); };
+        audio.onerror = (e) => { URL.revokeObjectURL(audioUrl); reject(e); };
+        audio.play().catch(reject);
+    });
+};
+
 const escapeXml = (unsafe) => {
     return (unsafe || '').replace(/[<>&'"]/g, function (c) {
         switch (c) {
@@ -167,11 +280,9 @@ const escapeXml = (unsafe) => {
 };
 
 /**
- * Main TTS dispatcher. Tries Azure TTS if configured; otherwise gracefully falls back
- * to Web Speech API phonetic synthesis without failing or throwing error toasts.
+ * Provider 4: Microsoft Azure Neural Speech (SSML + IPA phonemes)
  */
-export const playAzureTTS = async ({ text, ipa, voice, useIpa = false }) => {
-    // 1. Get Azure configuration from store or env
+export const speakWithAzure = async ({ text, ipa, voice, useIpa = false }) => {
     let key = '';
     let region = 'brazilsouth';
 
@@ -195,7 +306,6 @@ export const playAzureTTS = async ({ text, ipa, voice, useIpa = false }) => {
     let actualVoice = voice || 'ipa-default';
     let actualUseIpa = useIpa;
 
-    // Handle IPA-specific voice aliases
     if (actualVoice === 'ipa-default') {
         actualVoice = 'en-US-JennyMultilingualNeural';
         actualUseIpa = true;
@@ -207,7 +317,6 @@ export const playAzureTTS = async ({ text, ipa, voice, useIpa = false }) => {
         actualUseIpa = true;
     }
 
-    // 2. If no Azure key is configured, seamlessly synthesize via Web Speech API
     if (!key) {
         return speakWithWebSpeech({ text, ipa, voice: actualVoice, useIpa: actualUseIpa });
     }
@@ -243,14 +352,10 @@ export const playAzureTTS = async ({ text, ipa, voice, useIpa = false }) => {
 
         if (!response.ok) {
             const errorText = await response.text().catch(() => '');
-
-            // If Azure throws 400 with IPA, retry with normal text or phonetic approximation
             if (response.status === 400 && ipa && actualUseIpa) {
                 console.warn('Azure TTS rejected the IPA string (400). Trying phonetic speech...');
                 return speakWithWebSpeech({ text, ipa, voice: actualVoice, useIpa: true });
             }
-
-            // On 401 Unauthorized, 403 Forbidden, 429 Rate Limit, etc., fall back to browser Web Speech API!
             console.warn(`Azure TTS returned ${response.status} (${errorText}). Falling back to browser speech synthesis.`);
             return speakWithWebSpeech({ text, ipa, voice: actualVoice, useIpa: actualUseIpa });
         }
@@ -260,21 +365,114 @@ export const playAzureTTS = async ({ text, ipa, voice, useIpa = false }) => {
         const audio = new Audio(url);
 
         return new Promise((resolve, reject) => {
-            audio.onended = () => {
-                URL.revokeObjectURL(url);
-                resolve();
-            };
-            audio.onerror = (err) => {
-                URL.revokeObjectURL(url);
-                reject(err);
-            };
-            audio.play().catch(err => {
-                URL.revokeObjectURL(url);
-                reject(err);
-            });
+            audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
+            audio.onerror = (err) => { URL.revokeObjectURL(url); reject(err); };
+            audio.play().catch(reject);
         });
     } catch (networkError) {
         console.warn('Azure TTS request failed, falling back to browser speech synthesis:', networkError);
         return speakWithWebSpeech({ text, ipa, voice: actualVoice, useIpa: actualUseIpa });
     }
 };
+
+/**
+ * Universal TTS & IPA dispatcher. Routes to the user's selected engine:
+ * 'browser' | 'formant' | 'opentts' | 'custom' | 'azure'.
+ */
+export const playTTS = async ({ text, ipa, voice, useIpa = false, engine } = {}) => {
+    let state = {};
+    if (typeof window !== 'undefined') {
+        try {
+            state = cachedConfigStore?.getState ? cachedConfigStore.getState() : {};
+        } catch {
+            // Non-fatal
+        }
+    }
+
+    const selectedEngine = engine || state.ttsEngine || 'browser';
+
+    // 1. Acoustic Formant Synthesizer (pure client-side open-source IPA modeling)
+    if (selectedEngine === 'formant') {
+        if (ipa) {
+            try {
+                await playFormantIPA(ipa, {
+                    f0: state.formantF0 || 130,
+                    speed: state.ttsSpeed || 1.0
+                });
+                return;
+            } catch (err) {
+                console.warn('Formant synthesis error, falling back to Web Speech:', err);
+            }
+        }
+        return speakWithWebSpeech({ text, ipa, voice, useIpa: true });
+    }
+
+    // 2. OpenTTS / eSpeak-NG (self-hosted open source server)
+    if (selectedEngine === 'opentts' && state.openTtsUrl) {
+        try {
+            await speakWithOpenTTS({
+                text,
+                ipa,
+                url: state.openTtsUrl,
+                voice: state.openTtsVoice || 'espeak:en'
+            });
+            return;
+        } catch (err) {
+            console.warn('OpenTTS server failed, falling back to browser speech:', err);
+            return speakWithWebSpeech({ text, ipa, voice, useIpa });
+        }
+    }
+
+    // 3. Kokoro-TTS (Open-Source 82M Neural Model)
+    if (selectedEngine === 'kokoro') {
+        try {
+            await speakWithKokoro({
+                text,
+                ipa,
+                url: state.kokoroUrl || 'http://localhost:8880/v1/audio/speech',
+                voice: state.kokoroVoice || 'af_heart',
+                speed: state.kokoroSpeed ?? state.ttsSpeed ?? 1.0,
+                sendIpa: state.kokoroSendIpa ?? true
+            });
+            return;
+        } catch (err) {
+            console.warn('Kokoro-TTS server request failed, falling back to Web Speech:', err);
+            return speakWithWebSpeech({ text, ipa, voice, useIpa: true });
+        }
+    }
+
+    // 4. Custom OpenAI-compatible / Piper endpoint
+    if (selectedEngine === 'custom' && state.customTtsUrl) {
+        try {
+            await speakWithCustomEndpoint({
+                text,
+                ipa,
+                url: state.customTtsUrl,
+                key: state.customTtsKey,
+                voice: state.customTtsVoice
+            });
+            return;
+        } catch (err) {
+            console.warn('Custom endpoint failed, falling back to browser speech:', err);
+            return speakWithWebSpeech({ text, ipa, voice, useIpa });
+        }
+    }
+
+    // 4. Microsoft Azure Neural Speech
+    if (selectedEngine === 'azure') {
+        return speakWithAzure({ text, ipa, voice: voice || state.azureTtsVoice, useIpa });
+    }
+
+    // 5. Default: Browser Web Speech with enhanced phonetic IPA conversion
+    return speakWithWebSpeech({
+        text,
+        ipa,
+        voice: voice || state.azureTtsVoice || state.ttsVoice,
+        useIpa: useIpa ?? state.azureTtsUseIpa ?? true
+    });
+};
+
+/**
+ * Backward-compatible alias for existing codebase components.
+ */
+export const playAzureTTS = playTTS;

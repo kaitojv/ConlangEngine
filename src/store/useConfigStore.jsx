@@ -116,6 +116,21 @@ export const INITIAL_CONFIG = {
             order: 'digit-first'
         }
     },
+    // Speech Synthesis & IPA Engine settings
+    ttsEngine: 'browser',
+    ttsVoice: '',
+    ttsSpeed: 1.0,
+    ttsPitch: 1.0,
+    formantF0: 130,
+    kokoroUrl: 'http://localhost:8880/v1/audio/speech',
+    kokoroVoice: 'af_heart',
+    kokoroSpeed: 1.0,
+    kokoroSendIpa: true,
+    openTtsUrl: 'http://localhost:5500',
+    openTtsVoice: 'espeak:en',
+    customTtsUrl: '',
+    customTtsKey: '',
+    customTtsVoice: '',
     azureTtsUseIpa: true,
     azureTtsVoice: '',
     azureTtsKey: '',
