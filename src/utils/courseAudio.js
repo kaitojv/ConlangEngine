@@ -7,22 +7,17 @@
 // 1. Browser: Stored in IndexedDB ('ConlangAudioDB') and in-memory cache for
 //    instantaneous, offline-resilient, stutter-free playback.
 // 2. Database: Stored as base64 Data URL (phrase.audioData) inside project_data
-//    in the Supabase database (conlangs/conlang_snapshots), ensuring cross-device
-//    sync, exports, and cloud persistence.
-// 3. Storage Bucket: Opportunistic upload to Supabase storage ('course-audio') if
-//    the bucket exists and user is signed in. Never fails the user if the bucket
-//    errors out or does not exist.
+//    in the Supabase Postgres database (conlangs/conlang_snapshots), ensuring
+//    cross-device sync, exports, and cloud persistence without relying on
+//    external storage buckets.
 
-import { supabase } from './supabaseClient.js';
-
-export const COURSE_AUDIO_BUCKET = 'course-audio';
 export const MAX_AUDIO_BYTES = 10 * 1024 * 1024;
 export const MAX_RECORDING_SECONDS = 120;
 
 const AUDIO_DB_NAME = 'ConlangAudioDB';
 const AUDIO_STORE = 'audio';
 
-// In-memory cache: maps phraseId / path -> dataUrl or objectUrl
+// In-memory cache: maps phraseId -> dataUrl or objectUrl
 export const localAudioCache = new Map();
 
 /** Opens or initializes the local IndexedDB audio store */
@@ -44,16 +39,14 @@ const openAudioDB = () => new Promise((resolve) => {
 });
 
 /** Saves an audio clip into browser IndexedDB and in-memory cache */
-export const saveAudioToBrowser = async (phraseId, blob, dataUrl, path) => {
+export const saveAudioToBrowser = async (phraseId, blob, dataUrl) => {
     if (!phraseId) return;
     if (dataUrl) {
         localAudioCache.set(phraseId, dataUrl);
-        if (path) localAudioCache.set(path, dataUrl);
     } else if (blob) {
         try {
             const url = URL.createObjectURL(blob);
             localAudioCache.set(phraseId, url);
-            if (path) localAudioCache.set(path, url);
         } catch {
             // Non-fatal
         }
@@ -67,7 +60,6 @@ export const saveAudioToBrowser = async (phraseId, blob, dataUrl, path) => {
             const store = tx.objectStore(AUDIO_STORE);
             store.put({
                 id: phraseId,
-                path: path || '',
                 dataUrl: dataUrl || '',
                 blob: blob || null,
                 mimeType: blob?.type || '',
@@ -98,7 +90,6 @@ export const loadAudioFromBrowser = async (phraseId) => {
                 const res = req.result;
                 if (res?.dataUrl) {
                     localAudioCache.set(phraseId, res.dataUrl);
-                    if (res.path) localAudioCache.set(res.path, res.dataUrl);
                 }
                 resolve(res || null);
             };
@@ -172,16 +163,36 @@ export const pickRecorderMime = () => {
 const safeSegment = (value) =>
     String(value || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 80) || 'unknown';
 
-/**
- * Builds the storage path for a clip. The first segment MUST be the owner's
- * user id — the RLS policies key off `foldername(name))[1]`.
- */
 export const buildAudioPath = ({ userId, projectId, phraseId, extension }) =>
     `${safeSegment(userId)}/${safeSegment(projectId)}/${safeSegment(phraseId)}.${safeSegment(extension)}`;
 
+export const extractPhraseId = (path) => {
+    if (!path) return '';
+    const match = String(path).match(/(phrase-[a-zA-Z0-9_-]+)/);
+    return match ? match[1] : '';
+};
+
 /**
- * Resolves an audio reference (phrase object, data URL, blob URL, or storage path)
+ * Checks whether a phrase or exercise actually has valid audio attached.
+ * Ignores dead Supabase bucket paths that were created during earlier failed attempts.
+ */
+export const hasCourseAudio = (phrase) => {
+    if (!phrase) return false;
+    if (phrase.audioData) return true;
+    if (phrase.id && localAudioCache.has(phrase.id)) return true;
+    if (typeof phrase.audioPath === 'string') {
+        const p = phrase.audioPath.trim();
+        if (p.startsWith('data:') || p.startsWith('blob:')) return true;
+        if (p.includes('course-audio') || p.includes('/')) return false;
+        return !!p;
+    }
+    return false;
+};
+
+/**
+ * Resolves an audio reference (phrase object, data URL, blob URL, or phraseId)
  * to a playable URL.
+ * NEVER returns dead Supabase storage URLs to avoid 400 Bad Request console errors.
  */
 export const getCourseAudioUrl = (input) => {
     if (!input) return '';
@@ -189,107 +200,85 @@ export const getCourseAudioUrl = (input) => {
     // If an object (phrase or exercise) was passed
     if (typeof input === 'object') {
         if (input.audioData) {
-            localAudioCache.set(input.id || input.audioPath || '', input.audioData);
+            if (input.id) localAudioCache.set(input.id, input.audioData);
             return input.audioData;
         }
+        if (input.id && localAudioCache.has(input.id)) {
+            return localAudioCache.get(input.id);
+        }
         if (input.audioPath) return getCourseAudioUrl(input.audioPath);
-        if (input.id && localAudioCache.has(input.id)) return localAudioCache.get(input.id);
         return '';
     }
 
     const str = String(input).trim();
     if (!str) return '';
 
-    // If it's already a data URL, blob URL, or direct HTTP URL
-    if (str.startsWith('data:') || str.startsWith('blob:') || str.startsWith('http://') || str.startsWith('https://')) {
+    // Block any old dead Supabase storage URLs or paths so the browser never
+    // makes a network request to a non-existent bucket (which causes a 400 error in console)
+    if (str.includes('/storage/v1/object/course-audio') || str.includes('course-audio/')) {
+        const extractedId = extractPhraseId(str);
+        if (extractedId && localAudioCache.has(extractedId)) {
+            return localAudioCache.get(extractedId);
+        }
+        return '';
+    }
+
+    // If it's already a data URL or blob URL
+    if (str.startsWith('data:') || str.startsWith('blob:')) {
         return str;
     }
 
-    // Check in-memory cache
+    // Direct external HTTP URL (excluding Supabase storage bucket)
+    if (str.startsWith('http://') || str.startsWith('https://')) {
+        return str;
+    }
+
+    // Check in-memory cache directly by key
     if (localAudioCache.has(str)) {
         return localAudioCache.get(str);
     }
 
-    // Fall back to Supabase storage public URL if path contains a slash
-    if (str.includes('/')) {
-        try {
-            const { data } = supabase.storage.from(COURSE_AUDIO_BUCKET).getPublicUrl(str);
-            if (data?.publicUrl) return data.publicUrl;
-        } catch {
-            // Bucket not found or storage offline
-        }
+    // Extract phrase ID if it was an old storage path or "local::phraseId"
+    const extractedId = extractPhraseId(str);
+    if (extractedId && localAudioCache.has(extractedId)) {
+        return localAudioCache.get(extractedId);
     }
 
     return '';
 };
 
 /**
- * Uploads/saves a recorded or picked audio clip.
- * Saves to BOTH:
- * 1. Browser: IndexedDB ('ConlangAudioDB') and memory cache.
- * 2. Database: Returns audioData (base64 Data URL) to persist in project_data.
- * Also attempts opportunistic Supabase storage bucket upload without crashing if missing.
+ * Saves a recorded or picked audio clip to both the Browser and Database.
+ * 1. Browser: Saved in IndexedDB ('ConlangAudioDB') and memory cache for zero-latency offline playback.
+ * 2. Database: Returns audioData (base64 Data URL) which is persisted directly into the project's
+ *    customCourse in the Supabase database.
+ * Completely eliminates Supabase Storage bucket dependencies and "Bucket not found" errors!
  */
-export const uploadCourseAudio = async ({ blob, userId, projectId, phraseId, mimeType }) => {
+export const uploadCourseAudio = async ({ blob, phraseId, userId, projectId, mimeType }) => {
     if (!blob) throw new Error('No audio data to upload.');
     if (blob.size > MAX_AUDIO_BYTES) {
         throw new Error(`Recording is too large (${(blob.size / 1048576).toFixed(1)} MB). Maximum is 10 MB.`);
     }
 
-    const effectiveMime = mimeType || blob.type || 'audio/webm';
-    const extension = extensionForMime(effectiveMime);
-    const path = buildAudioPath({
-        userId: userId || 'local',
-        projectId: projectId || 'local',
-        phraseId,
-        extension
-    });
-
     // 1. Convert to base64 Data URL so it can be saved in the database
     const audioData = await blobToDataUrl(blob);
 
     // 2. Save to Browser (IndexedDB + memory cache)
-    await saveAudioToBrowser(phraseId, blob, audioData, path);
+    await saveAudioToBrowser(phraseId, blob, audioData);
 
-    // 3. Attempt Supabase Storage bucket upload (opportunistic)
-    let remotePath = path;
-    if (userId && supabase) {
-        try {
-            const { data, error } = await supabase.storage
-                .from(COURSE_AUDIO_BUCKET)
-                .upload(path, blob, { contentType: effectiveMime, upsert: true });
-
-            if (error) {
-                // Bucket might not exist, RLS policy error, etc.
-                console.warn('Supabase storage bucket upload skipped (saved to database & browser):', error.message || error);
-            } else if (data?.path) {
-                remotePath = data.path;
-            }
-        } catch (uploadErr) {
-            console.warn('Supabase storage upload error:', uploadErr.message || uploadErr);
-        }
-    }
+    const localPath = `local::${phraseId}`;
 
     return {
-        path: remotePath,
-        audioPath: remotePath,
+        path: localPath,
+        audioPath: localPath,
         audioData
     };
 };
 
-/** Removes a clip from browser storage and attempts bucket removal */
+/** Removes a clip from browser storage */
 export const deleteCourseAudio = async (path, phraseId) => {
-    if (phraseId) {
-        await deleteAudioFromBrowser(phraseId);
-    }
-    if (path) {
-        localAudioCache.delete(path);
-        if (supabase && path.includes('/')) {
-            try {
-                await supabase.storage.from(COURSE_AUDIO_BUCKET).remove([path]);
-            } catch {
-                // Non-fatal
-            }
-        }
+    const id = phraseId || extractPhraseId(path);
+    if (id) {
+        await deleteAudioFromBrowser(id);
     }
 };

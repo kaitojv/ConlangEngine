@@ -4,6 +4,7 @@ import {
     extensionForMime,
     buildAudioPath,
     getCourseAudioUrl,
+    hasCourseAudio,
     localAudioCache,
     uploadCourseAudio,
     deleteCourseAudio,
@@ -54,7 +55,13 @@ assert.equal(getCourseAudioUrl(phraseWithData), 'data:audio/webm;base64,AAAA', '
 // Local audio cache resolution
 localAudioCache.set('p-cached', 'data:audio/ogg;base64,BBBB');
 assert.equal(getCourseAudioUrl('p-cached'), 'data:audio/ogg;base64,BBBB', 'Resolves from localAudioCache by key');
-console.log('  ✓ getCourseAudioUrl resolves data URLs, phrase objects, and local cache');
+
+// Dead bucket suppression (prevents 400 Bad Request console errors)
+const deadBucketUrl = 'https://hgeuyvgjhonklflcdinj.supabase.co/storage/v1/object/course-audio/93fb73db-efab-4674-a840-57bc74365407/local_1776372927593/phrase-1780517812661.webm';
+assert.equal(getCourseAudioUrl(deadBucketUrl), '', 'Blocks dead course-audio bucket URL from being fetched');
+assert.equal(hasCourseAudio({ audioPath: '93fb73db-efab-4674-a840-57bc74365407/local/phrase-123.webm' }), false, 'Dead bucket path is not treated as having audio');
+assert.equal(hasCourseAudio({ audioData: 'data:audio/webm;base64,123' }), true, 'base64 audioData is treated as having audio');
+console.log('  ✓ getCourseAudioUrl resolves data URLs, phrase objects, and blocks dead bucket URLs');
 
 // 5. uploadCourseAudio (even when bucket is missing / throws bucket error)
 const uploadResult = await uploadCourseAudio({

@@ -9,6 +9,7 @@ import { generateCourseExercise } from '@/utils/courseGenerator.js';
 import { resolveWordStrokes } from '@/utils/strokeOrderResolver.js';
 import AudioRecorder from './AudioRecorder.jsx';
 import ExercisePlayer from './ExercisePlayer.jsx';
+import { hasCourseAudio } from '@/utils/courseAudio.js';
 import { Plus, Trash2, Save, ArrowLeft, ArrowRight, ArrowUp, Wand2, X, Play, ChevronUp, ChevronDown, ChevronRight, Search, Mic, Volume2, AlertTriangle, Bold, Italic, Underline, Smile, Zap, Star, Crown, Book, Brain, Flame, Dumbbell, Sword, Shield, Check } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import './courseBuilder.css';
@@ -891,7 +892,7 @@ export default function CourseBuilder({ onExit }) {
                                 const phraseType = phrase.type || 'translate_to_english';
                                 // Audio opens by default only where the learner must
                                 // hear the word, or when a clip already exists.
-                                const hasAudio = !!(phrase.audioPath || phrase.audioData);
+                                const hasAudio = hasCourseAudio(phrase);
                                 const audioDefaultsOpen = AUDIO_ALWAYS_TYPES.has(phraseType) || hasAudio;
                                 const audioVisible = supportsAudio(phrase) && (audioOpen.has(phrase.id) || audioDefaultsOpen);
                                 return (

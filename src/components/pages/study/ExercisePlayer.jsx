@@ -11,7 +11,7 @@ import { X, Share2, Star } from 'lucide-react';
 import { calculateStars, calculateXP } from '@/utils/xpSystem.js';
 import { resolveWordStrokes } from '@/utils/strokeOrderResolver.js';
 import { gradeDrawing } from '@/utils/glyphDrawMatch.js';
-import { getCourseAudioUrl } from '@/utils/courseAudio.js';
+import { getCourseAudioUrl, hasCourseAudio } from '@/utils/courseAudio.js';
 import GlyphDrawCanvas from './GlyphDrawCanvas.jsx';
 import * as LucideIcons from 'lucide-react';
 import './exercisePlayer.css';
@@ -560,12 +560,12 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
 
                 {/* Creator-recorded clip. Takes priority over Azure TTS, and is
                     offered on every exercise type that has one attached. */}
-                {(currentEx.audioData || currentEx.audioPath) && (
+                {hasCourseAudio(currentEx) && (
                     <button
                         className="ep-audio-chip"
                         onClick={() => {
-                            const url = getCourseAudioUrl(currentEx.audioData || currentEx.audioPath);
-                            if (url) new Audio(url).play();
+                            const url = getCourseAudioUrl(currentEx);
+                            if (url) new Audio(url).play().catch(e => console.warn('Audio play error:', e));
                         }}
                         title="Play pronunciation"
                     >

@@ -9,6 +9,7 @@ import {
     uploadCourseAudio,
     deleteCourseAudio,
     getCourseAudioUrl,
+    hasCourseAudio,
     loadAudioFromBrowser,
     pickRecorderMime,
     MAX_RECORDING_SECONDS
@@ -20,7 +21,7 @@ import './audioRecorder.css';
  * writes the resulting storage path and base64 audio data back through `onChange`.
  *
  * Saves in both the browser (IndexedDB) and database (project_data / Supabase),
- * degrading gracefully without failing if the cloud storage bucket is missing.
+ * completely free from Supabase Storage bucket dependencies.
  */
 export default function AudioRecorder({ phrase, projectId, onChange }) {
     const [isRecording, setIsRecording] = useState(false);
@@ -35,7 +36,6 @@ export default function AudioRecorder({ phrase, projectId, onChange }) {
     const audioRef = useRef(null);
     const fileRef = useRef(null);
 
-    const audioRefValue = phrase?.audioData || phrase?.audioPath || '';
     const [audioUrl, setAudioUrl] = useState(() => getCourseAudioUrl(phrase));
 
     useEffect(() => {
@@ -53,8 +53,18 @@ export default function AudioRecorder({ phrase, projectId, onChange }) {
             setAudioUrl(resolved);
         } else if (phrase?.id) {
             loadAudioFromBrowser(phrase.id).then(res => {
-                if (active && res?.dataUrl) {
+                if (!active) return;
+                if (res?.dataUrl) {
                     setAudioUrl(res.dataUrl);
+                    if (!phrase.audioData) {
+                        onChange('audioData', res.dataUrl);
+                    }
+                } else {
+                    setAudioUrl('');
+                    // Clean up dead legacy bucket paths so they stop causing phantom audio state
+                    if (phrase.audioPath && (phrase.audioPath.includes('course-audio') || phrase.audioPath.includes('/'))) {
+                        onChange('audioPath', '');
+                    }
                 }
             });
         } else {
@@ -182,7 +192,7 @@ export default function AudioRecorder({ phrase, projectId, onChange }) {
         }
     };
 
-    const hasAudio = !!(audioRefValue || audioUrl);
+    const hasAudio = !!(audioUrl || hasCourseAudio(phrase));
 
     return (
         <div className="ar-wrapper">
