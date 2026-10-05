@@ -165,7 +165,7 @@ export default function LexiconList() {
                 const cleanWord = (w.word || '').replace(/\*/g, '');
                 const displayWord = w.scriptOverride 
                     ? renderWordInScript(w, configFull, lexicon).text 
-                    : transliterate(cleanWord, lexicon);
+                    : (w.ideogram || transliterate(cleanWord, lexicon));
                 if (displayWord) {
                     letters.add(extractFirstCustomLetter(displayWord, customAlphabet));
                 }
@@ -212,7 +212,7 @@ export default function LexiconList() {
             const cleanWord = (w.word || '').replace(/\*/g, '');
             const displayWord = w.scriptOverride 
                 ? renderWordInScript(w, configFull, lexicon).text 
-                : transliterate(cleanWord, lexicon);
+                : (w.ideogram || transliterate(cleanWord, lexicon));
             if (displayWord) {
                 const firstChar = Array.from(displayWord)[0];
                 if (firstChar) {
@@ -286,7 +286,7 @@ export default function LexiconList() {
                 result = result.map(e => {
                     const safeWord = (e.word || '').replace(/\*/g, '').toLowerCase();
                     const normalizedWord = normalizeToBase(safeWord).toLowerCase();
-                    const displayWord = transliterate(e.word || '', lexicon).toLowerCase();
+                    const displayWord = ((e.ideogram && !e.scriptOverride) ? e.ideogram : transliterate(e.word || '', lexicon)).toLowerCase();
                     const trans = (e.translation || '').toLowerCase();
                     const def = (e.definition || '').toLowerCase();
                     const ipa = (e.ipa || '').toLowerCase();
@@ -330,7 +330,7 @@ export default function LexiconList() {
                 const cleanWord = (e.word || '').replace(/[*-]/g, '');
                 const displayWord = e.scriptOverride 
                     ? renderWordInScript(e, configFull, lexicon).text 
-                    : transliterate(cleanWord, lexicon);
+                    : (e.ideogram || transliterate(cleanWord, lexicon));
                 if (customAlphabet && customAlphabet.trim()) {
                     const firstLetter = extractFirstCustomLetter(displayWord, customAlphabet);
                     return firstLetter.toLowerCase() === filters.letter.toLowerCase();
@@ -790,11 +790,14 @@ export default function LexiconList() {
                     const safeWord = baseEntry.word.replace(/\*/g, '');
                     const wordScriptId = resolveWordScriptId(baseEntry, configFull);
 
-                    // Use script-aware rendering for words assigned to a non-default script,
-                    // otherwise fall back to the default transliterator (matches Quick Lexicon logic)
+                    // Use the entry's own ideogram directly if set and not overridden by a non-logographic script,
+                    // otherwise fall back to renderWordInScript / transliteration.
+                    // This guarantees homophones with distinct ideograms always show their own character!
                     let displayWord;
                     if (baseEntry.scriptOverride) {
                         displayWord = renderWordInScript(baseEntry, configFull, lexicon).text;
+                    } else if (baseEntry.ideogram) {
+                        displayWord = baseEntry.ideogram;
                     } else {
                         displayWord = transliterate(safeWord, lexicon);
                     }

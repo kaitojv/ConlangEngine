@@ -31,9 +31,14 @@ export function renderWordInScript(entry, config, lexicon = []) {
     const script = getScriptSystem(config, scriptId);
     const scriptConfig = buildScriptConfig(config, scriptId);
 
-    // Check for direct form in scriptForms
+    // Check for direct form in scriptForms or entry.ideogram for logographic scripts
+    const isLogographic = script.type === 'logographic' 
+        || scriptConfig.phonologyTypes === 'logographic' 
+        || config?.phonologyTypes === 'logographic';
+
     const directForm = entry.scriptForms?.[scriptId]
-        || (script.type === 'logographic' ? entry.ideogram : '');
+        || (isLogographic ? entry.ideogram : '')
+        || (entry.ideogram && !entry.scriptOverride ? entry.ideogram : '');
 
     const text = directForm || transliterateText(entry.word, scriptConfig, lexicon);
 

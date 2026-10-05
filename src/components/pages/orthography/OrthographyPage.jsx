@@ -585,7 +585,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                             glyph={c.char}
                                             strokes={c.raw}
                                             scriptId={activeScriptId}
-                                            size={26}
+                                            size={24}
                                             showCode={false}
                                             title={isPinned ? `Pinned: ${c.char}` : "Custom glyph"}
                                         />
