@@ -9,6 +9,7 @@ import {
     uploadCourseAudio,
     deleteCourseAudio,
     getCourseAudioUrl,
+    loadAudioFromBrowser,
     pickRecorderMime,
     MAX_RECORDING_SECONDS
 } from '@/utils/courseAudio.js';
@@ -16,10 +17,10 @@ import './audioRecorder.css';
 
 /**
  * Records (or accepts a file upload of) pronunciation audio for one phrase and
- * writes the resulting storage path back through `onChange`.
+ * writes the resulting storage path and base64 audio data back through `onChange`.
  *
- * Deliberately degrades gracefully: with no microphone, no MediaRecorder, or no
- * session, the file-upload path still works and the creator is told why.
+ * Saves in both the browser (IndexedDB) and database (project_data / Supabase),
+ * degrading gracefully without failing if the cloud storage bucket is missing.
  */
 export default function AudioRecorder({ phrase, projectId, onChange }) {
     const [isRecording, setIsRecording] = useState(false);
@@ -34,8 +35,8 @@ export default function AudioRecorder({ phrase, projectId, onChange }) {
     const audioRef = useRef(null);
     const fileRef = useRef(null);
 
-    const audioPath = phrase?.audioPath || '';
-    const audioUrl = audioPath ? getCourseAudioUrl(audioPath) : '';
+    const audioRefValue = phrase?.audioData || phrase?.audioPath || '';
+    const [audioUrl, setAudioUrl] = useState(() => getCourseAudioUrl(phrase));
 
     useEffect(() => {
         let active = true;
@@ -44,6 +45,23 @@ export default function AudioRecorder({ phrase, projectId, onChange }) {
         });
         return () => { active = false; };
     }, []);
+
+    useEffect(() => {
+        let active = true;
+        const resolved = getCourseAudioUrl(phrase);
+        if (resolved) {
+            setAudioUrl(resolved);
+        } else if (phrase?.id) {
+            loadAudioFromBrowser(phrase.id).then(res => {
+                if (active && res?.dataUrl) {
+                    setAudioUrl(res.dataUrl);
+                }
+            });
+        } else {
+            setAudioUrl('');
+        }
+        return () => { active = false; };
+    }, [phrase?.audioPath, phrase?.audioData, phrase?.id]);
 
     // Stop any in-flight timer when unmounting so we never setState after teardown.
     useEffect(() => () => {
@@ -58,21 +76,29 @@ export default function AudioRecorder({ phrase, projectId, onChange }) {
     const handleUpload = useCallback(async (blob, mimeType) => {
         setIsBusy(true);
         try {
-            const path = await uploadCourseAudio({
+            const result = await uploadCourseAudio({
                 blob,
                 userId: sessionUser?.id,
                 projectId,
                 phraseId: phrase.id,
                 mimeType
             });
-            onChange('audioPath', path);
+            if (result?.path) {
+                onChange('audioPath', result.path);
+            }
+            if (result?.audioData) {
+                onChange('audioData', result.audioData);
+                setAudioUrl(result.audioData);
+            } else if (result?.path) {
+                setAudioUrl(getCourseAudioUrl(result.path));
+            }
             toast.success('Audio attached');
         } catch (err) {
-            toast.error(err.message || 'Could not upload audio.');
+            toast.error(err.message || 'Could not attach audio.');
         } finally {
             setIsBusy(false);
         }
-    }, [sessionUser, projectId, phrase, onChange]);
+    }, [sessionUser, projectId, phrase?.id, onChange]);
 
     const startRecording = async () => {
         if (typeof MediaRecorder === 'undefined') {
@@ -81,10 +107,6 @@ export default function AudioRecorder({ phrase, projectId, onChange }) {
         }
         if (!navigator.mediaDevices?.getUserMedia) {
             toast.error('Microphone access is unavailable. Use the upload button instead.');
-            return;
-        }
-        if (!sessionUser) {
-            toast.error('Sign in to attach recorded audio to your course.');
             return;
         }
 
@@ -127,14 +149,16 @@ export default function AudioRecorder({ phrase, projectId, onChange }) {
         }
     };
 
-const stopRecording = () => {
+    const stopRecording = () => {
         if (recorderRef.current?.state === 'recording') recorderRef.current.stop();
         if (timerRef.current) clearInterval(timerRef.current);
     };
 
     const handleRemove = async () => {
-        if (audioPath) await deleteCourseAudio(audioPath);
+        await deleteCourseAudio(phrase?.audioPath, phrase?.id);
         onChange('audioPath', '');
+        onChange('audioData', '');
+        setAudioUrl('');
         toast.success('Audio removed');
     };
 
@@ -147,7 +171,10 @@ const stopRecording = () => {
     const togglePreview = () => {
         if (!audioRef.current) return;
         if (audioRef.current.paused) {
-            audioRef.current.play();
+            audioRef.current.play().catch(err => {
+                console.warn('Playback error:', err);
+                setIsPlaying(false);
+            });
             setIsPlaying(true);
         } else {
             audioRef.current.pause();
@@ -155,14 +182,16 @@ const stopRecording = () => {
         }
     };
 
+    const hasAudio = !!(audioRefValue || audioUrl);
+
     return (
         <div className="ar-wrapper">
             <div className="ar-header">
                 <span className="ar-label">Pronunciation Audio</span>
-                {audioPath && <span className="ar-badge">Attached</span>}
+                {hasAudio && <span className="ar-badge">Attached</span>}
             </div>
 
-            {audioPath ? (
+            {hasAudio ? (
                 <div className="ar-controls">
                     <Button variant="default" onClick={togglePreview} style={{ padding: '8px' }} title={isPlaying ? 'Stop' : 'Preview'}>
                         {isPlaying ? <Pause size={16} /> : <Play size={16} />}
@@ -196,13 +225,13 @@ const stopRecording = () => {
                         <Upload size={16} />
                     </label>
 
-                    {isBusy && <span className="ar-status">Uploading…</span>}
+                    {isBusy && <span className="ar-status">Attaching…</span>}
                 </div>
             )}
 
             <p className="ar-hint">
-                {audioPath
-                    ? 'Students hear this clip from the lesson.'
+                {hasAudio
+                    ? 'Students hear this clip in lessons. Saved in your browser and database.'
                     : `Optional. Record up to ${Math.floor(MAX_RECORDING_SECONDS / 60)} min, or upload a file. Max 10 MB.`}
             </p>
         </div>

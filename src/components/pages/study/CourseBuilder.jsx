@@ -583,6 +583,7 @@ export default function CourseBuilder({ onExit }) {
                         options: ['', '', ''],
                         distractors: '',
                         audioPath: '',
+                        audioData: '',
                         checkOrder: true,
                         showGuide: false,
                         pairs: [{conlang: '', english: ''}, {conlang: '', english: ''}, {conlang: '', english: ''}, {conlang: '', english: ''}]
@@ -890,7 +891,8 @@ export default function CourseBuilder({ onExit }) {
                                 const phraseType = phrase.type || 'translate_to_english';
                                 // Audio opens by default only where the learner must
                                 // hear the word, or when a clip already exists.
-                                const audioDefaultsOpen = AUDIO_ALWAYS_TYPES.has(phraseType) || !!phrase.audioPath;
+                                const hasAudio = !!(phrase.audioPath || phrase.audioData);
+                                const audioDefaultsOpen = AUDIO_ALWAYS_TYPES.has(phraseType) || hasAudio;
                                 const audioVisible = supportsAudio(phrase) && (audioOpen.has(phrase.id) || audioDefaultsOpen);
                                 return (
                                 <div key={phrase.id} className={`cb-phrase-card ${phraseCollapsed ? 'is-collapsed' : ''}`}>
@@ -912,7 +914,7 @@ export default function CourseBuilder({ onExit }) {
                                                     <AlertTriangle size={13} /> {issues.length}
                                                 </span>
                                             )}
-                                            {phrase.audioPath && (
+                                            {hasAudio && (
                                                 <span className="cb-phrase-has-audio" title="Audio attached"><Volume2 size={13} /></span>
                                             )}
                                         </button>
@@ -926,7 +928,7 @@ export default function CourseBuilder({ onExit }) {
                                                 >
                                                     {audioVisible ? <ChevronDown size={14} /> : <Mic size={14} />}
                                                     Audio
-                                                    {phrase.audioPath && <span className="cb-audio-dot" />}
+                                                    {hasAudio && <span className="cb-audio-dot" />}
                                                 </button>
                                             )}
                                             <select

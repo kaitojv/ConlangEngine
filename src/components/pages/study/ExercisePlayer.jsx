@@ -150,7 +150,9 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
             }
 
             // Creator-recorded pronunciation clip (any exercise type).
-            if (phrase.audioPath) ex.audioPath = phrase.audioPath;
+            const clip = phrase.audioData || phrase.audioPath;
+            if (clip) ex.audioPath = clip;
+            if (phrase.audioData) ex.audioData = phrase.audioData;
 
             return ex;
         });
@@ -536,8 +538,9 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                          <Button variant="imp" style={{ width: '80px', height: '80px', borderRadius: '50%' }} onClick={() => {
                              // A creator-recorded clip is authoritative; only fall
                              // back to TTS when no recording was attached.
-                             if (currentEx.audioPath) {
-                                 const url = getCourseAudioUrl(currentEx.audioPath);
+                             const clip = currentEx.audioData || currentEx.audioPath;
+                             if (clip) {
+                                 const url = getCourseAudioUrl(clip);
                                  if (url) { new Audio(url).play(); return; }
                              }
                              const text = currentEx.conlangSentence.replace(/[.\-*]/g, '');
@@ -557,11 +560,11 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
 
                 {/* Creator-recorded clip. Takes priority over Azure TTS, and is
                     offered on every exercise type that has one attached. */}
-                {currentEx.audioPath && (
+                {(currentEx.audioData || currentEx.audioPath) && (
                     <button
                         className="ep-audio-chip"
                         onClick={() => {
-                            const url = getCourseAudioUrl(currentEx.audioPath);
+                            const url = getCourseAudioUrl(currentEx.audioData || currentEx.audioPath);
                             if (url) new Audio(url).play();
                         }}
                         title="Play pronunciation"
