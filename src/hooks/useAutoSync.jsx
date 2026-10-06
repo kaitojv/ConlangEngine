@@ -203,15 +203,16 @@ export function useAutoSync() {
         const config = useConfigStore.getState();
         const lexicon = useLexiconStore.getState().lexicon || [];
 
-        // Strip volatile UI-only fields from comparison
-        const {
-            lastCloudSync, syncConflictStatus, activeTab, isThemeModalOpen,
-            showSettings, isSidebarOpen, isRehydrating, activity,
-            // Strip bloat fields that are in IndexedDB, not meaningful for sync comparison
-            customFontBase64, customFont, syllabaryMap, customGlyphs, scriptDataById,
-            featuralComponents, alphabetGlyphs,
-            ...cleanConfig
-        } = config;
+        // Strip volatile UI-only and IndexedDB bloat fields from comparison
+        const volatileKeys = new Set([
+            'lastCloudSync', 'syncConflictStatus', 'activeTab', 'isThemeModalOpen',
+            'showSettings', 'isSidebarOpen', 'isRehydrating', 'activity',
+            'customFontBase64', 'customFont', 'syllabaryMap', 'customGlyphs', 'scriptDataById',
+            'featuralComponents', 'alphabetGlyphs'
+        ]);
+        const cleanConfig = Object.fromEntries(
+            Object.entries(config).filter(([k]) => !volatileKeys.has(k))
+        );
 
         return JSON.stringify({ config: cleanConfig, lexiconLength: lexicon.length, lexicon });
     }, []);

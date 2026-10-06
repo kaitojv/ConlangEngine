@@ -38,12 +38,24 @@ export default function CommandPalette() {
     const updateConfig = useConfigStore(state => state.updateConfig);
     const localProjects = useProjectStore(state => state.localProjects) || [];
 
+    const openPalette = () => {
+        setQuery('');
+        setSelectedIndex(0);
+        setIsOpen(true);
+    };
+
     // Toggle on Ctrl+K or Cmd+K
     useEffect(() => {
         const handleKeyDown = (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 e.preventDefault();
-                setIsOpen(prev => !prev);
+                setIsOpen(prev => {
+                    if (!prev) {
+                        setQuery('');
+                        setSelectedIndex(0);
+                    }
+                    return !prev;
+                });
             }
             
             if (e.key === 'Escape' && isOpen) {
@@ -51,7 +63,7 @@ export default function CommandPalette() {
             }
         };
 
-        const handleCustomOpen = () => setIsOpen(true);
+        const handleCustomOpen = () => openPalette();
 
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('open-command-palette', handleCustomOpen);
@@ -61,25 +73,24 @@ export default function CommandPalette() {
         };
     }, [isOpen]);
 
-    // Reset state when opening/closing
+    // Focus input when opened
     useEffect(() => {
         if (isOpen) {
-            setQuery('');
-            setSelectedIndex(0);
-            setTimeout(() => inputRef.current?.focus(), 100);
+            const timer = setTimeout(() => inputRef.current?.focus(), 50);
+            return () => clearTimeout(timer);
         }
     }, [isOpen]);
 
-    const toggleTheme = () => {
+    const toggleTheme = React.useCallback(() => {
         const isDark = theme === 'dark';
         const targetList = isDark ? LIGHT_THEMES : DARK_THEMES;
         const randomTheme = targetList[Math.floor(Math.random() * targetList.length)];
         updateConfig({ theme: isDark ? 'light' : 'dark', colors: randomTheme.colors });
-    };
+    }, [theme, updateConfig]);
 
-    const QUICK_ACTIONS = [
+    const QUICK_ACTIONS = useMemo(() => [
         { id: 'act-theme', title: 'Toggle Light/Dark Theme', type: 'action', action: toggleTheme, icon: 'Settings' }
-    ];
+    ], [toggleTheme]);
 
     // Compute search results
     const results = useMemo(() => {
@@ -177,10 +188,11 @@ export default function CommandPalette() {
         });
 
         return matches;
-    }, [query, lexicon, wikiPages, localProjects, navigate]);
+    }, [query, lexicon, wikiPages, localProjects, navigate, QUICK_ACTIONS]);
 
     // Defined before the keyboard effect below, which captures it in a closure.
-    const executeResult = (result) => {
+    const executeResult = React.useCallback((result) => {
+        if (!result) return;
         if (result.type === 'action') {
             result.action();
         } else if (result.type === 'word') {
@@ -202,7 +214,7 @@ export default function CommandPalette() {
             }
         }
         setIsOpen(false);
-    };
+    }, [navigate]);
 
     // Handle keyboard navigation inside the modal
     useEffect(() => {
@@ -223,7 +235,7 @@ export default function CommandPalette() {
 
         window.addEventListener('keydown', handleNav);
         return () => window.removeEventListener('keydown', handleNav);
-    }, [isOpen, results, selectedIndex]);
+    }, [isOpen, results, selectedIndex, executeResult]);
 
     // Ensure selected item stays in view
     useEffect(() => {

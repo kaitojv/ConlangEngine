@@ -120,7 +120,7 @@ export function useFontInjector(){
                 if (isRehydrating || projectId) return;
                 if (styleNode) styleNode.remove();
                 if (document.fonts) {
-                    try { document.fonts.clear(); } catch (e) { /* ignore */ }
+                    try { document.fonts.clear(); } catch { /* ignore */ }
                 }
                 return;
             }

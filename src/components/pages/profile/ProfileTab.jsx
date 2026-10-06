@@ -11,7 +11,7 @@ import Modal from '@/components/UI/Modal/Modal.jsx';
 import { CloudUpload, CloudDownload, Trophy, Activity, User, LogOut, Globe, MessageCircle, BookOpen, Crown, Cog, Puzzle, Tags, Flame, GitBranch, Share2, Heart, Coffee, PieChart, Sparkles, Book, Library, BrainCircuit, ScrollText, Network, Ear, ArrowLeftRight, Layers, Volume2, PenTool, Shapes, Download, Trash2, Edit2, History, RotateCcw, RefreshCw } from 'lucide-react';
 import './profileTab.css';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ALLOWED_REDIRECTS } from '../../../App.jsx';
+import { ALLOWED_REDIRECTS } from '@/utils/navigationConstants.js';
 import { supabase } from '@/utils/supabaseClient.js';
 import toast from 'react-hot-toast';
 import { sanitizeConfig, sanitizeLexicon, decompressPayloadAsync } from '@/utils/schemaValidator.jsx';

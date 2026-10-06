@@ -84,7 +84,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
     const [isFontStudioOpen, setIsFontStudioOpen] = useState(false);
     const [isStrokeOrderOpen, setIsStrokeOrderOpen] = useState(false);
     const [isGlyphViewerOpen, setIsGlyphViewerOpen] = useState(false);
-    const { word, ipa, wordClass, translation, tags, ideogram, personCategory, tone, stress, customAudioBase64 } = formData;
+    const { word, ipa, wordClass, translation, tags, ideogram, personCategory, tone, stress, scriptOverride, customAudioBase64 } = formData;
 
     // Only show ideogram section when active script is logographic
     const isLogographic = useMemo(() => {

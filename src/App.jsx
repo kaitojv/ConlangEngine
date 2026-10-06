@@ -1,7 +1,7 @@
 //src/App.jsx
 
 //Imports
-import React, { useState, useMemo, Suspense, lazy } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import Header from './components/Layout/Header/Header.jsx';
 import { useConfigStore } from './store/useConfigStore.jsx';
 import './index.css';
@@ -69,31 +69,6 @@ const AnimatedPage = ({ children }) => {
   );
 };
 
-// Define your allowlist of safe relative routes based on your actual Route paths
-export const ALLOWED_REDIRECTS = [
-  '/',
-  '/lexicon',
-  '/conlangs',
-  '/settings',
-  '/create',
-  '/generator',
-  '/rootmap',
-  '/analyzer',
-  '/reader',
-  '/wiki',
-  '/study',
-  '/profile',
-  '/help',
-  '/aligner',
-  '/orthography',
-  '/semantic',
-  '/explore',
-  '/onboarding',
-  '/phrases',
-  '/howtostart',
-  '/typology'
-];
-
 function App(){
 
   const location = useLocation();
@@ -103,19 +78,6 @@ function App(){
   const[openMenu, setOpenMenu] = useState(false);
   const customFontBase64 = useConfigStore(state => state.customFontBase64);
   const rawWritingDirection = useConfigStore(state => state.writingDirection) || 'ltr';
-
-  // SEC-2: Validate customFontBase64 to prevent CSS injection via crafted backup files
-  const safeFontBase64 = useMemo(() => {
-    if (typeof customFontBase64 !== 'string') return null;
-    if (!customFontBase64.startsWith('data:')) return null;
-    // Only validate the base64 payload — the data URI prefix legitimately contains semicolons
-    // e.g. "data:font/truetype;charset=utf-8;base64,<payload>"
-    const payloadMatch = customFontBase64.match(/;base64,(.*)$/);
-    if (!payloadMatch) return null;
-    // Base64 payload may only contain A-Za-z0-9+/= characters
-    if (!/^[A-Za-z0-9+/=]+$/.test(payloadMatch[1])) return null;
-    return customFontBase64;
-  }, [customFontBase64]);
 
   // SEC-3: Allowlist writingDirection to prevent CSS injection
   const VALID_DIRECTIONS = ['ltr', 'rtl', 'vertical-rl', 'vertical-lr'];

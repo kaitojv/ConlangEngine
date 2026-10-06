@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ALLOWED_REDIRECTS } from '../../../App.jsx'; // Import the allowlist we just made
+import { ALLOWED_REDIRECTS } from '@/utils/navigationConstants.js';
 
 export default function Login() {
   const navigate = useNavigate();

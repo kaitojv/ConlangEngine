@@ -9,7 +9,7 @@ import { fetchDefinitionOptions } from '@/utils/semanticUtils.js';
 import DefinitionSelectModal from '@/components/UI/Modal/DefinitionSelectModal.jsx';
 import {
     vocabDatabase, VOCAB_LISTS, VOCAB_THEMES, VOCAB_CATEGORIES,
-    getWords, getWordsByCategory
+    getWords
 } from '@/data/vocabDatabase.js';
 import { buildLexiconIndex, checkWordInLexicon, getCategoryProgress } from '@/utils/lexiconMatcher.js';
 import toast from 'react-hot-toast';

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
-import { useShallow } from 'zustand/react/shallow';
 import { supabase } from '@/utils/supabaseClient.js';
 import { sanitizeConfig } from '@/utils/schemaValidator.jsx';
 import toast from 'react-hot-toast';

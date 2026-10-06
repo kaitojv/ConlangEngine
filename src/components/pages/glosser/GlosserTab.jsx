@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useShallow } from 'zustand/react/shallow';
@@ -27,6 +27,7 @@ export default function GlosserTab() {
     // Builder Mode State
     const [builderSearch, setBuilderSearch] = useState('');
     const [builderTokens, setBuilderTokens] = useState([]);
+    const nextTokenIdRef = useRef(1);
 
     // Store Data
     const rawLexicon = useLexiconStore((state) => state.lexicon);
@@ -279,7 +280,7 @@ export default function GlosserTab() {
 
     // --- BUILDER HELPERS ---
     const appendToBuilder = (entry) => {
-        const newTokens = [...builderTokens, { id: Math.random().toString(), word: entry.word, entry }];
+        const newTokens = [...builderTokens, { id: `tok_${nextTokenIdRef.current++}`, word: entry.word, entry }];
         setBuilderTokens(newTokens);
         setInputText(newTokens.map(t => t.word).join(' '));
     };

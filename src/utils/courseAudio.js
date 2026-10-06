@@ -130,8 +130,11 @@ export const blobToDataUrl = async (blob) => {
         });
     }
     // Fallback for Node.js / non-DOM environments
-    const buffer = Buffer.from(await blob.arrayBuffer());
-    return `data:${blob.type || 'application/octet-stream'};base64,${buffer.toString('base64')}`;
+    if (typeof globalThis !== 'undefined' && globalThis.Buffer) {
+        const buffer = globalThis.Buffer.from(await blob.arrayBuffer());
+        return `data:${blob.type || 'application/octet-stream'};base64,${buffer.toString('base64')}`;
+    }
+    return '';
 };
 
 const EXT_BY_MIME = {
@@ -254,7 +257,7 @@ export const getCourseAudioUrl = (input) => {
  *    customCourse in the Supabase database.
  * Completely eliminates Supabase Storage bucket dependencies and "Bucket not found" errors!
  */
-export const uploadCourseAudio = async ({ blob, phraseId, userId, projectId, mimeType }) => {
+export const uploadCourseAudio = async ({ blob, phraseId }) => {
     if (!blob) throw new Error('No audio data to upload.');
     if (blob.size > MAX_AUDIO_BYTES) {
         throw new Error(`Recording is too large (${(blob.size / 1048576).toFixed(1)} MB). Maximum is 10 MB.`);
