@@ -36,18 +36,35 @@
     transition: transform 0.05s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.btn-base:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+}
+
 /* Variants */
 .btn-save {
-    background: var(--ok);
+    background: color-mix(in srgb, var(--acc) 75%, black);
     color: #fff;
+    border: 1px solid color-mix(in srgb, var(--acc) 45%, transparent);
 }
-.btn-save:hover { transform: translateY(-2px); box-shadow: 0 4px 12px color-mix(in srgb, var(--ok) 30%, transparent); }
+.btn-save:hover {
+    background: color-mix(in srgb, var(--acc) 88%, black);
+    border-color: var(--acc);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--acc) 30%, transparent);
+}
 
 .btn-imp {
-    background: var(--ok);
+    background: color-mix(in srgb, var(--acc) 75%, black);
     color: #fff;
+    border: 1px solid color-mix(in srgb, var(--acc) 45%, transparent);
 }
-.btn-imp:hover { transform: translateY(-2px); box-shadow: 0 4px 12px color-mix(in srgb, var(--ok) 30%, transparent); }
+.btn-imp:hover {
+    background: color-mix(in srgb, var(--acc) 88%, black);
+    border-color: var(--acc);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--acc) 30%, transparent);
+}
 
 .btn-accent {
     background: color-mix(in srgb, var(--acc) 18%, transparent);
