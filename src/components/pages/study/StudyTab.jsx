@@ -704,7 +704,7 @@ export default function StudyTab() {
                                         const isLocked = i > currentPathIdx;
 
                                         const nodeColor = isLocked ? 'var(--bd)' : (isCompleted ? 'var(--ok)' : (node.color || 'var(--acc)'));
-                                        const iconColor = isLocked ? 'var(--tx3)' : (isCompleted ? '#ffffff' : (node.color || 'var(--acc)'));
+                                        const iconColor = isLocked ? 'var(--tx3)' : (node.color || 'var(--acc)');
                                         
                                         let IconCmp = Zap;
                                         switch(node.icon) {
@@ -717,9 +717,6 @@ export default function StudyTab() {
                                             case 'Sword': IconCmp = Sword; break;
                                             case 'Shield': IconCmp = Shield; break;
                                             default: IconCmp = Zap; break;
-                                        }
-                                        if (isCompleted) {
-                                            IconCmp = Check;
                                         }
 
                                         const nodeScore = courseLevelScores[node.id];
@@ -903,9 +900,9 @@ export default function StudyTab() {
                                     const isCurrent = !isLocked && !isCompleted;
 
                                     const nodeColor = isLocked ? 'var(--bd)' : (isCompleted ? 'var(--ok)' : (node.color || 'var(--acc)'));
-                                    const iconColor = isLocked ? 'var(--tx3)' : (isCompleted ? '#ffffff' : (node.color || 'var(--acc)'));
+                                    const iconColor = isLocked ? 'var(--tx3)' : (node.color || 'var(--acc)');
                                     
-                                    // Inaccessible levels show the usual icon grayed out instead of a lock
+                                    // Keep the lesson symbol; green border indicates completion
                                     let IconCmp = Zap;
                                     switch(node.icon) {
                                         case 'Star': IconCmp = Star; break;
@@ -917,9 +914,6 @@ export default function StudyTab() {
                                         case 'Sword': IconCmp = Sword; break;
                                         case 'Shield': IconCmp = Shield; break;
                                         default: IconCmp = Zap; break;
-                                    }
-                                    if (isCompleted) {
-                                        IconCmp = Check;
                                     }
 
                                     const nodeScore = courseLevelScores[node.id];
