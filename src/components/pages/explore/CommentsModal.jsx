@@ -305,7 +305,7 @@ export default function CommentsModal({
                 {/* Comment Input */}
                 <div className="comments-input-area">
                     {sessionUser ? (
-                        <form onSubmit={handleSubmitComment}>
+                        <form className="comments-form" onSubmit={handleSubmitComment}>
                             <div className="comments-textarea-wrapper">
                                 <textarea
                                     className="comments-textarea"
