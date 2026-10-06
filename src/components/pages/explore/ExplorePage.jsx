@@ -512,6 +512,13 @@ export default function ExplorePage() {
         }
     }, [searchQuery]);
 
+    const handleCommentsCountChange = React.useCallback((pId, count) => {
+        setCommentsCountData((prev) => {
+            if (prev[pId] === count) return prev;
+            return { ...prev, [pId]: count };
+        });
+    }, []);
+
     const renderConlangCard = (lang) => {
         const { config, dictionary, wiki, customCourse: topCourse } = lang.project_data;
         const icon = config?.conlangIcon || '🌐';
@@ -803,9 +810,7 @@ export default function ExplorePage() {
                 onClose={() => setActiveCommentConlang(null)}
                 conlang={activeCommentConlang}
                 sessionUser={sessionUser}
-                onCommentsCountChange={(pId, count) => {
-                    setCommentsCountData((prev) => ({ ...prev, [pId]: count }));
-                }}
+                onCommentsCountChange={handleCommentsCountChange}
             />
         </div>
     );

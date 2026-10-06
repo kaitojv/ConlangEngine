@@ -36,6 +36,11 @@ export default function CommentsModal({
     const [commentText, setCommentText] = useState('');
     const commentsListRef = useRef(null);
 
+    const onCountChangeRef = useRef(onCommentsCountChange);
+    useEffect(() => {
+        onCountChangeRef.current = onCommentsCountChange;
+    });
+
     const projectId = conlang?.project_id;
     const config = conlang?.project_data?.config || {};
     const conlangName = config.conlangName || 'Unnamed Conlang';
@@ -63,7 +68,7 @@ export default function CommentsModal({
                 }
             } else if (data) {
                 setComments(data);
-                onCommentsCountChange?.(pId, data.length);
+                onCountChangeRef.current?.(pId, data.length);
             }
         } catch (err) {
             console.error('Error fetching comments:', err);
@@ -71,7 +76,7 @@ export default function CommentsModal({
         } finally {
             setLoading(false);
         }
-    }, [onCommentsCountChange]);
+    }, []);
 
     useEffect(() => {
         if (!isOpen || !projectId) {
@@ -98,7 +103,7 @@ export default function CommentsModal({
                         setComments((prev) => {
                             if (prev.some((c) => c.id === payload.new.id)) return prev;
                             const next = [...prev, payload.new];
-                            onCommentsCountChange?.(projectId, next.length);
+                            onCountChangeRef.current?.(projectId, next.length);
                             return next;
                         });
                         setTimeout(() => {
@@ -109,7 +114,7 @@ export default function CommentsModal({
                     } else if (payload.eventType === 'DELETE') {
                         setComments((prev) => {
                             const next = prev.filter((c) => c.id !== payload.old.id);
-                            onCommentsCountChange?.(projectId, next.length);
+                            onCountChangeRef.current?.(projectId, next.length);
                             return next;
                         });
                     } else if (payload.eventType === 'UPDATE') {
@@ -124,7 +129,7 @@ export default function CommentsModal({
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [isOpen, projectId, fetchComments, onCommentsCountChange]);
+    }, [isOpen, projectId, fetchComments]);
 
     const handleSubmitComment = async (e) => {
         e?.preventDefault();
@@ -166,7 +171,7 @@ export default function CommentsModal({
                 setComments((prev) => {
                     if (prev.some((c) => c.id === data.id)) return prev;
                     const next = [...prev, data];
-                    onCommentsCountChange?.(projectId, next.length);
+                    onCountChangeRef.current?.(projectId, next.length);
                     return next;
                 });
             }
@@ -198,7 +203,7 @@ export default function CommentsModal({
 
             setComments((prev) => {
                 const next = prev.filter((c) => c.id !== commentId);
-                onCommentsCountChange?.(projectId, next.length);
+                onCountChangeRef.current?.(projectId, next.length);
                 return next;
             });
             toast.success('Comment removed');
