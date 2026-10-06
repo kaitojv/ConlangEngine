@@ -326,16 +326,20 @@
 .explore-author-groups {
     display: flex;
     flex-direction: column;
-    gap: 2.5rem;
+    gap: 1.5rem;
     width: 100%;
 }
 
 .explore-author-section {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
-    padding-bottom: 2rem;
+    padding-bottom: 1.75rem;
     border-bottom: 1px solid var(--bd);
+    transition: padding-bottom 0.25s ease;
+}
+
+.explore-author-section.collapsed {
+    padding-bottom: 0.5rem;
 }
 
 .explore-author-section:last-child {
@@ -349,14 +353,58 @@
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 0.75rem;
-    padding-bottom: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    background: transparent;
+    border: none;
     border-bottom: 1px dashed var(--bd);
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    box-sizing: border-box;
+    font-family: inherit;
+    color: inherit;
+    transition: background 0.2s cubic-bezier(0.2, 0, 0, 1), border-color 0.2s ease;
+}
+
+.explore-author-header:hover {
+    background: var(--s2);
+}
+
+.explore-author-header:focus-visible {
+    outline: 2px solid var(--acc);
+    outline-offset: 2px;
+}
+
+.explore-author-header.collapsed {
+    border-bottom-color: transparent;
 }
 
 .explore-author-info {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+}
+
+.explore-author-chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    color: var(--tx2);
+    transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease, background 0.2s ease;
+    flex-shrink: 0;
+}
+
+.explore-author-header:hover .explore-author-chevron {
+    color: var(--acc);
+    background: var(--s3);
+}
+
+.explore-author-chevron.collapsed {
+    transform: rotate(-90deg);
 }
 
 .explore-author-avatar {
@@ -370,6 +418,11 @@
     justify-content: center;
     color: var(--acc);
     flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.explore-author-header:hover .explore-author-avatar {
+    transform: scale(1.05);
 }
 
 .explore-author-name-row {
@@ -384,6 +437,11 @@
     font-weight: 700;
     color: var(--tx);
     margin: 0;
+    transition: color 0.2s ease;
+}
+
+.explore-author-header:hover .explore-author-name {
+    color: var(--acc);
 }
 
 .explore-author-badge {
@@ -409,5 +467,29 @@
     display: flex;
     align-items: center;
     gap: 0.35rem;
+}
+
+/* Collapsible Accordion Grid */
+.explore-author-content {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.3s cubic-bezier(0.2, 0, 0, 1), opacity 0.25s ease;
+    opacity: 1;
+}
+
+.explore-author-content.collapsed {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.explore-author-content-inner {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.explore-author-content-inner .explore-grid {
+    padding-top: 1.25rem;
 }
 

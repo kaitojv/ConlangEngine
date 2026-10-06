@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../utils/supabaseClient.js';
-import { Globe, BookA, User, Loader2, Heart, Trash2, Library, Map as MapIcon, Search, Users } from 'lucide-react';
+import { Globe, BookA, User, Loader2, Heart, Trash2, Library, Map as MapIcon, Search, Users, ChevronDown, ChevronsUpDown, ChevronsDownUp } from 'lucide-react';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import toast from 'react-hot-toast';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
@@ -25,6 +25,7 @@ export default function ExplorePage() {
     const [sortBy, setSortBy] = useState('updated'); // 'updated', 'likes', 'name', 'author', 'words'
     const [groupByAuthor, setGroupByAuthor] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [collapsedAuthors, setCollapsedAuthors] = useState(() => new Set());
 
     const isPublic = useConfigStore((state) => state.isPublic);
     const updateConfig = useConfigStore((state) => state.updateConfig);
@@ -460,6 +461,36 @@ export default function ExplorePage() {
         return sortConlangList(filteredConlangs);
     }, [filteredConlangs, sortConlangList]);
 
+    const allAuthorKeys = React.useMemo(() => authorGroups.map(g => g.key), [authorGroups]);
+    const areAllCollapsed = allAuthorKeys.length > 0 && allAuthorKeys.every(k => collapsedAuthors.has(k));
+
+    const toggleAuthorCollapse = React.useCallback((key) => {
+        setCollapsedAuthors(prev => {
+            const next = new Set(prev);
+            if (next.has(key)) {
+                next.delete(key);
+            } else {
+                next.add(key);
+            }
+            return next;
+        });
+    }, []);
+
+    const handleToggleAllAuthors = React.useCallback(() => {
+        if (areAllCollapsed) {
+            setCollapsedAuthors(new Set());
+        } else {
+            setCollapsedAuthors(new Set(allAuthorKeys));
+        }
+    }, [areAllCollapsed, allAuthorKeys]);
+
+    // Auto-expand groups when user types a search query so results are immediately visible
+    useEffect(() => {
+        if (searchQuery.trim()) {
+            setCollapsedAuthors(new Set());
+        }
+    }, [searchQuery]);
+
     const renderConlangCard = (lang) => {
         const { config, dictionary, wiki, customCourse: topCourse } = lang.project_data;
         const icon = config?.conlangIcon || '🌐';
@@ -626,6 +657,18 @@ export default function ExplorePage() {
                         <span>{groupByAuthor ? 'Grouped by Author' : 'All Conlangs'}</span>
                     </button>
 
+                    {groupByAuthor && authorGroups.length > 0 && (
+                        <button 
+                            type="button"
+                            className="explore-toggle-btn"
+                            onClick={handleToggleAllAuthors}
+                            title={areAllCollapsed ? "Expand all author sections" : "Collapse all author sections"}
+                        >
+                            {areAllCollapsed ? <ChevronsUpDown size={14} /> : <ChevronsDownUp size={14} />}
+                            <span>{areAllCollapsed ? 'Expand All' : 'Collapse All'}</span>
+                        </button>
+                    )}
+
                     <div className="explore-sort">
                         <select 
                             value={sortBy} 
@@ -668,30 +711,54 @@ export default function ExplorePage() {
                 </div>
             ) : groupByAuthor ? (
                 <div className="explore-author-groups">
-                    {authorGroups.map((group) => (
-                        <section key={group.key} className="explore-author-section">
-                            <div className="explore-author-header">
-                                <div className="explore-author-info">
-                                    <div className="explore-author-avatar">
-                                        <User size={16} />
+                    {authorGroups.map((group) => {
+                        const isCollapsed = collapsedAuthors.has(group.key);
+                        return (
+                            <section 
+                                key={group.key} 
+                                className={`explore-author-section ${isCollapsed ? 'collapsed' : ''}`}
+                            >
+                                <button
+                                    type="button"
+                                    className={`explore-author-header ${isCollapsed ? 'collapsed' : ''}`}
+                                    onClick={() => toggleAuthorCollapse(group.key)}
+                                    aria-expanded={!isCollapsed}
+                                    aria-controls={`author-group-${group.key}`}
+                                    title={isCollapsed ? `Expand ${group.authorName}'s conlangs` : `Collapse ${group.authorName}'s conlangs`}
+                                >
+                                    <div className="explore-author-info">
+                                        <div className={`explore-author-chevron ${isCollapsed ? 'collapsed' : ''}`}>
+                                            <ChevronDown size={18} />
+                                        </div>
+                                        <div className="explore-author-avatar">
+                                            <User size={16} />
+                                        </div>
+                                        <div className="explore-author-name-row">
+                                            <h2 className="explore-author-name">{group.authorName}</h2>
+                                            <span className="explore-author-badge">
+                                                {group.langs.length} {group.langs.length === 1 ? 'conlang' : 'conlangs'}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div className="explore-author-name-row">
-                                        <h2 className="explore-author-name">{group.authorName}</h2>
-                                        <span className="explore-author-badge">
-                                            {group.langs.length} {group.langs.length === 1 ? 'conlang' : 'conlangs'}
-                                        </span>
+                                    <div className="explore-author-stats">
+                                        <span><BookA size={13} /> {group.totalWords.toLocaleString()} words</span>
+                                        <span><Heart size={13} /> {group.totalLikes} likes</span>
+                                    </div>
+                                </button>
+                                <div 
+                                    id={`author-group-${group.key}`}
+                                    className={`explore-author-content ${isCollapsed ? 'collapsed' : ''}`}
+                                    aria-hidden={isCollapsed}
+                                >
+                                    <div className="explore-author-content-inner">
+                                        <div className="explore-grid">
+                                            {group.sortedLangs.map((lang) => renderConlangCard(lang))}
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="explore-author-stats">
-                                    <span><BookA size={13} /> {group.totalWords.toLocaleString()} words</span>
-                                    <span><Heart size={13} /> {group.totalLikes} likes</span>
-                                </div>
-                            </div>
-                            <div className="explore-grid">
-                                {group.sortedLangs.map((lang) => renderConlangCard(lang))}
-                            </div>
-                        </section>
-                    ))}
+                            </section>
+                        );
+                    })}
                 </div>
             ) : (
                 <div className="explore-grid">
