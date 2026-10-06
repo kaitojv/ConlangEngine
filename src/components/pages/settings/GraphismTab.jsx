@@ -725,7 +725,7 @@ export default function TypographyStudio() {
                                 <div className="gt-lighten-tolerance-ticks">
                                     <span>0.1px (Ultra crisp)</span>
                                     <span>0.3px</span>
-                                    <span style={{ color: 'var(--ok, #10b981)', fontWeight: 600 }}>0.5px (Pixel Perfect ⭐)</span>
+                                    <span style={{ color: 'var(--ok, #10b981)', fontWeight: 600 }}>0.5px (Pixel Perfect - Recommended)</span>
                                     <span>1.0px</span>
                                     <span>2.0px (Max safe)</span>
                                 </div>

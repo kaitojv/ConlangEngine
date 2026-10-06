@@ -76,7 +76,7 @@ export default function PhonologyTab() {
     const updateConfig = useConfigStore((state) => state.updateConfig);
 
     const KOKORO_VOICES = [
-        { value: 'af_heart', label: 'Heart (American Female - Warm & Expressive ⭐)' },
+        { value: 'af_heart', label: 'Heart (American Female - Warm & Expressive - Recommended)' },
         { value: 'af_bella', label: 'Bella (American Female - Crisp)' },
         { value: 'af_nicole', label: 'Nicole (American Female - Whispery)' },
         { value: 'af_sarah', label: 'Sarah (American Female - Bright)' },
@@ -315,9 +315,9 @@ export default function PhonologyTab() {
         setPendingChanges(null);
 
         if (appliedCount > 0) {
-            toast.success(`✅ Applied rules to ${appliedCount} word${appliedCount !== 1 ? 's' : ''} in your lexicon.`);
+            toast.success(`Applied rules to ${appliedCount} word${appliedCount !== 1 ? 's' : ''} in your lexicon.`);
         } else {
-            toast(`No changes were applied.`, { icon: 'ℹ️' });
+            toast('No changes were applied.');
         }
     };
 
@@ -575,12 +575,12 @@ export default function PhonologyTab() {
                         value={ttsEngine}
                         onChange={(e) => updateConfig({ ttsEngine: e.target.value })}
                     >
-                        <option value="browser">🌐 Browser Speech Synthesizer (Enhanced Phonetic IPA - Built-in & Free)</option>
-                        <option value="formant">🔬 Acoustic Formant Synthesizer (Pure Open-Source IPA - Web Audio)</option>
-                        <option value="kokoro">🌸 Kokoro-TTS (Open-Source 82M Neural Model - High Fidelity IPA)</option>
-                        <option value="opentts">🐧 OpenTTS / eSpeak-NG (Self-Hosted Open Source Server)</option>
-                        <option value="custom">⚡ Custom Audio API (Piper / LocalAI / OpenAI-compatible)</option>
-                        <option value="azure">☁️ Microsoft Azure Speech (Neural SSML IPA)</option>
+                        <option value="browser">Browser Speech Synthesizer (Enhanced Phonetic IPA - Built-in & Free)</option>
+                        <option value="formant">Acoustic Formant Synthesizer (Pure Open-Source IPA - Web Audio)</option>
+                        <option value="kokoro">Kokoro-TTS (Open-Source 82M Neural Model - High Fidelity IPA)</option>
+                        <option value="opentts">OpenTTS / eSpeak-NG (Self-Hosted Open Source Server)</option>
+                        <option value="custom">Custom Audio API (Piper / LocalAI / OpenAI-compatible)</option>
+                        <option value="azure">Microsoft Azure Speech (Neural SSML IPA)</option>
                     </select>
                 </div>
 
@@ -931,7 +931,7 @@ export default function PhonologyTab() {
             >
                 <div className="historical-review-modal">
                     <p className="historical-review-desc">
-                        ⚠️ These changes will rewrite the phoneme spelling of the selected words. This cannot be undone.
+                        Warning: These changes will rewrite the phoneme spelling of the selected words. This cannot be undone.
                     </p>
 
                     {pendingChanges && (

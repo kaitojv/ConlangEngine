@@ -1603,7 +1603,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                 >
                     <Download size={16} /> Export SVG
                 </Button>
-                <Button variant="edit" className="fs-btn-full fs-btn-save" onClick={handleSave}>💾 Save Glyph</Button>
+                <Button variant="edit" className="fs-btn-full fs-btn-save" onClick={handleSave}>Save Glyph</Button>
             </div>
 
             <div className="fs-preview-section">
