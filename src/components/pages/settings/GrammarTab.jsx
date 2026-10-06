@@ -1,143 +1,396 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import Card from '../../UI/Card/Card.jsx';
-import Infobox from '../../UI/Infobox/Infobox.jsx';
 import RulesManager from './grammarMatrix/RulesManager.jsx';
-import Input from '../../UI/Input/Input.jsx';
-import Button from '../../UI/Buttons/Buttons.jsx';
-import { TextInitial, TextAlignStart, Users, Languages, Info } from 'lucide-react';
+import ParadigmMatrix from './grammarMatrix/ParadigmMatrix.jsx';
+import {
+    Layers,
+    TextAlignStart,
+    Play,
+    BookOpen,
+    ArrowRight,
+    Sliders,
+    Link2,
+    Code2,
+    Sparkles,
+    Check
+} from 'lucide-react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import './grammartab.css';
 
-export default function GrammarTab(){
-    // Grab all our syntax and morphology settings from the global store
+export default function GrammarTab() {
+    const [subTab, setSubTab] = useState('morphology');
+
     const syntaxOrder = useConfigStore((state) => state.syntaxOrder) || 'SVO';
     const adjectivePlacement = useConfigStore((state) => state.adjectivePlacement) || 'pre-nominal';
     const adjectiveAgreement = useConfigStore((state) => state.adjectiveAgreement) || false;
     const verbMarker = useConfigStore((state) => state.verbMarker) || '';
     const cliticsRules = useConfigStore((state) => state.cliticsRules) || '';
-    const waConfig = useConfigStore((state) => state.wordAssistConfig) || {};
+    const rawWaConfig = useConfigStore((state) => state.wordAssistConfig);
     const updateConfig = useConfigStore((state) => state.updateConfig);
+
+    const waConfig = useMemo(() => rawWaConfig || {}, [rawWaConfig]);
+
+    // Compute constituent order pills for visual diagram
+    const orderPills = useMemo(() => {
+        const letters = (syntaxOrder || 'SVO').toUpperCase().split('');
+        const map = {
+            'S': { label: 'Subject', className: 'subject' },
+            'V': { label: 'Verb', className: 'verb' },
+            'O': { label: 'Object', className: 'object' },
+            'A': { label: 'Adverb', className: 'adverb' }
+        };
+        return letters.map((char) => map[char] || { label: char, className: 'subject' });
+    }, [syntaxOrder]);
 
     return (
         <div className="grammar-tab-container">
-            
-            {/* --- MORPHOLOGY & RULES --- */}
-            <Card>
-                <h2 className="flex sg-title"><TextInitial /> Grammatical Rules & Inflections</h2>
-                
-                <Infobox title="Morphology & Inflection Guide">
-                    • <b>Visual Rule Builder:</b> Click the <b>Magic Wand (🪄)</b> icon to build any rule visually. The "Test Lab" shows your changes in real-time.<br />
-                    • <b>Manual Formulas:</b> Use the <code>=&gt;</code> operator for stem changes. Example: <code>um$ =&gt; i</code> (turns <i>kum</i> into <i>ki</i>).<br />
-                    • <b>Affix / Infix:</b> Standard <b>Prefixes</b> (<code>ir-</code>), <b>Suffixes</b> (<code>-s</code>), and <b>Infixes</b> (<code>-ma-@V</code>).<br />
-                    • <b>Advanced Regex:</b> Support for capture groups and lookaheads. Example: <code>n(?=[pb]) =&gt; m</code> (Assimilation) or <code>^(.{2})(.*) =&gt; $1$1$2</code> (Reduplication).<br />
-                    • <b>Dependencies & Chaining:</b> Type another rule's name in <b>"Depends on:"</b> to chain them. You can use wildcards (<code>*suffix</code>, <code>*prefix</code>, <code>*infix</code>, or <code>*affix</code>) to automatically chain a rule after <i>every</i> rule of that type!<br />
-                    • <b>Apostrophe Handling:</b> The engine is robust against smart/straight quotes and shared punctuation between affixes.<br />
-                    • <b>Standalone Rules:</b> Check <b>"Standalone"</b> for rules that conjugate independently (e.g., Passive Voice or Infinitives).<br />
-                    • <b>Applies To (Constraint):</b> Filters which words are allowed to use this rule (e.g., "This rule only applies to <b>Nouns</b>").<br />
-                    • <b>Target POS (Transformation):</b> Defines what the word becomes after the rule is applied (e.g., "This rule turns a Verb into a <b>Noun</b>").<br />
-                    • <b>Rule Scoping:</b> Use Person Categories or Root Tags to restrict rules to specific dictionary words.<br />
-                    • <b>Repair Rules & Sandhi:</b> Use Rules with an empty <b>"add"</b> field to perform pure Regex replacements on the root. Ideal for fixing illegal consonant clusters or enforcing sandhi (e.g., <code>n(?=[pb]) =&gt; m</code>).<br />
-                    • <b>Genealogy:</b> Use "Target POS" in grammar rules to automatically categorize derived words (e.g., Noun to Adjective).
-                </Infobox>
-                
-                <div className="rules-wrapper">
+            {/* Sub-Navigation Header */}
+            <nav className="grammar-subnav" aria-label="Grammar Sections">
+                <button
+                    type="button"
+                    className={`grammar-subnav-btn ${subTab === 'morphology' ? 'active' : ''}`}
+                    onClick={() => setSubTab('morphology')}
+                >
+                    <Layers size={16} />
+                    <span>Morphology & Rules</span>
+                </button>
+
+                <button
+                    type="button"
+                    className={`grammar-subnav-btn ${subTab === 'syntax' ? 'active' : ''}`}
+                    onClick={() => setSubTab('syntax')}
+                >
+                    <TextAlignStart size={16} />
+                    <span>Syntax & Word Order</span>
+                </button>
+
+                <button
+                    type="button"
+                    className={`grammar-subnav-btn ${subTab === 'paradigm' ? 'active' : ''}`}
+                    onClick={() => setSubTab('paradigm')}
+                >
+                    <Play size={16} />
+                    <span>Paradigm Tester</span>
+                </button>
+
+                <button
+                    type="button"
+                    className={`grammar-subnav-btn ${subTab === 'reference' ? 'active' : ''}`}
+                    onClick={() => setSubTab('reference')}
+                >
+                    <BookOpen size={16} />
+                    <span>Linguistic Reference</span>
+                </button>
+            </nav>
+
+            {/* TAB 1: MORPHOLOGY & RULES */}
+            {subTab === 'morphology' && (
+                <div className="grammar-tab-content">
                     <RulesManager />
                 </div>
-            </Card>
-            
-            {/* --- SYNTAX & WORD ORDER --- */}
-            <Card>
-                <h2 className="flex sg-title"><TextAlignStart /> Syntax & Word Order</h2>
-                
-                <Infobox title="Syntax & Analyzer Guide">
-                    • <b>Verb Base Marker:</b> Define how your verbs typically end (e.g., <i>-ar</i> or <i>-er</i>). The Engine will use this to warn you if you create a verb that does not match this ending, helping you maintain consistency.<br />
-                    • <b>Clitics:</b> List particles that attach to words but function independently in syntax (like English <i>'s</i> or <i>'ll</i>), separated by commas. The Analyzer will detach them behind the scenes to parse the sentence structure correctly.<br />
-                    • <b>Adjective Placement:</b> Determines if adjectives come before nouns (Pre-nominal, like English) or after nouns (Post-nominal, like Spanish).<br />
-                    • <b>Adjective Agreement:</b> If enabled, adjectives will copy the affixes applied to the noun they modify.<br />
-                    • <b>Copula (To Be) Behavior:</b> "Normal" forces sentences to use a translation of 'to be' (e.g. <i>I am tall</i>). "Zero-Copula" allows sentences without it (e.g. <i>I tall</i>) or replaces it with a specific marker.
-                </Infobox>
-                
-                <div className="syntax-grid">
-                    <div className="input-wrapper">
-                        <label className="input-label">Word Order</label>
-                        <select 
-                            className="fi custom-select"
-                            value={syntaxOrder}
-                            onChange={(e) => updateConfig({ syntaxOrder: e.target.value })}
-                        >
-                            <option value="SVO">SVO (Subject-Verb-Object)</option>
-                            <option value="SOV">SOV (Subject-Object-Verb)</option>
-                            <option value="VSO">VSO (Verb-Subject-Object)</option>
-                            <option value="VOS">VOS (Verb-Object-Subject)</option>
-                            <option value="OVS">OVS (Object-Verb-Subject)</option>
-                            <option value="OSV">OSV (Object-Subject-Verb)</option>
-                            <option value="OVA">OVA (Object-Verb-Adverb)</option>
-                        </select>
-                    </div>
-                    
-                    <div className="input-wrapper">
-                        <label className="input-label">Adjective Placement</label>
-                        <select 
-                            className="fi custom-select"
-                            value={adjectivePlacement}
-                            onChange={(e) => updateConfig({ adjectivePlacement: e.target.value })}
-                        >
-                            <option value="pre-nominal">Pre-nominal (e.g. Big dog)</option>
-                            <option value="post-nominal">Post-nominal (e.g. Dog big)</option>
-                        </select>
-                    </div>
+            )}
 
-                    <div className="input-wrapper" style={{ display: 'flex', alignItems: 'center', marginTop: '1rem' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>
-                            <input 
-                                type="checkbox" 
-                                checked={adjectiveAgreement} 
-                                onChange={(e) => updateConfig({ adjectiveAgreement: e.target.checked })}
-                                style={{ transform: 'scale(1.2)' }}
-                            />
-                            Adjective Agreement (Adjectives copy noun affixes)
-                        </label>
-                    </div>
-                    
-                    
+            {/* TAB 2: SYNTAX & WORD ORDER */}
+            {subTab === 'syntax' && (
+                <div className="grammar-tab-content syntax-grid-layout">
+                    {/* Word Order Card */}
+                    <div className="syntax-card">
+                        <h3 className="syntax-card-title">
+                            <Sliders size={18} />
+                            Constituent Word Order
+                        </h3>
+                        <p className="syntax-card-desc">
+                            Sets the canonical ordering of primary arguments for translation and parsing engines.
+                        </p>
 
-                    <Input 
-                        label="Verb Base Marker(s)"
-                        value={verbMarker}
-                        placeholder="e.g., -r, -ar, -en (comma separated)"
-                        onChange={(e) => updateConfig({ verbMarker: e.target.value })}
-                    />
-                    
-                    <Input 
-                        label="Clitics"  
-                        placeholder="e.g., s, ll, ne" 
-                        value={cliticsRules}
-                        onChange={(e) => updateConfig({ cliticsRules: e.target.value })}
-                    />
+                        <div className="word-order-diagram">
+                            {orderPills.map((pill, idx) => (
+                                <React.Fragment key={idx}>
+                                    <div className={`word-order-pill ${pill.className}`}>
+                                        <span>{pill.label}</span>
+                                    </div>
+                                    {idx < orderPills.length - 1 && (
+                                        <span className="word-order-arrow">
+                                            <ArrowRight size={18} />
+                                        </span>
+                                    )}
+                                </React.Fragment>
+                            ))}
+                        </div>
 
-                    <div className="input-wrapper">
-                        <label className="input-label">Copula (To Be) Behavior</label>
-                        <select 
-                            className="fi custom-select"
-                            value={waConfig.copulaBehavior === 'replace' || waConfig.copulaBehavior === 'both' || waConfig.copulaBehavior === 'omit' ? 'zero_copula' : (waConfig.copulaBehavior || 'normal')}
-                            onChange={(e) => updateConfig({ wordAssistConfig: { ...waConfig, copulaBehavior: e.target.value } })}
-                        >
-                            <option value="normal">Normal (Parse as Verb/Modal)</option>
-                            <option value="zero_copula">Enable Zero Copula</option>
-                        </select>
+                        <div className="syntax-control-group">
+                            <label htmlFor="syntax-order-select">Select Word Order Pattern</label>
+                            <select
+                                id="syntax-order-select"
+                                className="syntax-select"
+                                value={syntaxOrder}
+                                onChange={(e) => updateConfig({ syntaxOrder: e.target.value })}
+                            >
+                                <option value="SVO">SVO - Subject Verb Object (e.g. English, Mandarin)</option>
+                                <option value="SOV">SOV - Subject Object Verb (e.g. Japanese, Turkish)</option>
+                                <option value="VSO">VSO - Verb Subject Object (e.g. Arabic, Irish)</option>
+                                <option value="VOS">VOS - Verb Object Subject (e.g. Malagasy, Fijian)</option>
+                                <option value="OVS">OVS - Object Verb Subject (e.g. Hixkaryana, Klingon)</option>
+                                <option value="OSV">OSV - Object Subject Verb (e.g. Xavante)</option>
+                                <option value="OVA">OVA - Object Verb Adverb</option>
+                            </select>
+                        </div>
                     </div>
 
-                    {waConfig.copulaBehavior === 'zero_copula' && (
-                        <Input 
-                            label="Copula Replacement Marker"
-                            value={waConfig.copulaReplacement || ''}
-                            placeholder="e.g. vu"
-                            onChange={(e) => updateConfig({ wordAssistConfig: { ...waConfig, copulaReplacement: e.target.value } })}
-                        />
-                    )}
+                    {/* Modifiers & Agreement Card */}
+                    <div className="syntax-card">
+                        <h3 className="syntax-card-title">
+                            <Sparkles size={18} />
+                            Modifiers & Agreement
+                        </h3>
+                        <p className="syntax-card-desc">
+                            Controls the placement of adjectives relative to the nouns they modify, and inflection agreement rules.
+                        </p>
+
+                        <div className="syntax-options-grid">
+                            <div className="syntax-control-group">
+                                <label htmlFor="adjective-placement-select">Adjective Placement</label>
+                                <select
+                                    id="adjective-placement-select"
+                                    className="syntax-select"
+                                    value={adjectivePlacement}
+                                    onChange={(e) => updateConfig({ adjectivePlacement: e.target.value })}
+                                >
+                                    <option value="pre-nominal">Pre-nominal (e.g. Big dog)</option>
+                                    <option value="post-nominal">Post-nominal (e.g. Dog big)</option>
+                                </select>
+                            </div>
+
+                            <div className="syntax-control-group">
+                                <label>Agreement Rules</label>
+                                <label className="syntax-checkbox-label">
+                                    <input
+                                        type="checkbox"
+                                        checked={adjectiveAgreement}
+                                        onChange={(e) => updateConfig({ adjectiveAgreement: e.target.checked })}
+                                    />
+                                    <span>Adjectives copy noun affixes (Case / Number)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Markers, Clitics & Copula Card */}
+                    <div className="syntax-card">
+                        <h3 className="syntax-card-title">
+                            <Link2 size={18} />
+                            Markers, Clitics & Copula
+                        </h3>
+                        <p className="syntax-card-desc">
+                            Configure bound particles, base verb forms for lexeme detection, and zero-copula handling.
+                        </p>
+
+                        <div className="syntax-options-grid">
+                            <div className="syntax-control-group">
+                                <label htmlFor="verb-marker-input">Verb Base Marker(s)</label>
+                                <input
+                                    id="verb-marker-input"
+                                    type="text"
+                                    className="syntax-input"
+                                    value={verbMarker}
+                                    placeholder="e.g. -r, -ar, -en (comma separated)"
+                                    onChange={(e) => updateConfig({ verbMarker: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="syntax-control-group">
+                                <label htmlFor="clitics-input">Clitics</label>
+                                <input
+                                    id="clitics-input"
+                                    type="text"
+                                    className="syntax-input"
+                                    value={cliticsRules}
+                                    placeholder="e.g. s, ll, ne (comma separated)"
+                                    onChange={(e) => updateConfig({ cliticsRules: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="syntax-control-group">
+                                <label htmlFor="copula-select">Copula (To Be) Behavior</label>
+                                <select
+                                    id="copula-select"
+                                    className="syntax-select"
+                                    value={
+                                        waConfig.copulaBehavior === 'replace' ||
+                                        waConfig.copulaBehavior === 'both' ||
+                                        waConfig.copulaBehavior === 'omit'
+                                            ? 'zero_copula'
+                                            : (waConfig.copulaBehavior || 'normal')
+                                    }
+                                    onChange={(e) =>
+                                        updateConfig({
+                                            wordAssistConfig: { ...waConfig, copulaBehavior: e.target.value }
+                                        })
+                                    }
+                                >
+                                    <option value="normal">Normal (Parse as verb / modal)</option>
+                                    <option value="zero_copula">Enable Zero Copula</option>
+                                </select>
+                            </div>
+
+                            {waConfig.copulaBehavior === 'zero_copula' && (
+                                <div className="syntax-control-group">
+                                    <label htmlFor="copula-replacement-input">Copula Replacement Marker</label>
+                                    <input
+                                        id="copula-replacement-input"
+                                        type="text"
+                                        className="syntax-input"
+                                        value={waConfig.copulaReplacement || ''}
+                                        placeholder="e.g. vu"
+                                        onChange={(e) =>
+                                            updateConfig({
+                                                wordAssistConfig: { ...waConfig, copulaReplacement: e.target.value }
+                                            })
+                                        }
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
-            </Card>
-            
+            )}
+
+            {/* TAB 3: PARADIGM TESTER */}
+            {subTab === 'paradigm' && (
+                <div className="grammar-tab-content">
+                    <Card>
+                        <ParadigmMatrix />
+                    </Card>
+                </div>
+            )}
+
+            {/* TAB 4: LINGUISTIC REFERENCE */}
+            {subTab === 'reference' && (
+                <div className="grammar-tab-content">
+                    <Card>
+                        <div className="grammar-section-header">
+                            <h2 className="grammar-section-title">
+                                <BookOpen size={20} />
+                                Linguistic Formula Reference & Guide
+                            </h2>
+                        </div>
+
+                        <div className="reference-cards-grid">
+                            {/* Card 1: Affixes */}
+                            <div className="reference-card">
+                                <div className="reference-card-header">
+                                    <Code2 size={18} />
+                                    <h4 className="reference-card-title">Affix Position Notation</h4>
+                                </div>
+                                <p className="reference-card-body">
+                                    Affixes attach to word boundaries or target phonological slots based on the hyphen position:
+                                </p>
+                                <div className="reference-example-box">
+                                    <div className="reference-example-line">
+                                        <span className="reference-example-label">Suffix:</span>
+                                        <code>-s</code> or <code>-ed</code> (attaches to end)
+                                    </div>
+                                    <div className="reference-example-line">
+                                        <span className="reference-example-label">Prefix:</span>
+                                        <code>ir-</code> or <code>un-</code> (attaches to start)
+                                    </div>
+                                    <div className="reference-example-line">
+                                        <span className="reference-example-label">Infix:</span>
+                                        <code>-ma-@V</code> (inserts before first vowel)
+                                    </div>
+                                    <div className="reference-example-line">
+                                        <span className="reference-example-label">Infix:</span>
+                                        <code>-n-@C</code> (inserts after first consonant)
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card 2: Stem Mutations */}
+                            <div className="reference-card">
+                                <div className="reference-card-header">
+                                    <Sparkles size={18} />
+                                    <h4 className="reference-card-title">Stem Mutations & Formulas</h4>
+                                </div>
+                                <p className="reference-card-body">
+                                    Use the <code>=&gt;</code> transformation operator to alter internal letters or endings:
+                                </p>
+                                <div className="reference-example-box">
+                                    <div className="reference-example-line">
+                                        <span className="reference-example-label">Ablaut:</span>
+                                        <code>i =&gt; a</code> (e.g. sing &rarr; sang)
+                                    </div>
+                                    <div className="reference-example-line">
+                                        <span className="reference-example-label">Truncate:</span>
+                                        <code>um$ =&gt; i</code> (turns <i>kum</i> into <i>ki</i>)
+                                    </div>
+                                    <div className="reference-example-line">
+                                        <span className="reference-example-label">Assimilation:</span>
+                                        <code>n(?=[pb]) =&gt; m</code> (sandhi before labials)
+                                    </div>
+                                    <div className="reference-example-line">
+                                        <span className="reference-example-label">Reduplication:</span>
+                                        <code>^(.&#123;2&#125;)(.*) =&gt; $1$1$2</code>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card 3: Rule Chaining */}
+                            <div className="reference-card">
+                                <div className="reference-card-header">
+                                    <Link2 size={18} />
+                                    <h4 className="reference-card-title">Rule Chaining & Dependencies</h4>
+                                </div>
+                                <p className="reference-card-body">
+                                    Rules can execute sequentially in an ordered pipeline using the <b>Depends on</b> field:
+                                </p>
+                                <div className="reference-example-box">
+                                    <div className="reference-example-line">
+                                        <span className="reference-example-label">Specific:</span>
+                                        <code>Depends on: plural</code> (runs after plural)
+                                    </div>
+                                    <div className="reference-example-line">
+                                        <span className="reference-example-label">Wildcard:</span>
+                                        <code>*suffix</code> (runs after any suffix rule)
+                                    </div>
+                                    <div className="reference-example-line">
+                                        <span className="reference-example-label">Wildcard:</span>
+                                        <code>*prefix</code> (runs after any prefix rule)
+                                    </div>
+                                    <div className="reference-example-line">
+                                        <span className="reference-example-label">Universal:</span>
+                                        <code>*affix</code> (runs after all morphology)
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card 4: Constraints & POS */}
+                            <div className="reference-card">
+                                <div className="reference-card-header">
+                                    <Check size={18} />
+                                    <h4 className="reference-card-title">Target Constraints & Shifts</h4>
+                                </div>
+                                <p className="reference-card-body">
+                                    Filter which words receive the rule and update their grammatical classification:
+                                </p>
+                                <div className="reference-example-box">
+                                    <div className="reference-example-line">
+                                        <span className="reference-example-label">Applies To:</span>
+                                        Restricts execution to specific parts of speech
+                                    </div>
+                                    <div className="reference-example-line">
+                                        <span className="reference-example-label">Target POS:</span>
+                                        Converts lexeme class (e.g. Verb &rarr; Noun derivation)
+                                    </div>
+                                    <div className="reference-example-line">
+                                        <span className="reference-example-label">Standalone:</span>
+                                        Rule conjugates independently without requiring root inflections
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+                </div>
+            )}
         </div>
     );
 }

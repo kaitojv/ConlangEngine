@@ -1,0 +1,151 @@
+/* paradigmMatrix.css */
+
+.paradigm-matrix-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.paradigm-tester-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background: var(--s2);
+    padding: 1rem 1.25rem;
+    border-radius: 12px;
+    border: 1px solid var(--bd);
+}
+
+.paradigm-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    flex: 1;
+    min-width: 180px;
+}
+
+.paradigm-input-group label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--tx2);
+    letter-spacing: 0.04em;
+}
+
+.paradigm-control-input,
+.paradigm-control-select {
+    padding: 0.6rem 0.85rem;
+    background: var(--s1);
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+    color: var(--tx);
+    font-size: 0.9rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.paradigm-control-input:focus,
+.paradigm-control-select:focus {
+    border-color: var(--acc);
+    box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
+}
+
+.paradigm-table-container {
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.paradigm-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.88rem;
+}
+
+.paradigm-table th {
+    background: var(--s3);
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--tx2);
+    border-bottom: 1px solid var(--bd);
+    letter-spacing: 0.03em;
+}
+
+.paradigm-table td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--bd);
+    color: var(--tx);
+    vertical-align: middle;
+}
+
+.paradigm-table tr:last-child td {
+    border-bottom: none;
+}
+
+.paradigm-table tr:hover td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.paradigm-rule-name-cell {
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.paradigm-result-cell {
+    font-weight: 700;
+    color: var(--acc);
+    font-size: 0.95rem;
+}
+
+.paradigm-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+}
+
+.paradigm-status-applied {
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #4ade80;
+}
+
+.paradigm-status-skipped {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #fbbf24;
+}
+
+.paradigm-empty-state {
+    padding: 3rem 1.5rem;
+    text-align: center;
+    color: var(--tx2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.paradigm-empty-state h4 {
+    margin: 0;
+    color: var(--tx);
+    font-size: 1.05rem;
+}
+
+.paradigm-empty-state p {
+    margin: 0;
+    font-size: 0.85rem;
+    max-width: 360px;
+    line-height: 1.45;
+}
