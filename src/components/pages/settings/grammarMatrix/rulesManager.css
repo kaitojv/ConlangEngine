@@ -258,3 +258,39 @@
     justify-content: center;
     margin-top: 1rem;
 }
+
+@media (max-width: 640px) {
+    .rules-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+        padding: 0.75rem;
+    }
+
+    .rules-category-bar {
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .rules-search-wrap {
+        min-width: 0;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .rules-add-dropdown-wrapper {
+        width: 100%;
+    }
+
+    .rules-add-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .rules-category-btn {
+        padding: 0.35rem 0.65rem;
+        font-size: 0.8rem;
+    }
+}

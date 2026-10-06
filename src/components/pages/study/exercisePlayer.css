@@ -211,3 +211,54 @@
     text-align: center;
     gap: 20px;
 }
+
+@media (max-width: 640px) {
+    .ep-header {
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+
+    .ep-prompt {
+        font-size: 1.4rem;
+        margin-bottom: 20px;
+        word-break: break-word;
+    }
+
+    .ep-instruction {
+        font-size: 1rem;
+        margin-bottom: 14px;
+    }
+
+    .ep-sentence-builder {
+        font-size: 1.15rem;
+        min-height: 48px;
+    }
+
+    .ep-placeholder {
+        font-size: 1rem;
+    }
+
+    .ep-word-block {
+        padding: 8px 14px;
+        font-size: 0.95rem;
+    }
+
+    .ep-footer {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+        min-height: auto;
+        padding-top: 14px;
+    }
+
+    .ep-check-btn {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .ep-feedback-msg {
+        font-size: 0.95rem;
+        justify-content: center;
+        text-align: center;
+    }
+}

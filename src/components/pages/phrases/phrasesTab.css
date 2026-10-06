@@ -1,0 +1,124 @@
+/* src/components/pages/phrases/phrasesTab.css */
+
+.phrases-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.phrases-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.phrases-search-wrapper {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.phrases-search-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--tx3);
+    pointer-events: none;
+}
+
+.phrases-search-input {
+    padding-left: 40px !important;
+}
+
+.phrases-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.phrase-card-item {
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad);
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.phrase-item-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.phrase-header-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.phrase-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* Modal form layout */
+.phrase-modal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.phrase-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+@media (max-width: 600px) {
+    .phrases-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .phrases-header button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .phrase-card-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .phrase-actions {
+        width: 100%;
+        justify-content: flex-end;
+        border-top: 1px solid var(--bd);
+        padding-top: 10px;
+        margin-top: 6px;
+    }
+
+    .phrase-modal-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .phrase-modal-actions {
+        flex-direction: column-reverse;
+        width: 100%;
+    }
+
+    .phrase-modal-actions button {
+        width: 100%;
+        justify-content: center;
+    }
+}

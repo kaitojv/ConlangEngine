@@ -417,3 +417,20 @@
     font-size: 0.9rem;
     color: var(--tx2);
 }
+
+@media (max-width: 600px) {
+    .ideogram-row {
+        flex-wrap: wrap;
+    }
+    .create-actions-wrap {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .create-save-main, .create-view-lexicon {
+        width: 100%;
+        flex: none;
+    }
+    .create-save-main button, .create-view-lexicon button {
+        width: 100%;
+    }
+}

@@ -528,3 +528,53 @@
 .srs-good:hover {
     background: rgba(34, 197, 94, 0.25) !important;
 }
+
+@media (max-width: 640px) {
+    .learning-path-container {
+        padding: 24px 10px;
+        border-radius: 16px;
+        margin: 12px auto;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .controls-header {
+        gap: 10px;
+    }
+
+    .filter-section {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .filter-select-container {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .filter-section button {
+        width: 100%;
+    }
+
+    .srs-actions {
+        gap: 6px;
+    }
+
+    .srs-btn {
+        padding: 8px 4px !important;
+        min-height: 52px;
+    }
+
+    .srs-label {
+        font-size: 0.95rem;
+    }
+
+    .srs-hint {
+        font-size: 0.7rem;
+    }
+
+    .quiz-finished {
+        padding: 24px 12px;
+    }
+}

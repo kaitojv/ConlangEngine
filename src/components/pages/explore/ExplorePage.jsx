@@ -659,12 +659,12 @@ export default function ExplorePage() {
 
     return (
         <div className="explore-container fade-in">
-            <div className="explore-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+            <div className="explore-header">
                 <div>
                     <h1>Explore</h1>
                     <p>Discover public conlangs created by the community.</p>
                 </div>
-                <div className="explore-header-actions" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div className="explore-header-actions">
                     <div className="explore-search-wrapper">
                         <Search size={15} className="explore-search-icon" />
                         <input 

@@ -11,6 +11,7 @@ import PhraseEditModal from './PhraseEditModal.jsx';
 import EmptyState from '@/components/UI/EmptyState/EmptyState.jsx';
 import { playAzureTTS } from '@/utils/azureTTS.js';
 import toast from 'react-hot-toast';
+import './phrasesTab.css';
 
 export default function PhrasesTab() {
     const phrases = useLexiconStore(state => state.phrases || []);
@@ -67,9 +68,9 @@ export default function PhrasesTab() {
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div className="phrases-container">
             <Card>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <div className="phrases-header">
                     <h2 className='flex sg-title' style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}><MessageSquare /> Phrases & Idioms</h2>
                     <Button variant="imp" onClick={handleAdd}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -78,13 +79,13 @@ export default function PhrasesTab() {
                     </Button>
                 </div>
 
-                <div style={{ position: 'relative', marginBottom: '20px' }}>
-                    <Search size={16} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: 'var(--tx3)' }} />
+                <div className="phrases-search-wrapper">
+                    <Search size={16} className="phrases-search-icon" />
                     <Input 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search phrases by conlang or meaning..."
-                        style={{ paddingLeft: '40px' }}
+                        className="phrases-search-input"
                     />
                 </div>
 
@@ -93,11 +94,11 @@ export default function PhrasesTab() {
                         {searchQuery ? "Try a different search term." : "Click 'Add Phrase' to create your first multi-word expression."}
                     </EmptyState>
                 ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    <div className="phrases-list">
                         {filteredPhrases.map(phrase => (
-                            <div key={phrase.id} style={{ background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 'var(--rad)', padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                            <div key={phrase.id} className="phrase-card-item">
+                                <div className="phrase-item-main">
+                                    <div className="phrase-header-meta">
                                         <span className="custom-font-text notranslate" style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--acc)' }}>
                                             {transliterate(phrase.phrase)}
                                         </span>
@@ -117,7 +118,7 @@ export default function PhrasesTab() {
                                         </div>
                                     )}
                                 </div>
-                                <div style={{ display: 'flex', gap: '10px' }}>
+                                <div className="phrase-actions">
                                     <Button variant="default" onClick={() => handleReadAloud(phrase.phrase)} title="Read Aloud" style={{ padding: '8px' }}>
                                         <Volume2 size={16} />
                                     </Button>

@@ -774,3 +774,24 @@
     }
 }
 
+@media (max-width: 640px) {
+    .alpha-filter-bar {
+        padding: 0.85rem 14px 1.25rem 14px;
+        margin: 0 -14px -18px -14px;
+    }
+    .filter-select {
+        width: 100%;
+    }
+    .search-box {
+        min-width: 0;
+        width: 100%;
+    }
+    .lexicon-entry {
+        padding: 1rem;
+    }
+    .entry-header {
+        flex-wrap: wrap;
+    }
+}
+
+

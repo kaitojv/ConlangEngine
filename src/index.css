@@ -142,6 +142,17 @@ body {
   max-width: 1400px;
 }
 
+@media (max-width: 640px) {
+  .content { 
+    padding: 16px 10px; 
+    min-height: calc(100vh - 70px); 
+  }
+
+  .wide-content {
+    padding: 12px 6px;
+  }
+}
+
 /* Global typography */
 
 h1, h2, h3, h4 {

@@ -86,8 +86,8 @@ export default function PhraseEditModal({ isOpen, onClose, editingPhrase = null 
                     />
                 </div>
 
-                <div style={{ display: 'flex', gap: '15px' }}>
-                    <div style={{ flex: 1 }}>
+                <div className="phrase-modal-grid">
+                    <div>
                         <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'var(--tx)' }}>Category</label>
                         <select 
                             value={category} 
@@ -102,7 +102,7 @@ export default function PhraseEditModal({ isOpen, onClose, editingPhrase = null 
                         </select>
                     </div>
 
-                    <div style={{ flex: 1 }}>
+                    <div>
                         <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'var(--tx)' }}>Register</label>
                         <select 
                             value={register} 
@@ -118,7 +118,7 @@ export default function PhraseEditModal({ isOpen, onClose, editingPhrase = null 
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <div className="phrase-modal-actions">
                     <Button variant="default" onClick={onClose}>Cancel</Button>
                     <Button variant="imp" onClick={handleSave}>{editingPhrase ? "Save Changes" : "Add Phrase"}</Button>
                 </div>
