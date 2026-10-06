@@ -44,7 +44,7 @@ export default function GrammarTab() {
 
     return (
         <div className="grammar-tab-container">
-            {/* Sub-Navigation Header */}
+            {/* Sub-Navigation Header matching config-subnav */}
             <nav className="grammar-subnav" aria-label="Grammar Sections">
                 <button
                     type="button"
@@ -86,21 +86,28 @@ export default function GrammarTab() {
             {/* TAB 1: MORPHOLOGY & RULES */}
             {subTab === 'morphology' && (
                 <div className="grammar-tab-content">
-                    <RulesManager />
+                    <Card>
+                        <h2 className="flex sg-title">
+                            <Layers /> Grammatical Rules & Inflections
+                        </h2>
+                        <p className="settings-description">
+                            Define prefixes, suffixes, infixes, and phonological stem mutations for word classes and roots.
+                        </p>
+                        <RulesManager />
+                    </Card>
                 </div>
             )}
 
             {/* TAB 2: SYNTAX & WORD ORDER */}
             {subTab === 'syntax' && (
-                <div className="grammar-tab-content syntax-grid-layout">
+                <div className="grammar-tab-content">
                     {/* Word Order Card */}
-                    <div className="syntax-card">
-                        <h3 className="syntax-card-title">
-                            <Sliders size={18} />
-                            Constituent Word Order
-                        </h3>
-                        <p className="syntax-card-desc">
-                            Sets the canonical ordering of primary arguments for translation and parsing engines.
+                    <Card>
+                        <h2 className="flex sg-title">
+                            <Sliders /> Constituent Word Order
+                        </h2>
+                        <p className="settings-description">
+                            Sets the canonical ordering of primary arguments (Subject, Verb, Object) for translation and parsing engines.
                         </p>
 
                         <div className="word-order-diagram">
@@ -118,11 +125,11 @@ export default function GrammarTab() {
                             ))}
                         </div>
 
-                        <div className="syntax-control-group">
-                            <label htmlFor="syntax-order-select">Select Word Order Pattern</label>
+                        <div className="input-wrapper">
+                            <label className="form-label" htmlFor="syntax-order-select">Word Order Pattern</label>
                             <select
                                 id="syntax-order-select"
-                                className="syntax-select"
+                                className="fi custom-select"
                                 value={syntaxOrder}
                                 onChange={(e) => updateConfig({ syntaxOrder: e.target.value })}
                             >
@@ -135,24 +142,23 @@ export default function GrammarTab() {
                                 <option value="OVA">OVA - Object Verb Adverb</option>
                             </select>
                         </div>
-                    </div>
+                    </Card>
 
                     {/* Modifiers & Agreement Card */}
-                    <div className="syntax-card">
-                        <h3 className="syntax-card-title">
-                            <Sparkles size={18} />
-                            Modifiers & Agreement
-                        </h3>
-                        <p className="syntax-card-desc">
+                    <Card>
+                        <h2 className="flex sg-title">
+                            <Sparkles /> Nominal Modifiers & Agreement
+                        </h2>
+                        <p className="settings-description">
                             Controls the placement of adjectives relative to the nouns they modify, and inflection agreement rules.
                         </p>
 
                         <div className="syntax-options-grid">
-                            <div className="syntax-control-group">
-                                <label htmlFor="adjective-placement-select">Adjective Placement</label>
+                            <div className="input-wrapper">
+                                <label className="form-label" htmlFor="adjective-placement-select">Adjective Placement</label>
                                 <select
                                     id="adjective-placement-select"
-                                    className="syntax-select"
+                                    className="fi custom-select"
                                     value={adjectivePlacement}
                                     onChange={(e) => updateConfig({ adjectivePlacement: e.target.value })}
                                 >
@@ -161,8 +167,8 @@ export default function GrammarTab() {
                                 </select>
                             </div>
 
-                            <div className="syntax-control-group">
-                                <label>Agreement Rules</label>
+                            <div className="input-wrapper">
+                                <label className="form-label">Agreement Rules</label>
                                 <label className="syntax-checkbox-label">
                                     <input
                                         type="checkbox"
@@ -173,48 +179,47 @@ export default function GrammarTab() {
                                 </label>
                             </div>
                         </div>
-                    </div>
+                    </Card>
 
                     {/* Markers, Clitics & Copula Card */}
-                    <div className="syntax-card">
-                        <h3 className="syntax-card-title">
-                            <Link2 size={18} />
-                            Markers, Clitics & Copula
-                        </h3>
-                        <p className="syntax-card-desc">
+                    <Card>
+                        <h2 className="flex sg-title">
+                            <Link2 /> Markers, Clitics & Copula
+                        </h2>
+                        <p className="settings-description">
                             Configure bound particles, base verb forms for lexeme detection, and zero-copula handling.
                         </p>
 
                         <div className="syntax-options-grid">
-                            <div className="syntax-control-group">
-                                <label htmlFor="verb-marker-input">Verb Base Marker(s)</label>
+                            <div className="input-wrapper">
+                                <label className="form-label" htmlFor="verb-marker-input">Verb Base Marker(s)</label>
                                 <input
                                     id="verb-marker-input"
                                     type="text"
-                                    className="syntax-input"
+                                    className="fi"
                                     value={verbMarker}
                                     placeholder="e.g. -r, -ar, -en (comma separated)"
                                     onChange={(e) => updateConfig({ verbMarker: e.target.value })}
                                 />
                             </div>
 
-                            <div className="syntax-control-group">
-                                <label htmlFor="clitics-input">Clitics</label>
+                            <div className="input-wrapper">
+                                <label className="form-label" htmlFor="clitics-input">Clitics</label>
                                 <input
                                     id="clitics-input"
                                     type="text"
-                                    className="syntax-input"
+                                    className="fi"
                                     value={cliticsRules}
                                     placeholder="e.g. s, ll, ne (comma separated)"
                                     onChange={(e) => updateConfig({ cliticsRules: e.target.value })}
                                 />
                             </div>
 
-                            <div className="syntax-control-group">
-                                <label htmlFor="copula-select">Copula (To Be) Behavior</label>
+                            <div className="input-wrapper">
+                                <label className="form-label" htmlFor="copula-select">Copula (To Be) Behavior</label>
                                 <select
                                     id="copula-select"
-                                    className="syntax-select"
+                                    className="fi custom-select"
                                     value={
                                         waConfig.copulaBehavior === 'replace' ||
                                         waConfig.copulaBehavior === 'both' ||
@@ -234,12 +239,12 @@ export default function GrammarTab() {
                             </div>
 
                             {waConfig.copulaBehavior === 'zero_copula' && (
-                                <div className="syntax-control-group">
-                                    <label htmlFor="copula-replacement-input">Copula Replacement Marker</label>
+                                <div className="input-wrapper">
+                                    <label className="form-label" htmlFor="copula-replacement-input">Copula Replacement Marker</label>
                                     <input
                                         id="copula-replacement-input"
                                         type="text"
-                                        className="syntax-input"
+                                        className="fi"
                                         value={waConfig.copulaReplacement || ''}
                                         placeholder="e.g. vu"
                                         onChange={(e) =>
@@ -251,7 +256,7 @@ export default function GrammarTab() {
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </Card>
                 </div>
             )}
 
@@ -259,6 +264,12 @@ export default function GrammarTab() {
             {subTab === 'paradigm' && (
                 <div className="grammar-tab-content">
                     <Card>
+                        <h2 className="flex sg-title">
+                            <Play /> Paradigm Matrix & Inflection Tester
+                        </h2>
+                        <p className="settings-description">
+                            Test all inflectional rules and sandhi mutations live against any root word or lexicon entry.
+                        </p>
                         <ParadigmMatrix />
                     </Card>
                 </div>
@@ -268,12 +279,12 @@ export default function GrammarTab() {
             {subTab === 'reference' && (
                 <div className="grammar-tab-content">
                     <Card>
-                        <div className="grammar-section-header">
-                            <h2 className="grammar-section-title">
-                                <BookOpen size={20} />
-                                Linguistic Formula Reference & Guide
-                            </h2>
-                        </div>
+                        <h2 className="flex sg-title">
+                            <BookOpen /> Linguistic Formula Reference & Guide
+                        </h2>
+                        <p className="settings-description">
+                            Quick reference for affix notation, regex stem mutations, phonological environments, and rule chaining.
+                        </p>
 
                         <div className="reference-cards-grid">
                             {/* Card 1: Affixes */}

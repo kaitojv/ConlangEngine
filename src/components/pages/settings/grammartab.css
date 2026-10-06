@@ -3,20 +3,15 @@
 .grammar-tab-container {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
 }
 
-/* Grammar Sub-Navigation */
+/* Grammar Sub-Navigation - Aligned with settings.css .config-subnav & .config-tab-btn */
 .grammar-subnav {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: var(--s2);
-    padding: 0.35rem;
-    border-radius: 12px;
-    border: 1px solid var(--bd);
+    gap: 10px;
+    margin-bottom: 20px;
     overflow-x: auto;
-    scrollbar-width: none;
+    padding-bottom: 5px;
 }
 
 .grammar-subnav::-webkit-scrollbar {
@@ -26,83 +21,36 @@
 .grammar-subnav-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.55rem 1rem;
-    border-radius: 8px;
-    background: transparent;
-    border: none;
-    color: var(--tx2);
-    font-size: 0.88rem;
-    font-weight: 600;
-    font-family: inherit;
+    gap: 6px;
+    background: var(--s4);
+    color: var(--tx1, var(--tx));
+    border: 1px solid var(--bd);
+    padding: 8px 18px;
+    border-radius: 99px;
     cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: 0.2s;
     white-space: nowrap;
-    transition: all 0.2s ease;
+    font-family: inherit;
 }
 
 .grammar-subnav-btn:hover {
     color: var(--tx);
-    background: var(--s3);
+    border-color: var(--acc);
 }
 
 .grammar-subnav-btn.active {
-    background: var(--acc);
-    color: #ffffff;
-    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+    background: rgba(124, 58, 237, 0.15);
+    color: var(--acc);
+    border-color: var(--acc);
+    box-shadow: none;
 }
 
-/* Section Header */
-.grammar-section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
-}
-
-.grammar-section-title {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--tx);
-    margin: 0;
-}
-
-/* Syntax Visualizer & Cards */
-.syntax-grid-layout {
+/* Content Container */
+.grammar-tab-content {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
-}
-
-.syntax-card {
-    background: var(--s2);
-    border: 1px solid var(--bd);
-    border-radius: 14px;
-    padding: 1.25rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.syntax-card-title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--tx);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0;
-}
-
-.syntax-card-desc {
-    font-size: 0.85rem;
-    color: var(--tx2);
-    margin: 0;
-    line-height: 1.45;
 }
 
 /* Word Order Visual Diagram */
@@ -112,10 +60,11 @@
     justify-content: center;
     gap: 0.75rem;
     padding: 1.25rem;
-    background: var(--s1);
+    background: var(--s2);
     border: 1px solid var(--bd);
-    border-radius: 12px;
+    border-radius: var(--rad);
     flex-wrap: wrap;
+    margin-bottom: 1.5rem;
 }
 
 .word-order-pill {
@@ -158,45 +107,14 @@
     color: var(--tx3);
     font-size: 1.1rem;
     font-weight: bold;
+    display: flex;
+    align-items: center;
 }
 
 .syntax-options-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 1rem;
-}
-
-.syntax-control-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-}
-
-.syntax-control-group label {
-    font-size: 0.78rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--tx2);
-    letter-spacing: 0.03em;
-}
-
-.syntax-select,
-.syntax-input {
-    padding: 0.65rem 0.85rem;
-    background: var(--s1);
-    border: 1px solid var(--bd);
-    border-radius: 8px;
-    color: var(--tx);
-    font-size: 0.88rem;
-    font-family: inherit;
-    outline: none;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.syntax-select:focus,
-.syntax-input:focus {
-    border-color: var(--acc);
-    box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.25rem;
 }
 
 .syntax-checkbox-label {
@@ -204,10 +122,10 @@
     align-items: center;
     gap: 0.65rem;
     cursor: pointer;
-    font-size: 0.88rem;
+    font-size: 0.9rem;
     color: var(--tx);
     font-weight: 600;
-    margin-top: 0.5rem;
+    margin-top: 0.75rem;
     user-select: none;
 }
 
@@ -228,7 +146,7 @@
 .reference-card {
     background: var(--s2);
     border: 1px solid var(--bd);
-    border-radius: 14px;
+    border-radius: var(--rad);
     padding: 1.25rem;
     display: flex;
     flex-direction: column;
