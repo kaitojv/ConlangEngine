@@ -178,6 +178,27 @@
     color: var(--tx);
 }
 
+/* Comment Button */
+.explore-comment-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: transparent;
+    border: none;
+    color: var(--tx2);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.3rem 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.explore-comment-btn:hover {
+    background: var(--s3);
+    color: var(--acc);
+}
+
 .explore-like-btn.liked {
     color: #ff4b4b; /* A vibrant red for likes */
 }

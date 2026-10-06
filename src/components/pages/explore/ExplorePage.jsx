@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../utils/supabaseClient.js';
-import { Globe, BookA, User, Loader2, Heart, Trash2, Library, Map as MapIcon, Search, Users, ChevronDown, ChevronsUpDown, ChevronsDownUp } from 'lucide-react';
+import { Globe, BookA, User, Loader2, Heart, Trash2, Library, Map as MapIcon, Search, Users, ChevronDown, ChevronsUpDown, ChevronsDownUp, MessageSquare } from 'lucide-react';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import toast from 'react-hot-toast';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
@@ -12,6 +12,7 @@ import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import PageSkeleton from '../../UI/PageSkeleton/PageSkeleton.jsx';
 import { useSharing } from '../../../hooks/useSharing.jsx';
+import CommentsModal from './CommentsModal.jsx';
 import './explorePage.css';
 
 export default function ExplorePage() {
@@ -21,6 +22,8 @@ export default function ExplorePage() {
     const [error, setError] = useState(null);
     const [likesData, setLikesData] = useState({}); // { projectId: count }
     const [userLikes, setUserLikes] = useState(new Set()); // Set of projectIds liked by user
+    const [commentsCountData, setCommentsCountData] = useState({}); // { projectId: count }
+    const [activeCommentConlang, setActiveCommentConlang] = useState(null);
     const [sessionUser, setSessionUser] = useState(null);
     const [sortBy, setSortBy] = useState('updated'); // 'updated', 'likes', 'name', 'author', 'words'
     const [groupByAuthor, setGroupByAuthor] = useState(true);
@@ -157,6 +160,24 @@ export default function ExplorePage() {
                         });
                         setLikesData(counts);
                         setUserLikes(userSet);
+                    }
+
+                    // Fetch comments count for these projects
+                    try {
+                        const { data: commentsResult, error: commentsError } = await supabase
+                            .from('conlang_comments')
+                            .select('project_id')
+                            .in('project_id', projectIds);
+
+                        if (!commentsError && commentsResult) {
+                            const cCounts = {};
+                            commentsResult.forEach(c => {
+                                cCounts[c.project_id] = (cCounts[c.project_id] || 0) + 1;
+                            });
+                            setCommentsCountData(cCounts);
+                        }
+                    } catch (cErr) {
+                        console.warn("Could not fetch comments count:", cErr);
                     }
                 }
             } catch (err) {
@@ -587,7 +608,18 @@ export default function ExplorePage() {
                             <span>{courseCount} {courseCount === 1 ? 'course' : 'courses'}</span>
                         </div>
                     )}
-                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <button 
+                            className="explore-comment-btn"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveCommentConlang(lang);
+                            }}
+                            title="Comments & Discussion"
+                        >
+                            <MessageSquare size={14} />
+                            <span>{commentsCountData[lang.project_id] || 0}</span>
+                        </button>
                         <button 
                             className={`explore-like-btn ${userLikes.has(lang.project_id) ? 'liked' : ''}`}
                             onClick={(e) => toggleLike(e, lang.project_id)}
@@ -765,6 +797,16 @@ export default function ExplorePage() {
                     {flatSortedConlangs.map((lang) => renderConlangCard(lang))}
                 </div>
             )}
+
+            <CommentsModal
+                isOpen={Boolean(activeCommentConlang)}
+                onClose={() => setActiveCommentConlang(null)}
+                conlang={activeCommentConlang}
+                sessionUser={sessionUser}
+                onCommentsCountChange={(pId, count) => {
+                    setCommentsCountData((prev) => ({ ...prev, [pId]: count }));
+                }}
+            />
         </div>
     );
 }
