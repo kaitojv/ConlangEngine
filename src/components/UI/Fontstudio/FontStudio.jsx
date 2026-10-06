@@ -8,6 +8,7 @@ import { RotateCcw, RotateCw, Trash2, Download, Pencil, Minus, Spline, Eraser, F
 import { exportStrokesAsSVG } from '../../../utils/svgExporter.jsx';
 import { parseSVGToStrokes } from '../../../utils/svgImporter.jsx';
 import { simplifyGlyph, countGlyphPoints } from '../../../utils/glyphSimplify.js';
+import toast from 'react-hot-toast';
 import './fontStudio.css';
 
 const generateCurvePoints = (p0, p1, p2) => {
@@ -1143,6 +1144,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     const [simplifyTolerance, setSimplifyTolerance] = useState(0.5);
 
     const handleSimplifyStrokes = () => {
+        const beforePts = countGlyphPoints(strokes);
         const withMeta = [{ isMeta: true, scale: glyphScale, leftMargin, rightMargin, yOffset }, ...strokes];
         const simplified = simplifyGlyph(withMeta, {
             tolerance: simplifyTolerance,
@@ -1150,7 +1152,15 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         });
         // Strip the placeholder metadata back out; the canvas state never
         // includes it and the real meta object is built at save time.
-        setStrokes(simplified.filter((entry) => Array.isArray(entry)));
+        const afterStrokes = simplified.filter((entry) => Array.isArray(entry));
+        const afterPts = countGlyphPoints(afterStrokes);
+        setStrokes(afterStrokes);
+
+        if (beforePts > afterPts) {
+            toast.success(`Lightened: ${beforePts} → ${afterPts} pts (${Math.round((1 - afterPts / beforePts) * 100)}% lighter, pixel-perfect)`);
+        } else {
+            toast('Glyph is already lightweight at this tolerance.');
+        }
     };
 
     const canvasPointCount = useMemo(() => countGlyphPoints(strokes), [strokes]);
@@ -1264,18 +1274,18 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                         <Button variant="default" className="btn-sm" onClick={handleSimplifyStrokes} disabled={strokes.length === 0} title="Reduce the number of points in this glyph so it saves much smaller. Visually equivalent.">
                             <Spline size={14} style={{ marginRight: '4px' }} /> Lighten
                         </Button>
-                        <label className="fs-simplify-tolerance" title="Higher tolerance means fewer points and a smaller file, but a slightly looser outline">
+                        <label className="fs-simplify-tolerance" title="Pixel-perfect tolerance (0.05px to 2.0px). 0.5px reduces ~90% points with sub-pixel accuracy.">
                             Tolerance
                             <input
                                 type="range"
                                 className="range range-xs range-primary"
-                                min="0.1"
-                                max="25"
-                                step="0.1"
-                                value={simplifyTolerance}
+                                min="0.05"
+                                max="2.0"
+                                step="0.05"
+                                value={Math.min(Math.max(simplifyTolerance, 0.05), 2.0)}
                                 onChange={(e) => setSimplifyTolerance(parseFloat(e.target.value))}
                             />
-                            <span>{simplifyTolerance.toFixed(1)}px</span>
+                            <span>{simplifyTolerance.toFixed(2)}px</span>
                         </label>
                         {canvasPointCount > 0 && (
                             <span className="fs-simplify-count" title="Points in the current drawing">

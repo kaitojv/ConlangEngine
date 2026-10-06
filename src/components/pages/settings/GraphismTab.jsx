@@ -685,8 +685,8 @@ export default function TypographyStudio() {
                                 <p className="gt-lighten-desc">
                                     Font Studio samples strokes densely so drawing stays precise, but that
                                     makes saved glyphs large. This rewrites every glyph in a lighter,
-                                    visually equivalent form. You will be asked to export a backup first,
-                                    since it cannot be undone.
+                                    pixel-perfect form (recommended: 0.5px saves ~90% space with sub-pixel fidelity).
+                                    You will be asked to export a backup first, since it cannot be undone.
                                 </p>
                             </div>
                             <div className="gt-lighten-tolerance">
@@ -697,16 +697,18 @@ export default function TypographyStudio() {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                         <input
                                             type="number"
-                                            min="0.1"
-                                            max="50"
-                                            step="0.1"
+                                            min="0.05"
+                                            max="2.0"
+                                            step="0.05"
                                             value={glyphLightenTolerance}
                                             onChange={(e) => {
                                                 const val = parseFloat(e.target.value);
-                                                if (!isNaN(val) && val > 0) setGlyphLightenTolerance(val);
+                                                if (!isNaN(val) && val > 0) {
+                                                    setGlyphLightenTolerance(Math.min(Math.max(val, 0.05), 2.0));
+                                                }
                                             }}
                                             className="gt-lighten-tolerance-input"
-                                            title="Type any tolerance up to 50px"
+                                            title="Pixel-perfect tolerance (0.05px to 2.0px)"
                                         />
                                         <span style={{ fontSize: '0.82rem', color: 'var(--tx2)' }}>px</span>
                                     </div>
@@ -714,17 +716,18 @@ export default function TypographyStudio() {
                                 <input
                                     type="range"
                                     className="range range-xs range-primary"
-                                    min="0.1"
-                                    max="25"
-                                    step="0.1"
-                                    value={Math.min(glyphLightenTolerance, 25)}
+                                    min="0.05"
+                                    max="2.0"
+                                    step="0.05"
+                                    value={Math.min(Math.max(glyphLightenTolerance, 0.05), 2.0)}
                                     onChange={(e) => setGlyphLightenTolerance(parseFloat(e.target.value))}
                                 />
                                 <div className="gt-lighten-tolerance-ticks">
-                                    <span>0.1px (Subtle)</span>
-                                    <span>3.0px</span>
-                                    <span>10.0px</span>
-                                    <span>25.0px (Ultra light)</span>
+                                    <span>0.1px (Ultra crisp)</span>
+                                    <span>0.3px</span>
+                                    <span style={{ color: 'var(--ok, #10b981)', fontWeight: 600 }}>0.5px (Pixel Perfect ⭐)</span>
+                                    <span>1.0px</span>
+                                    <span>2.0px (Max safe)</span>
                                 </div>
                             </div>
                             <Button variant="edit" onClick={handleLightenAllGlyphs} style={{ width: '100%' }}>

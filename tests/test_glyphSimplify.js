@@ -137,6 +137,16 @@ test('two-point strokes are still rounded', () => {
     assert.strictEqual(out[1].y, 8.77);
 });
 
+test('excessive tolerance is safely clamped to pixel-perfect ceiling', () => {
+    const pts = [];
+    for (let i = 0; i < 60; i++) {
+        const a = (i / 60) * Math.PI * 2;
+        pts.push({ x: 50 + Math.cos(a) * 30, y: 50 + Math.sin(a) * 30 });
+    }
+    const out = simplifyStroke(pts, { tolerance: 50, precision: 2 });
+    assert.ok(out.length >= 6, `circle outline should survive excessive tolerance, kept ${out.length} pts`);
+});
+
 console.log('\nsimplifyGlyph:');
 
 test('metadata entry is preserved exactly', () => {

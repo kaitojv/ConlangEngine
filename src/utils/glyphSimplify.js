@@ -60,11 +60,15 @@ export function simplifyPolyline(points, tolerance, isClosed = false) {
     const n = points.length;
     if (tolerance <= 0 || n <= 2) return points.slice();
 
+    // Safe ceiling (2.0px) ensures glyph curves, loops, and sharp corners
+    // are never obliterated on the 300x300 drawing canvas.
+    const effectiveTol = Math.min(tolerance, 2.0);
+
     const keep = new Uint8Array(n);
     keep[0] = 1;
     if (n > 1) keep[n - 1] = 1;
 
-    const tolSq = tolerance * tolerance;
+    const tolSq = effectiveTol * effectiveTol;
     const stack = [];
 
     if (isClosed) {
@@ -121,7 +125,9 @@ function roundCoord(v, precision) {
  * Simplifies a single stroke, preserving its lineCap / isFilled annotations.
  */
 export function simplifyStroke(stroke, options = {}) {
-    const tolerance = options.tolerance ?? 0.5;
+    const rawTol = options.tolerance ?? 0.5;
+    // Allow 0 for exact retention, otherwise clamp to pixel-perfect ceiling [0.05, 2.0]
+    const tolerance = rawTol <= 0 ? 0 : Math.min(Math.max(rawTol, 0.05), 2.0);
     const precision = options.precision ?? DEFAULT_PRECISION;
 
     const points = Array.isArray(stroke) ? stroke : (stroke?.points || []);
