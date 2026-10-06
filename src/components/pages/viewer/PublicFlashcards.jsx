@@ -17,6 +17,7 @@ export default function PublicFlashcards({ lexicon = [], config = {} }) {
     const [selectedTag, setSelectedTag] = useState('all');
     const [hasFinished, setHasFinished] = useState(false);
     const [deckStarted, setDeckStarted] = useState(false);
+    const [scriptPracticeMode, setScriptPracticeMode] = useState('standard'); // 'standard', 'native_only', 'romanized_only'
 
     // Figure out all the unique semantic tags they've used so we can filter by them
     const allTags = useMemo(() => {
@@ -111,30 +112,64 @@ export default function PublicFlashcards({ lexicon = [], config = {} }) {
                 </div>
 
                 {!deckStarted && (
-                    <div className="filter-section">
-                        <div className="filter-select-container">
-                            <label className="filter-select-label">Filter by Semantic Tag:</label>
-                            <select 
-                                value={selectedTag} 
-                                onChange={(e) => setSelectedTag(e.target.value)}
-                                className="filter-select"
-                            >
-                                <option value="all">All Words</option>
-                                {allTags.map(tag => (
-                                    <option key={tag} value={tag}>
-                                        {tag.charAt(0).toUpperCase() + tag.slice(1)}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <Button variant="imp" onClick={() => startDeck()}>
-                            <div className="btn-content-flex">
-                                <Play size={18} /> Start Study Session
+                    <>
+                        <div className="filter-section">
+                            <div className="filter-select-container">
+                                <label className="filter-select-label">Filter by Semantic Tag:</label>
+                                <select 
+                                    value={selectedTag} 
+                                    onChange={(e) => setSelectedTag(e.target.value)}
+                                    className="filter-select"
+                                >
+                                    <option value="all">All Words ({lexicon.length})</option>
+                                    {allTags.map(tag => (
+                                        <option key={tag} value={tag}>
+                                            {tag.charAt(0).toUpperCase() + tag.slice(1)}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
-                        </Button>
-                    </div>
+                            <Button variant="imp" onClick={() => startDeck()}>
+                                <div className="btn-content-flex">
+                                    <Play size={18} /> Start Study Session
+                                </div>
+                            </Button>
+                        </div>
+
+                        <div className="study-options-row">
+                            <div className="study-options-group">
+                                <label className="study-options-label">Script Mode:</label>
+                                <div className="study-toggle-pills">
+                                    <button
+                                        type="button"
+                                        className={`study-pill-btn ${scriptPracticeMode === 'standard' ? 'active' : ''}`}
+                                        onClick={() => setScriptPracticeMode('standard')}
+                                    >
+                                        Standard
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`study-pill-btn ${scriptPracticeMode === 'native_only' ? 'active' : ''}`}
+                                        onClick={() => setScriptPracticeMode('native_only')}
+                                        title="Practice reading native script glyphs only"
+                                    >
+                                        Native Script Drill
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`study-pill-btn ${scriptPracticeMode === 'romanized_only' ? 'active' : ''}`}
+                                        onClick={() => setScriptPracticeMode('romanized_only')}
+                                        title="Show phonetic romanization only"
+                                    >
+                                        Romanized Only
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </>
                 )}
             </Card>
+
 
             {/* --- ACTIVE FLASHCARD AREA --- */}
             {deckStarted && (
@@ -165,19 +200,47 @@ export default function PublicFlashcards({ lexicon = [], config = {} }) {
                                     </>
                                 ) : currentWord ? (
                                     <>
-                                        <div className="fc-word custom-font-text notranslate" style={{ display: 'flex', justifyContent: 'center' }}>
-                                            {config.customGlyphs?.[(currentWord.word || '').toLowerCase()] ? (
-                                                <img 
-                                                    src={config.customGlyphs[(currentWord.word || '').toLowerCase()]} 
-                                                    alt={currentWord.word}
-                                                    style={{ maxHeight: '80px', maxWidth: '200px', objectFit: 'contain' }}
-                                                />
-                                            ) : (
-                                                transliterate(currentWord.word)
-                                            )}
-                                        </div>
-                                        {currentWord.ipa && (
-                                            <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>
+                                        {scriptPracticeMode === 'native_only' ? (
+                                            <div className="fc-script-drill">
+                                                <div className="fc-word custom-font-text notranslate fc-word-large" style={{ display: 'flex', justifyContent: 'center' }}>
+                                                    {config.customGlyphs?.[(currentWord.word || '').toLowerCase()] ? (
+                                                        <img 
+                                                            src={config.customGlyphs[(currentWord.word || '').toLowerCase()]} 
+                                                            alt={currentWord.word}
+                                                            style={{ maxHeight: '80px', maxWidth: '200px', objectFit: 'contain' }}
+                                                        />
+                                                    ) : (
+                                                        transliterate(currentWord.word)
+                                                    )}
+                                                </div>
+                                                <div className="fc-script-hint">Native Script Drill</div>
+                                            </div>
+                                        ) : scriptPracticeMode === 'romanized_only' ? (
+                                            <>
+                                                <div className="fc-word notranslate" style={{ fontSize: '2rem', fontWeight: 600 }}>
+                                                    {currentWord.word.replace(/\*/g, '')}
+                                                </div>
+                                                {currentWord.ipa && (
+                                                    <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="fc-word custom-font-text notranslate" style={{ display: 'flex', justifyContent: 'center' }}>
+                                                    {config.customGlyphs?.[(currentWord.word || '').toLowerCase()] ? (
+                                                        <img 
+                                                            src={config.customGlyphs[(currentWord.word || '').toLowerCase()]} 
+                                                            alt={currentWord.word}
+                                                            style={{ maxHeight: '80px', maxWidth: '200px', objectFit: 'contain' }}
+                                                        />
+                                                    ) : (
+                                                        transliterate(currentWord.word)
+                                                    )}
+                                                </div>
+                                                {currentWord.ipa && (
+                                                    <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>
+                                                )}
+                                            </>
                                         )}
                                         <div style={{ marginTop: '15px' }}>
                                             <Button variant="default" onClick={(e) => handleListen(e, currentWord)} style={{ padding: '6px 12px' }}>
@@ -193,7 +256,15 @@ export default function PublicFlashcards({ lexicon = [], config = {} }) {
                                 {currentWord && !hasFinished && (
                                     <>
                                         <div className="fc-trans">{currentWord.translation}</div>
-                                        <div className="fc-class">{currentWord.wordClass}</div>
+                                        {scriptPracticeMode === 'native_only' && (
+                                            <div className="fc-revealed-phonetics">
+                                                <span className="notranslate" style={{ fontWeight: 600, color: 'var(--tx)' }}>
+                                                    {currentWord.word.replace(/\*/g, '')}
+                                                </span>
+                                                {currentWord.ipa && <span className="notranslate" style={{ marginLeft: '8px' }}>/{currentWord.ipa}/</span>}
+                                            </div>
+                                        )}
+                                        <div className="fc-class" style={{ marginTop: '10px' }}>{currentWord.wordClass}</div>
                                         {currentWord.tags && currentWord.tags.length > 0 && (
                                             <div className="fc-tags-container">
                                                 {currentWord.tags.map(tag => (
@@ -203,6 +274,7 @@ export default function PublicFlashcards({ lexicon = [], config = {} }) {
                                         )}
                                     </>
                                 )}
+
                             </div>
                         </div>
                     </div>

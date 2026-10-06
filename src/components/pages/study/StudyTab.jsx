@@ -6,7 +6,7 @@ import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { renderWordInScript } from '../../../utils/scriptRendering.js';
 import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
-import { BrainCircuit, Flame, RotateCcw, Check, X, Play, Map, Zap, Volume2, Star, Crown, Book, Brain, Dumbbell, Sword, Shield, Lock } from 'lucide-react';
+import { BrainCircuit, Flame, RotateCcw, Check, X, Play, Map, Zap, Volume2, Star, Crown, Book, Brain, Dumbbell, Sword, Shield, Lock, CheckCircle } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import Mascot from './Mascot.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
@@ -85,6 +85,8 @@ export default function StudyTab() {
     const [hasFinished, setHasFinished] = useState(false);
     const [deckStarted, setDeckStarted] = useState(false);
     const [flashcardDirection, setFlashcardDirection] = useState('toEnglish');
+    const [flashcardDirectionPreference, setFlashcardDirectionPreference] = useState('toEnglish'); // 'auto', 'toEnglish', 'toConlang'
+    const [scriptPracticeMode, setScriptPracticeMode] = useState('standard'); // 'standard', 'native_only', 'romanized_only'
     const updateWordSRS = useLexiconStore((state) => state.updateWordSRS);
     
     // Gamification state
@@ -155,7 +157,11 @@ export default function StudyTab() {
         setHasFinished(false);
         setDeckStarted(true);
         setStudyMode('flashcard');
-        setFlashcardDirection(Math.random() > 0.5 ? 'toEnglish' : 'toConlang');
+        if (flashcardDirectionPreference === 'auto') {
+            setFlashcardDirection(Math.random() > 0.5 ? 'toEnglish' : 'toConlang');
+        } else {
+            setFlashcardDirection(flashcardDirectionPreference);
+        }
     };
 
     const startQuiz = (levelNode) => {
@@ -484,29 +490,91 @@ export default function StudyTab() {
                 )}
 
                 {studyMode === 'flashcard' && !deckStarted && (
-                    <div className="filter-section">
-                        <div className="filter-select-container">
-                            <label className="filter-select-label">Filter by Semantic Tag:</label>
-                            <select 
-                                value={selectedTag} 
-                                onChange={(e) => setSelectedTag(e.target.value)}
-                                className="filter-select"
-                            >
-                                <option value="all">All Words</option>
-                                {allTags.map(tag => (
-                                    <option key={tag} value={tag}>
-                                        {tag.charAt(0).toUpperCase() + tag.slice(1)}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <Button variant="imp" onClick={() => startDeck()}>
-                            <div className="btn-content-flex">
-                                <Play size={18} /> Start Study Session
+                    <>
+                        <div className="filter-section">
+                            <div className="filter-select-container">
+                                <label className="filter-select-label">Filter by Semantic Tag:</label>
+                                <select 
+                                    value={selectedTag} 
+                                    onChange={(e) => setSelectedTag(e.target.value)}
+                                    className="filter-select"
+                                >
+                                    <option value="all">All Words ({lexicon.length})</option>
+                                    {allTags.map(tag => (
+                                        <option key={tag} value={tag}>
+                                            {tag.charAt(0).toUpperCase() + tag.slice(1)}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
-                        </Button>
-                    </div>
+                            <Button variant="imp" onClick={() => startDeck()}>
+                                <div className="btn-content-flex">
+                                    <Play size={18} /> Start Study Session
+                                </div>
+                            </Button>
+                        </div>
+
+                        <div className="study-options-row">
+                            <div className="study-options-group">
+                                <label className="study-options-label">Drill Direction:</label>
+                                <div className="study-toggle-pills">
+                                    <button
+                                        type="button"
+                                        className={`study-pill-btn ${flashcardDirectionPreference === 'toEnglish' ? 'active' : ''}`}
+                                        onClick={() => setFlashcardDirectionPreference('toEnglish')}
+                                    >
+                                        Conlang → Meaning
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`study-pill-btn ${flashcardDirectionPreference === 'toConlang' ? 'active' : ''}`}
+                                        onClick={() => setFlashcardDirectionPreference('toConlang')}
+                                    >
+                                        Meaning → Conlang
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`study-pill-btn ${flashcardDirectionPreference === 'auto' ? 'active' : ''}`}
+                                        onClick={() => setFlashcardDirectionPreference('auto')}
+                                    >
+                                        Mixed (Auto)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="study-options-group">
+                                <label className="study-options-label">Script Mode:</label>
+                                <div className="study-toggle-pills">
+                                    <button
+                                        type="button"
+                                        className={`study-pill-btn ${scriptPracticeMode === 'standard' ? 'active' : ''}`}
+                                        onClick={() => setScriptPracticeMode('standard')}
+                                        title="Show custom script with romanization"
+                                    >
+                                        Standard
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`study-pill-btn ${scriptPracticeMode === 'native_only' ? 'active' : ''}`}
+                                        onClick={() => setScriptPracticeMode('native_only')}
+                                        title="Practice reading the native script glyphs only"
+                                    >
+                                        Native Script Drill
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`study-pill-btn ${scriptPracticeMode === 'romanized_only' ? 'active' : ''}`}
+                                        onClick={() => setScriptPracticeMode('romanized_only')}
+                                        title="Show Latin phonetic romanization only"
+                                    >
+                                        Romanized Only
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </>
                 )}
+
             </Card>
 
             {/* --- EXERCISE PLAYER (COURSE ENGINE) --- */}
@@ -608,17 +676,17 @@ export default function StudyTab() {
                                                     <path 
                                                         d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
                                                         stroke="var(--bg)"
-                                                        strokeWidth="32"
+                                                        strokeWidth="14"
                                                         fill="none"
                                                         strokeLinecap="round"
                                                     />
                                                     <path 
                                                         d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
                                                         stroke={lineColor}
-                                                        strokeWidth="24"
+                                                        strokeWidth="8"
                                                         fill="none"
                                                         strokeLinecap="round"
-                                                        strokeDasharray={isNextLocked ? "12, 16" : "none"}
+                                                        strokeDasharray={isNextLocked ? "8, 10" : "none"}
                                                     />
                                                 </g>
                                             );
@@ -635,43 +703,61 @@ export default function StudyTab() {
                                         const isCurrent = i === currentPathIdx;
                                         const isLocked = i > currentPathIdx;
 
-                                        const nodeColor = isLocked ? 'var(--bd)' : (isCompleted ? 'var(--save)' : (node.color || 'var(--acc)'));
-                                        const iconColor = isLocked ? 'var(--tx2)' : nodeColor;
+                                        const nodeColor = isLocked ? 'var(--bd)' : (isCompleted ? 'var(--ok)' : (node.color || 'var(--acc)'));
+                                        const iconColor = isLocked ? 'var(--tx3)' : (isCompleted ? '#ffffff' : (node.color || 'var(--acc)'));
                                         
                                         let IconCmp = Zap;
-                                        if (isLocked) IconCmp = Lock;
-                                        else if (isCompleted) IconCmp = Check;
-                                        else {
-                                            switch(node.icon) {
-                                                case 'Star': IconCmp = Star; break;
-                                                case 'Crown': IconCmp = Crown; break;
-                                                case 'Book': IconCmp = Book; break;
-                                                case 'Brain': IconCmp = Brain; break;
-                                                case 'Flame': IconCmp = Flame; break;
-                                                case 'Dumbbell': IconCmp = Dumbbell; break;
-                                                case 'Sword': IconCmp = Sword; break;
-                                                case 'Shield': IconCmp = Shield; break;
-                                                default: IconCmp = Zap; break;
-                                            }
+                                        switch(node.icon) {
+                                            case 'Star': IconCmp = Star; break;
+                                            case 'Crown': IconCmp = Crown; break;
+                                            case 'Book': IconCmp = Book; break;
+                                            case 'Brain': IconCmp = Brain; break;
+                                            case 'Flame': IconCmp = Flame; break;
+                                            case 'Dumbbell': IconCmp = Dumbbell; break;
+                                            case 'Sword': IconCmp = Sword; break;
+                                            case 'Shield': IconCmp = Shield; break;
+                                            default: IconCmp = Zap; break;
+                                        }
+                                        if (isCompleted) {
+                                            IconCmp = Check;
                                         }
 
                                         const nodeScore = courseLevelScores[node.id];
                                         const starCount = nodeScore ? nodeScore.stars : 0;
+                                        const prevTitle = pathNodes[i - 1]?.title || 'Previous Level';
+                                        const reqText = `Requires: ${prevTitle}`;
 
                                         return (
-                                            <div key={node.id} className={`path-node-wrapper ${isZigZag ? 'left' : 'right'} ${isCurrent ? 'current-node' : ''} ${isLocked ? 'locked-node' : ''}`}>
+                                            <div 
+                                                key={node.id} 
+                                                className={`path-node-wrapper ${isZigZag ? 'left' : 'right'} ${isCurrent ? 'current-node' : ''} ${isLocked ? 'locked-node' : ''}`}
+                                                title={isLocked ? reqText : node.title}
+                                            >
+                                                {isLocked && (
+                                                    <div className="path-node-req-tooltip" role="tooltip">
+                                                        <Lock size={12} className="req-tooltip-icon" />
+                                                        <span>{reqText}</span>
+                                                    </div>
+                                                )}
                                                 <div 
                                                     className="path-node" 
                                                     onClick={() => !isLocked && startQuiz(node)}
                                                     style={{ 
-                                                        backgroundColor: isLocked ? 'var(--s1)' : 'var(--bg)', 
+                                                        backgroundColor: isLocked ? 'var(--s1)' : 'var(--s2)', 
                                                         borderColor: nodeColor, 
-                                                        boxShadow: isLocked ? 'none' : `0 8px 0 ${nodeColor}`,
+                                                        boxShadow: isLocked ? 'none' : `0 6px 0 ${nodeColor}`,
                                                         transform: isLocked ? 'scale(0.95)' : 'none',
                                                         cursor: isLocked ? 'not-allowed' : 'pointer'
                                                     }}
                                                 >
-                                                    <div className="path-node-icon"><IconCmp size={32} color={iconColor} fill={isLocked ? 'none' : 'currentColor'} strokeWidth={isCompleted ? 3 : 2} /></div>
+                                                    <div className="path-node-icon">
+                                                        <IconCmp 
+                                                            size={30} 
+                                                            color={iconColor} 
+                                                            fill={isCompleted ? 'none' : (isLocked ? 'none' : 'rgba(255, 255, 255, 0.08)')} 
+                                                            strokeWidth={isCompleted ? 3 : 2.5} 
+                                                        />
+                                                    </div>
                                                     {!isLocked && (
                                                         <div style={{ position: 'absolute', bottom: '-25px', display: 'flex', gap: '2px', background: 'var(--bg)', padding: '2px 6px', borderRadius: '12px', border: '1px solid var(--bd)', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                                                             {[1, 2, 3].map(s => (
@@ -680,7 +766,7 @@ export default function StudyTab() {
                                                         </div>
                                                     )}
                                                 </div>
-                                                <div className="path-node-label" style={{ opacity: isLocked ? 0.5 : 1 }}>
+                                                <div className="path-node-label" style={{ opacity: isLocked ? 0.6 : 1 }}>
                                                     {node.title}
                                                 </div>
                                             </div>
@@ -724,7 +810,7 @@ export default function StudyTab() {
                         // fits the 600px track instead of hanging outside the panel.
                         const widestRow = Math.max(1, ...pathRows.map(r => r.length));
                         const siblingGap = widestRow > 1
-                            ? Math.max(90, Math.min(140, (TRACK_INNER_WIDTH - NODE_SIZE) / (widestRow - 1)))
+                            ? Math.max(110, Math.min(150, (TRACK_INNER_WIDTH - NODE_SIZE) / (widestRow - 1)))
                             : 140;
                         
                         const nodePositions = {};
@@ -741,6 +827,37 @@ export default function StudyTab() {
                         // that much height plus the trailing label under the last node.
                         const trackHeight = FIRST_ROW_Y + maxDepth * ROW_HEIGHT + NODE_SIZE + LABEL_SPACE;
 
+                        // Build and layer all DAG connector edges
+                        const allEdges = pathNodes.flatMap((node) => {
+                            if (!node.prerequisites || node.prerequisites.length === 0) return [];
+                            return node.prerequisites.map((pId) => {
+                                const prereqPos = nodePositions[pId];
+                                const currentPos = nodePositions[node.id];
+                                if (!prereqPos || !currentPos) return null;
+                                
+                                const isPrereqCompleted = courseProgress.includes(pId);
+                                const edgeColor = isPrereqCompleted ? (node.color || 'var(--acc)') : 'var(--bd)';
+
+                                return {
+                                    id: `edge-${pId}-${node.id}`,
+                                    pId,
+                                    nodeId: node.id,
+                                    prereqPos,
+                                    currentPos,
+                                    isPrereqCompleted,
+                                    edgeColor,
+                                    targetY: currentPos.y,
+                                    sourceY: prereqPos.y
+                                };
+                            }).filter(Boolean);
+                        });
+
+                        // Make sure all lines going out from a level are rendered in SVG
+                        // on a layer below (earlier in DOM) lines going into that level.
+                        // Sorting descending by targetY paints edges targeting deeper rows first,
+                        // so incoming edges at upper levels sit cleanly on top of outgoing edges.
+                        allEdges.sort((a, b) => b.targetY - a.targetY || b.sourceY - a.sourceY);
+
                         return (
                             <div className="path-track is-dag" style={{ height: `${trackHeight}px` }}>
                                 <div style={{ position: 'absolute', top: '-40px', right: '0' }}>
@@ -753,89 +870,102 @@ export default function StudyTab() {
                                     className="path-svg" 
                                     style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: '100%', overflow: 'visible', zIndex: 0, pointerEvents: 'none' }}
                                 >
-                                    {pathNodes.flatMap((node) => {
-                                        if (!node.prerequisites || node.prerequisites.length === 0) return [];
-                                        return node.prerequisites.map((pId) => {
-                                            const prereqPos = nodePositions[pId];
-                                            const currentPos = nodePositions[node.id];
-                                            if (!prereqPos || !currentPos) return null;
-                                            
-                                            // Is this line unlocked? A line is unlocked if the prerequisite is completed.
-                                            const isPrereqCompleted = courseProgress.includes(pId);
-                                            const lineColor = isPrereqCompleted ? (node.color || 'var(--acc)') : 'var(--bd)';
-
-                                            return (
-                                                <g key={`edge-${pId}-${node.id}`}>
-                                                    <path 
-                                                        d={`M ${prereqPos.x} ${prereqPos.y} C ${prereqPos.x} ${(prereqPos.y + currentPos.y)/2}, ${currentPos.x} ${(prereqPos.y + currentPos.y)/2}, ${currentPos.x} ${currentPos.y}`}
-                                                        stroke="var(--bg)"
-                                                        strokeWidth="32"
-                                                        fill="none"
-                                                        strokeLinecap="round"
-                                                    />
-                                                    <path 
-                                                        d={`M ${prereqPos.x} ${prereqPos.y} C ${prereqPos.x} ${(prereqPos.y + currentPos.y)/2}, ${currentPos.x} ${(prereqPos.y + currentPos.y)/2}, ${currentPos.x} ${currentPos.y}`}
-                                                        stroke={lineColor}
-                                                        strokeWidth="24"
-                                                        fill="none"
-                                                        strokeLinecap="round"
-                                                        strokeDasharray={isPrereqCompleted ? "none" : "12, 16"}
-                                                    />
-                                                </g>
-                                            );
-                                        });
-                                    })}
+                                    {allEdges.map((edge) => (
+                                        <g key={edge.id}>
+                                            <path 
+                                                d={`M ${edge.prereqPos.x} ${edge.prereqPos.y} C ${edge.prereqPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${edge.currentPos.y}`}
+                                                stroke="var(--bg)"
+                                                strokeWidth="14"
+                                                fill="none"
+                                                strokeLinecap="round"
+                                            />
+                                            <path 
+                                                d={`M ${edge.prereqPos.x} ${edge.prereqPos.y} C ${edge.prereqPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${edge.currentPos.y}`}
+                                                stroke={edge.edgeColor}
+                                                strokeWidth="8"
+                                                fill="none"
+                                                strokeLinecap="round"
+                                                strokeDasharray={edge.isPrereqCompleted ? "none" : "8, 10"}
+                                            />
+                                        </g>
+                                    ))}
                                 </svg>
 
                                 {pathNodes.map((node) => {
                                     const pos = nodePositions[node.id];
                                     if (!pos) return null;
                                     
-                                    const isLocked = node.prerequisites && node.prerequisites.length > 0 && !node.prerequisites.every(pId => courseProgress.includes(pId));
+                                    const hasPrereqs = Array.isArray(node.prerequisites) && node.prerequisites.length > 0;
+                                    // Multiple connections: only ONE connection needed. Single connection: that one needed.
+                                    const isUnlocked = !hasPrereqs || node.prerequisites.some(pId => courseProgress.includes(pId));
+                                    const isLocked = !isUnlocked;
                                     const isCompleted = courseProgress.includes(node.id);
                                     const isCurrent = !isLocked && !isCompleted;
 
-                                    const nodeColor = isLocked ? 'var(--bd)' : (isCompleted ? 'var(--save)' : (node.color || 'var(--acc)'));
-                                    const iconColor = isLocked ? 'var(--tx2)' : nodeColor;
+                                    const nodeColor = isLocked ? 'var(--bd)' : (isCompleted ? 'var(--ok)' : (node.color || 'var(--acc)'));
+                                    const iconColor = isLocked ? 'var(--tx3)' : (isCompleted ? '#ffffff' : (node.color || 'var(--acc)'));
                                     
+                                    // Inaccessible levels show the usual icon grayed out instead of a lock
                                     let IconCmp = Zap;
-                                    if (isLocked) IconCmp = Lock;
-                                    else if (isCompleted) IconCmp = Check;
-                                    else {
-                                        switch(node.icon) {
-                                            case 'Star': IconCmp = Star; break;
-                                            case 'Crown': IconCmp = Crown; break;
-                                            case 'Book': IconCmp = Book; break;
-                                            case 'Brain': IconCmp = Brain; break;
-                                            case 'Flame': IconCmp = Flame; break;
-                                            case 'Dumbbell': IconCmp = Dumbbell; break;
-                                            case 'Sword': IconCmp = Sword; break;
-                                            case 'Shield': IconCmp = Shield; break;
-                                            default: IconCmp = Zap; break;
-                                        }
+                                    switch(node.icon) {
+                                        case 'Star': IconCmp = Star; break;
+                                        case 'Crown': IconCmp = Crown; break;
+                                        case 'Book': IconCmp = Book; break;
+                                        case 'Brain': IconCmp = Brain; break;
+                                        case 'Flame': IconCmp = Flame; break;
+                                        case 'Dumbbell': IconCmp = Dumbbell; break;
+                                        case 'Sword': IconCmp = Sword; break;
+                                        case 'Shield': IconCmp = Shield; break;
+                                        default: IconCmp = Zap; break;
+                                    }
+                                    if (isCompleted) {
+                                        IconCmp = Check;
                                     }
 
                                     const nodeScore = courseLevelScores[node.id];
                                     const starCount = nodeScore ? nodeScore.stars : 0;
+
+                                    const prereqNodes = (node.prerequisites || [])
+                                        .map(pId => pathNodes.find(n => n.id === pId))
+                                        .filter(Boolean);
+                                    const reqText = prereqNodes.length === 1
+                                        ? `Requires: ${prereqNodes[0].title || 'Previous Level'}`
+                                        : prereqNodes.length > 1
+                                            ? `Requires any of: ${prereqNodes.map(p => p.title || 'Untitled').join(', ')}`
+                                            : 'Locked level';
 
                                     return (
                                         <div
                                             key={node.id}
                                             className={`path-node-wrapper is-dag-node ${isCurrent ? 'current-node' : ''} ${isLocked ? 'locked-node' : ''}`}
                                             style={{ transform: `translateX(${pos.x}px)`, top: `${pos.y - NODE_SIZE / 2}px` }}
+                                            title={isLocked ? reqText : node.title}
                                         >
+                                            {isLocked && (
+                                                <div className="path-node-req-tooltip" role="tooltip">
+                                                    <Lock size={12} className="req-tooltip-icon" />
+                                                    <span>{reqText}</span>
+                                                </div>
+                                            )}
                                             <div 
                                                 className="path-node" 
                                                 onClick={() => !isLocked && startQuiz(node)}
                                                 style={{ 
-                                                    backgroundColor: isLocked ? 'var(--s1)' : 'var(--bg)', 
+                                                    backgroundColor: isLocked ? 'var(--s1)' : 'var(--s2)', 
                                                     borderColor: nodeColor, 
-                                                    boxShadow: isLocked ? 'none' : `0 8px 0 ${nodeColor}`,
+                                                    boxShadow: isLocked ? 'none' : `0 6px 0 ${nodeColor}`,
                                                     transform: isLocked ? 'scale(0.95)' : 'none',
                                                     cursor: isLocked ? 'not-allowed' : 'pointer'
                                                 }}
                                             >
-                                                <div className="path-node-icon"><IconCmp size={32} color={iconColor} fill={isLocked ? 'none' : 'currentColor'} strokeWidth={isCompleted ? 3 : 2} /></div>
+                                                <div className="path-node-icon">
+                                                    <IconCmp 
+                                                        size={30} 
+                                                        color={iconColor} 
+                                                        fill={isCompleted ? 'none' : (isLocked ? 'none' : 'rgba(255, 255, 255, 0.08)')} 
+                                                        strokeWidth={isCompleted ? 3 : 2.5} 
+                                                    />
+                                                </div>
                                                 {!isLocked && (
                                                     <div style={{ position: 'absolute', bottom: '-25px', display: 'flex', gap: '2px', background: 'var(--bg)', padding: '2px 6px', borderRadius: '12px', border: '1px solid var(--bd)', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                                                         {[1, 2, 3].map(s => (
@@ -844,7 +974,7 @@ export default function StudyTab() {
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="path-node-label" style={{ opacity: isLocked ? 0.5 : 1 }}>
+                                            <div className="path-node-label" style={{ opacity: isLocked ? 0.6 : 1 }}>
                                                 {node.title}
                                             </div>
                                         </div>
@@ -932,24 +1062,57 @@ export default function StudyTab() {
                             <div className="fc-face">
                                 {hasFinished ? (
                                     <>
-                                        <div className="finished-emoji">🎉</div>
+                                        <div className="finished-icon-wrapper">
+                                            <CheckCircle size={56} color="var(--ok)" />
+                                        </div>
                                         <h2 className="finished-title">Deck Finished!</h2>
                                         <p className="finished-text">Great job today! Your streak has been updated.</p>
-                                        <Button variant="default" onClick={() => setDeckStarted(false)} style={{marginTop: '20px'}}>Back to Menu</Button>
+                                        <Button variant="default" onClick={() => setDeckStarted(false)} style={{ marginTop: '20px' }}>
+                                            Back to Menu
+                                        </Button>
                                     </>
                                 ) : currentWord ? (
                                     <>
                                         {flashcardDirection === 'toEnglish' ? (
                                             <>
-                                                <div className="fc-word custom-font-text notranslate">
-                                                    {currentWord.scriptOverride
-                                                        ? renderWordInScript(currentWord, useConfigStore.getState(), lexicon).text
-                                                        : transliterate(currentWord.word)
-                                                    }
-                                                </div>
-                                                {currentWord.ipa && (
-                                                    <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>
+                                                {scriptPracticeMode === 'native_only' ? (
+                                                    <div className="fc-script-drill">
+                                                        <div className="fc-word custom-font-text notranslate fc-word-large">
+                                                            {currentWord.scriptOverride
+                                                                ? renderWordInScript(currentWord, useConfigStore.getState(), lexicon).text
+                                                                : (currentWord.ideogram || transliterate(currentWord.word))
+                                                            }
+                                                        </div>
+                                                        <div className="fc-script-hint">Native Script Drill</div>
+                                                    </div>
+                                                ) : scriptPracticeMode === 'romanized_only' ? (
+                                                    <>
+                                                        <div className="fc-word notranslate" style={{ fontSize: '2rem', fontWeight: 600 }}>
+                                                            {currentWord.word.replace(/\*/g, '')}
+                                                        </div>
+                                                        {currentWord.ipa && (
+                                                            <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div className="fc-word custom-font-text notranslate">
+                                                            {currentWord.scriptOverride
+                                                                ? renderWordInScript(currentWord, useConfigStore.getState(), lexicon).text
+                                                                : transliterate(currentWord.word)
+                                                            }
+                                                        </div>
+                                                        {currentWord.ipa && (
+                                                            <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>
+                                                        )}
+                                                    </>
                                                 )}
+                                                <div style={{ marginTop: '15px' }}>
+                                                    <Button variant="default" onClick={(e) => handleListen(e, currentWord)} style={{ padding: '6px 12px' }}>
+                                                        <div className="btn-content-flex"><Volume2 size={16} /> Listen</div>
+                                                    </Button>
+                                                </div>
+                                                <div className="flip-hint" style={{ marginTop: '15px' }}>Click to flip</div>
                                             </>
                                         ) : (
                                             <div className="fc-word-english">
@@ -972,11 +1135,24 @@ export default function StudyTab() {
                                         {flashcardDirection === 'toEnglish' ? (
                                             <>
                                                 <div className="fc-trans">{currentWord.translation}</div>
+                                                {scriptPracticeMode === 'native_only' && (
+                                                    <div className="fc-revealed-phonetics">
+                                                        <span className="notranslate" style={{ fontWeight: 600, color: 'var(--tx)' }}>
+                                                            {currentWord.word.replace(/\*/g, '')}
+                                                        </span>
+                                                        {currentWord.ipa && <span className="notranslate" style={{ marginLeft: '8px' }}>/{currentWord.ipa}/</span>}
+                                                    </div>
+                                                )}
                                             </>
                                         ) : (
                                             <>
                                                 <div className="fc-word custom-font-text notranslate" style={{fontSize: '2rem', marginBottom: '10px'}}>
-                                                    {transliterate(currentWord.word)}
+                                                    {scriptPracticeMode === 'romanized_only'
+                                                        ? currentWord.word.replace(/\*/g, '')
+                                                        : (currentWord.scriptOverride
+                                                            ? renderWordInScript(currentWord, useConfigStore.getState(), lexicon).text
+                                                            : transliterate(currentWord.word))
+                                                    }
                                                 </div>
                                                 {currentWord.ipa && (
                                                     <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>
@@ -994,6 +1170,7 @@ export default function StudyTab() {
                                     </>
                                 )}
                             </div>
+
                         </div>
                     </div>
 
@@ -1040,3 +1217,4 @@ export default function StudyTab() {
         </div>
     );
 }
+

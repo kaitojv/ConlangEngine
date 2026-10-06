@@ -13,6 +13,7 @@ import { BookOpen, List, Wand2, Copy, Check, Plus, Volume2, X, ChevronLeft, Chev
 import * as HoverCard from '@radix-ui/react-hover-card';
 import SyntaxTreeRenderer from './SyntaxTreeRenderer.jsx';
 import { playAzureTTS } from '@/utils/azureTTS.js';
+import { exportLeipzig } from '@/utils/leipzigExporter.js';
 import toast from 'react-hot-toast';
 import './glosserTab.css';
 
@@ -22,7 +23,8 @@ export default function GlosserTab() {
     const [processedWords, setProcessedWords] = useState([]);
     const [freeTranslation, setFreeTranslation] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [copied, setCopied] = useState(false);
+    const [exportFormat, setExportFormat] = useState('monospace');
+    const [copiedFormat, setCopiedFormat] = useState(null);
     
     // Builder Mode State
     const [builderSearch, setBuilderSearch] = useState('');
@@ -124,46 +126,25 @@ export default function GlosserTab() {
         }
     };
 
-    // --- EXPORT IGT TO CLIPBOARD ---
-    const handleCopyIGT = () => {
-        let line1 = []; // Segmented Conlang Words
-        let line2 = []; // Grammatical Glosses
-
-        processedWords.forEach(tokenData => {
-            if (tokenData.isPunctuation && !tokenData.text.trim()) return;
-
-            if (tokenData.isPunctuation) {
-                line1.push(tokenData.text);
-                line2.push(tokenData.text);
-            } else if (tokenData.parsings.length > 0) {
-                let p = tokenData.parsings[0];
-                let baseWord = p.root.word.replace(/\*/g, '');
-                let lexicalGloss = (p.root.translation?.split(',')[0] || '').toLowerCase().trim().replace(/\s*\/\s*/g, '/').replace(/\s+/g, '.');
-                
-                let segmentedWord = baseWord;
-                let glossParts = [lexicalGloss];
-                
-                p.rules.slice().reverse().forEach(r => {
-                    let cleanAffix = r.affix.replace(/^-|-$/g, '');
-                    let tag = r.name.toUpperCase();
-                    
-                    if (r.affix.endsWith('-') && !r.affix.startsWith('-')) {
-                        segmentedWord = cleanAffix + '-' + segmentedWord;
-                        glossParts.unshift(tag);
-                    } else {
-                        segmentedWord = segmentedWord + '-' + cleanAffix;
-                        glossParts.push(tag);
-                    }
-                });
-                line1.push(segmentedWord);
-                line2.push(glossParts.join('-'));
-            }
-        });
-
-        const igtText = `${line1.join('\t')}\n${line2.join('\t')}\n${freeTranslation ? `'${freeTranslation}'` : ''}`.trim();
-        navigator.clipboard.writeText(igtText);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+    // --- EXPORT LEIPZIG GLOSS ---
+    const handleCopyLeipzig = (format = exportFormat) => {
+        const text = exportLeipzig(processedWords, freeTranslation, format);
+        if (!text) {
+            toast.error('No gloss content to copy.');
+            return;
+        }
+        navigator.clipboard.writeText(text);
+        setCopiedFormat(format);
+        const formatNames = {
+            monospace: 'Aligned Monospace',
+            markdown: 'Markdown Table',
+            latex: 'LaTeX (gb4e)',
+            tsv: 'TSV'
+        };
+        toast.success(`Copied as ${formatNames[format] || format}!`);
+        setTimeout(() => {
+            setCopiedFormat(null);
+        }, 2000);
     };
 
     // --- 3. RENDER HELPERS ---
@@ -260,19 +241,54 @@ export default function GlosserTab() {
                         );
                     })}
                 </div>
-                <div style={{ borderTop: '1px dashed var(--bd)', paddingTop: '20px', display: 'flex', gap: '15px', alignItems: 'center' }}>
-                    <input 
-                        type="text" 
-                        placeholder="Type the free translation here..." 
-                        value={freeTranslation}
-                        onChange={(e) => setFreeTranslation(e.target.value)}
-                        style={{ flex: 1, padding: '10px 15px', background: 'var(--s4)', border: '1px solid var(--bd)', borderRadius: 'var(--rad-sm)', color: 'var(--tx)', fontStyle: 'italic', fontSize: '1.05rem', outline: 'none' }}
-                    />
-                    <Button variant="edit" onClick={handleCopyIGT}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? 'Copied!' : 'Copy IGT'}
+                <div style={{ borderTop: '1px dashed var(--bd)', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                        <input 
+                            type="text" 
+                            placeholder="Type the free translation here..." 
+                            value={freeTranslation}
+                            onChange={(e) => setFreeTranslation(e.target.value)}
+                            style={{ flex: 1, padding: '10px 15px', background: 'var(--s4)', border: '1px solid var(--bd)', borderRadius: 'var(--rad-sm)', color: 'var(--tx)', fontStyle: 'italic', fontSize: '1.05rem', outline: 'none' }}
+                        />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', background: 'var(--s2)', padding: '10px 14px', borderRadius: 'var(--rad)', border: '1px solid var(--bd)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--tx2)' }}>Export Leipzig:</span>
+                            <div className="leipzig-format-tabs" style={{ display: 'flex', gap: '4px' }}>
+                                {[
+                                    { id: 'monospace', label: 'Aligned Text' },
+                                    { id: 'markdown', label: 'Markdown' },
+                                    { id: 'latex', label: 'LaTeX' },
+                                    { id: 'tsv', label: 'TSV' }
+                                ].map(f => (
+                                    <button
+                                        key={f.id}
+                                        type="button"
+                                        onClick={() => setExportFormat(f.id)}
+                                        style={{
+                                            padding: '4px 10px',
+                                            fontSize: '0.8rem',
+                                            borderRadius: 'var(--rad-sm)',
+                                            border: exportFormat === f.id ? '1px solid var(--acc)' : '1px solid var(--bd)',
+                                            background: exportFormat === f.id ? 'var(--acc)' : 'var(--s3)',
+                                            color: exportFormat === f.id ? '#ffffff' : 'var(--tx2)',
+                                            cursor: 'pointer',
+                                            fontWeight: exportFormat === f.id ? 600 : 'normal',
+                                            transition: 'all 0.15s ease'
+                                        }}
+                                    >
+                                        {f.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    </Button>
+                        <Button variant="edit" onClick={() => handleCopyLeipzig(exportFormat)}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {copiedFormat ? <Check size={16} /> : <Copy size={16} />}
+                                {copiedFormat ? 'Copied!' : `Copy ${exportFormat === 'monospace' ? 'Aligned' : exportFormat.toUpperCase()}`}
+                            </div>
+                        </Button>
+                    </div>
                 </div>
             </div>
         );

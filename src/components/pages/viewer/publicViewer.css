@@ -631,6 +631,7 @@
     width: 80px;
     height: 80px;
     border: 4px solid rgba(0,0,0,0.1);
+    background-color: var(--s2);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -641,20 +642,30 @@
 }
 
 .pv-path-node-icon {
-    color: var(--acc);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .pv-path-node-label {
     position: absolute;
-    bottom: -40px;
-    font-size: 0.9rem;
-    font-weight: bold;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: 124px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1.25;
     color: var(--tx);
-    background: var(--bg);
-    padding: 6px 14px;
-    border-radius: 20px;
-    border: 2px solid var(--bd);
-    white-space: nowrap;
+    background: var(--s2);
+    padding: 4px 8px;
+    border-radius: 10px;
+    border: 1px solid var(--bd2);
+    white-space: normal;
+    text-align: center;
+    word-break: break-word;
+    overflow-wrap: break-word;
     z-index: 5;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.35);
 }

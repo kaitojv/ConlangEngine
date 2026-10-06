@@ -170,3 +170,94 @@
     max-width: 360px;
     line-height: 1.45;
 }
+
+/* 2D Matrix & Export Toolbar */
+.paradigm-toolbar-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+}
+
+.paradigm-mode-pills {
+    display: flex;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    padding: 2px;
+    gap: 2px;
+}
+
+.paradigm-mode-btn {
+    padding: 6px 12px;
+    border: none;
+    background: transparent;
+    color: var(--tx2);
+    font-size: 0.82rem;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.paradigm-mode-btn.active {
+    background: var(--s1);
+    color: var(--acc);
+}
+
+.paradigm-export-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.paradigm-export-btn {
+    padding: 5px 10px;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    color: var(--tx2);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+}
+
+.paradigm-export-btn:hover {
+    background: var(--s3);
+    color: var(--tx);
+    border-color: var(--acc);
+}
+
+.paradigm-matrix-table td.row-header {
+    background: var(--s3);
+    font-weight: 700;
+    color: var(--tx);
+    white-space: nowrap;
+    border-right: 1px solid var(--bd);
+}
+
+.paradigm-matrix-cell {
+    font-weight: 600;
+    color: var(--acc);
+}
+
+.paradigm-dim-badge {
+    font-size: 0.68rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--s1);
+    color: var(--tx3);
+    margin-left: 6px;
+    text-transform: none;
+    font-weight: normal;
+}
+

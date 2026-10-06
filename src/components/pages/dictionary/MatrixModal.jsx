@@ -3,8 +3,9 @@ import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { applyRuleToWord, getPersonRules, expandWildcardDependencies } from '@/utils/morphologyEngine.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
-import { Lightbulb, Edit2, Save, Download } from 'lucide-react';
+import { Lightbulb, Edit2, Save, Download, Copy, Check } from 'lucide-react';
 import { exportTextAsSVG } from '@/utils/svgExporter.jsx';
+import { generateFullParadigm, paradigmToMarkdown, paradigmToTSV } from '@/utils/paradigmGenerator.js';
 import toast from 'react-hot-toast';
 import './matrixmodal.css';
 
@@ -27,6 +28,7 @@ export default function MatrixModal({ wordObj }) {
     const { transliterate } = useTransliterator();
     const [isEditMode, setIsEditMode] = useState(false);
     const [conjugationMode, setConjugationMode] = useState('affix');
+    const [copyState, setCopyState] = useState(''); // 'md' | 'tsv' | ''
     
     // State for saving derivations
     const [derivationToSave, setDerivationToSave] = useState(null);
@@ -148,7 +150,28 @@ export default function MatrixModal({ wordObj }) {
         return generatedResult;
     };
 
+    const handleCopyParadigm = async (format) => {
+        const config = useConfigStore.getState();
+        const paradigm = generateFullParadigm(cleanBaseWord, config, {
+            wordClass: liveWord.wordClass || 'all',
+            conjugationMode
+        });
+        const text = format === 'md' ? paradigmToMarkdown(paradigm) : paradigmToTSV(paradigm);
+        if (!text) {
+            return toast.error("No paradigm generated to export.");
+        }
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopyState(format);
+            toast.success(`Copied paradigm table as ${format.toUpperCase()}!`);
+            setTimeout(() => setCopyState(''), 2000);
+        } catch {
+            toast.error("Failed to copy to clipboard.");
+        }
+    };
+
     // Time to paint the UI!
+
     return (
         <div className="matrix-modal-container">
             <div className="matrix-header-box">
@@ -219,6 +242,22 @@ export default function MatrixModal({ wordObj }) {
                         </div>
                     )}
                     <button 
+                        type="button"
+                        className="matrix-edit-btn"
+                        onClick={() => handleCopyParadigm('md')}
+                        title="Copy paradigm table as Markdown"
+                    >
+                        {copyState === 'md' ? <Check size={14} /> : <Copy size={14} />} MD Table
+                    </button>
+                    <button 
+                        type="button"
+                        className="matrix-edit-btn"
+                        onClick={() => handleCopyParadigm('tsv')}
+                        title="Copy paradigm table as TSV"
+                    >
+                        {copyState === 'tsv' ? <Check size={14} /> : <Copy size={14} />} TSV
+                    </button>
+                    <button 
                         className={`matrix-edit-btn ${isEditMode ? 'active' : ''}`}
                         onClick={() => setIsEditMode(!isEditMode)}
                     >
@@ -226,6 +265,7 @@ export default function MatrixModal({ wordObj }) {
                     </button>
                 </div>
             </div>
+
 
             {derivationToSave && (
                 <div className="matrix-quick-save-row">

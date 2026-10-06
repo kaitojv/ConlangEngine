@@ -828,7 +828,7 @@ export default function CourseBuilder({ onExit }) {
                                         <span className="cb-prereq-label">Branching / Prerequisites:</span>
                                         <span className="cb-prereq-status">
                                             {(level.prerequisites || []).length > 0 
-                                                ? `${(level.prerequisites || []).length} required (${courseData.filter(l => (level.prerequisites || []).includes(l.id)).map(l => l.title || 'Untitled').join(', ')})`
+                                                ? `${(level.prerequisites || []).length === 1 ? '1 required' : `${(level.prerequisites || []).length} connected (any unlocks)`} (${courseData.filter(l => (level.prerequisites || []).includes(l.id)).map(l => l.title || 'Untitled').join(', ')})`
                                                 : 'Linear progression (Default)'}
                                         </span>
                                     </span>
@@ -841,7 +841,7 @@ export default function CourseBuilder({ onExit }) {
                                 {openPrereqs.has(level.id) && (
                                     <div className="cb-prereq-body">
                                         <p className="cb-prereq-desc">
-                                            By default, this level unlocks sequentially after the previous level. Select specific earlier levels below only if you want a custom branching path:
+                                            By default, this level unlocks sequentially after the previous level. Select specific earlier levels below for custom branching paths (if multiple are connected, completing any one unlocks this level):
                                         </p>
                                         <div className="cb-prereq-list">
                                             {courseData.filter(l => l.id !== level.id).map(l => {
@@ -994,7 +994,7 @@ export default function CourseBuilder({ onExit }) {
                                                         value={phrase.conlang || ''}
                                                         onChange={(e) => updatePhrase(level.id, phrase.id, 'conlang', e.target.value)}
                                                         placeholder={
-                                                            phrase.type === 'picture_match' ? "e.g. 🍎" :
+                                                            phrase.type === 'picture_match' ? "e.g. apple" :
                                                             phrase.type === 'conjugation_drill' ? "e.g. Past tense of 'run'" :
                                                             phrase.type === 'fill_blank' ? "e.g. The ____ pays" :
                                                             phrase.type === 'glyph_drawing' ? "e.g. nuvir or ka or the glyph character itself" :

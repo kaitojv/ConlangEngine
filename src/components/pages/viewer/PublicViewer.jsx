@@ -884,14 +884,14 @@ export default function PublicViewer() {
                                                 <path 
                                                     d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
                                                     stroke="var(--bd)"
-                                                    strokeWidth="32"
+                                                    strokeWidth="14"
                                                     fill="none"
                                                     strokeLinecap="round"
                                                 />
                                                 <path 
                                                     d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
                                                     stroke="var(--s2)"
-                                                    strokeWidth="24"
+                                                    strokeWidth="8"
                                                     fill="none"
                                                     strokeLinecap="round"
                                                 />

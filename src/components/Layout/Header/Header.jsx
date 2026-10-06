@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
-import { Menu, Home, Printer, Save, FolderUp, User, Cloud, FileText, Table, FileEdit, Download, Gamepad, Globe, Database, Search, Book, Swords } from 'lucide-react';
+import { Menu, Home, Printer, Save, FolderUp, User, Cloud, FileText, Table, FileEdit, Download, Gamepad, Globe, Database, Search, Book, Swords, Layers } from 'lucide-react';
 
 
 // Bring in our UI components and styling
@@ -22,6 +22,7 @@ import { exportTerrariaLocalizationPack } from '../../../utils/terrariaExporter.
 
 import { ExportModal } from './ExportModal.jsx';
 import { CsvImportModal } from './CsvImportModal.jsx';
+import AnkiExportModal from '../../UI/AnkiExportModal/AnkiExportModal.jsx';
 import BackupStatus from '../BackupStatus/BackupStatus.jsx';
 import { sanitizeBackup } from '../../../utils/schemaValidator.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
@@ -37,6 +38,7 @@ export default function Header({ openMenu, onBackupNow }) {
     const [isLive, setIsLive] = useState(false);
     const [exportType, setExportType] = useState(null); // 'pdf', 'docx', 'obsidian', 'sheets'
     const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
+    const [isAnkiModalOpen, setIsAnkiModalOpen] = useState(false);
 
     // Listen for auth changes and figure out if the user has an active Pro subscription
     useEffect(() => {
@@ -279,6 +281,9 @@ export default function Header({ openMenu, onBackupNow }) {
                                 <button className="export-opt" onClick={() => setExportType('sheets')}>
                                     <Table size={14} /> Sheets (CSV)
                                 </button>
+                                <button className="export-opt" onClick={() => setIsAnkiModalOpen(true)}>
+                                    <Layers size={14} /> Anki Deck (TSV)
+                                </button>
                                 <button className="export-opt" onClick={() => setExportType('minecraft')}>
                                     <Gamepad size={14} /> Minecraft Pack
                                 </button>
@@ -348,6 +353,10 @@ export default function Header({ openMenu, onBackupNow }) {
         <CsvImportModal 
             isOpen={isCsvModalOpen}
             onClose={() => setIsCsvModalOpen(false)}
+        />
+        <AnkiExportModal 
+            isOpen={isAnkiModalOpen}
+            onClose={() => setIsAnkiModalOpen(false)}
         />
         </>
     );

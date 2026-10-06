@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
-import { renderWordInScript } from '../../../utils/scriptRendering.js';
+import { renderWordInScript, renderWordStringInScript } from '../../../utils/scriptRendering.js';
 import { getScriptSystem, resolveWordScriptId, getDefaultScriptId } from '../../../utils/scriptResolver.js';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import Card from '../../UI/Card/Card.jsx';
@@ -82,6 +82,8 @@ export default function LexiconList() {
     const [showBoundMorphemes, setShowBoundMorphemes] = useState(false);
     // Toggle for showing romanized form beneath the conscript in script modes
     const [showRomanization, setShowRomanization] = useState(false);
+    // Active script display switcher: 'auto', 'latin', or specific scriptId
+    const [activeDisplayScript, setActiveDisplayScript] = useState('auto');
     // Grid vs List view mode
     const [layoutMode, setLayoutMode] = useState('list');
     // Toggle for showing/hiding quick character jump bar
@@ -570,6 +572,24 @@ export default function LexiconList() {
                             </option>
                         ))}
                     </select>
+
+                    {(scriptSystems.length > 0 || isScriptMode) && (
+                        <select 
+                            className="filter-select script-switcher-select"
+                            value={activeDisplayScript}
+                            onChange={(e) => setActiveDisplayScript(e.target.value)}
+                            title="Switch active script display in dictionary"
+                        >
+                            <option value="auto">Script: Auto (Per-Word)</option>
+                            <option value="latin">Script: Latin (Romanized)</option>
+                            {scriptSystems.map(s => (
+                                <option key={s.id} value={s.id}>
+                                    Script: {s.name || s.id} ({s.type})
+                                </option>
+                            ))}
+                        </select>
+                    )}
+
                     <label className="bound-toggle">
                         <input 
                             type="checkbox" 
@@ -579,6 +599,7 @@ export default function LexiconList() {
                         />
                         Show Affixes
                     </label>
+
                     {isScriptMode && (
                         <label className="bound-toggle">
                             <input 
@@ -735,6 +756,7 @@ export default function LexiconList() {
                         </button>
                     </div>
 
+
                     {session && (
                         <Button variant="default" className="btn-sm" onClick={handleShareLink} disabled={isSharing}>
                             <Share2 size={14} className={isSharing ? 'animate-spin' : ''} /> 
@@ -782,13 +804,18 @@ export default function LexiconList() {
                     const baseEntry = group.baseEntry;
                     const senses = group.senses;
                     const safeWord = baseEntry.word.replace(/\*/g, '');
-                    const wordScriptId = resolveWordScriptId(baseEntry, configFull);
+                    const isLatinSelected = activeDisplayScript === 'latin';
+                    const wordScriptId = (activeDisplayScript && activeDisplayScript !== 'auto' && !isLatinSelected)
+                        ? activeDisplayScript
+                        : resolveWordScriptId(baseEntry, configFull);
 
-                    // Use the entry's own ideogram directly if set and not overridden by a non-logographic script,
-                    // otherwise fall back to renderWordInScript / transliteration.
-                    // This guarantees homophones with distinct ideograms always show their own character!
+                    // Respect active script switcher if selected, otherwise entry's own script/ideogram
                     let displayWord;
-                    if (baseEntry.scriptOverride) {
+                    if (isLatinSelected) {
+                        displayWord = safeWord;
+                    } else if (activeDisplayScript && activeDisplayScript !== 'auto') {
+                        displayWord = renderWordStringInScript(safeWord, configFull, activeDisplayScript).text || safeWord;
+                    } else if (baseEntry.scriptOverride) {
                         displayWord = renderWordInScript(baseEntry, configFull, lexicon).text;
                     } else if (baseEntry.ideogram) {
                         displayWord = baseEntry.ideogram;
@@ -821,7 +848,7 @@ export default function LexiconList() {
                                             const resolvedScriptType = wordScript?.type || phonologyTypes || 'alphabetic';
                                             return (
                                                 <span 
-                                                    className={`notranslate entry-main-word custom-font-text conlang-script-${wordScriptId} ${resolvedScriptType === 'featural_block' ? 'featural-block-render' : ''}`} 
+                                                    className={`notranslate entry-main-word ${isLatinSelected ? '' : `custom-font-text conlang-script-${wordScriptId}`} ${resolvedScriptType === 'featural_block' && !isLatinSelected ? 'featural-block-render' : ''}`} 
                                                     style={{ textAlign: 'center', cursor: 'pointer', transition: 'color 0.2s' }}
                                                     onClick={() => setSelectedGlyphDetails({ 
                                                         char: resolvedScriptType === 'logographic' ? (baseEntry.ideogram || safeWord) : safeWord, 
@@ -837,6 +864,7 @@ export default function LexiconList() {
                                                 </span>
                                             );
                                         })()}
+
                                         {baseEntry.scriptOverride && scriptSystems.length > 1 && (
                                             <span className="script-badge-inline" title={`Script: ${getScriptSystem(configFull, baseEntry.scriptOverride).name}`}>
                                                 {getScriptSystem(configFull, baseEntry.scriptOverride).name}
@@ -1101,4 +1129,4 @@ export default function LexiconList() {
             </Modal>
         </div>
     );
-}
+}
