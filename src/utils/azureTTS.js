@@ -7,6 +7,8 @@
 // 5. Microsoft Azure Neural Speech (SSML + IPA phonemes)
 
 import { playFormantIPA } from './formantSynth.js';
+import { playEspeakWasm } from './espeakSynth.js';
+import { playHumanIpaAudio } from './humanIpaAudio.js';
 
 let cachedConfigStore = null;
 if (typeof window !== 'undefined') {
@@ -405,6 +407,34 @@ export const playTTS = async ({ text, ipa, voice, useIpa = false, engine } = {})
             }
         }
         return speakWithWebSpeech({ text, ipa, voice, useIpa: true });
+    }
+
+    // 2. eSpeak-NG WebAssembly (pure client-side in-browser phonetic synthesis)
+    if (selectedEngine === 'espeak') {
+        try {
+            await playEspeakWasm({
+                text,
+                ipa,
+                voice: voice || state.espeakVoice || 'en/en-us',
+                speed: state.espeakSpeed || 160,
+                pitch: state.espeakPitch || 50
+            });
+            return;
+        } catch (err) {
+            console.warn('eSpeak WASM synthesis error, falling back to Web Speech:', err);
+            return speakWithWebSpeech({ text, ipa, voice, useIpa: true });
+        }
+    }
+
+    // 3. Authentic Human IPA Audio Bank (Wikimedia Commons IPA recordings)
+    if (selectedEngine === 'human') {
+        try {
+            await playHumanIpaAudio({ ipa, text });
+            return;
+        } catch (err) {
+            console.warn('Human IPA audio player error, falling back to Web Speech:', err);
+            return speakWithWebSpeech({ text, ipa, voice, useIpa: true });
+        }
     }
 
     // 2. OpenTTS / eSpeak-NG (self-hosted open source server)
