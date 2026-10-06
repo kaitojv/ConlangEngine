@@ -30,7 +30,6 @@ const VALID_CONFIG_KEYS = new Set([
     'evolutionEpochs', 'worldMap', 'customLabels', 'ipaMappingRules', 'typographySettings',
     'ttsEngine', 'ttsVoice', 'ttsSpeed', 'ttsPitch', 'formantF0', 'openTtsUrl', 'openTtsVoice', 'customTtsUrl', 'customTtsKey', 'customTtsVoice',
     'kokoroUrl', 'kokoroVoice', 'kokoroSpeed', 'kokoroSendIpa', 'kokoroEndpointType',
-    'espeakVoice', 'espeakSpeed', 'espeakPitch',
     'azureTtsUseIpa', 'azureTtsVoice', 'azureTtsKey', 'azureTtsRegion',
     // Multi-script fields
     'scriptSystems', 'scriptRules', 'activeScriptSystemId', 'configVersion', 'scriptDataById',

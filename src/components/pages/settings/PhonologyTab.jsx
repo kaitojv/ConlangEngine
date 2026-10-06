@@ -15,7 +15,6 @@ import { Info, AudioLines, Headphones, Music, Hourglass, Wand2, BookCheck, Eye, 
 import toast from 'react-hot-toast';
 import Modal from '../../UI/Modal/Modal.jsx';
 import { playTTS } from '../../../utils/azureTTS.js';
-import { AVAILABLE_ESPEAK_VOICES } from '../../../utils/espeakSynth.js';
 import './phonologyTab.css';
 
 export default function PhonologyTab() {
@@ -31,7 +30,8 @@ export default function PhonologyTab() {
     const syllabificationAlgorithm = useConfigStore((state) => state.syllabificationAlgorithm) || 'ltr';
 
     // Multi-engine TTS & IPA Reader settings
-    const ttsEngine = useConfigStore((state) => state.ttsEngine) || 'browser';
+    const rawTtsEngine = useConfigStore((state) => state.ttsEngine) || 'browser';
+    const ttsEngine = ['browser', 'formant', 'human', 'kokoro', 'opentts', 'custom', 'azure'].includes(rawTtsEngine) ? rawTtsEngine : 'browser';
     const ttsVoice = useConfigStore((state) => state.ttsVoice) || '';
     const ttsSpeed = useConfigStore((state) => state.ttsSpeed) ?? 1.0;
     const formantF0 = useConfigStore((state) => state.formantF0) ?? 130;
@@ -39,9 +39,6 @@ export default function PhonologyTab() {
     const kokoroVoice = useConfigStore((state) => state.kokoroVoice) || 'af_heart';
     const kokoroSpeed = useConfigStore((state) => state.kokoroSpeed) ?? 1.0;
     const kokoroSendIpa = useConfigStore((state) => state.kokoroSendIpa) ?? true;
-    const espeakVoice = useConfigStore((state) => state.espeakVoice) || 'en/en-us';
-    const espeakSpeed = useConfigStore((state) => state.espeakSpeed) || 160;
-    const espeakPitch = useConfigStore((state) => state.espeakPitch) || 50;
     const openTtsUrl = useConfigStore((state) => state.openTtsUrl) || 'http://localhost:5500';
     const openTtsVoice = useConfigStore((state) => state.openTtsVoice) || 'espeak:en';
     const customTtsUrl = useConfigStore((state) => state.customTtsUrl) || '';
@@ -582,7 +579,6 @@ export default function PhonologyTab() {
                         <optgroup label="Instant / Zero-Install (Choose & Play)">
                             <option value="browser">Browser Speech Synthesizer (Built-in, zero setup)</option>
                             <option value="formant">Acoustic Formant Synthesizer (Pure Open-Source IPA, zero setup, 100% offline)</option>
-                            <option value="espeak">eSpeak-NG WebAssembly (Client-side, raw IPA phonetic engine, zero setup, 100% offline)</option>
                             <option value="human">IPA Phoneme Audio Bank (Authentic human recordings from IPA phoneticians)</option>
                         </optgroup>
                         <optgroup label="Self-Hosted & Cloud (Requires Server or API Key)">
@@ -638,60 +634,6 @@ export default function PhonologyTab() {
                                 />
                                 <span style={{ minWidth: '70px', textAlign: 'right', fontSize: '0.85rem', color: 'var(--tx2)' }}>
                                     {formantF0 < 120 ? 'Deep' : formantF0 < 180 ? 'Mid' : 'High'} ({formantF0}Hz)
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {ttsEngine === 'espeak' && (
-                    <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <Infobox title="eSpeak-NG WebAssembly (Zero-Install / 100% Offline IPA Engine)">
-                            The gold-standard open-source linguistic synthesizer running directly in your browser. Reads IPA phonemes and phonetic rules client-side with zero downloads, zero servers, and zero setup.
-                        </Infobox>
-                        <div className="settings-section-wrapper">
-                            <label className="form-label settings-label-block">eSpeak Base Voice</label>
-                            <select
-                                className="settings-select-full"
-                                value={espeakVoice}
-                                onChange={(e) => updateConfig({ espeakVoice: e.target.value })}
-                            >
-                                {AVAILABLE_ESPEAK_VOICES.map(voice => (
-                                    <option key={voice.id} value={voice.id}>{voice.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="settings-section-wrapper">
-                            <label className="form-label settings-label-block">Speech Speed ({espeakSpeed} WPM)</label>
-                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                <input
-                                    type="range"
-                                    min="100"
-                                    max="260"
-                                    step="5"
-                                    value={espeakSpeed}
-                                    onChange={(e) => updateConfig({ espeakSpeed: Number(e.target.value) })}
-                                    style={{ flex: 1 }}
-                                />
-                                <span style={{ minWidth: '70px', textAlign: 'right', fontSize: '0.85rem', color: 'var(--tx2)' }}>
-                                    {espeakSpeed} WPM
-                                </span>
-                            </div>
-                        </div>
-                        <div className="settings-section-wrapper">
-                            <label className="form-label settings-label-block">Pitch ({espeakPitch}%)</label>
-                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                <input
-                                    type="range"
-                                    min="20"
-                                    max="90"
-                                    step="2"
-                                    value={espeakPitch}
-                                    onChange={(e) => updateConfig({ espeakPitch: Number(e.target.value) })}
-                                    style={{ flex: 1 }}
-                                />
-                                <span style={{ minWidth: '70px', textAlign: 'right', fontSize: '0.85rem', color: 'var(--tx2)' }}>
-                                    {espeakPitch}%
                                 </span>
                             </div>
                         </div>
