@@ -660,9 +660,10 @@ export default function StudyTab() {
 
                         if (!hasCustomDAG) {
                             return (
-                                <div className="path-track" style={{ position: 'relative' }}>
+                                <>
                                     {renderHeader()}
-                                    <svg 
+                                    <div className="path-track" style={{ position: 'relative' }}>
+                                        <svg 
                                         className="path-svg" 
                                         style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: `${FIRST_ROW_Y + (pathNodes.length - 1) * ROW_HEIGHT + NODE_SIZE}px`, overflow: 'visible', zIndex: 1, pointerEvents: 'none' }}
                                     >
@@ -797,8 +798,9 @@ export default function StudyTab() {
                                         );
                                     })}
                                 </div>
-                            );
-                        }
+                            </>
+                        );
+                    }
                         // --- DAG LAYOUT ---
                         // A node's depth is the longest prerequisite chain reaching it,
                         // so it always sits below every level it depends on and siblings
@@ -881,10 +883,10 @@ export default function StudyTab() {
                         allEdges.sort((a, b) => b.targetY - a.targetY || b.sourceY - a.sourceY);
 
                         return (
-                            <div className="path-track is-dag" style={{ height: `${trackHeight}px`, position: 'relative' }}>
+                            <>
                                 {renderHeader()}
-                                
-                                <svg 
+                                <div className="path-track is-dag" style={{ height: `${trackHeight}px`, position: 'relative' }}>
+                                    <svg 
                                     className="path-svg" 
                                     style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: '100%', overflow: 'visible', zIndex: 1, pointerEvents: 'none' }}
                                 >
@@ -1018,7 +1020,8 @@ export default function StudyTab() {
                                     );
                                 })}
                             </div>
-                        );
+                        </>
+                    );
                     })()}
                 </div>
             )}
