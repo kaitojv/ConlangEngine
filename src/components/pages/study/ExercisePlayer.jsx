@@ -7,7 +7,7 @@ import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import Mascot from './Mascot.jsx';
-import { X, Share2, Star } from 'lucide-react';
+import { X, Check, Share2, Star } from 'lucide-react';
 import { calculateStars, calculateXP } from '@/utils/xpSystem.js';
 import { resolveWordStrokes } from '@/utils/strokeOrderResolver.js';
 import { gradeDrawing } from '@/utils/glyphDrawMatch.js';
@@ -636,11 +636,11 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                     </div>
                 ) : currentEx.type === 'true_false' ? (
                     <div className="ep-multiple-choice" style={{ display: 'flex', gap: '20px', width: '100%', maxWidth: '400px' }}>
-                        <Button variant={selectedOption === 'True' ? 'imp' : 'default'} onClick={() => setSelectedOption('True')} disabled={!!feedback} style={{ flex: 1, padding: '15px', fontSize: '1.2rem' }}>
-                            ✅ True
+                        <Button variant={selectedOption === 'True' ? 'imp' : 'default'} onClick={() => setSelectedOption('True')} disabled={!!feedback} style={{ flex: 1, padding: '15px', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                            <Check size={20} /> True
                         </Button>
-                        <Button variant={selectedOption === 'False' ? 'error' : 'default'} onClick={() => setSelectedOption('False')} disabled={!!feedback} style={{ flex: 1, padding: '15px', fontSize: '1.2rem' }}>
-                            ❌ False
+                        <Button variant={selectedOption === 'False' ? 'error' : 'default'} onClick={() => setSelectedOption('False')} disabled={!!feedback} style={{ flex: 1, padding: '15px', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                            <X size={20} /> False
                         </Button>
                     </div>
                 ) : currentEx.type === 'matching_pairs' ? (

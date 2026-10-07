@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/utils/supabaseClient.js';
-import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit, FileText, Map, Zap, ArrowLeft, Loader2, Calendar, Clock, Library } from 'lucide-react';
+import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit, FileText, Map, Zap, ArrowLeft, Loader2, Calendar, Clock, Library, Star, Crown, Book, Brain, Flame, Dumbbell, Sword, Shield, Lock, CheckCircle } from 'lucide-react';
+import Button from '../../UI/Buttons/Buttons.jsx';
 import { playAzureTTS } from '@/utils/azureTTS.js';
 import DOMPurify from 'dompurify';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
@@ -17,6 +18,12 @@ import { decompressPayloadAsync } from '@/utils/schemaValidator.jsx';
 import './publicViewer.css';
 import '../study/studyTab.css'; // Required for the course map layout
 
+const NODE_SIZE = 80;
+const ROW_HEIGHT = 150;
+const FIRST_ROW_Y = 80;
+const TRACK_INNER_WIDTH = 520;
+const LABEL_SPACE = 90;
+
 export default function PublicViewer() {
     const { projectId } = useParams();
     const [projectData, setProjectData] = useState(null);
@@ -29,6 +36,77 @@ export default function PublicViewer() {
     const [savedScroll, setSavedScroll] = useState(0);
     const [playingWordId, setPlayingWordId] = useState(null);
     const [collapsedFolders, setCollapsedFolders] = useState({});
+
+    // Visitor progress persistence for the public course map
+    const [viewerProgress, setViewerProgress] = useState(() => {
+        try {
+            const saved = localStorage.getItem(`pv_course_progress_${projectId}`);
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
+    const [viewerScores, setViewerScores] = useState(() => {
+        try {
+            const saved = localStorage.getItem(`pv_course_scores_${projectId}`);
+            return saved ? JSON.parse(saved) : {};
+        } catch {
+            return {};
+        }
+    });
+
+    useEffect(() => {
+        try {
+            const savedProg = localStorage.getItem(`pv_course_progress_${projectId}`);
+            setViewerProgress(savedProg ? JSON.parse(savedProg) : []);
+            const savedSc = localStorage.getItem(`pv_course_scores_${projectId}`);
+            setViewerScores(savedSc ? JSON.parse(savedSc) : {});
+        } catch {
+            setViewerProgress([]);
+            setViewerScores({});
+        }
+    }, [projectId]);
+
+    const handleLevelComplete = useCallback((nodeId, stats) => {
+        if (!nodeId) return;
+        setViewerProgress(prev => {
+            const next = prev.includes(nodeId) ? prev : [...prev, nodeId];
+            try {
+                localStorage.setItem(`pv_course_progress_${projectId}`, JSON.stringify(next));
+            } catch (e) {
+                console.warn(e);
+            }
+            return next;
+        });
+        if (stats) {
+            setViewerScores(prev => {
+                const currentStars = prev[nodeId]?.stars || 0;
+                if (stats.stars > currentStars) {
+                    const next = { ...prev, [nodeId]: { stars: stats.stars, correct: stats.correct, total: stats.total } };
+                    try {
+                        localStorage.setItem(`pv_course_scores_${projectId}`, JSON.stringify(next));
+                    } catch (e) {
+                        console.warn(e);
+                    }
+                    return next;
+                }
+                return prev;
+            });
+        }
+        setActiveLevel(null);
+        setTimeout(() => window.scrollTo(0, savedScroll), 50);
+    }, [projectId, savedScroll]);
+
+    const handleResetProgress = useCallback(() => {
+        setViewerProgress([]);
+        setViewerScores({});
+        try {
+            localStorage.removeItem(`pv_course_progress_${projectId}`);
+            localStorage.removeItem(`pv_course_scores_${projectId}`);
+        } catch (e) {
+            console.warn(e);
+        }
+    }, [projectId]);
 
     const handlePlayIpa = useCallback(async (entry) => {
         if (playingWordId) return; // prevent overlapping
@@ -864,64 +942,338 @@ export default function PublicViewer() {
                             <Map size={28} className="pv-section-icon" />
                             <h2 className="pv-section-title" style={{ fontSize: '1.8rem' }}>Course Map</h2>
                         </div>
-                        <div className="pv-learning-path-container" style={{ margin: '0 auto' }}>
-                            <div className="pv-path-track" style={{ position: 'relative' }}>
-                                <svg 
-                                    className="path-svg" 
-                                    style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: `${80 + (customCourse.length - 1) * 150}px`, overflow: 'visible', zIndex: 0, pointerEvents: 'none' }}
-                                >
-                                    {customCourse.map((node, i) => {
-                                        if (i === customCourse.length - 1) return null;
-                                        const isLeft = i % 2 === 0;
-                                        const y1 = 80 + i * 150;
-                                        const y2 = 80 + (i + 1) * 150;
-                                        const midY = (y1 + y2) / 2;
-                                        const x1 = isLeft ? -40 : 40;
-                                        const x2 = isLeft ? 40 : -40;
-                                        
-                                        return (
-                                            <g key={`line-${i}`}>
-                                                <path 
-                                                    d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
-                                                    stroke="var(--bd)"
-                                                    strokeWidth="14"
-                                                    fill="none"
-                                                    strokeLinecap="round"
-                                                />
-                                                <path 
-                                                    d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
-                                                    stroke="var(--s2)"
-                                                    strokeWidth="8"
-                                                    fill="none"
-                                                    strokeLinecap="round"
-                                                />
-                                            </g>
-                                        );
-                                    })}
-                                </svg>
+                        <div className="learning-path-container" style={{ margin: '0 auto' }}>
+                            {(() => {
+                                const pathNodes = customCourse;
+                                const hasCustomDAG = pathNodes.some(n => n.prerequisites !== undefined);
 
-                                {customCourse.map((node, i) => {
-                                    const isZigZag = i % 2 === 0;
+                                if (!hasCustomDAG) {
                                     return (
-                                        <div key={node.id} className={`pv-path-node-wrapper ${isZigZag ? 'left' : 'right'}`}>
-                                            <div 
-                                                className="pv-path-node" 
-                                                onClick={() => {
-                                                    setSavedScroll(window.scrollY);
-                                                    setActiveLevel(node);
-                                                    setTimeout(() => window.scrollTo(0, 0), 50);
-                                                }}
-                                                style={{ backgroundColor: 'var(--bg)', borderColor: 'var(--acc)', boxShadow: `0 8px 0 var(--acc)`, cursor: 'pointer' }}
+                                        <div className="path-track" style={{ position: 'relative' }}>
+                                            <div style={{ position: 'absolute', top: '-40px', right: '0' }}>
+                                                <Button variant="default" onClick={handleResetProgress}>
+                                                    Reset Progress
+                                                </Button>
+                                            </div>
+                                            <svg 
+                                                className="path-svg" 
+                                                style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: `${80 + (pathNodes.length - 1) * 150}px`, overflow: 'visible', zIndex: 0, pointerEvents: 'none' }}
                                             >
-                                                <div className="pv-path-node-icon"><Zap size={32} color="var(--acc)" fill="none" /></div>
-                                            </div>
-                                            <div className="pv-path-node-label">
-                                                {node.title}
-                                            </div>
+                                                {pathNodes.map((node, i) => {
+                                                    if (i === pathNodes.length - 1) return null;
+                                                    const isLeft = i % 2 === 0;
+                                                    const y1 = 80 + i * 150;
+                                                    const y2 = 80 + (i + 1) * 150;
+                                                    const midY = (y1 + y2) / 2;
+                                                    const x1 = isLeft ? -40 : 40;
+                                                    const x2 = isLeft ? 40 : -40;
+                                                    
+                                                    let currentPathIdx = pathNodes.findIndex(n => !viewerProgress.includes(n.id));
+                                                    if (currentPathIdx === -1) currentPathIdx = pathNodes.length;
+                                                    
+                                                    const isNextLocked = (i + 1) > currentPathIdx;
+                                                    const lineColor = isNextLocked ? 'var(--bd)' : (node.color || 'var(--acc)');
+                                                    
+                                                    return (
+                                                        <g key={`line-${i}`}>
+                                                            <path 
+                                                                d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
+                                                                stroke="var(--bg)"
+                                                                strokeWidth="14"
+                                                                fill="none"
+                                                                strokeLinecap="round"
+                                                            />
+                                                            <path 
+                                                                d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
+                                                                stroke={lineColor}
+                                                                strokeWidth="8"
+                                                                fill="none"
+                                                                strokeLinecap="round"
+                                                                strokeDasharray={isNextLocked ? "8, 10" : "none"}
+                                                            />
+                                                        </g>
+                                                    );
+                                                })}
+                                            </svg>
+
+                                            {pathNodes.map((node, i) => {
+                                                const isZigZag = i % 2 === 0;
+                                                
+                                                let currentPathIdx = pathNodes.findIndex(n => !viewerProgress.includes(n.id));
+                                                if (currentPathIdx === -1) currentPathIdx = pathNodes.length;
+                                                
+                                                const isCompleted = i < currentPathIdx || viewerProgress.includes(node.id);
+                                                const isCurrent = i === currentPathIdx;
+                                                const isLocked = i > currentPathIdx;
+
+                                                const nodeColor = isLocked ? 'var(--bd)' : (isCompleted ? 'var(--ok)' : (node.color || 'var(--acc)'));
+                                                const iconColor = isLocked ? 'var(--tx3)' : (node.color || 'var(--acc)');
+                                                
+                                                let IconCmp = Zap;
+                                                switch(node.icon) {
+                                                    case 'Star': IconCmp = Star; break;
+                                                    case 'Crown': IconCmp = Crown; break;
+                                                    case 'Book': IconCmp = Book; break;
+                                                    case 'Brain': IconCmp = Brain; break;
+                                                    case 'Flame': IconCmp = Flame; break;
+                                                    case 'Dumbbell': IconCmp = Dumbbell; break;
+                                                    case 'Sword': IconCmp = Sword; break;
+                                                    case 'Shield': IconCmp = Shield; break;
+                                                    default: IconCmp = Zap; break;
+                                                }
+
+                                                const nodeScore = viewerScores[node.id];
+                                                const starCount = nodeScore ? nodeScore.stars : 0;
+                                                const prevTitle = pathNodes[i - 1]?.title || 'Previous Level';
+                                                const reqText = `Requires: ${prevTitle}`;
+
+                                                return (
+                                                    <div 
+                                                        key={node.id} 
+                                                        className={`path-node-wrapper ${isZigZag ? 'left' : 'right'} ${isCurrent ? 'current-node' : ''} ${isLocked ? 'locked-node' : ''}`}
+                                                        title={isLocked ? reqText : node.title}
+                                                    >
+                                                        {isLocked && (
+                                                            <div className="path-node-req-tooltip" role="tooltip">
+                                                                <Lock size={12} className="req-tooltip-icon" />
+                                                                <span>{reqText}</span>
+                                                            </div>
+                                                        )}
+                                                        <div 
+                                                            className="path-node" 
+                                                            onClick={() => {
+                                                                if (!isLocked) {
+                                                                    setSavedScroll(window.scrollY);
+                                                                    setActiveLevel(node);
+                                                                    setTimeout(() => window.scrollTo(0, 0), 50);
+                                                                }
+                                                            }}
+                                                            style={{ 
+                                                                backgroundColor: isLocked ? 'var(--s1)' : 'var(--s2)', 
+                                                                borderColor: nodeColor, 
+                                                                boxShadow: isLocked ? 'none' : `0 6px 0 ${nodeColor}`,
+                                                                transform: isLocked ? 'scale(0.95)' : 'none',
+                                                                cursor: isLocked ? 'not-allowed' : 'pointer'
+                                                            }}
+                                                        >
+                                                            <div className="path-node-icon">
+                                                                <IconCmp 
+                                                                    size={30} 
+                                                                    color={iconColor} 
+                                                                    fill={isCompleted ? 'none' : (isLocked ? 'none' : 'rgba(255, 255, 255, 0.08)')} 
+                                                                    strokeWidth={isCompleted ? 3 : 2.5} 
+                                                                />
+                                                            </div>
+                                                            {!isLocked && (
+                                                                <div style={{ position: 'absolute', bottom: '-25px', display: 'flex', gap: '2px', background: 'var(--bg)', padding: '2px 6px', borderRadius: '12px', border: '1px solid var(--bd)', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                                                                    {[1, 2, 3].map(s => (
+                                                                        <Star key={s} size={12} color={s <= starCount ? '#f59e0b' : 'var(--bd)'} fill={s <= starCount ? '#f59e0b' : 'none'} />
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="path-node-label" style={{ opacity: isLocked ? 0.6 : 1 }}>
+                                                            {node.title}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     );
-                                })}
-                            </div>
+                                }
+
+                                // --- DAG LAYOUT ---
+                                const nodeDepths = {};
+                                pathNodes.forEach(n => { nodeDepths[n.id] = 0; });
+                                const depthCap = pathNodes.length;
+                                let changed = true;
+                                let loopCount = 0;
+                                while (changed && loopCount <= depthCap) {
+                                    changed = false;
+                                    pathNodes.forEach(n => {
+                                        if (!n.prerequisites || n.prerequisites.length === 0) return;
+                                        const maxPrereqDepth = Math.max(...n.prerequisites.map(pId => nodeDepths[pId] !== undefined ? nodeDepths[pId] : -1));
+                                        if (maxPrereqDepth >= 0 && nodeDepths[n.id] <= maxPrereqDepth) {
+                                            nodeDepths[n.id] = Math.min(maxPrereqDepth + 1, depthCap);
+                                            changed = true;
+                                        }
+                                    });
+                                    loopCount++;
+                                }
+                                
+                                const maxDepth = Math.max(0, ...Object.values(nodeDepths));
+                                const pathRows = Array.from({ length: maxDepth + 1 }, () => []);
+                                pathNodes.forEach(n => pathRows[nodeDepths[n.id]].push(n));
+                                
+                                const widestRow = Math.max(1, ...pathRows.map(r => r.length));
+                                const siblingGap = widestRow > 1
+                                    ? Math.max(110, Math.min(150, (TRACK_INNER_WIDTH - NODE_SIZE) / (widestRow - 1)))
+                                    : 140;
+                                
+                                const nodePositions = {};
+                                pathRows.forEach((row, rIdx) => {
+                                    const y = FIRST_ROW_Y + rIdx * ROW_HEIGHT;
+                                    const numNodes = row.length;
+                                    row.forEach((n, colIdx) => {
+                                        const xOffset = (colIdx - (numNodes - 1) / 2) * siblingGap;
+                                        nodePositions[n.id] = { x: xOffset, y };
+                                    });
+                                });
+
+                                const trackHeight = FIRST_ROW_Y + maxDepth * ROW_HEIGHT + NODE_SIZE + LABEL_SPACE;
+
+                                const allEdges = pathNodes.flatMap((node) => {
+                                    if (!node.prerequisites || node.prerequisites.length === 0) return [];
+                                    return node.prerequisites.map((pId) => {
+                                        const prereqPos = nodePositions[pId];
+                                        const currentPos = nodePositions[node.id];
+                                        if (!prereqPos || !currentPos) return null;
+                                        
+                                        const isPrereqCompleted = viewerProgress.includes(pId);
+                                        const edgeColor = isPrereqCompleted ? (node.color || 'var(--acc)') : 'var(--bd)';
+
+                                        return {
+                                            id: `edge-${pId}-${node.id}`,
+                                            pId,
+                                            nodeId: node.id,
+                                            prereqPos,
+                                            currentPos,
+                                            isPrereqCompleted,
+                                            edgeColor,
+                                            targetY: currentPos.y,
+                                            sourceY: prereqPos.y
+                                        };
+                                    }).filter(Boolean);
+                                });
+
+                                allEdges.sort((a, b) => b.targetY - a.targetY || b.sourceY - a.sourceY);
+
+                                return (
+                                    <div className="path-track is-dag" style={{ height: `${trackHeight}px` }}>
+                                        <div style={{ position: 'absolute', top: '-40px', right: '0' }}>
+                                            <Button variant="default" onClick={handleResetProgress}>
+                                                Reset Progress
+                                            </Button>
+                                        </div>
+                                        
+                                        <svg 
+                                            className="path-svg" 
+                                            style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: '100%', overflow: 'visible', zIndex: 0, pointerEvents: 'none' }}
+                                        >
+                                            {allEdges.map((edge) => (
+                                                <g key={edge.id}>
+                                                    <path 
+                                                        d={`M ${edge.prereqPos.x} ${edge.prereqPos.y} C ${edge.prereqPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${edge.currentPos.y}`}
+                                                        stroke="var(--bg)"
+                                                        strokeWidth="14"
+                                                        fill="none"
+                                                        strokeLinecap="round"
+                                                    />
+                                                    <path 
+                                                        d={`M ${edge.prereqPos.x} ${edge.prereqPos.y} C ${edge.prereqPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${edge.currentPos.y}`}
+                                                        stroke={edge.edgeColor}
+                                                        strokeWidth="8"
+                                                        fill="none"
+                                                        strokeLinecap="round"
+                                                        strokeDasharray={edge.isPrereqCompleted ? "none" : "8, 10"}
+                                                    />
+                                                </g>
+                                            ))}
+                                        </svg>
+
+                                        {pathNodes.map((node) => {
+                                            const pos = nodePositions[node.id];
+                                            if (!pos) return null;
+                                            
+                                            const hasPrereqs = Array.isArray(node.prerequisites) && node.prerequisites.length > 0;
+                                            const isUnlocked = !hasPrereqs || node.prerequisites.some(pId => viewerProgress.includes(pId));
+                                            const isLocked = !isUnlocked;
+                                            const isCompleted = viewerProgress.includes(node.id);
+                                            const isCurrent = !isLocked && !isCompleted;
+
+                                            const nodeColor = isLocked ? 'var(--bd)' : (isCompleted ? 'var(--ok)' : (node.color || 'var(--acc)'));
+                                            const iconColor = isLocked ? 'var(--tx3)' : (node.color || 'var(--acc)');
+                                            
+                                            let IconCmp = Zap;
+                                            switch(node.icon) {
+                                                case 'Star': IconCmp = Star; break;
+                                                case 'Crown': IconCmp = Crown; break;
+                                                case 'Book': IconCmp = Book; break;
+                                                case 'Brain': IconCmp = Brain; break;
+                                                case 'Flame': IconCmp = Flame; break;
+                                                case 'Dumbbell': IconCmp = Dumbbell; break;
+                                                case 'Sword': IconCmp = Sword; break;
+                                                case 'Shield': IconCmp = Shield; break;
+                                                default: IconCmp = Zap; break;
+                                            }
+
+                                            const nodeScore = viewerScores[node.id];
+                                            const starCount = nodeScore ? nodeScore.stars : 0;
+
+                                            const prereqNodes = (node.prerequisites || [])
+                                                .map(pId => pathNodes.find(n => n.id === pId))
+                                                .filter(Boolean);
+                                            const reqText = prereqNodes.length === 1
+                                                ? `Requires: ${prereqNodes[0].title || 'Previous Level'}`
+                                                : prereqNodes.length > 1
+                                                    ? `Requires any of: ${prereqNodes.map(p => p.title || 'Untitled').join(', ')}`
+                                                    : 'Locked level';
+
+                                            return (
+                                                <div
+                                                    key={node.id}
+                                                    className={`path-node-wrapper is-dag-node ${isCurrent ? 'current-node' : ''} ${isLocked ? 'locked-node' : ''}`}
+                                                    style={{ transform: `translateX(${pos.x}px)`, top: `${pos.y - NODE_SIZE / 2}px` }}
+                                                    title={isLocked ? reqText : node.title}
+                                                >
+                                                    {isLocked && (
+                                                        <div className="path-node-req-tooltip" role="tooltip">
+                                                            <Lock size={12} className="req-tooltip-icon" />
+                                                            <span>{reqText}</span>
+                                                        </div>
+                                                    )}
+                                                    <div 
+                                                        className="path-node" 
+                                                        onClick={() => {
+                                                            if (!isLocked) {
+                                                                setSavedScroll(window.scrollY);
+                                                                setActiveLevel(node);
+                                                                setTimeout(() => window.scrollTo(0, 0), 50);
+                                                            }
+                                                        }}
+                                                        style={{ 
+                                                            backgroundColor: isLocked ? 'var(--s1)' : 'var(--s2)', 
+                                                            borderColor: nodeColor, 
+                                                            boxShadow: isLocked ? 'none' : `0 6px 0 ${nodeColor}`,
+                                                            transform: isLocked ? 'scale(0.95)' : 'none',
+                                                            cursor: isLocked ? 'not-allowed' : 'pointer'
+                                                        }}
+                                                    >
+                                                        <div className="path-node-icon">
+                                                            <IconCmp 
+                                                                size={30} 
+                                                                color={iconColor} 
+                                                                fill={isCompleted ? 'none' : (isLocked ? 'none' : 'rgba(255, 255, 255, 0.08)')} 
+                                                                strokeWidth={isCompleted ? 3 : 2.5} 
+                                                            />
+                                                        </div>
+                                                        {!isLocked && (
+                                                            <div style={{ position: 'absolute', bottom: '-25px', display: 'flex', gap: '2px', background: 'var(--bg)', padding: '2px 6px', borderRadius: '12px', border: '1px solid var(--bd)', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                                                                {[1, 2, 3].map(s => (
+                                                                    <Star key={s} size={12} color={s <= starCount ? '#f59e0b' : 'var(--bd)'} fill={s <= starCount ? '#f59e0b' : 'none'} />
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="path-node-label" style={{ opacity: isLocked ? 0.6 : 1 }}>
+                                                        {node.title}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </section>
                 )}
@@ -930,10 +1282,7 @@ export default function PublicViewer() {
                     <div style={{ marginTop: '2rem' }}>
                         <ExercisePlayer 
                             levelNode={activeLevel} 
-                            onComplete={() => {
-                                setActiveLevel(null);
-                                setTimeout(() => window.scrollTo(0, savedScroll), 50);
-                            }} 
+                            onComplete={handleLevelComplete} 
                             onExit={() => {
                                 setActiveLevel(null);
                                 setTimeout(() => window.scrollTo(0, savedScroll), 50);

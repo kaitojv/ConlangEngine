@@ -644,14 +644,14 @@ export default function SystemTab() {
                             style={{ padding: '0.5rem', borderRadius: 'var(--rad-sm)', border: '1px solid var(--bd)', background: 'var(--s1)', color: 'var(--tx)' }}
                         >
                             <option value="greetings">Greetings (Olá, Hello, Hola...)</option>
-                            <option value="clouds">Clouds ☁️</option>
-                            <option value="hearts">Hearts ❤️</option>
-                            <option value="stars">Stars ⭐</option>
-                            <option value="geometry">Geometry ▲■●</option>
-                            <option value="nature">Nature 🌿</option>
-                            <option value="magic">Magic ✨</option>
-                            <option value="music">Music 🎵</option>
-                            <option value="lexicon_words">Your Custom Lexicon Words ✨</option>
+                            <option value="clouds">Clouds</option>
+                            <option value="hearts">Hearts</option>
+                            <option value="stars">Stars</option>
+                            <option value="geometry">Geometry</option>
+                            <option value="nature">Nature</option>
+                            <option value="magic">Magic</option>
+                            <option value="music">Music</option>
+                            <option value="lexicon_words">Your Custom Lexicon Words</option>
                         </select>
                     </div>
                 </div>
