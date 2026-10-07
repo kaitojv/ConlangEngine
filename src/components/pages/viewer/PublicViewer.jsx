@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/utils/supabaseClient.js';
-import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit, FileText, Map, Zap, ArrowLeft, Loader2, Calendar, Clock, Library, Star, Crown, Book, Brain, Flame, Dumbbell, Sword, Shield, Lock, CheckCircle } from 'lucide-react';
+import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit, FileText, Map, Zap, ArrowLeft, Loader2, Calendar, Clock, Library, Star, Crown, Book, Brain, Flame, Dumbbell, Sword, Shield, Lock, Check, CheckCircle } from 'lucide-react';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import { playAzureTTS } from '@/utils/azureTTS.js';
 import DOMPurify from 'dompurify';
@@ -19,8 +19,8 @@ import './publicViewer.css';
 import '../study/studyTab.css'; // Required for the course map layout
 
 const NODE_SIZE = 80;
-const ROW_HEIGHT = 150;
-const FIRST_ROW_Y = 80;
+const ROW_HEIGHT = 160;
+const FIRST_ROW_Y = 60;
 const TRACK_INNER_WIDTH = 520;
 const LABEL_SPACE = 90;
 
@@ -946,24 +946,34 @@ export default function PublicViewer() {
                             {(() => {
                                 const pathNodes = customCourse;
                                 const hasCustomDAG = pathNodes.some(n => n.prerequisites !== undefined);
+                                const completedCount = pathNodes.filter(n => viewerProgress.includes(n.id)).length;
+
+                                const renderHeader = () => (
+                                    <div className="path-header">
+                                        <div className="path-header-info">
+                                            <span className="path-progress-pill">
+                                                {completedCount} of {pathNodes.length} completed
+                                            </span>
+                                        </div>
+                                        <Button variant="default" size="sm" onClick={handleResetProgress}>
+                                            Reset Progress
+                                        </Button>
+                                    </div>
+                                );
 
                                 if (!hasCustomDAG) {
                                     return (
                                         <div className="path-track" style={{ position: 'relative' }}>
-                                            <div style={{ position: 'absolute', top: '-40px', right: '0' }}>
-                                                <Button variant="default" onClick={handleResetProgress}>
-                                                    Reset Progress
-                                                </Button>
-                                            </div>
+                                            {renderHeader()}
                                             <svg 
                                                 className="path-svg" 
-                                                style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: `${80 + (pathNodes.length - 1) * 150}px`, overflow: 'visible', zIndex: 0, pointerEvents: 'none' }}
+                                                style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: `${FIRST_ROW_Y + (pathNodes.length - 1) * ROW_HEIGHT + NODE_SIZE}px`, overflow: 'visible', zIndex: 1, pointerEvents: 'none' }}
                                             >
                                                 {pathNodes.map((node, i) => {
                                                     if (i === pathNodes.length - 1) return null;
                                                     const isLeft = i % 2 === 0;
-                                                    const y1 = 80 + i * 150;
-                                                    const y2 = 80 + (i + 1) * 150;
+                                                    const y1 = FIRST_ROW_Y + i * ROW_HEIGHT;
+                                                    const y2 = FIRST_ROW_Y + (i + 1) * ROW_HEIGHT;
                                                     const midY = (y1 + y2) / 2;
                                                     const x1 = isLeft ? -40 : 40;
                                                     const x2 = isLeft ? 40 : -40;
@@ -971,25 +981,27 @@ export default function PublicViewer() {
                                                     let currentPathIdx = pathNodes.findIndex(n => !viewerProgress.includes(n.id));
                                                     if (currentPathIdx === -1) currentPathIdx = pathNodes.length;
                                                     
-                                                    const isNextLocked = (i + 1) > currentPathIdx;
-                                                    const lineColor = isNextLocked ? 'var(--bd)' : (node.color || 'var(--acc)');
+                                                    const isNextCompleted = (i + 1) <= currentPathIdx;
+                                                    const strokeColor = isNextCompleted ? (node.color || 'var(--acc)') : 'var(--bd2, var(--bd))';
+                                                    const strokeW = isNextCompleted ? 2.5 : 2;
+                                                    const opacity = isNextCompleted ? 1 : 0.55;
                                                     
                                                     return (
                                                         <g key={`line-${i}`}>
                                                             <path 
                                                                 d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
-                                                                stroke="var(--bg)"
-                                                                strokeWidth="14"
+                                                                stroke="var(--s4)"
+                                                                strokeWidth={strokeW + 4}
                                                                 fill="none"
                                                                 strokeLinecap="round"
                                                             />
                                                             <path 
                                                                 d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
-                                                                stroke={lineColor}
-                                                                strokeWidth="8"
+                                                                stroke={strokeColor}
+                                                                strokeWidth={strokeW}
+                                                                strokeOpacity={opacity}
                                                                 fill="none"
                                                                 strokeLinecap="round"
-                                                                strokeDasharray={isNextLocked ? "8, 10" : "none"}
                                                             />
                                                         </g>
                                                     );
@@ -1007,7 +1019,7 @@ export default function PublicViewer() {
                                                 const isLocked = i > currentPathIdx;
 
                                                 const nodeColor = isLocked ? 'var(--bd)' : (isCompleted ? 'var(--ok)' : (node.color || 'var(--acc)'));
-                                                const iconColor = isLocked ? 'var(--tx3)' : (node.color || 'var(--acc)');
+                                                const iconColor = isLocked ? 'var(--tx3)' : (isCompleted ? 'var(--ok)' : (node.color || 'var(--acc)'));
                                                 
                                                 let IconCmp = Zap;
                                                 switch(node.icon) {
@@ -1051,29 +1063,44 @@ export default function PublicViewer() {
                                                             style={{ 
                                                                 backgroundColor: isLocked ? 'var(--s1)' : 'var(--s2)', 
                                                                 borderColor: nodeColor, 
-                                                                boxShadow: isLocked ? 'none' : `0 6px 0 ${nodeColor}`,
-                                                                transform: isLocked ? 'scale(0.95)' : 'none',
+                                                                boxShadow: isCurrent 
+                                                                    ? '0 0 0 4px rgba(56, 189, 248, 0.2), 0 4px 12px rgba(0,0,0,0.3)' 
+                                                                    : (isLocked ? 'none' : '0 2px 8px rgba(0,0,0,0.2)'),
                                                                 cursor: isLocked ? 'not-allowed' : 'pointer'
                                                             }}
                                                         >
                                                             <div className="path-node-icon">
                                                                 <IconCmp 
-                                                                    size={30} 
+                                                                    size={28} 
                                                                     color={iconColor} 
-                                                                    fill={isCompleted ? 'none' : (isLocked ? 'none' : 'rgba(255, 255, 255, 0.08)')} 
-                                                                    strokeWidth={isCompleted ? 3 : 2.5} 
+                                                                    strokeWidth={isCompleted ? 2.5 : 2} 
                                                                 />
                                                             </div>
-                                                            {!isLocked && (
-                                                                <div style={{ position: 'absolute', bottom: '-25px', display: 'flex', gap: '2px', background: 'var(--bg)', padding: '2px 6px', borderRadius: '12px', border: '1px solid var(--bd)', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                                                                    {[1, 2, 3].map(s => (
-                                                                        <Star key={s} size={12} color={s <= starCount ? '#f59e0b' : 'var(--bd)'} fill={s <= starCount ? '#f59e0b' : 'none'} />
-                                                                    ))}
+                                                            {isCompleted && (
+                                                                <div className="path-node-badge check" title="Completed">
+                                                                    <Check size={11} strokeWidth={3} />
+                                                                </div>
+                                                            )}
+                                                            {isLocked && (
+                                                                <div className="path-node-badge lock" title="Locked">
+                                                                    <Lock size={10} strokeWidth={2.5} />
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        <div className="path-node-label" style={{ opacity: isLocked ? 0.6 : 1 }}>
-                                                            {node.title}
+                                                        <div className="path-node-label">
+                                                            <span className="path-node-title">{node.title}</span>
+                                                            {isCompleted && starCount > 0 && (
+                                                                <div className="path-node-stars">
+                                                                    {[1, 2, 3].map(s => (
+                                                                        <Star 
+                                                                            key={s} 
+                                                                            size={11} 
+                                                                            color={s <= starCount ? '#f59e0b' : 'var(--bd)'} 
+                                                                            fill={s <= starCount ? '#f59e0b' : 'none'} 
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 );
@@ -1130,7 +1157,7 @@ export default function PublicViewer() {
                                         if (!prereqPos || !currentPos) return null;
                                         
                                         const isPrereqCompleted = viewerProgress.includes(pId);
-                                        const edgeColor = isPrereqCompleted ? (node.color || 'var(--acc)') : 'var(--bd)';
+                                        const edgeColor = isPrereqCompleted ? (node.color || 'var(--acc)') : 'var(--bd2, var(--bd))';
 
                                         return {
                                             id: `edge-${pId}-${node.id}`,
@@ -1149,36 +1176,39 @@ export default function PublicViewer() {
                                 allEdges.sort((a, b) => b.targetY - a.targetY || b.sourceY - a.sourceY);
 
                                 return (
-                                    <div className="path-track is-dag" style={{ height: `${trackHeight}px` }}>
-                                        <div style={{ position: 'absolute', top: '-40px', right: '0' }}>
-                                            <Button variant="default" onClick={handleResetProgress}>
-                                                Reset Progress
-                                            </Button>
-                                        </div>
+                                    <div className="path-track is-dag" style={{ height: `${trackHeight}px`, position: 'relative' }}>
+                                        {renderHeader()}
                                         
                                         <svg 
                                             className="path-svg" 
-                                            style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: '100%', overflow: 'visible', zIndex: 0, pointerEvents: 'none' }}
+                                            style={{ position: 'absolute', top: 0, left: '50%', width: '2px', height: '100%', overflow: 'visible', zIndex: 1, pointerEvents: 'none' }}
                                         >
-                                            {allEdges.map((edge) => (
-                                                <g key={edge.id}>
-                                                    <path 
-                                                        d={`M ${edge.prereqPos.x} ${edge.prereqPos.y} C ${edge.prereqPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${edge.currentPos.y}`}
-                                                        stroke="var(--bg)"
-                                                        strokeWidth="14"
-                                                        fill="none"
-                                                        strokeLinecap="round"
-                                                    />
-                                                    <path 
-                                                        d={`M ${edge.prereqPos.x} ${edge.prereqPos.y} C ${edge.prereqPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${edge.currentPos.y}`}
-                                                        stroke={edge.edgeColor}
-                                                        strokeWidth="8"
-                                                        fill="none"
-                                                        strokeLinecap="round"
-                                                        strokeDasharray={edge.isPrereqCompleted ? "none" : "8, 10"}
-                                                    />
-                                                </g>
-                                            ))}
+                                            {allEdges.map((edge) => {
+                                                const isCompleted = edge.isPrereqCompleted;
+                                                const strokeColor = isCompleted ? (edge.edgeColor || 'var(--acc)') : 'var(--bd2, var(--bd))';
+                                                const strokeW = isCompleted ? 2.5 : 2;
+                                                const opacity = isCompleted ? 1 : 0.55;
+
+                                                return (
+                                                    <g key={edge.id}>
+                                                        <path 
+                                                            d={`M ${edge.prereqPos.x} ${edge.prereqPos.y} C ${edge.prereqPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${edge.currentPos.y}`}
+                                                            stroke="var(--s4)"
+                                                            strokeWidth={strokeW + 4}
+                                                            fill="none"
+                                                            strokeLinecap="round"
+                                                        />
+                                                        <path 
+                                                            d={`M ${edge.prereqPos.x} ${edge.prereqPos.y} C ${edge.prereqPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${edge.currentPos.y}`}
+                                                            stroke={strokeColor}
+                                                            strokeWidth={strokeW}
+                                                            strokeOpacity={opacity}
+                                                            fill="none"
+                                                            strokeLinecap="round"
+                                                        />
+                                                    </g>
+                                                );
+                                            })}
                                         </svg>
 
                                         {pathNodes.map((node) => {
@@ -1192,7 +1222,7 @@ export default function PublicViewer() {
                                             const isCurrent = !isLocked && !isCompleted;
 
                                             const nodeColor = isLocked ? 'var(--bd)' : (isCompleted ? 'var(--ok)' : (node.color || 'var(--acc)'));
-                                            const iconColor = isLocked ? 'var(--tx3)' : (node.color || 'var(--acc)');
+                                            const iconColor = isLocked ? 'var(--tx3)' : (isCompleted ? 'var(--ok)' : (node.color || 'var(--acc)'));
                                             
                                             let IconCmp = Zap;
                                             switch(node.icon) {
@@ -1244,29 +1274,44 @@ export default function PublicViewer() {
                                                         style={{ 
                                                             backgroundColor: isLocked ? 'var(--s1)' : 'var(--s2)', 
                                                             borderColor: nodeColor, 
-                                                            boxShadow: isLocked ? 'none' : `0 6px 0 ${nodeColor}`,
-                                                            transform: isLocked ? 'scale(0.95)' : 'none',
+                                                            boxShadow: isCurrent 
+                                                                ? '0 0 0 4px rgba(56, 189, 248, 0.2), 0 4px 12px rgba(0,0,0,0.3)' 
+                                                                : (isLocked ? 'none' : '0 2px 8px rgba(0,0,0,0.2)'),
                                                             cursor: isLocked ? 'not-allowed' : 'pointer'
                                                         }}
                                                     >
                                                         <div className="path-node-icon">
                                                             <IconCmp 
-                                                                size={30} 
+                                                                size={28} 
                                                                 color={iconColor} 
-                                                                fill={isCompleted ? 'none' : (isLocked ? 'none' : 'rgba(255, 255, 255, 0.08)')} 
-                                                                strokeWidth={isCompleted ? 3 : 2.5} 
+                                                                strokeWidth={isCompleted ? 2.5 : 2} 
                                                             />
                                                         </div>
-                                                        {!isLocked && (
-                                                            <div style={{ position: 'absolute', bottom: '-25px', display: 'flex', gap: '2px', background: 'var(--bg)', padding: '2px 6px', borderRadius: '12px', border: '1px solid var(--bd)', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                                                                {[1, 2, 3].map(s => (
-                                                                    <Star key={s} size={12} color={s <= starCount ? '#f59e0b' : 'var(--bd)'} fill={s <= starCount ? '#f59e0b' : 'none'} />
-                                                                ))}
+                                                        {isCompleted && (
+                                                            <div className="path-node-badge check" title="Completed">
+                                                                <Check size={11} strokeWidth={3} />
+                                                            </div>
+                                                        )}
+                                                        {isLocked && (
+                                                            <div className="path-node-badge lock" title="Locked">
+                                                                <Lock size={10} strokeWidth={2.5} />
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <div className="path-node-label" style={{ opacity: isLocked ? 0.6 : 1 }}>
-                                                        {node.title}
+                                                    <div className="path-node-label">
+                                                        <span className="path-node-title">{node.title}</span>
+                                                        {isCompleted && starCount > 0 && (
+                                                            <div className="path-node-stars">
+                                                                {[1, 2, 3].map(s => (
+                                                                    <Star 
+                                                                        key={s} 
+                                                                        size={11} 
+                                                                        color={s <= starCount ? '#f59e0b' : 'var(--bd)'} 
+                                                                        fill={s <= starCount ? '#f59e0b' : 'none'} 
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             );

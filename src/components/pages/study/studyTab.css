@@ -239,15 +239,44 @@
 /* GAMIFIED LEARNING PATH */
 .learning-path-container {
     width: 100%;
-    max-width: 600px;
-    padding: 60px 20px;
+    max-width: 620px;
+    padding: 24px 24px 60px;
     margin: 20px auto;
     background-color: var(--s4);
-    background-image: radial-gradient(var(--bd) 2px, transparent 2px);
-    background-size: 40px 40px;
-    border-radius: 24px;
-    border: 2px solid var(--bd);
-    box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+    background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+    background-size: 32px 32px;
+    border-radius: 16px;
+    border: 1px solid var(--bd);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    position: relative;
+}
+
+.path-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--bd);
+    position: relative;
+    z-index: 10;
+}
+
+.path-header-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.path-progress-pill {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--tx2);
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    padding: 4px 10px;
+    border-radius: 6px;
 }
 
 .empty-path {
@@ -266,7 +295,7 @@
     align-items: center;
     gap: 70px;
     position: relative;
-    padding: 40px 0;
+    padding: 20px 0;
 }
 
 /*
@@ -274,11 +303,8 @@
  *
  * The linear track above is a flex column: each node is a flow item and the 70px
  * gap does the vertical spacing. The DAG cannot reuse that, because sibling nodes
- * on the same row must sit side by side. Giving a flex item a `top` offset only
- * shifts it visually - it still consumes a full row in the flow - so nodes
- * overlapped each other and the last ones spilled out of the panel. Absolute
- * positioning makes the computed coordinates authoritative, which is what the
- * connector curves in the SVG are drawn against.
+ * on the same row must sit side by side. Absolute positioning makes the computed
+ * coordinates authoritative, which is what the connector curves in the SVG are drawn against.
  */
 .path-track.is-dag {
     display: block;
@@ -292,7 +318,7 @@
     left: 50%;
     width: 80px;
     margin-left: -40px;
-    z-index: 2;
+    z-index: 5;
 }
 
 .path-node-wrapper {
@@ -300,7 +326,7 @@
     width: 100%;
     display: flex;
     justify-content: center;
-    z-index: 2;
+    z-index: 5;
 }
 
 .path-node-wrapper.left {
@@ -312,9 +338,9 @@
 }
 
 .path-node {
-    width: 80px;
-    height: 80px;
-    border: 4px solid rgba(0,0,0,0.1);
+    width: 76px;
+    height: 76px;
+    border: 2px solid var(--bd);
     background-color: var(--s2);
     border-radius: 50%;
     display: flex;
@@ -322,23 +348,22 @@
     justify-content: center;
     cursor: pointer;
     position: relative;
-    z-index: 2;
-    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 5;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .path-node:hover {
-    transform: scale(1.05) translateY(-2px);
-    filter: brightness(1.15);
+    transform: translateY(-2px);
+    filter: brightness(1.08);
 }
 
 .path-node:active {
-    transform: translateY(4px) scale(0.95);
-    box-shadow: 0 0 0 rgba(0,0,0,0) !important;
+    transform: translateY(1px);
 }
 
 @keyframes ringPulse {
-    0% { transform: scale(1); opacity: 0.6; }
-    100% { transform: scale(1.4); opacity: 0; }
+    0% { transform: scale(1); opacity: 0.7; }
+    100% { transform: scale(1.35); opacity: 0; }
 }
 
 .current-node .path-node::before {
@@ -349,20 +374,49 @@
     right: -4px;
     bottom: -4px;
     border-radius: 50%;
-    border: 4px solid var(--acc);
+    border: 2.5px solid var(--acc);
     animation: ringPulse 2s infinite cubic-bezier(0.165, 0.84, 0.44, 1);
     z-index: -1;
     pointer-events: none;
 }
 
 .locked-node .path-node {
-    opacity: 0.65;
-    filter: grayscale(100%);
+    opacity: 1;
+    filter: none;
+    background-color: var(--s1);
+    border: 1.5px solid var(--bd);
+    cursor: not-allowed;
 }
 
 .locked-node .path-node:hover {
-    transform: scale(0.95) !important;
-    filter: grayscale(100%) brightness(1) !important;
+    transform: none !important;
+    filter: none !important;
+}
+
+.path-node-badge {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 6;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.path-node-badge.check {
+    background: var(--ok, #10b981);
+    color: #ffffff;
+    border: 2px solid var(--s2);
+}
+
+.path-node-badge.lock {
+    background: var(--s1);
+    color: var(--tx3);
+    border: 1.5px solid var(--bd);
 }
 
 .path-node-icon {
@@ -373,25 +427,55 @@
 
 .path-node-label {
     position: absolute;
-    top: calc(100% + 8px);
+    top: calc(100% + 10px);
     left: 50%;
     transform: translateX(-50%);
     width: max-content;
-    max-width: 124px;
+    max-width: 150px;
+    min-width: 70px;
     font-size: 0.8rem;
-    font-weight: 700;
-    line-height: 1.25;
+    font-weight: 600;
+    line-height: 1.3;
     color: var(--tx);
-    background: var(--s2);
-    padding: 4px 8px;
-    border-radius: 10px;
-    border: 1px solid var(--bd2);
+    background-color: var(--s2);
+    padding: 5px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--bd);
     white-space: normal;
     text-align: center;
     word-break: break-word;
     overflow-wrap: break-word;
-    z-index: 5;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+    z-index: 7;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    pointer-events: none;
+}
+
+.path-node-title {
+    display: block;
+}
+
+.path-node-stars {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    margin-top: 1px;
+}
+
+.locked-node .path-node-label {
+    color: var(--tx3);
+    background-color: var(--s1);
+    border-color: var(--bd);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.current-node .path-node-label {
+    border-color: var(--acc);
+    color: var(--tx);
 }
 
 .path-node-req-tooltip {
@@ -399,8 +483,8 @@
     bottom: calc(100% + 10px);
     left: 50%;
     transform: translateX(-50%) translateY(4px);
-    background: #0f131d;
-    border: 1px solid var(--bd2);
+    background: var(--s1, #0f131d);
+    border: 1px solid var(--bd2, var(--bd));
     color: var(--tx2);
     font-size: 0.76rem;
     font-weight: 600;
@@ -430,7 +514,7 @@
     left: 50%;
     transform: translateX(-50%);
     border: 5px solid transparent;
-    border-top-color: #0f131d;
+    border-top-color: var(--s1, #0f131d);
 }
 
 .locked-node:hover .path-node-req-tooltip,
