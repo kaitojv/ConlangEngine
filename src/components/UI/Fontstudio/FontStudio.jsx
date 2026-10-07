@@ -162,22 +162,47 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     const canvasRef = useRef(null);
     const resolvedScriptId = scriptId;
     const {
-        customGlyphs, puaCounter, addCustomGlyph, incrementPuaCounter,
-        alphabetGlyphs, alphabetNames, featuralComponents
+        rootCustomGlyphs,
+        scriptCustomGlyphs,
+        scriptPuaCounter,
+        storePuaCounter,
+        addCustomGlyph,
+        incrementPuaCounter,
+        scriptAlphabetGlyphs,
+        storeAlphabetGlyphs,
+        scriptAlphabetNames,
+        storeAlphabetNames,
+        scriptFeaturalComponents,
+        storeFeaturalComponents,
     } = useConfigStore(useShallow(state => {
-        const rootGlyphs = state.customGlyphs || {};
-        const scriptData = (resolvedScriptId && state.scriptDataById?.[resolvedScriptId]) || {};
-        const scriptGlyphs = scriptData.customGlyphs || {};
+        const scriptData = resolvedScriptId ? state.scriptDataById?.[resolvedScriptId] : null;
         return {
-            customGlyphs: { ...rootGlyphs, ...scriptGlyphs },
-            puaCounter: scriptData.puaCounter || state.puaCounter,
+            rootCustomGlyphs: state.customGlyphs,
+            scriptCustomGlyphs: scriptData?.customGlyphs,
+            scriptPuaCounter: scriptData?.puaCounter,
+            storePuaCounter: state.puaCounter,
             addCustomGlyph: state.addCustomGlyph,
             incrementPuaCounter: state.incrementPuaCounter,
-            alphabetGlyphs: scriptData.alphabetGlyphs || state.alphabetGlyphs,
-            alphabetNames: scriptData.alphabetNames || state.alphabetNames,
-            featuralComponents: scriptData.featuralComponents || state.featuralComponents,
+            scriptAlphabetGlyphs: scriptData?.alphabetGlyphs,
+            storeAlphabetGlyphs: state.alphabetGlyphs,
+            scriptAlphabetNames: scriptData?.alphabetNames,
+            storeAlphabetNames: state.alphabetNames,
+            scriptFeaturalComponents: scriptData?.featuralComponents,
+            storeFeaturalComponents: state.featuralComponents,
         };
     }));
+
+    const customGlyphs = useMemo(() => {
+        if (!scriptCustomGlyphs || Object.keys(scriptCustomGlyphs).length === 0) {
+            return rootCustomGlyphs || {};
+        }
+        return { ...(rootCustomGlyphs || {}), ...scriptCustomGlyphs };
+    }, [rootCustomGlyphs, scriptCustomGlyphs]);
+
+    const puaCounter = scriptPuaCounter || storePuaCounter;
+    const alphabetGlyphs = scriptAlphabetGlyphs || storeAlphabetGlyphs;
+    const alphabetNames = scriptAlphabetNames || storeAlphabetNames;
+    const featuralComponents = scriptFeaturalComponents || storeFeaturalComponents;
 
     const initialData = useMemo(() => {
         return extractInitialGlyphData(existingCharCode, customGlyphs);
@@ -216,6 +241,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     const [leftMargin, setLeftMargin] = useState(() => initialData?.meta?.leftMargin ?? 100);
     const [rightMargin, setRightMargin] = useState(() => initialData?.meta?.rightMargin ?? 100);
     const [yOffset, setYOffset] = useState(() => initialData?.meta?.yOffset ?? 0);
+    const [simplifyTolerance, setSimplifyTolerance] = useState(0.5);
 
     const [backgroundStrokes, setBackgroundStrokes] = useState([]);
     const [backgroundText, setBackgroundText] = useState('');
@@ -320,7 +346,9 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     // Redraw the canvas whenever strokes change (for Undo support)
     useEffect(() => {
         const canvas = canvasRef.current;
+        if (!canvas) return;
         const ctx = canvas.getContext('2d');
+        if (!ctx) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         ctx.save();
@@ -571,6 +599,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     }, [strokes, currentStroke, brushSize, isCalligraphy, isBrushPen, isChisel, chiselAngle, isPaintBrush, isSerifPen, backgroundStrokes, backgroundText, zoom, activeTool, selectedNode, selectedStrokeIndex]);
 
     const getCoords = (e) => {
+        if (!canvasRef.current) return { x: 0, y: 0 };
         const rect = canvasRef.current.getBoundingClientRect();
         // Since canvas is 600x600 but rendered at rect.width, our internal space is 300x300, 
         // so we map client to 300 space.
@@ -1141,8 +1170,6 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     // that density is what makes saved glyphs huge. This rewrites the current
     // drawing in a lighter, visually equivalent form; it only affects the
     // canvas until the user saves, so it is safe to try and compare.
-    const [simplifyTolerance, setSimplifyTolerance] = useState(0.5);
-
     const handleSimplifyStrokes = () => {
         const beforePts = countGlyphPoints(strokes);
         const withMeta = [{ isMeta: true, scale: glyphScale, leftMargin, rightMargin, yOffset }, ...strokes];

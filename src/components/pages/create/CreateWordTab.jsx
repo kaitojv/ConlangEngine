@@ -1303,21 +1303,24 @@ export default function CreateWordTab() {
 
             </Card>
 
-            <Modal
-                isOpen={isFontStudioOpen}
-                onClose={() => setIsFontStudioOpen(false)}
-                title={ideogram ? "Edit Custom Ideogram" : "Draw Custom Ideogram"}
-            >
-                <FontStudioModal
-                    targetLabel={word || 'New Root'}
-                    existingCharCode={ideogram ? ideogram.codePointAt(0) : undefined}
-                    onSave={(newChar) => {
-                        updateField('ideogram', newChar);
-                        setIsFontStudioOpen(false);
-                    }}
-                    onCancel={() => setIsFontStudioOpen(false)}
-                />
-            </Modal>
+            {isFontStudioOpen && (
+                <Modal
+                    isOpen={isFontStudioOpen}
+                    onClose={() => setIsFontStudioOpen(false)}
+                    title={ideogram ? "Edit Custom Ideogram" : "Draw Custom Ideogram"}
+                >
+                    <FontStudioModal
+                        targetLabel={word || 'New Root'}
+                        existingCharCode={ideogram ? ideogram.codePointAt(0) : undefined}
+                        scriptId={scriptOverride}
+                        onSave={(newChar) => {
+                            updateField('ideogram', newChar);
+                            setIsFontStudioOpen(false);
+                        }}
+                        onCancel={() => setIsFontStudioOpen(false)}
+                    />
+                </Modal>
+            )}
 
             {isStrokeOrderOpen && (
                 <StrokeOrderModal
