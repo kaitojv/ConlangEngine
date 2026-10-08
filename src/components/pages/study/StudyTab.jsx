@@ -840,13 +840,45 @@ export default function StudyTab() {
                             : 140;
                         
                         const nodePositions = {};
+                        const maxOffset = (TRACK_INNER_WIDTH - NODE_SIZE) / 2;
+
                         pathRows.forEach((row, rIdx) => {
                             const y = FIRST_ROW_Y + rIdx * ROW_HEIGHT;
                             const numNodes = row.length;
-                            row.forEach((n, colIdx) => {
-                                const xOffset = (colIdx - (numNodes - 1) / 2) * siblingGap;
-                                nodePositions[n.id] = { x: xOffset, y };
+
+                            // Sort row nodes by average X of prerequisites to avoid horizontal line crossings
+                            row.sort((a, b) => {
+                                const getParentX = (node) => {
+                                    if (!node.prerequisites || node.prerequisites.length === 0) return 0;
+                                    const knownXs = node.prerequisites.map(pId => nodePositions[pId]?.x).filter(x => x !== undefined);
+                                    return knownXs.length > 0 ? (knownXs.reduce((sum, x) => sum + x, 0) / knownXs.length) : 0;
+                                };
+                                return getParentX(a) - getParentX(b);
                             });
+
+                            if (numNodes === 1) {
+                                const node = row[0];
+                                const knownXs = (node.prerequisites || []).map(pId => nodePositions[pId]?.x).filter(x => x !== undefined);
+                                let idealX = 0;
+                                if (knownXs.length > 0) {
+                                    const avgParentX = knownXs.reduce((sum, x) => sum + x, 0) / knownXs.length;
+                                    idealX = Math.round(avgParentX * 0.7);
+                                }
+                                nodePositions[node.id] = { x: Math.max(-maxOffset, Math.min(maxOffset, idealX)), y };
+                            } else {
+                                const rowIdealXs = row.map(node => {
+                                    const knownXs = (node.prerequisites || []).map(pId => nodePositions[pId]?.x).filter(x => x !== undefined);
+                                    return knownXs.length > 0 ? (knownXs.reduce((sum, x) => sum + x, 0) / knownXs.length) : 0;
+                                });
+                                const groupCenter = rowIdealXs.reduce((s, x) => s + x, 0) / numNodes;
+                                const halfSpan = ((numNodes - 1) / 2) * siblingGap;
+                                const clampedCenter = Math.max(-maxOffset + halfSpan, Math.min(maxOffset - halfSpan, Math.round(groupCenter * 0.5)));
+
+                                row.forEach((n, colIdx) => {
+                                    const xOffset = clampedCenter + (colIdx - (numNodes - 1) / 2) * siblingGap;
+                                    nodePositions[n.id] = { x: xOffset, y };
+                                });
+                            }
                         });
 
                         // Rows are placed by coordinate, so the track must reserve exactly
@@ -863,6 +895,8 @@ export default function StudyTab() {
                                 
                                 const isPrereqCompleted = courseProgress.includes(pId);
                                 const edgeColor = isPrereqCompleted ? (node.color || 'var(--acc)') : 'var(--bd2, var(--bd))';
+                                const sourceDepth = nodeDepths[pId] ?? 0;
+                                const targetDepth = nodeDepths[node.id] ?? 0;
 
                                 return {
                                     id: `edge-${pId}-${node.id}`,
@@ -870,6 +904,9 @@ export default function StudyTab() {
                                     nodeId: node.id,
                                     prereqPos,
                                     currentPos,
+                                    sourceDepth,
+                                    targetDepth,
+                                    depthDiff: targetDepth - sourceDepth,
                                     isPrereqCompleted,
                                     edgeColor,
                                     targetY: currentPos.y,
@@ -878,9 +915,82 @@ export default function StudyTab() {
                             }).filter(Boolean);
                         });
 
-                        // Make sure all lines going out from a level are rendered in SVG
-                        // on a layer below (earlier in DOM) lines going into that level.
-                        allEdges.sort((a, b) => b.targetY - a.targetY || b.sourceY - a.sourceY);
+                        // Route multi-row edges through distinct bypass lanes so lines never cut through intermediate nodes
+                        const edgeBypassMap = new Map();
+                        let leftLaneIdx = 0;
+                        let rightLaneIdx = 0;
+
+                        const multiRowEdges = allEdges.filter(e => e.depthDiff >= 2);
+                        multiRowEdges.sort((a, b) => b.depthDiff - a.depthDiff);
+
+                        multiRowEdges.forEach((edge) => {
+                            const x1 = edge.prereqPos.x;
+                            const x2 = edge.currentPos.x;
+                            const midX = (x1 + x2) / 2;
+
+                            const intermediateNodes = pathNodes.filter(n => {
+                                const d = nodeDepths[n.id] ?? 0;
+                                return d > edge.sourceDepth && d < edge.targetDepth;
+                            });
+                            const interXs = intermediateNodes.map(n => nodePositions[n.id]?.x).filter(x => x !== undefined);
+                            const minInterX = interXs.length > 0 ? Math.min(...interXs) : 0;
+                            const maxInterX = interXs.length > 0 ? Math.max(...interXs) : 0;
+
+                            let side = 'left';
+                            if (midX > 15) {
+                                side = 'right';
+                            } else if (midX < -15) {
+                                side = 'left';
+                            } else {
+                                side = maxInterX > Math.abs(minInterX) ? 'left' : 'right';
+                            }
+
+                            if (side === 'left') {
+                                const lane = leftLaneIdx++;
+                                const leftmost = Math.min(x1, x2, minInterX);
+                                const bypassX = leftmost - 65 - (lane * 20);
+                                edgeBypassMap.set(edge.id, bypassX);
+                            } else {
+                                const lane = rightLaneIdx++;
+                                const rightmost = Math.max(x1, x2, maxInterX);
+                                const bypassX = rightmost + 65 + (lane * 20);
+                                edgeBypassMap.set(edge.id, bypassX);
+                            }
+                        });
+
+                        const getEdgePath = (edge) => {
+                            const x1 = edge.prereqPos.x;
+                            const y1 = edge.prereqPos.y;
+                            const x2 = edge.currentPos.x;
+                            const y2 = edge.currentPos.y;
+
+                            if (edge.depthDiff <= 1) {
+                                if (y1 === y2) {
+                                    const arcY = y1 - 45;
+                                    return `M ${x1} ${y1} C ${x1} ${arcY}, ${x2} ${arcY}, ${x2} ${y2}`;
+                                }
+                                const midY = (y1 + y2) / 2;
+                                return `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+                            }
+
+                            const bypassX = edgeBypassMap.get(edge.id) ?? (x1 < 0 ? Math.min(x1, x2) - 65 : Math.max(x1, x2) + 65);
+                            const dy = Math.min(80, (y2 - y1) * 0.25);
+                            const yExit = y1 + dy;
+                            const yEntry = y2 - dy;
+
+                            return `M ${x1} ${y1} ` +
+                                   `C ${x1} ${(y1 + yExit) / 2}, ${bypassX} ${(y1 + yExit) / 2}, ${bypassX} ${yExit} ` +
+                                   `L ${bypassX} ${yEntry} ` +
+                                   `C ${bypassX} ${(yEntry + y2) / 2}, ${x2} ${(yEntry + y2) / 2}, ${x2} ${y2}`;
+                        };
+
+                        // Layer edges: multi-row outer bypass edges render below local adjacent edges
+                        allEdges.sort((a, b) => {
+                            const aMulti = a.depthDiff >= 2 ? 0 : 1;
+                            const bMulti = b.depthDiff >= 2 ? 0 : 1;
+                            if (aMulti !== bMulti) return aMulti - bMulti;
+                            return b.targetY - a.targetY || b.sourceY - a.sourceY;
+                        });
 
                         return (
                             <>
@@ -899,14 +1009,14 @@ export default function StudyTab() {
                                         return (
                                             <g key={edge.id}>
                                                 <path 
-                                                    d={`M ${edge.prereqPos.x} ${edge.prereqPos.y} C ${edge.prereqPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${edge.currentPos.y}`}
+                                                    d={getEdgePath(edge)}
                                                     stroke="var(--s4)"
                                                     strokeWidth={strokeW + 4}
                                                     fill="none"
                                                     strokeLinecap="round"
                                                 />
                                                 <path 
-                                                    d={`M ${edge.prereqPos.x} ${edge.prereqPos.y} C ${edge.prereqPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${(edge.prereqPos.y + edge.currentPos.y)/2}, ${edge.currentPos.x} ${edge.currentPos.y}`}
+                                                    d={getEdgePath(edge)}
                                                     stroke={strokeColor}
                                                     strokeWidth={strokeW}
                                                     strokeOpacity={opacity}

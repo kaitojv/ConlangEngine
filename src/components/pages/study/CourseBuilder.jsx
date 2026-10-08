@@ -403,6 +403,46 @@ export default function CourseBuilder({ onExit }) {
         }
     };
 
+    const moveLevelBelowPrereqs = (id) => {
+        const idx = courseData.findIndex(l => l.id === id);
+        if (idx === -1) return;
+        const current = courseData[idx];
+        const prereqIds = current.prerequisites || [];
+        if (prereqIds.length === 0) return;
+
+        let maxPrereqIdx = -1;
+        prereqIds.forEach(pId => {
+            const pIdx = courseData.findIndex(l => l.id === pId);
+            if (pIdx > maxPrereqIdx) maxPrereqIdx = pIdx;
+        });
+
+        if (maxPrereqIdx <= idx) return;
+
+        const newData = [...courseData];
+        newData.splice(idx, 1);
+        newData.splice(maxPrereqIdx, 0, current);
+        mutate(newData);
+    };
+
+    const wouldCreateCycle = (fromLevelId, toLevelId, data) => {
+        if (fromLevelId === toLevelId) return true;
+        const visited = new Set();
+        const queue = [toLevelId];
+        while (queue.length > 0) {
+            const currentId = queue.shift();
+            if (currentId === fromLevelId) return true;
+            if (visited.has(currentId)) continue;
+            visited.add(currentId);
+            const currentLevel = data.find(l => l.id === currentId);
+            if (currentLevel && Array.isArray(currentLevel.prerequisites)) {
+                for (const pId of currentLevel.prerequisites) {
+                    if (!visited.has(pId)) queue.push(pId);
+                }
+            }
+        }
+        return false;
+    };
+
     const exportCourse = () => {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(courseData, null, 2));
         const a = document.createElement('a');
@@ -718,7 +758,7 @@ export default function CourseBuilder({ onExit }) {
                     // A search must always reveal its matches, never leave them
                     // hidden behind a collapsed card.
                     const levelCollapsed = !search && collapsedLevels.has(level.id);
-                    const levelIssues = (level.phrases || []).filter(p => phraseIssues(p).length).length;
+                    const _levelIssues = (level.phrases || []).filter(p => phraseIssues(p).length).length;
                     return (
                     <div key={level.id} className={`cb-level-card ${levelCollapsed ? 'is-collapsed' : ''}`}>
                         <div className="cb-level-header">
@@ -841,16 +881,25 @@ export default function CourseBuilder({ onExit }) {
                                 {openPrereqs.has(level.id) && (
                                     <div className="cb-prereq-body">
                                         <p className="cb-prereq-desc">
-                                            By default, this level unlocks sequentially after the previous level. Select specific earlier levels below for custom branching paths (if multiple are connected, completing any one unlocks this level):
+                                            Select levels below for custom branching paths (if multiple are connected, completing any one unlocks this level):
                                         </p>
                                         <div className="cb-prereq-list">
                                             {courseData.filter(l => l.id !== level.id).map(l => {
                                                 const isPrereq = (level.prerequisites || []).includes(l.id);
+                                                const lIdx = courseData.findIndex(item => item.id === l.id);
+                                                const isLater = lIdx > realIndex;
+                                                const createsCycle = !isPrereq && wouldCreateCycle(level.id, l.id, courseData);
+
                                                 return (
-                                                    <label key={l.id} className={`cb-prereq-chip ${isPrereq ? 'selected' : ''}`}>
+                                                    <label 
+                                                        key={l.id} 
+                                                        className={`cb-prereq-chip ${isPrereq ? 'selected' : ''} ${createsCycle ? 'is-disabled' : ''}`}
+                                                        title={createsCycle ? "Cannot select: would create a circular dependency" : isLater ? "This level appears lower down in the editor list" : undefined}
+                                                    >
                                                         <input
                                                             type="checkbox"
                                                             checked={isPrereq}
+                                                            disabled={createsCycle}
                                                             onChange={(e) => {
                                                                 const current = level.prerequisites || [];
                                                                 const newPrereqs = e.target.checked ? [...current, l.id] : current.filter(id => id !== l.id);
@@ -861,11 +910,36 @@ export default function CourseBuilder({ onExit }) {
                                                         <span className={`cb-prereq-check-box ${isPrereq ? 'checked' : ''}`}>
                                                             {isPrereq && <Check size={12} />}
                                                         </span>
-                                                        <span>{l.title || 'Untitled Level'}</span>
+                                                        <span>
+                                                            {l.title || `Level ${lIdx + 1}`}
+                                                            {isLater && <span className="cb-prereq-subtag"> (below)</span>}
+                                                        </span>
                                                     </label>
                                                 );
                                             })}
                                         </div>
+                                        {(() => {
+                                            const prereqs = level.prerequisites || [];
+                                            const hasPrereqBelow = prereqs.some(pId => {
+                                                const pIdx = courseData.findIndex(l => l.id === pId);
+                                                return pIdx > realIndex;
+                                            });
+                                            if (!hasPrereqBelow) return null;
+                                            return (
+                                                <div className="cb-prereq-order-hint">
+                                                    <span className="cb-prereq-hint-text">
+                                                        This level requires levels below it in the list. In the path tree, it will be placed after them.
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        className="cb-prereq-move-btn"
+                                                        onClick={() => moveLevelBelowPrereqs(level.id)}
+                                                    >
+                                                        Move level below prerequisites
+                                                    </button>
+                                                </div>
+                                            );
+                                        })()}
                                         {(level.prerequisites || []).length > 0 && (
                                             <button
                                                 type="button"
