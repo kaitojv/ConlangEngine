@@ -1,10 +1,10 @@
-// ./src/components/pages/settings.jsx
 import { useState } from 'react';
 import SettingsGeneral from './SettingsGeneral.jsx';
 import PhonologyTab from './PhonologyTab.jsx';
 import './settings.css';
 import { Cog, Languages, Palette, Hash, BookOpen, FileText, Bookmark, Type, Cloud, Atom } from 'lucide-react'
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import LexiconTab from './LexiconTab.jsx';
 import GrammarTab from './GrammarTab.jsx';
 import NumeralTab from './NumeralTab.jsx';
@@ -16,6 +16,7 @@ import BackupTab from './BackupTab.jsx';
 import { useIsDesktop } from '../../../utils/device.js';
 
 export default function Settings() {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState('general');
     // Backup talks to the desktop-only Obsidian plugin — hide the tab on mobile.
     const isDesktop = useIsDesktop();
@@ -36,7 +37,7 @@ export default function Settings() {
     return (
         <div>
             <h2 className="settings-header">
-                Settings
+                {t('settings.title')}
             </h2>
 
             <div>
@@ -48,7 +49,7 @@ export default function Settings() {
                             onClick={() => setActiveTab(tab.id)}
                         >
                             <tab.icon className='settings-icon' size={18}/> 
-                            {tab.label}
+                            {t(`settings.tabs.${tab.id}`) || tab.label}
                         </button>
                     ))}
                 </div>

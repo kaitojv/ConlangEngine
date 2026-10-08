@@ -227,6 +227,7 @@ export const INITIAL_CONFIG = {
     // Array of { id, title, phrases: [{ id, conlang, english }] }
     customCourse: [],
     courseProgress: [],
+    appLanguage: (typeof localStorage !== 'undefined' && localStorage.getItem('conlang_app_language')) || 'en',
     customLabels: {}, // Customizable terminology (e.g. app title, navbar labels)
     ipaMappingRules: '', // Rules for autogenerating IPA from orthography (e.g., "oo=oʊ, uu=uː")
     typographySettings: {
@@ -1115,7 +1116,7 @@ export const useConfigStore = create(
                 let newActivity = [...(state.activity || [])].filter(a => !a.text.includes('isProActive'));
 
                 // Prevent spamming the timeline with system updates or rapid identical updates
-                const systemKeys = ['isProActive', 'activity', 'theme', 'autoReturnToLexicon', 'conlangName'];
+                const systemKeys = ['isProActive', 'activity', 'theme', 'autoReturnToLexicon', 'conlangName', 'appLanguage'];
                 const isSystemOnly = keys.every(k => systemKeys.includes(k));
 
                 if (!isSystemOnly) {

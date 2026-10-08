@@ -262,6 +262,9 @@
     transition: all 0.2s;
     font-family: inherit;
     width: 200px;
+    height: 36px;
+    box-sizing: border-box;
+    white-space: nowrap;
 }
 
 .hdr-search-btn:hover {
@@ -271,6 +274,7 @@
 
 .hdr-search-icon {
     opacity: 0.5;
+    flex-shrink: 0;
 }
 
 .hdr-search-placeholder {
@@ -279,6 +283,9 @@
     font-size: 0.85rem;
     font-weight: 500;
     opacity: 0.6;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .hdr-search-shortcut {

@@ -4,6 +4,7 @@ import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { resolveWordScriptId } from '@/utils/scriptResolver.js';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 
 import { Sunrise, Sun, Moon, Sparkles, Settings2, BookA, PlusCircle, BrainCircuit, Flame, ArrowRight, Bookmark, Library, HelpCircle, Heart, Coffee, Globe, Activity, FlaskConical } from 'lucide-react';
 import Card from '@/components/UI/Card/Card.jsx';
@@ -43,12 +44,13 @@ export default function Home() {
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const isFeaturalBlock = phonologyTypes === 'featural_block';
     const { transliterate } = useTransliterator();
+    const { t } = useTranslation();
     const navigate = useNavigate();
 
     const [greeting, setGreeting] = useState({
-        base: "Hello",
-        subtext: "Welcome to your linguistic laboratory.",
-        Icon: Sparkles
+        baseKey: "home.greetings.afternoon",
+        phraseKey: "home.greetings.afternoon1",
+        Icon: Sun
     });
 
     const [stats, setStats] = useState({ languages: 0, words: 0, conlangers: 0, loading: true });
@@ -117,38 +119,38 @@ export default function Home() {
         
         const greetings = {
             morning: {
-                base: "Good morning",
-                phrases: [
-                    "Early bird catches the root! Ready to build?", 
-                    "Morning! Time to craft some fresh vowels.", 
-                    "A new day, a new syntax rule."
+                baseKey: "home.greetings.morning",
+                phraseKeys: [
+                    "home.greetings.morning1", 
+                    "home.greetings.morning2", 
+                    "home.greetings.morning3"
                 ],
                 Icon: Sunrise
             },
             afternoon: {
-                base: "Good afternoon",
-                phrases: [
-                    "Welcome back to your linguistic laboratory.", 
-                    "Hope your day is as structured as your grammar.", 
-                    "Time to forge some new vocabulary."
+                baseKey: "home.greetings.afternoon",
+                phraseKeys: [
+                    "home.greetings.afternoon1", 
+                    "home.greetings.afternoon2", 
+                    "home.greetings.afternoon3"
                 ],
                 Icon: Sun
             },
             evening: {
-                base: "Good evening",
-                phrases: [
-                    "Dusk is falling. Perfect time to review your grammar.", 
-                    "The stars are out, and the words are waiting.", 
-                    "A quiet evening for some phonology."
+                baseKey: "home.greetings.evening",
+                phraseKeys: [
+                    "home.greetings.evening1", 
+                    "home.greetings.evening2", 
+                    "home.greetings.evening3"
                 ],
                 Icon: Moon
             },
             night: {
-                base: "Hello night owl",
-                phrases: [
-                    "Late night inspiration? Let's craft some words.", 
-                    "The best ideas come at midnight.", 
-                    "Burning the midnight oil for that perfect translation?"
+                baseKey: "home.greetings.night",
+                phraseKeys: [
+                    "home.greetings.night1", 
+                    "home.greetings.night2", 
+                    "home.greetings.night3"
                 ],
                 Icon: Sparkles
             }
@@ -160,54 +162,51 @@ export default function Home() {
         else if (hour >= 18 && hour < 22) timeOfDay = 'evening';
 
         const selected = { ...greetings[timeOfDay] };
-        selected.phrases = [...selected.phrases];
+        selected.phraseKeys = [...selected.phraseKeys];
 
         // Day of week special phrases
         if (dayOfWeek === 1) { // Monday
-            selected.phrases.push("Happy Monday! Let's conquer this week's grammar.");
-            selected.phrases.push("Start the week strong with some fresh verbs.");
+            selected.phraseKeys.push("home.greetings.monday1", "home.greetings.monday2");
         } else if (dayOfWeek === 3) { // Wednesday
-            selected.phrases.push("Happy Hump Day! You're halfway through the week's linguistic journey.");
+            selected.phraseKeys.push("home.greetings.wednesday");
         } else if (dayOfWeek === 5) { // Friday
-            selected.phrases.push("Happy Friday! Perfect day to polish those phonemes.");
-            selected.phrases.push("The weekend is near! Time for some relaxed dictionary building.");
+            selected.phraseKeys.push("home.greetings.friday1", "home.greetings.friday2");
         } else if (dayOfWeek === 0 || dayOfWeek === 6) { // Weekend
-            selected.phrases.push("Weekend worldbuilding time!");
-            selected.phrases.push("Grab a beverage, it's a great day to expand the lexicon.");
+            selected.phraseKeys.push("home.greetings.weekend1", "home.greetings.weekend2");
         }
 
         // Holidays (Overrides base greeting and limits phrases to festive ones)
         if (month === 0 && date === 1) { // Jan 1
-            selected.base = "Happy New Year";
-            selected.phrases = ["A whole new year for worldbuilding!", "365 new days to expand your lexicon.", "New year, new phonemes!"];
+            selected.baseKey = "home.greetings.newYear";
+            selected.phraseKeys = ["home.greetings.newYear1", "home.greetings.newYear2", "home.greetings.newYear3"];
             selected.Icon = Sparkles;
         } else if (month === 1 && date === 14) { // Feb 14
-            selected.base = "Happy Valentine's Day";
-            selected.phrases = ["A language of love.", "Time to invent 50 words for 'snow', and 100 for 'love'.", "Expressing affection in your own words."];
+            selected.baseKey = "home.greetings.valentines";
+            selected.phraseKeys = ["home.greetings.valentines1", "home.greetings.valentines2", "home.greetings.valentines3"];
             selected.Icon = Heart;
         } else if (month === 4 && date === 4) { // May 4
-            selected.base = "May the 4th be with you";
-            selected.phrases = ["Ready to build the next Huttese?", "Time to craft some sci-fi jargon.", "A great day to work on your galactic lingua franca."];
+            selected.baseKey = "home.greetings.may4th";
+            selected.phraseKeys = ["home.greetings.may4th1", "home.greetings.may4th2", "home.greetings.may4th3"];
             selected.Icon = Sparkles;
         } else if (month === 9 && date === 31) { // Oct 31
-            selected.base = "Happy Halloween";
-            selected.phrases = ["Spooky words are brewing in the cauldron.", "Time for some terrifying tongue-twisters.", "Crafting languages in the dark..."];
+            selected.baseKey = "home.greetings.halloween";
+            selected.phraseKeys = ["home.greetings.halloween1", "home.greetings.halloween2", "home.greetings.halloween3"];
             selected.Icon = Flame;
         } else if (month === 11 && date === 25) { // Dec 25
-            selected.base = "Merry Christmas";
-            selected.phrases = ["Unwrap a new grammar rule!", "Spreading linguistic joy this season.", "A festive day for worldbuilding."];
+            selected.baseKey = "home.greetings.christmas";
+            selected.phraseKeys = ["home.greetings.christmas1", "home.greetings.christmas2", "home.greetings.christmas3"];
             selected.Icon = Sparkles;
         } else if (month === 11 && date === 31) { // Dec 31
-            selected.base = "Happy New Year's Eve";
-            selected.phrases = ["Ready to count down in your conlang?", "Finishing the year strong with one last lexicon entry."];
+            selected.baseKey = "home.greetings.newYearsEve";
+            selected.phraseKeys = ["home.greetings.newYearsEve1", "home.greetings.newYearsEve2"];
             selected.Icon = Sparkles;
         }
 
-        const randomPhrase = selected.phrases[Math.floor(Math.random() * selected.phrases.length)];
+        const randomPhraseKey = selected.phraseKeys[Math.floor(Math.random() * selected.phraseKeys.length)];
 
         setGreeting({
-            base: selected.base,
-            subtext: randomPhrase,
+            baseKey: selected.baseKey,
+            phraseKey: randomPhraseKey,
             Icon: selected.Icon
         });
     }, []);
@@ -233,25 +232,23 @@ export default function Home() {
 
     return (
         <>
-
-        
         <div className="home-container">
             {/* Main Welcome Dashboard */}
             <Card className='home-page'>
                 <h1>
-                    {greeting.base}<span>, {authorName}</span>
+                    {t(greeting.baseKey)}<span>, {authorName}</span>
                     <IconComponent className='icon-home'/>
                 </h1>
-                <p>{greeting.subtext}</p>  
+                <p>{t(greeting.phraseKey)}</p>  
                 <div className="home-actions">
                     <button onClick={() => navigate('/settings')} className="btn btn-base btn-primary">
-                        <Settings2 size={18} /> Configure Grammar
+                        <Settings2 size={18} /> {t('home.configureGrammar')}
                     </button>
                     <button onClick={() => navigate('/create')} className="btn btn-base btn-secondary">
-                        <PlusCircle size={18} /> Expand Lexicon
+                        <PlusCircle size={18} /> {t('home.expandLexicon')}
                     </button>
                     <button onClick={() => navigate('/lexicon')} className="btn btn-base btn-secondary">
-                        <BookA size={18} /> Open Lexicon
+                        <BookA size={18} /> {t('home.openLexicon')}
                     </button>
                 </div>
             </Card> 
@@ -265,11 +262,11 @@ export default function Home() {
                     onClick={() => navigate('/help')} 
                 >
                     <h3>
-                        <HelpCircle size={24} /> Build Guide
+                        <HelpCircle size={24} /> {t('home.buildGuideTitle')}
                     </h3>
-                    <p>New to conlanging? Read our comprehensive guide on how to build a language from scratch.</p>
+                    <p>{t('home.buildGuideDesc')}</p>
                     <div className="widget-footer">
-                        Open Guide <ArrowRight size={16} />
+                        {t('home.openGuide')} <ArrowRight size={16} />
                     </div>
                 </Card>
 
@@ -279,19 +276,19 @@ export default function Home() {
                     onClick={() => navigate('/study')} 
                 >
                     <h3>
-                        <BrainCircuit size={24} /> Daily Training
+                        <BrainCircuit size={24} /> {t('home.dailyTrainingTitle')}
                     </h3>
                     {studiedToday ? (
                         <p>
-                            You've studied today! Your streak is at <b className="streak-text"><Flame size={14} className="streak-icon"/> {streak}</b>. Awesome job!
+                            {t('home.studiedTodayDesc', { streak: `${streak}` })}
                         </p>
                     ) : (
                         <p>
-                            Your flashcards are waiting. Practice now to keep your <b className="streak-text"><Flame size={14} className="streak-icon"/> {streak}</b> day streak alive!
+                            {t('home.flashcardsWaitingDesc', { streak: `${streak}` })}
                         </p>
                     )}
                     <div className="widget-footer">
-                        Practice Now <ArrowRight size={16} />
+                        {t('home.practiceNow')} <ArrowRight size={16} />
                     </div>
                 </Card>
 
@@ -301,7 +298,7 @@ export default function Home() {
                     onClick={() => navigate('/lexicon')} 
                 >
                     <h3>
-                        <Bookmark size={24} /> Word of the Day
+                        <Bookmark size={24} /> {t('home.wordOfTheDayTitle')}
                     </h3>
                     {wordOfTheDay ? (
                         <div className="wotd-content">
@@ -318,10 +315,10 @@ export default function Home() {
                             </div>
                         </div>
                     ) : (
-                        <p>Add words to your lexicon to reveal your daily featured word!</p>
+                        <p>{t('home.wordOfTheDayEmpty')}</p>
                     )}
                     <div className="widget-footer">
-                        Open Lexicon <ArrowRight size={16} />
+                        {t('home.openLexicon')} <ArrowRight size={16} />
                     </div>
                 </Card>
 
@@ -331,11 +328,11 @@ export default function Home() {
                     onClick={() => navigate('/wiki')} 
                 >
                     <h3>
-                        <Library size={24} /> Grammar Wiki
+                        <Library size={24} /> {t('home.grammarWikiTitle')}
                     </h3>
-                    <p>Document your phonology, syntax rules, and worldbuilding lore.</p>
+                    <p>{t('home.grammarWikiDesc')}</p>
                     <div className="widget-footer">
-                        Open Wiki <ArrowRight size={16} />
+                        {t('home.openWiki')} <ArrowRight size={16} />
                     </div>
                 </Card>
 
@@ -345,11 +342,11 @@ export default function Home() {
                     onClick={() => setIsHealthCheckOpen(true)} 
                 >
                     <h3>
-                        <Activity size={24} /> Health Check
+                        <Activity size={24} /> {t('home.healthCheckTitle')}
                     </h3>
-                    <p>Evaluate your conlang's completeness, phonology, and core vocabulary.</p>
+                    <p>{t('home.healthCheckDesc')}</p>
                     <div className="widget-footer">
-                        Run Diagnostics <ArrowRight size={16} />
+                        {t('home.runDiagnostics')} <ArrowRight size={16} />
                     </div>
                 </Card>
 
@@ -359,36 +356,36 @@ export default function Home() {
                     onClick={() => navigate('/typology')}
                 >
                     <h3>
-                        <FlaskConical size={24} /> Naturalness
+                        <FlaskConical size={24} /> {t('home.naturalnessTitle')}
                     </h3>
-                    <p>Score your conlang against real-world linguistic tendencies and spot unusual combinations.</p>
+                    <p>{t('home.naturalnessDesc')}</p>
                     <div className="widget-footer">
-                        View Report <ArrowRight size={16} />
+                        {t('home.viewReport')} <ArrowRight size={16} />
                     </div>
                 </Card>
 
                 {/* Global Stats */}
                 <Card className="interactive-card stats-card" style={{ cursor: 'default', display: 'flex', flexDirection: 'column', gap: '15px' }}>
                     <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Globe size={24} /> Join ConlangEngine
+                        <Globe size={24} /> {t('home.joinCommunityTitle')}
                     </h3>
                     {stats.loading ? (
-                        <p>Counting our worldbuilders...</p>
+                        <p>{t('home.countingWorldbuilders')}</p>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                            <p style={{ margin: 0, color: 'var(--tx2)' }}>Join ConlangEngine, we have:</p>
+                            <p style={{ margin: 0, color: 'var(--tx2)' }}>{t('home.weHave')}</p>
                             <div style={{ display: 'flex', justifyContent: 'space-around', padding: '15px', background: 'var(--s1)', borderRadius: 'var(--rad)', border: '1px solid var(--bd)' }}>
                                 <div style={{ textAlign: 'center' }}>
                                     <h3 style={{ margin: '0', color: 'var(--acc)', fontSize: '1.8rem' }}><RollingNumber endValue={stats.languages} />+</h3>
-                                    <span style={{ fontSize: '0.9rem', color: 'var(--tx2)', fontWeight: 'bold' }}>Languages</span>
+                                    <span style={{ fontSize: '0.9rem', color: 'var(--tx2)', fontWeight: 'bold' }}>{t('home.languagesStat')}</span>
                                 </div>
                                 <div style={{ textAlign: 'center' }}>
                                     <h3 style={{ margin: '0', color: 'var(--acc)', fontSize: '1.8rem' }}><RollingNumber endValue={stats.words} />+</h3>
-                                    <span style={{ fontSize: '0.9rem', color: 'var(--tx2)', fontWeight: 'bold' }}>Words</span>
+                                    <span style={{ fontSize: '0.9rem', color: 'var(--tx2)', fontWeight: 'bold' }}>{t('home.wordsStat')}</span>
                                 </div>
                                 <div style={{ textAlign: 'center' }}>
                                     <h3 style={{ margin: '0', color: 'var(--acc)', fontSize: '1.8rem' }}><RollingNumber endValue={stats.conlangers} />+</h3>
-                                    <span style={{ fontSize: '0.9rem', color: 'var(--tx2)', fontWeight: 'bold' }}>Conlangers</span>
+                                    <span style={{ fontSize: '0.9rem', color: 'var(--tx2)', fontWeight: 'bold' }}>{t('home.conlangersStat')}</span>
                                 </div>
                             </div>
                         </div>
@@ -398,12 +395,12 @@ export default function Home() {
                 {/* Support the Project */}
                 <Card className="interactive-card support-card">
                     <h3>
-                        <Heart size={24} /> Support the Project
+                        <Heart size={24} /> {t('home.supportTitle')}
                     </h3>
-                    <p>Help keep Conlang Engine alive and unlock <b>Cloud Sync</b> + <b>Multi-device backups</b>.</p>
+                    <p>{t('home.supportDesc')}</p>
                     <div className="support-card-actions">
                         <button onClick={() => window.open('https://ko-fi.com/kaitosz', '_blank')} className="support-link-btn">
-                            <Coffee size={14} /> Ko-fi
+                            <Coffee size={14} /> {t('home.kofi')}
                         </button>
                     </div>
                 </Card>

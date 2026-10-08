@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import './footer.css';
 
 const SOCIAL_LINKS = [
@@ -30,6 +31,7 @@ const SOCIAL_LINKS = [
 ];
 
 export default function Footer() {
+    const { t } = useTranslation();
     const currentYear = new Date().getFullYear();
 
     return (
@@ -37,7 +39,7 @@ export default function Footer() {
             <div className="footer-content">
                 <div className="footer-brand">
                     <h2 className="app-titulo-dinamico">ConlangEngine</h2>
-                    <p>Made with love for conlangers.</p>
+                    <p>{t('footer.tagline')}</p>
                 </div>
 
                 <div className="social-links">
@@ -56,7 +58,7 @@ export default function Footer() {
                 </div>
 
                 <div className="footer-bottom">
-                    © {currentYear} Conlang Engine. All rights reserved.
+                    © {currentYear} Conlang Engine. {t('footer.rights')}
                 </div>
             </div>
         </footer>

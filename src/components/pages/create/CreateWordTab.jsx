@@ -10,6 +10,7 @@ import { Sparkles, AlertTriangle, Save, Brush, X, Plus, Wand2 } from 'lucide-rea
 import { applyRuleToWord, expandWildcardDependencies } from '../../../utils/morphologyEngine.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { fetchSynonymOptions, fetchDefinitionOptions, fetchTopicOptions } from '../../../utils/semanticUtils.js';
 import './createWordTab.css';
 import Modal from '../../UI/Modal/Modal.jsx';
@@ -46,6 +47,7 @@ const layouts = {
 };
 
 export default function CreateWordTab() {
+    const { t } = useTranslation();
     const location = useLocation();
     const navigate = useNavigate();
     const { normalizeToBase, transliterate } = useTransliterator();
@@ -825,10 +827,10 @@ export default function CreateWordTab() {
         <div className="create-word-container">
             <Card>
                 <h2 className="create-word-title">
-                    <Sparkles className="title-icon" /> Create New Root
+                    <Sparkles className="title-icon" /> {t('createWord.title')}
                 </h2>
 
-                <Infobox title="Derivation & Genealogy Guide">
+                <Infobox title={t('createWord.guideTitle')}>
                     • <b>Automatic Linking:</b> Words saved from the "Derivations" list are linked to this root. You can see this genealogy in the Lexicon Edit modal.<br />
                     • <b>Target POS:</b> If a grammar rule (like "Adjectival") has a Target POS set, derived words will automatically be categorized correctly.<br />
                     • <b>Duplicate Alerts:</b> The app checks for homonyms (same word) and synonyms (same translation) in real-time.<br />
@@ -838,11 +840,11 @@ export default function CreateWordTab() {
                 <div className="input-grid">
                     <div>
                         <Input
-                            label="WORD (CONLANG)"
+                            label={t('createWord.wordLabel')}
                             value={word}
                             onChange={(e) => updateField('word', e.target.value)}
                             onFocus={() => setActiveField('word')}
-                            placeholder="e.g., makin"
+                            placeholder={t('createWord.wordPlaceholder')}
                             className="custom-font-text notranslate"
                         />
                         {harmonyStatus && !harmonyStatus.conforms && (
@@ -877,7 +879,7 @@ export default function CreateWordTab() {
                     </div>
                     <div>
                         <Input
-                            label="IPA (OPTIONAL)"
+                            label={t('createWord.ipaLabel')}
                             value={ipa}
                             onChange={(e) => updateField('ipa', e.target.value)}
                             onFocus={() => setActiveField('ipa')}
@@ -886,10 +888,10 @@ export default function CreateWordTab() {
                     </div>
                     <div>
                         <Input
-                            label="PART OF SPEECH"
+                            label={t('createWord.posLabel')}
                             value={wordClass}
                             onChange={(e) => updateField('wordClass', e.target.value.toLowerCase())}
-                            placeholder="Ex: noun, verb, classifier..."
+                            placeholder={t('createWord.posPlaceholder')}
                             list="word-classes"
                         >
                             <button
@@ -1282,14 +1284,14 @@ export default function CreateWordTab() {
                             className="create-save-main"
                             onClick={() => handleSave(false)}
                         >
-                            <Save size={20} /> Save Root
+                            <Save size={20} /> {t('createWord.saveBtn')}
                         </Button>
                         <Button
                             variant="default"
                             className="create-save-main"
                             onClick={() => handleSave(true)}
                         >
-                            <Plus size={20} /> Save & Add Another Meaning
+                            <Plus size={20} /> {t('createWord.saveAndNewBtn')}
                         </Button>
                         <div style={{ flex: 1 }}></div>
                         <Button
@@ -1297,7 +1299,7 @@ export default function CreateWordTab() {
                             className="create-view-lexicon"
                             onClick={() => navigate('/lexicon')}
                         >
-                            View Lexicon
+                            {t('home.openLexicon')}
                         </Button>
                     </div>
 

@@ -26,6 +26,7 @@ import { reverseDictScore } from '../../../utils/reverseDictionary.js';
 import { createCustomAlphabetCollator, extractFirstCustomLetter } from '../../../utils/customSort.js';
 import StressWave from '../../UI/StressWave/StressWave.jsx';
 import { useShallow } from 'zustand/react/shallow';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import './lexiconList.css';
 
 // Config fields read by the script helpers LexiconList calls. Union scanned
@@ -55,6 +56,7 @@ const LEXICON_SCRIPT_CONFIG_KEYS = [
 
 
 export default function LexiconList() {
+    const { t } = useTranslation();
     // Grab the global stores for our lexicon and language settings
     const rawLexicon = useLexiconStore((state) => state.lexicon);
     const lexicon = Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []);
@@ -525,7 +527,7 @@ export default function LexiconList() {
                         <input 
                             type="text" 
                             className="search-input"
-                            placeholder="Search words, translations, or tags..."
+                            placeholder={t('lexicon.searchPlaceholder')}
                             value={filters.search}
                             onChange={(e) => updateFilter('search', e.target.value)}
                         />
@@ -543,7 +545,7 @@ export default function LexiconList() {
                         value={filters.tag}
                         onChange={(e) => updateFilter('tag', e.target.value)}
                     >
-                        <option value="all">All Tags</option>
+                        <option value="all">{t('lexicon.allTags')}</option>
                         {allTags.map(tag => (
                             <option key={tag} value={tag}>#{tag}</option>
                         ))}
@@ -565,7 +567,7 @@ export default function LexiconList() {
                         value={filters.type}
                         onChange={(e) => updateFilter('type', e.target.value)}
                     >
-                        <option value="all">All Classes</option>
+                        <option value="all">{t('lexicon.allClasses')}</option>
                         {uniqueClasses.map(cls => (
                             <option key={cls} value={cls}>
                                 {cls === 'bound-morpheme' ? 'Bound Morphemes' : cls}
@@ -732,11 +734,11 @@ export default function LexiconList() {
 
             <div className="list-header">
                 <span className="list-title">
-                    Lexicon Entries
+                    {t('lexicon.title')}
                 </span>
                 <div className="list-header-actions">
                     <span className="list-total">
-                        <span className="list-total-count">{groupedLexicon.length}</span> words <span style={{fontSize: '0.75rem', opacity: 0.7}}>({filteredLexicon.length} entries)</span>
+                        <span className="list-total-count">{groupedLexicon.length}</span> {t('common.words').toLowerCase()} <span style={{fontSize: '0.75rem', opacity: 0.7}}>({filteredLexicon.length} entries)</span>
                     </span>
                     
                     <div className="layout-toggle-group">
@@ -764,7 +766,7 @@ export default function LexiconList() {
                         </Button>
                     )}
                     <Button variant="edit" className="btn-sm" onClick={() => navigate('/create')}>
-                        <PlusCircle size={14} /> Create Word
+                        <PlusCircle size={14} /> {t('lexicon.addWord')}
                     </Button>
                 </div>
             </div>
@@ -780,11 +782,11 @@ export default function LexiconList() {
             {lexicon.length === 0 && (
                 <div className="empty-state">
                     <Hash className="empty-icon" size={48} />
-                    <h3>Your lexicon is empty</h3>
-                    <p>Every great language starts with a single word. Let's create your first root.</p>
+                    <h3>{t('lexicon.emptyTitle')}</h3>
+                    <p>{t('lexicon.emptyDesc')}</p>
                     <div className="empty-state-actions">
                         <Button variant="save" onClick={() => navigate('/create')}>
-                            <PlusCircle size={16} /> Create First Word
+                            <PlusCircle size={16} /> {t('lexicon.addWord')}
                         </Button>
                         <Button variant="default" onClick={() => navigate('/settings')}>
                             <Settings2 size={16} /> Configure Phonology

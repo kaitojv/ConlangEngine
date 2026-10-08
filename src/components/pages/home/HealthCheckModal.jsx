@@ -4,6 +4,7 @@ import Modal from '@/components/UI/Modal/Modal.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { Activity, CheckCircle, AlertTriangle, XCircle, FlaskConical } from 'lucide-react';
 
 const SWADESH_100 = [
@@ -21,6 +22,7 @@ const SWADESH_100 = [
 
 export default function HealthCheckModal({ isOpen, onClose }) {
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const lexicon = useLexiconStore(state => state.lexicon || []);
     const consonants = useConfigStore(state => state.consonants || []);
     const vowels = useConfigStore(state => state.vowels || []);
@@ -37,31 +39,30 @@ export default function HealthCheckModal({ isOpen, onClose }) {
         else if (lexicon.length > 0) vocabScore = 5;
         result.total += vocabScore;
         result.details.push({
-            name: "Lexicon Size",
+            name: t('healthCheck.lexiconSize'),
             value: lexicon.length,
             pts: vocabScore,
             max: 30,
-            msg: lexicon.length < 500 ? "Aim for 500+ words for basic fluency." : "Excellent vocabulary size!"
+            msg: lexicon.length < 500 ? t('healthCheck.vocabMsgLow') : t('healthCheck.vocabMsgGood')
         });
 
         // 2. Swadesh List Coverage (Max 30 pts)
         const translations = lexicon.map(w => (w.translation || '').toLowerCase());
         let swadeshCount = 0;
         SWADESH_100.forEach(sw => {
-            // Check if any word translation contains this swadesh word as a standalone word
             const regex = new RegExp(`\\b${sw}\\b`);
-            if (translations.some(t => regex.test(t))) {
+            if (translations.some(tr => regex.test(tr))) {
                 swadeshCount++;
             }
         });
         let swadeshScore = Math.floor((swadeshCount / 100) * 30);
         result.total += swadeshScore;
         result.details.push({
-            name: "Core Vocabulary (Swadesh 100)",
+            name: t('healthCheck.swadeshTitle'),
             value: `${swadeshCount}%`,
             pts: swadeshScore,
             max: 30,
-            msg: swadeshCount < 50 ? "Missing essential universal concepts." : "Good coverage of core words!"
+            msg: swadeshCount < 50 ? t('healthCheck.swadeshMsgLow') : t('healthCheck.swadeshMsgGood')
         });
 
         // 3. Phonology (Max 20 pts)
@@ -70,11 +71,11 @@ export default function HealthCheckModal({ isOpen, onClose }) {
         else if (consonants.length > 0) phonoScore = 10;
         result.total += phonoScore;
         result.details.push({
-            name: "Phoneme Inventory",
+            name: t('healthCheck.phonemeTitle'),
             value: `${consonants.length} C, ${vowels.length} V`,
             pts: phonoScore,
             max: 20,
-            msg: phonoScore === 20 ? "Healthy phoneme count." : "Warning: Very small inventory."
+            msg: phonoScore === 20 ? t('healthCheck.phonemeMsgGood') : t('healthCheck.phonemeMsgLow')
         });
 
         // 4. Grammar Rules (Max 20 pts)
@@ -84,32 +85,34 @@ export default function HealthCheckModal({ isOpen, onClose }) {
         else if (grammarRules.length > 0) grammarScore = 5;
         result.total += grammarScore;
         result.details.push({
-            name: "Morphology Rules",
+            name: t('healthCheck.morphologyTitle'),
             value: grammarRules.length,
             pts: grammarScore,
             max: 20,
-            msg: grammarRules.length < 5 ? "Needs more inflectional rules." : "Solid grammar foundation."
+            msg: grammarRules.length < 5 ? t('healthCheck.morphologyMsgLow') : t('healthCheck.morphologyMsgGood')
         });
 
         return { score: result.total, metrics: result.details };
-    }, [lexicon, consonants, vowels, grammarRules]);
+    }, [lexicon, consonants, vowels, grammarRules, t]);
 
     const getGrade = (s) => {
-        if (s >= 90) return { label: 'S (Excellent)', color: 'var(--ok)' };
-        if (s >= 75) return { label: 'A (Great)', color: 'var(--acc)' };
-        if (s >= 50) return { label: 'B (Good)', color: 'var(--warn)' };
-        if (s >= 25) return { label: 'C (Developing)', color: 'var(--err)' };
-        return { label: 'D (Beginner)', color: 'var(--tx3)' };
+        if (s >= 90) return { label: t('healthCheck.gradeS'), color: 'var(--ok)' };
+        if (s >= 75) return { label: t('healthCheck.gradeA'), color: 'var(--acc)' };
+        if (s >= 50) return { label: t('healthCheck.gradeB'), color: 'var(--warn)' };
+        if (s >= 25) return { label: t('healthCheck.gradeC'), color: 'var(--err)' };
+        return { label: t('healthCheck.gradeD'), color: 'var(--tx3)' };
     };
 
     const grade = getGrade(score);
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Conlang Health Check">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('healthCheck.title')}>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                 <Activity size={48} style={{ color: grade.color, marginBottom: '10px' }} />
                 <h2 style={{ fontSize: '2rem', margin: '0', color: grade.color }}>{grade.label}</h2>
-                <p style={{ fontSize: '1.2rem', color: 'var(--tx2)', marginTop: '5px' }}>Overall Score: {score} / 100</p>
+                <p style={{ fontSize: '1.2rem', color: 'var(--tx2)', marginTop: '5px' }}>
+                    {t('healthCheck.overallScore', { score: `${score}` })}
+                </p>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -131,9 +134,9 @@ export default function HealthCheckModal({ isOpen, onClose }) {
             <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '20px', flexWrap: 'wrap' }}>
                 <Button variant="save" onClick={() => { onClose(); navigate('/typology'); }}>
                     <FlaskConical size={16} style={{ marginBottom: '-3px', marginRight: '6px' }} />
-                    Naturalness Report
+                    {t('healthCheck.naturalnessReport')}
                 </Button>
-                <Button variant="imp" onClick={onClose}>Close Report</Button>
+                <Button variant="imp" onClick={onClose}>{t('healthCheck.closeReport')}</Button>
             </div>
         </Modal>
     );

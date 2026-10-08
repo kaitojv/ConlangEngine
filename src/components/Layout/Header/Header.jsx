@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
 import { Menu, Home, Printer, Save, FolderUp, User, Cloud, FileText, Table, FileEdit, Download, Gamepad, Globe, Database, Search, Book, Swords, Layers } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 
 
 // Bring in our UI components and styling
@@ -33,8 +34,9 @@ export default function Header({ openMenu, onBackupNow }) {
     const fileInputRef = useRef(null);
     const fileInputSingleRef = useRef(null);
     const { transliterate } = useTransliterator();
+    const { t } = useTranslation();
     
-    const [session, setSession] = useState(null);
+    const [_session, setSession] = useState(null);
     const [isLive, setIsLive] = useState(false);
     const [exportType, setExportType] = useState(null); // 'pdf', 'docx', 'obsidian', 'sheets'
     const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
@@ -232,17 +234,17 @@ export default function Header({ openMenu, onBackupNow }) {
         <header className="hdr">
             <div className="hdr-flex">
                 <div className="hdr-left">
-                    <button className="toggle-btn" onClick={openMenu} title="Toggle Menu">
+                    <button className="toggle-btn" onClick={openMenu} title={t('header.toggleMenu')}>
                         <Menu size={20} />
                     </button>
                     <div className="hdr-brand">
                         <h1 className="app-dinamic-title">{customLabels.appTitle || "ConlangEngine"}</h1>
                         {isLive ? (
                             <span className="hdr-badge badge-live">
-                                <Cloud size={14} /> LIVE
+                                <Cloud size={14} /> {t('header.statusLive')}
                             </span>
                         ) : (
-                            <span className="hdr-badge">Local</span>
+                            <span className="hdr-badge">{t('header.statusLocal')}</span>
                         )}
                         <BackupStatus onBackupNow={onBackupNow} />
                     </div>
@@ -251,50 +253,50 @@ export default function Header({ openMenu, onBackupNow }) {
                 <div className="hdr-actions">
                     <button className="hdr-search-btn" onClick={() => window.dispatchEvent(new CustomEvent('open-command-palette'))}>
                         <Search size={16} className="hdr-search-icon" />
-                        <span className="hdr-search-placeholder">Search...</span>
+                        <span className="hdr-search-placeholder">{t('header.searchPlaceholder')}</span>
                         <span className="hdr-search-shortcut">Ctrl+K</span>
                     </button>
                     <div className="hdr-right">
                         <Button className="hdr-btn" onClick={() => navigate('/')}>
-                            <Home /> <span>Home</span>
+                            <Home /> <span>{t('header.home')}</span>
                         </Button>
                         <Button className="hdr-btn" onClick={() => navigate('/explore')}>
-                            <Globe /> <span>Explore</span>
+                            <Globe /> <span>{t('header.explore')}</span>
                         </Button>
                         <Button className="hdr-btn" onClick={() => navigate('/lexicon')}>
-                            <Book /> <span>Lexicon</span>
+                            <Book /> <span>{t('header.lexicon')}</span>
                         </Button>
                         <div className="export-menu-wrapper">
                             <Button className="hdr-btn export-trigger">
-                                <Download /> <span>Export</span>
+                                <Download /> <span>{t('header.export')}</span>
                             </Button>
                             <div className="export-dropdown">
                                 <button className="export-opt" onClick={() => setExportType('pdf')}>
-                                    <Printer size={14} /> PDF Document
+                                    <Printer size={14} /> {t('header.exportPdf')}
                                 </button>
                                 <button className="export-opt" onClick={() => setExportType('obsidian')}>
-                                    <FileText size={14} /> Obsidian (MD)
+                                    <FileText size={14} /> {t('header.exportObsidian')}
                                 </button>
                                 <button className="export-opt" onClick={() => setExportType('docx')}>
-                                    <FileEdit size={14} /> Word (DOCX)
+                                    <FileEdit size={14} /> {t('header.exportWord')}
                                 </button>
                                 <button className="export-opt" onClick={() => setExportType('sheets')}>
-                                    <Table size={14} /> Sheets (CSV)
+                                    <Table size={14} /> {t('header.exportSheets')}
                                 </button>
                                 <button className="export-opt" onClick={() => setIsAnkiModalOpen(true)}>
-                                    <Layers size={14} /> Anki Deck (TSV)
+                                    <Layers size={14} /> {t('header.exportAnki')}
                                 </button>
                                 <button className="export-opt" onClick={() => setExportType('minecraft')}>
-                                    <Gamepad size={14} /> Minecraft Pack
+                                    <Gamepad size={14} /> {t('header.exportMinecraft')}
                                 </button>
                                 <button className="export-opt" onClick={() => setExportType('terraria')}>
-                                    <Swords size={14} /> Terraria Mod
+                                    <Swords size={14} /> {t('header.exportTerraria')}
                                 </button>
                             </div>
                         </div>
                         <div className="export-menu-wrapper">
                             <Button className="hdr-btn export-trigger">
-                                <Save /> <span>Save</span>
+                                <Save /> <span>{t('header.save')}</span>
                             </Button>
                             <div className="export-dropdown">
                                 <button className="export-opt" onClick={() => handleSave(false)}>

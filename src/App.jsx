@@ -88,6 +88,14 @@ function App(){
   const purgeBloatedGlyphs = useConfigStore(state => state.purgeBloatedGlyphs);
   const hasCompletedOnboarding = useConfigStore(state => state.hasCompletedOnboarding);
   
+  const appLanguage = useConfigStore(state => state.appLanguage) || 'en';
+
+  React.useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = appLanguage;
+    }
+  }, [appLanguage]);
+
   React.useEffect(() => {
       if (!projectId) {
           useConfigStore.getState().updateConfig({ projectId: `local_${Date.now()}` });

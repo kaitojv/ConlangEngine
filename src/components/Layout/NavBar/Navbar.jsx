@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
     Home, Languages, Settings, PlusCircle, Book, 
     Sparkles, Activity, Map, BookOpen, Library, Layers,
-    Lock, HelpCircle, Sun, Moon, Link2, Compass, MessageSquare, GraduationCap, FlaskConical
+    Lock, HelpCircle, Sun, Moon, Link2, Compass, MessageSquare, GraduationCap, FlaskConical,
+    Globe, Check
 } from 'lucide-react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
 import { DARK_THEMES, LIGHT_THEMES } from '@/utils/themePresets.js';
 import './navbar.css';
@@ -13,56 +15,80 @@ import './navbar.css';
 // We define the navigation structure outside the component so it isn't recreated on every single render.
 const NAV_GROUPS = [
     {
-        title: 'Workspace',
+        key: 'workspace',
+        fallbackTitle: 'Workspace',
         items: [
-            { id: '/', label: 'Home', Icon: Home },
-            { id: '/conlangs', label: 'Conlangs', Icon: Languages },
-            { id: '/settings', label: 'Settings', Icon: Settings },
+            { id: '/', key: 'home', label: 'Home', Icon: Home },
+            { id: '/conlangs', key: 'conlangs', label: 'Conlangs', Icon: Languages },
+            { id: '/settings', key: 'settings', label: 'Settings', Icon: Settings },
         ]
     },
     {
-        title: 'Lexicon',
+        key: 'lexiconGroup',
+        fallbackTitle: 'Lexicon',
         items: [
-            { id: '/create', label: 'Create Word', Icon: PlusCircle },
-            { id: '/lexicon', label: 'Lexicon', Icon: Book },
-            { id: '/phrases', label: 'Phrases & Idioms', Icon: MessageSquare },
-            { id: '/semantic', label: 'Semantic Explorer', Icon: Compass },
+            { id: '/create', key: 'createWord', label: 'Create Word', Icon: PlusCircle },
+            { id: '/lexicon', key: 'lexicon', label: 'Lexicon', Icon: Book },
+            { id: '/phrases', key: 'phrases', label: 'Phrases & Idioms', Icon: MessageSquare },
+            { id: '/semantic', key: 'semantic', label: 'Semantic Explorer', Icon: Compass },
         ]
     },
     {
-        title: 'Linguistics',
+        key: 'linguistics',
+        fallbackTitle: 'Linguistics',
         items: [
-            { id: '/generator', label: 'Generator', Icon: Sparkles },
-            { id: '/orthography', label: 'Orthography & Numbers', Icon: Languages },
-            { id: '/analyzer', label: 'Analyzer', Icon: Activity },
-            { id: '/typology', label: 'Naturalness', Icon: FlaskConical },
-            { id: '/rootmap', label: 'Root Map', Icon: Map },
-            { id: '/aligner', label: 'Sentence Mapper', Icon: Link2 },
+            { id: '/generator', key: 'generator', label: 'Generator', Icon: Sparkles },
+            { id: '/orthography', key: 'orthography', label: 'Orthography & Numbers', Icon: Languages },
+            { id: '/analyzer', key: 'analyzer', label: 'Analyzer', Icon: Activity },
+            { id: '/typology', key: 'typology', label: 'Naturalness', Icon: FlaskConical },
+            { id: 'rootmap', key: 'rootmap', label: 'Root Map', Icon: Map },
+            { id: '/aligner', key: 'aligner', label: 'Sentence Mapper', Icon: Link2 },
         ]
     },
     {
-        title: 'Resources',
+        key: 'resources',
+        fallbackTitle: 'Resources',
         items: [
-            { id: '/reader', label: 'Reader', Icon: BookOpen },
-            { id: '/wiki', label: 'Library & Writing', Icon: Library },
-            { id: '/study', label: 'Study & Flashcards', Icon: Layers },
+            { id: '/reader', key: 'reader', label: 'Reader', Icon: BookOpen },
+            { id: '/wiki', key: 'wiki', label: 'Library & Writing', Icon: Library },
+            { id: '/study', key: 'study', label: 'Study & Flashcards', Icon: Layers },
         ]
     },
     {
-        title: 'Help',
+        key: 'help',
+        fallbackTitle: 'Help',
         items: [
-            { id: '/howtostart', label: 'How to Start', Icon: GraduationCap },
-            { id: '/help', label: 'Help & Info', Icon: HelpCircle },
+            { id: '/howtostart', key: 'howToStart', label: 'How to Start', Icon: GraduationCap },
+            { id: '/help', key: 'helpInfo', label: 'Help & Info', Icon: HelpCircle },
         ]
     }
 ];
 
 export default function NavBar({ isMenuOpen, closeMenu }) {
+    const { t, currentLang, setLanguage, languages } = useTranslation();
     const isProActive = useConfigStore(state => state.isProActive);
     const theme = useConfigStore(state => state.theme);
     const customLabels = useConfigStore(state => state.customLabels) || {};
     const updateConfig = useConfigStore(state => state.updateConfig);
     const [session, setSession] = useState(null);
+    const [isLangOpen, setIsLangOpen] = useState(false);
+    const langMenuRef = useRef(null);
+
+    const currentLangObj = languages.find(l => l.code === currentLang) || languages[0];
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (langMenuRef.current && !langMenuRef.current.contains(e.target)) {
+                setIsLangOpen(false);
+            }
+        };
+        if (isLangOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isLangOpen]);
     
     // Keep track of the user's active session to determine if they get access to LIVE features
     useEffect(() => {
@@ -95,30 +121,71 @@ export default function NavBar({ isMenuOpen, closeMenu }) {
             {/* Darkens the background when the menu is open on smaller screens */}
             <div 
                 className={`navbar-overlay ${isMenuOpen ? 'active' : ''}`} 
-                onClick={closeMenu}
+                onClick={closeMenu} 
                 aria-hidden="true"
             />
 
             <nav className={`navbar-container ${isMenuOpen ? 'active' : ''}`}>
                 <header className="sidebar-header">
-                    <button className="theme-toggle-nav" onClick={toggleTheme} title="Toggle Day/Night Mode">
-                        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-                        <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                    <button 
+                        className="sidebar-header-btn theme-toggle-nav" 
+                        onClick={toggleTheme} 
+                        title={theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
+                    >
+                        {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+                        <span>{theme === 'dark' ? (t('nav.light') || 'Light') : (t('nav.dark') || 'Dark')}</span>
                     </button>
+
+                    <div className="sidebar-lang-wrapper" ref={langMenuRef}>
+                        <button 
+                            className={`sidebar-header-btn lang-toggle-nav ${isLangOpen ? 'open' : ''}`}
+                            onClick={() => setIsLangOpen(prev => !prev)}
+                            title={t('nav.language') || 'Language'}
+                            aria-expanded={isLangOpen}
+                        >
+                            <Globe size={17} />
+                            <span>{currentLangObj?.flag} {currentLang.toUpperCase()}</span>
+                        </button>
+
+                        {isLangOpen && (
+                            <div className="sidebar-lang-dropdown">
+                                {languages.map((lang) => (
+                                    <button 
+                                        key={lang.code}
+                                        className={`sidebar-lang-opt ${currentLang === lang.code ? 'active' : ''}`}
+                                        onClick={() => {
+                                            setLanguage(lang.code);
+                                            setIsLangOpen(false);
+                                        }}
+                                    >
+                                        <span className="sidebar-lang-opt-left">
+                                            <span className="lang-flag">{lang.flag}</span>
+                                            <span className="lang-name">{lang.nativeName}</span>
+                                        </span>
+                                        {currentLang === lang.code && <Check size={14} />}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </header>
 
                 <div className="navbar">
                     {NAV_GROUPS.map((group) => (
-                        <section key={group.title} className="nav-group">
-                            <h4 className="nav-group-label">{customLabels[group.title] || group.title}</h4>
+                        <section key={group.key} className="nav-group">
+                            <h4 className="nav-group-label">
+                                {customLabels[group.fallbackTitle] || t(`nav.${group.key}`)}
+                            </h4>
                             
-                            {group.items.map(({ id, label, Icon, requiresLive }) => {
+                            {group.items.map((item) => {
+                                const { id, key, label, requiresLive } = item;
+                                const Icon = item.Icon;
                                 // If this tab requires a LIVE subscription and the user doesn't have it, show a locked version
-                                const displayLabel = customLabels[label] || label;
+                                const displayLabel = customLabels[label] || t(`nav.${key}`);
                                 
                                 if (requiresLive && !isLive) {
                                     return (
-                                        <div key={id} className="nb locked" title="Upgrade to LIVE to unlock multiple workspaces.">
+                                        <div key={id} className="nb locked" title={t('nav.lockedWorkspaces')}>
                                             <Lock className="nav-icon" size={18} />
                                             <span className="nav-label">{displayLabel}</span>
                                         </div>

@@ -4,7 +4,8 @@ import Card from '../../UI/Card/Card.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import './systemtab.css';
-import { Palette, CaseLower, Database, ToggleLeft, Globe, Type, Code, Copy, Check } from 'lucide-react';
+import { Palette, CaseLower, Database, ToggleLeft, Globe, Type, Code, Copy, Check, Languages } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { useConfigStore, INITIAL_CONFIG } from '../../../store/useConfigStore.jsx';
 import { useProjectStore } from '../../../store/useProjectStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
@@ -20,6 +21,7 @@ import { useSharing } from '../../../hooks/useSharing.jsx';
 export default function SystemTab() {
 
     const navigate = useNavigate();
+    const { t, currentLang, setLanguage, languages } = useTranslation();
 
     const colors = useConfigStore((state) => state.colors) || {};
     const autoReturnToLexicon = useConfigStore((state) => state.autoReturnToLexicon);
@@ -159,7 +161,7 @@ export default function SystemTab() {
         return fallback;
     };
 
-    const handleFontUpload = (event) => {
+    const _handleFontUpload = (event) => {
         const file = event.target.files[0];
         if (!file) return;
 
@@ -187,7 +189,7 @@ export default function SystemTab() {
         reader.readAsDataURL(file);
     };
 
-    const handleClearFont = () => {
+    const _handleClearFont = () => {
         if (!window.confirm("Are you sure you want to remove the custom font? The app will revert to default system fonts.")) return;
 
         updateConfig({ customFont: null, customFontBase64: null });
@@ -510,6 +512,34 @@ export default function SystemTab() {
                     </label>
                 </div>
             </Card>
+
+            <Card>
+                <h2 className='flex sg-title'><Languages /> {t('settings.languageTitle')}</h2>
+                <p>{t('settings.languageDesc')}</p>
+                <div className="lang-selector-grid">
+                    {languages.map((lang) => {
+                        const isSelected = currentLang === lang.code;
+                        return (
+                            <button
+                                key={lang.code}
+                                type="button"
+                                onClick={() => setLanguage(lang.code)}
+                                className={`lang-selector-btn ${isSelected ? 'active' : ''}`}
+                            >
+                                <div className="lang-selector-meta">
+                                    <span className="lang-selector-flag">{lang.flag}</span>
+                                    <div>
+                                        <div className="lang-selector-name">{lang.nativeName}</div>
+                                        <div className="lang-selector-sub">{lang.name}</div>
+                                    </div>
+                                </div>
+                                {isSelected && <Check size={16} color="var(--acc)" />}
+                            </button>
+                        );
+                    })}
+                </div>
+            </Card>
+
             <Card>
                 <h2 className='flex sg-title'><Palette /> Aesthetics and Theme</h2>
                 <p>Customize the look and feel of the app.</p>

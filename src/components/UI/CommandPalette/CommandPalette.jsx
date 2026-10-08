@@ -9,6 +9,7 @@ import {
     Sparkles, Library, FileText, ArrowRight, Type, Plus, FilePlus
 } from 'lucide-react';
 import { DARK_THEMES, LIGHT_THEMES } from '@/utils/themePresets.js';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import './commandPalette.css';
 
 // Pre-defined app routes for navigation search
@@ -24,6 +25,7 @@ const APP_ROUTES = [
 ];
 
 export default function CommandPalette() {
+    const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -89,8 +91,8 @@ export default function CommandPalette() {
     }, [theme, updateConfig]);
 
     const QUICK_ACTIONS = useMemo(() => [
-        { id: 'act-theme', title: 'Toggle Light/Dark Theme', type: 'action', action: toggleTheme, icon: 'Settings' }
-    ], [toggleTheme]);
+        { id: 'act-theme', title: t('commandPalette.toggleTheme'), type: 'action', action: toggleTheme, icon: 'Settings' }
+    ], [toggleTheme, t]);
 
     // Compute search results
     const results = useMemo(() => {
@@ -156,18 +158,18 @@ export default function CommandPalette() {
         // 5. Dynamic Create Actions
         matches.push({
             id: `create-word-${lowerQuery}`,
-            title: `Create Word: "${query}"`,
+            title: t('commandPalette.createWord', { word: query }),
             type: 'action',
-            subtitle: 'Add new word to lexicon',
+            subtitle: t('nav.createWord'),
             icon: 'Plus',
             action: () => navigate('/create', { state: { prefillWord: query } })
         });
         
         matches.push({
             id: `create-wiki-${lowerQuery}`,
-            title: `Create Wiki Page: "${query}"`,
+            title: t('commandPalette.createWiki', { page: query }),
             type: 'action',
-            subtitle: 'Add new wiki document',
+            subtitle: t('nav.wiki'),
             icon: 'FilePlus',
             action: () => navigate(`/wiki`)
         });
@@ -180,7 +182,7 @@ export default function CommandPalette() {
                     id: `workspace-${project.id}`,
                     title: projectName,
                     type: 'workspace',
-                    subtitle: 'Switch Workspace',
+                    subtitle: t('commandPalette.switchWorkspace'),
                     icon: 'Languages',
                     project: project
                 });
@@ -188,7 +190,7 @@ export default function CommandPalette() {
         });
 
         return matches;
-    }, [query, lexicon, wikiPages, localProjects, navigate, QUICK_ACTIONS]);
+    }, [query, lexicon, wikiPages, localProjects, navigate, QUICK_ACTIONS, t]);
 
     // Defined before the keyboard effect below, which captures it in a closure.
     const executeResult = React.useCallback((result) => {
@@ -274,7 +276,7 @@ export default function CommandPalette() {
                         ref={inputRef}
                         type="text" 
                         className="cp-input" 
-                        placeholder="Search workspace... (Words, Pages, Actions)"
+                        placeholder={t('commandPalette.placeholder')}
                         value={query}
                         onChange={e => {
                             setQuery(e.target.value);
@@ -286,7 +288,7 @@ export default function CommandPalette() {
                 
                 <div className="cp-results" ref={listRef}>
                     {results.length === 0 ? (
-                        <div className="cp-empty">No results found for "{query}"</div>
+                        <div className="cp-empty">{t('commandPalette.noResults', { query })}</div>
                     ) : (
                         results.map((result, index) => (
                             <div 
@@ -317,8 +319,8 @@ export default function CommandPalette() {
                 </div>
                 
                 <div className="cp-footer">
-                    <span><kbd>↑</kbd> <kbd>↓</kbd> to navigate</span>
-                    <span><kbd>↵</kbd> to select</span>
+                    <span><kbd>↑</kbd> <kbd>↓</kbd> {t('commandPalette.navigateHint')}</span>
+                    <span><kbd>↵</kbd> {t('commandPalette.selectHint')}</span>
                 </div>
             </div>
         </div>
