@@ -1,0 +1,151 @@
+/* src/components/UI/Dropdown/dropdown.css */
+
+.ns-dropdown-wrap {
+    position: relative;
+    display: inline-flex;
+    vertical-align: middle;
+}
+
+.ns-dropdown-trigger {
+    display: inline-flex;
+    cursor: pointer;
+}
+
+/* Default trigger button if no custom trigger is provided */
+.ns-dropdown-btn-default {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--s2);
+    color: var(--tx);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm, 6px);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background-color 0.14s ease, border-color 0.14s ease;
+}
+
+.ns-dropdown-btn-default:hover {
+    background: var(--s3);
+    border-color: color-mix(in srgb, var(--tx) 20%, var(--bd));
+}
+
+.ns-dropdown-chevron {
+    color: var(--tx2);
+    transition: transform 0.14s ease;
+}
+
+.ns-dropdown-chevron.rotated {
+    transform: rotate(180deg);
+}
+
+/* ─── Dropdown Panel (Soft, Grounded, No AI Slop) ─── */
+.ns-dropdown-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    z-index: 1000;
+    min-width: 170px;
+    padding: 4px;
+    background: var(--s1);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm, 6px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22), 0 1px 3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    /* Soft micro-animation entrance: 140ms cubic-bezier */
+    animation: nsDropdownFadeIn 140ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transform-origin: top;
+}
+
+.ns-dropdown-panel.align-right {
+    right: 0;
+    left: auto;
+}
+
+.ns-dropdown-panel.align-left {
+    left: 0;
+    right: auto;
+}
+
+@keyframes nsDropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-3px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ─── Dropdown Items ─── */
+.ns-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 10px;
+    background: transparent;
+    border: none;
+    border-radius: calc(var(--rad-sm, 6px) - 2px);
+    color: var(--tx);
+    font-size: 0.82rem;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    /* Soft hover transition */
+    transition: background-color 0.12s ease, color 0.12s ease;
+    user-select: none;
+}
+
+.ns-dropdown-item:hover:not(:disabled) {
+    background: var(--s3);
+    color: var(--tx);
+}
+
+.ns-dropdown-item:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.ns-dropdown-item.danger {
+    color: var(--err);
+}
+
+.ns-dropdown-item.danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--err) 12%, var(--s1));
+    color: var(--err);
+}
+
+.ns-dropdown-item-icon {
+    flex-shrink: 0;
+    color: var(--tx2);
+    transition: color 0.12s ease;
+}
+
+.ns-dropdown-item:hover:not(:disabled) .ns-dropdown-item-icon {
+    color: var(--tx);
+}
+
+.ns-dropdown-item.danger .ns-dropdown-item-icon {
+    color: var(--err);
+}
+
+.ns-dropdown-item-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Separator line */
+.ns-dropdown-sep {
+    height: 1px;
+    background: var(--bd);
+    margin: 3px 0;
+}

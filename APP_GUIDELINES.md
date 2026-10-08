@@ -39,8 +39,12 @@ Never use hardcoded colors. Always use the following CSS variables which are dyn
 
 ## 4. UI Components & UX
 - **Theme Injector & Presets**: Everything must follow the `themeInjector` and `themePresets` logic. **Never redefine theme arrays locally** in components; always import from `src/utils/themePresets.js`.
-- Use existing UI components from `src/components/UI` (Card, Button, etc.) for consistency.
-- **NO SLOP UI Rule**: Follow the "No Slop UI" aesthetic: functional, honest, clean, and normal. DO NOT USE glassmorphism, floating panels, gradient backgrounds as decoration, or oversized rounded corners. Opt for 1px solid borders, subtle drop shadows, and linear/stripe-like data density. Reference `NO_SLOP_UI_SKILL` for the banned patterns.
+- Use existing UI components from `src/components/UI` (Card, Button, Dropdown, etc.) for consistency.
+- **PERMANENT NO SLOP UI RULE**: Follow the "No Slop UI" aesthetic (Linear / Stripe / GitHub benchmark): functional, honest, clean, and normal.
+  - **Banned Visuals**: NO glassmorphism (`backdrop-filter: blur`), NO glowing/neon shadows, NO gradient buttons or borders, NO pill buttons (`border-radius: 9999px`), NO detached floating shells.
+  - **Banned Motion**: NO hover scaling (`scale(1.02)`), NO hover lift (`translateY(-2px)`), NO bouncy spring overshoots, NO sluggish >200ms transitions, NO `transition: all`.
+  - **Motion Standard**: 100ms–160ms ease-out transitions on explicit properties (`background-color`, `border-color`, `color`, `box-shadow`, `opacity`). Dropdown entrances use soft micro-shifts (max 2–3px translateY + opacity fade in ~140ms).
+  - Full rule specification: See `.agents/rules/no-ai-slop-ui.md`.
 
 ## 5. Development Workflow
 - **Verify Persistence**: Always check if a new feature needs to be saved in the config store.

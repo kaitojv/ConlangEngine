@@ -1,28 +1,25 @@
-/* src/components/Card.css */
+/* src/components/UI/Card/card.css */
 
 .card {
     position: relative;
     background: var(--s4);
-    border-radius: var(--rad);
+    border-radius: var(--rad, 8px);
     padding: 30px;
     margin-bottom: 25px;
     box-shadow: var(--shadow);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    backdrop-filter: blur(var(--blur));
-    -webkit-backdrop-filter: blur(var(--blur));
     border: 1px solid var(--bd);
+    transition: border-color 0.14s ease, box-shadow 0.14s ease;
 }
 
 .card:hover {
-    border-color: var(--acc);
-    box-shadow: var(--shadow-hover), inset 0 0 20px color-mix(in srgb, var(--acc) 5%, transparent);
-    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--acc) 45%, var(--bd));
+    box-shadow: var(--shadow-hover);
 }
 
 @media (max-width: 640px) {
     .card {
         padding: 18px 14px;
         margin-bottom: 16px;
-        border-radius: var(--rad-sm, 10px);
+        border-radius: var(--rad-sm, 6px);
     }
 }

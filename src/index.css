@@ -193,12 +193,12 @@ select {
     background-color: var(--s4);
     color: var(--tx);
     border: 1px solid var(--bd);
-    border-radius: var(--rad-sm);
+    border-radius: var(--rad-sm, 6px);
     padding: 0.6rem 1rem;
     font-size: 0.9rem;
     outline: none;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: border-color 0.14s ease, background-color 0.14s ease, box-shadow 0.14s ease;
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
     background-repeat: no-repeat;
@@ -207,13 +207,13 @@ select {
 }
 
 select:hover {
-    border-color: var(--bd3);
+    border-color: var(--bd3, var(--bd));
     background-color: var(--s3);
 }
 
 select:focus {
     border-color: var(--acc);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--acc) 15%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 25%, transparent);
     background-color: var(--s4);
 }
 
@@ -223,12 +223,12 @@ select option {
     padding: 12px;
 }
 
-/* Animations */
+/* Animations (Soft Micro-Motion, No 20px AI Bounce) */
 
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
