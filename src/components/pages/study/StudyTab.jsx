@@ -6,7 +6,7 @@ import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { renderWordInScript } from '../../../utils/scriptRendering.js';
 import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
-import { BrainCircuit, Flame, RotateCcw, Check, X, Play, Map, Zap, Volume2, Star, Crown, Book, Brain, Dumbbell, Sword, Shield, Lock, CheckCircle } from 'lucide-react';
+import { BrainCircuit, Flame, RotateCcw, Check, X, Play, Map as MapIcon, Zap, Volume2, Star, Crown, Book, Brain, Dumbbell, Sword, Shield, Lock, CheckCircle } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import Mascot from './Mascot.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
@@ -411,7 +411,7 @@ export default function StudyTab() {
             <Card className="controls-card">
                 <div className="controls-header">
                     <h2 className="flex sg-title mb-0">
-                        {studyMode === 'path' ? <Map /> : studyMode === 'course' ? <Zap /> : <BrainCircuit />} 
+                        {studyMode === 'path' ? <MapIcon /> : studyMode === 'course' ? <Zap /> : <BrainCircuit />} 
                         {studyMode === 'path' ? ' Learning Path' : studyMode === 'flashcard' ? ' Flashcard Drill' : studyMode === 'course' ? ` Course: ${pathLevel?.title}` : ' Mascot Quiz'}
                     </h2>
                     
@@ -451,7 +451,7 @@ export default function StudyTab() {
                             </>
                         ) : studyMode === 'flashcard' ? (
                             <Button variant="default" onClick={() => { setStudyMode('path'); setDeckStarted(false); }}>
-                                <div className="btn-content-flex"><Map size={16}/> Learning Path</div>
+                                <div className="btn-content-flex"><MapIcon size={16}/> Learning Path</div>
                             </Button>
                         ) : null}
                     </div>
@@ -629,7 +629,7 @@ export default function StudyTab() {
                 <div className="learning-path-container">
                     {pathNodes.length === 0 ? (
                         <EmptyState
-                            icon={Map}
+                            icon={MapIcon}
                             title="Welcome to the Course Map!"
                             description={lexicon.length >= 200 
                                 ? "You haven't built your language course yet. Build your skill tree and path to mastery." 

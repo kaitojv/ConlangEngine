@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/utils/supabaseClient.js';
-import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit, FileText, Map, Zap, ArrowLeft, Loader2, Calendar, Clock, Library, Star, Crown, Book, Brain, Flame, Dumbbell, Sword, Shield, Lock, Check, CheckCircle } from 'lucide-react';
+import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit, FileText, Map as MapIcon, Zap, ArrowLeft, Loader2, Calendar, Clock, Library, Star, Crown, Book, Brain, Flame, Dumbbell, Sword, Shield, Lock, Check, CheckCircle } from 'lucide-react';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import { playAzureTTS } from '@/utils/azureTTS.js';
 import DOMPurify from 'dompurify';
@@ -455,7 +455,7 @@ export default function PublicViewer() {
                     onClick={() => { setActiveTab('course'); setActiveLevel(null); }}
                     style={{ padding: '10px 20px', border: 'none', background: activeTab === 'course' ? 'var(--acc)' : 'transparent', color: activeTab === 'course' ? '#fff' : 'var(--tx)', borderRadius: '20px', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s' }}
                 >
-                    <Map size={16} style={{display: 'inline', marginRight: '8px', marginBottom: '-3px'}}/> Course Map
+                    <MapIcon size={16} style={{display: 'inline', marginRight: '8px', marginBottom: '-3px'}}/> Course Map
                 </button>
                 <button 
                     className={`pv-tab-btn ${activeTab === 'flashcards' ? 'active' : ''}`} 
@@ -939,7 +939,7 @@ export default function PublicViewer() {
                 {!activeLevel && customCourse && customCourse.length > 0 && (
                     <section className="pv-section" style={{ border: 'none', background: 'transparent' }}>
                         <div className="pv-section-header" style={{ justifyContent: 'center', marginBottom: '2rem', background: 'transparent', borderBottom: 'none' }}>
-                            <Map size={28} className="pv-section-icon" />
+                            <MapIcon size={28} className="pv-section-icon" />
                             <h2 className="pv-section-title" style={{ fontSize: '1.8rem' }}>Course Map</h2>
                         </div>
                         <div className="learning-path-container" style={{ margin: '0 auto' }}>
@@ -1454,7 +1454,7 @@ export default function PublicViewer() {
 
                 {!activeLevel && (!customCourse || customCourse.length === 0) && (
                     <div className="pv-section" style={{ textAlign: 'center', padding: '4rem 2rem', opacity: 0.7 }}>
-                        <Map size={48} style={{ margin: '0 auto 1rem', color: 'var(--tx3)' }} />
+                        <MapIcon size={48} style={{ margin: '0 auto 1rem', color: 'var(--tx3)' }} />
                         <h3>No Course Available</h3>
                         <p>The creator hasn't published a learning course for this conlang yet.</p>
                     </div>
