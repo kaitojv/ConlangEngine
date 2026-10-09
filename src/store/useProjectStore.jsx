@@ -77,7 +77,8 @@ export const useProjectStore = create(
               scriptDataById: undefined,
               alphabetGlyphs: undefined,
               featuralComponents: undefined,
-              isRehydrating: undefined
+              isRehydrating: undefined,
+              appLanguage: undefined
             }));
             const safeLexicon = JSON.parse(JSON.stringify(lexicon));
             const projectData = { config: safeConfig, dictionary: safeLexicon };

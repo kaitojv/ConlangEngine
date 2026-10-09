@@ -142,7 +142,7 @@ export default function ConlangsTab() {
         
         // Wipe the slate clean for the new language but preserve account-wide settings
         const newId = `local_${Date.now()}`;
-        const { isProActive, theme, colors, autoReturnToLexicon } = useConfigStore.getState();
+        const { isProActive, theme, colors, autoReturnToLexicon, appLanguage } = useConfigStore.getState();
         
         setLexicon([]);
         setFullConfig({ 
@@ -153,6 +153,7 @@ export default function ConlangsTab() {
             theme,
             colors,
             autoReturnToLexicon,
+            appLanguage,
             hasCompletedOnboarding: false
         });
         
@@ -207,7 +208,7 @@ export default function ConlangsTab() {
         
         // If they deleted the language they were currently viewing, give them a fresh one
         if (projectId === id) {
-            const { isProActive, theme, colors, autoReturnToLexicon } = useConfigStore.getState();
+            const { isProActive, theme, colors, autoReturnToLexicon, appLanguage } = useConfigStore.getState();
             setLexicon([]);
             setFullConfig({ 
                 ...INITIAL_CONFIG, 
@@ -216,7 +217,8 @@ export default function ConlangsTab() {
                 isProActive,
                 theme,
                 colors,
-                autoReturnToLexicon
+                autoReturnToLexicon,
+                appLanguage
             });
         }
     };

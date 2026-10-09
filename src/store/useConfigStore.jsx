@@ -2,6 +2,23 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { normalizeScriptType, normalizeScriptName, repairScriptSystems, normalizeRuleKey } from '../utils/scriptResolver.js';
 
+export function getInitialLanguage() {
+    if (typeof localStorage !== 'undefined') {
+        const saved = localStorage.getItem('conlang_app_language');
+        if (saved && ['en', 'pt', 'es', 'fr', 'ru', 'zh', 'ja'].includes(saved)) {
+            return saved;
+        }
+    }
+    if (typeof navigator !== 'undefined' && navigator.language) {
+        const navLang = navigator.language.toLowerCase();
+        const base = navLang.split('-')[0];
+        if (['en', 'pt', 'es', 'fr', 'ru', 'zh', 'ja'].includes(base)) {
+            return base;
+        }
+    }
+    return 'en';
+}
+
 export const INITIAL_CONFIG = {
     projectId: null,
     parentId: null,
@@ -227,7 +244,7 @@ export const INITIAL_CONFIG = {
     // Array of { id, title, phrases: [{ id, conlang, english }] }
     customCourse: [],
     courseProgress: [],
-    appLanguage: (typeof localStorage !== 'undefined' && localStorage.getItem('conlang_app_language')) || 'en',
+    appLanguage: getInitialLanguage(),
     customLabels: {}, // Customizable terminology (e.g. app title, navbar labels)
     ipaMappingRules: '', // Rules for autogenerating IPA from orthography (e.g., "oo=oʊ, uu=uː")
     typographySettings: {
@@ -573,7 +590,9 @@ export const useConfigStore = create(
                     newConfig.scriptSystems = repaired.scriptSystems;
                     newConfig.scriptRules = { ...(newConfig.scriptRules || {}), ...repaired.scriptRules };
                 }
-                set(() => ({ ...INITIAL_CONFIG, ...newConfig }));
+                const activeLang = useConfigStore.getState().appLanguage || getInitialLanguage();
+                const targetLang = newConfig.appLanguage || activeLang;
+                set(() => ({ ...INITIAL_CONFIG, ...newConfig, appLanguage: targetLang }));
             },
 
             // Cleanup utility to wipe bloated legacy state
@@ -1123,6 +1142,19 @@ export const useConfigStore = create(
                     newActivity = [{ text, time: now }, ...newActivity].slice(0, 15);
                 }
 
+                if (newConfig.appLanguage) {
+                    try {
+                        if (typeof localStorage !== 'undefined') {
+                            localStorage.setItem('conlang_app_language', newConfig.appLanguage);
+                        }
+                        if (typeof document !== 'undefined') {
+                            document.documentElement.lang = newConfig.appLanguage;
+                        }
+                    } catch (e) {
+                        console.warn('Failed to persist language in updateConfig:', e);
+                    }
+                }
+
                 if (state.projectId) {
                     const bloat = {};
                     const scriptDataPatch = {};
@@ -1185,6 +1217,15 @@ export const useConfigStore = create(
                     return { ...persistedState, configVersion: 2 };
                 }
                 return persistedState;
+            },
+            merge: (persistedState, currentState) => {
+                const storedLang = (typeof localStorage !== 'undefined' && localStorage.getItem('conlang_app_language')) || null;
+                const effectiveLang = storedLang || persistedState?.appLanguage || currentState.appLanguage || getInitialLanguage();
+                return {
+                    ...currentState,
+                    ...persistedState,
+                    appLanguage: effectiveLang,
+                };
             },
             partialize: (state) => {
                 // Exclude large fields from localStorage (quota limit)

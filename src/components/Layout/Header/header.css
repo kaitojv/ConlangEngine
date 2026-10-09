@@ -211,6 +211,46 @@
     background: transparent;
 }
 
+/* Language Switcher in Header */
+.lang-menu-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.lang-dropdown {
+    width: 145px;
+    right: 0;
+}
+
+.hdr-lang-flag {
+    font-size: 0.95rem;
+    line-height: 1;
+    margin-right: 2px;
+}
+
+.lang-opt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+}
+
+.lang-opt.active {
+    background: var(--s2);
+    color: var(--acc2);
+    font-weight: 600;
+}
+
+.hdr-lang-opt-flag {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.hdr-lang-opt-name {
+    font-size: 0.82rem;
+    white-space: nowrap;
+}
+
 .app-dinamic-title {
     font-size: 1.8rem;
     font-weight: 800;

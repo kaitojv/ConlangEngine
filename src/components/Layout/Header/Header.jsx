@@ -34,7 +34,8 @@ export default function Header({ openMenu, onBackupNow }) {
     const fileInputRef = useRef(null);
     const fileInputSingleRef = useRef(null);
     const { transliterate } = useTransliterator();
-    const { t } = useTranslation();
+    const { t, currentLang, setLanguage, languages } = useTranslation();
+    const currentLangObj = languages.find(l => l.code === currentLang) || languages[0];
     
     const [_session, setSession] = useState(null);
     const [isLive, setIsLive] = useState(false);
@@ -335,6 +336,24 @@ export default function Header({ openMenu, onBackupNow }) {
                                 <button className="export-opt" onClick={() => setIsCsvModalOpen(true)}>
                                     <Table size={14} /> {t('header.importCsv')}
                                 </button>
+                            </div>
+                        </div>
+                        <div className="export-menu-wrapper lang-menu-wrapper">
+                            <Button className="hdr-btn lang-trigger" title={t('settings.language')}>
+                                <span className="hdr-lang-flag">{currentLangObj?.flag}</span>
+                                <span>{currentLang.toUpperCase()}</span>
+                            </Button>
+                            <div className="export-dropdown lang-dropdown">
+                                {languages.map((lang) => (
+                                    <button 
+                                        key={lang.code} 
+                                        className={`export-opt lang-opt ${currentLang === lang.code ? 'active' : ''}`}
+                                        onClick={() => setLanguage(lang.code)}
+                                    >
+                                        <span className="hdr-lang-opt-flag">{lang.flag}</span>
+                                        <span className="hdr-lang-opt-name">{lang.nativeName}</span>
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     </div>
