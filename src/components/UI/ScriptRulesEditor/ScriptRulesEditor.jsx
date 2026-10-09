@@ -3,6 +3,7 @@ import React, { useState, useMemo } from "react";
 import { useConfigStore } from "../../../store/useConfigStore.jsx";
 import { useLexiconStore } from "../../../store/useLexiconStore.jsx";
 import { normalizeRuleKey } from "../../../utils/scriptResolver.js";
+import { useTranslation } from "@/hooks/useTranslation.jsx";
 import { Plus, X } from "lucide-react";
 import "./scriptRulesEditor.css";
 
@@ -17,34 +18,8 @@ const STANDARD_WORD_CLASSES = [
   "preposition",
 ];
 
-const RULE_GROUPS = [
-  {
-    key: "wordClasses",
-    label: "Word Classes",
-    placeholder: "Select word class...",
-    desc: "Map word classes (Noun, Verb, etc.) to scripts. Comma-separated classes in entries are matched individually.",
-  },
-  {
-    key: "tags",
-    label: "Tags",
-    placeholder: "Select tag...",
-    desc: "Map semantic tags (loanword, honorific, archaic, etc.) to scripts.",
-  },
-  {
-    key: "personCategories",
-    label: "Person Categories",
-    placeholder: "Select person category...",
-    desc: "Map grammatical person categories (1s, 2s, 3m, etc.) to scripts.",
-  },
-  {
-    key: "roles",
-    label: "Roles",
-    placeholder: "Select role...",
-    desc: "Reserved for future explicit role field on lexicon entries.",
-  },
-];
-
 export default function ScriptRulesEditor() {
+  const { t } = useTranslation();
   const scriptSystems = useConfigStore((state) => state.scriptSystems) || [];
   const scriptRules = useConfigStore((state) => state.scriptRules) || {};
   const setScriptRule = useConfigStore((state) => state.setScriptRule);
@@ -56,6 +31,40 @@ export default function ScriptRulesEditor() {
   const lexicon = useLexiconStore((state) => state.lexicon) || [];
 
   const [newKeys, setNewKeys] = useState({});
+
+  const ruleGroups = useMemo(
+    () => [
+      {
+        key: "wordClasses",
+        label: t("orthography.scriptRules.wordClasses"),
+        placeholder: t("orthography.scriptRules.selectWordClass"),
+        desc: t("orthography.scriptRules.wordClassesDesc"),
+        example: "Noun",
+      },
+      {
+        key: "tags",
+        label: t("orthography.scriptRules.tags"),
+        placeholder: t("orthography.scriptRules.selectTag"),
+        desc: t("orthography.scriptRules.tagsDesc"),
+        example: "loanword",
+      },
+      {
+        key: "personCategories",
+        label: t("orthography.scriptRules.personCategories"),
+        placeholder: t("orthography.scriptRules.selectPersonCategory"),
+        desc: t("orthography.scriptRules.personCategoriesDesc"),
+        example: "1s",
+      },
+      {
+        key: "roles",
+        label: t("orthography.scriptRules.roles"),
+        placeholder: t("orthography.scriptRules.selectRole"),
+        desc: t("orthography.scriptRules.rolesDesc"),
+        example: "subject",
+      },
+    ],
+    [t]
+  );
 
   const scriptOptions = scriptSystems.map((s) => ({ id: s.id, name: s.name }));
 
@@ -152,10 +161,10 @@ export default function ScriptRulesEditor() {
               </option>
             ))}
           </select>
-          <span className="script-rules-add-or">or</span>
+          <span className="script-rules-add-or">{t("orthography.scriptRules.or")}</span>
           <input
             className="fi script-rules-add-input"
-            placeholder="type custom..."
+            placeholder={t("orthography.scriptRules.typeCustom")}
             value={newKeys[group.key] || ""}
             onChange={(e) =>
               setNewKeys((prev) => ({ ...prev, [group.key]: e.target.value }))
@@ -169,7 +178,7 @@ export default function ScriptRulesEditor() {
             onClick={() => handleAddRule(group.key)}
             style={{ display: "flex", alignItems: "center", gap: "4px" }}
           >
-            <Plus size={14} /> Add
+            <Plus size={14} /> {t("orthography.scriptRules.addBtn")}
           </button>
         </div>
       );
@@ -180,7 +189,7 @@ export default function ScriptRulesEditor() {
       <div className="script-rules-add">
         <input
           className="fi script-rules-add-input"
-          placeholder={`e.g. ${group.key === "wordClasses" ? "Noun" : group.key === "tags" ? "loanword" : group.key === "roles" ? "subject" : "1s"}`}
+          placeholder={t("orthography.scriptRules.placeholderCustom", { example: group.example })}
           value={newKeys[group.key] || ""}
           onChange={(e) =>
             setNewKeys((prev) => ({ ...prev, [group.key]: e.target.value }))
@@ -194,7 +203,7 @@ export default function ScriptRulesEditor() {
           onClick={() => handleAddRule(group.key)}
           style={{ display: "flex", alignItems: "center", gap: "4px" }}
         >
-          <Plus size={14} /> Add
+          <Plus size={14} /> {t("orthography.scriptRules.addBtn")}
         </button>
       </div>
     );
@@ -203,31 +212,29 @@ export default function ScriptRulesEditor() {
   return (
     <div className="script-rules-editor">
       <div className="script-rules-header">
-        <h3 className="sg-title">Script Assignment Rules</h3>
+        <h3 className="sg-title">{t("orthography.scriptRules.title")}</h3>
       </div>
 
       <p className="script-rules-desc">
-        Assign scripts to word classes, tags, and categories. When a word
-        matches a rule, it renders in that script. Resolution order:{" "}
+        {t("orthography.scriptRules.desc")}{" "}
         <b>
-          word override → role → person category → tag → word class → default
-          script
+          {t("orthography.scriptRules.resolutionOrder")}
         </b>
         .
       </p>
 
       <div className="script-rules-default">
-        <span className="script-rules-default-label">Default Script:</span>
+        <span className="script-rules-default-label">{t("orthography.scriptRules.defaultScriptLabel")}</span>
         <span className="script-rules-default-value">
           {scriptSystems.find((s) => s.id === defaultScriptId)?.name ||
             defaultScriptId}
         </span>
         <span className="script-rules-default-hint">
-          (used when no rule matches)
+          {t("orthography.scriptRules.defaultScriptHint")}
         </span>
       </div>
 
-      {RULE_GROUPS.map((group) => {
+      {ruleGroups.map((group) => {
         const rules = scriptRules[group.key] || {};
         const entries = Object.entries(rules);
 
@@ -241,7 +248,7 @@ export default function ScriptRulesEditor() {
             <div className="script-rules-list">
               {entries.length === 0 && (
                 <div className="script-rules-empty">
-                  No rules yet. Add one below.
+                  {t("orthography.scriptRules.noRulesYet")}
                 </div>
               )}
               {entries.map(([key, scriptId]) => (
@@ -264,7 +271,7 @@ export default function ScriptRulesEditor() {
                   <button
                     className="script-rule-remove"
                     onClick={() => handleRemoveRule(group.key, key)}
-                    title="Remove rule"
+                    title={t("orthography.scriptRules.removeRuleTooltip")}
                   >
                     <X size={14} />
                   </button>

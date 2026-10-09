@@ -7,10 +7,12 @@ import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { playAzureTTS } from '../../../utils/azureTTS.js';
 import StrokeOrderViewer from '../StrokeOrder/StrokeOrderViewer.jsx';
 import GlyphPreviewBadge from '../Glyph/GlyphPreviewBadge.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import toast from 'react-hot-toast';
 import './glyphDetailsModal.css';
 
 export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, name, isWord, scriptId = null, strokes = null }) {
+    const { t } = useTranslation();
     const rawLexicon = useLexiconStore(state => state.lexicon);
     const lexicon = useMemo(() => Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []), [rawLexicon]);
     const config = useConfigStore.getState();
@@ -158,13 +160,13 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                             className={`glyph-modal-tab ${activeTab === 'analysis' ? 'active' : ''}`}
                             onClick={() => setActiveTab('analysis')}
                         >
-                            <BarChart2 size={16} /> Glyph & Usage
+                            <BarChart2 size={16} /> {t('glyphDetails.glyphAndUsage')}
                         </button>
                         <button
                             className={`glyph-modal-tab ${activeTab === 'stroke_order' ? 'active' : ''}`}
                             onClick={() => setActiveTab('stroke_order')}
                         >
-                            <PenTool size={16} /> Stroke Order
+                            <PenTool size={16} /> {t('glyphDetails.strokeOrder')}
                         </button>
                     </div>
                 )}
@@ -193,7 +195,7 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                                 onClick={handlePlayAudio}
                                 disabled={isPlaying}
                             >
-                                <Volume2 size={20} /> Listen to Pronunciation
+                                <Volume2 size={20} /> {t('glyphDetails.listenPronunciation')}
                             </button>
                         </div>
 
@@ -204,12 +206,12 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                                         <div className="stat-card glass">
                                             <BarChart2 size={24} className="stat-icon" />
                                             <div className="stat-value">{stats.length}</div>
-                                            <div className="stat-label">Length</div>
+                                            <div className="stat-label">{t('glyphDetails.length')}</div>
                                         </div>
                                         <div className="stat-card glass">
                                             <BarChart2 size={24} className="stat-icon" />
                                             <div className="stat-value">{stats.compoundCount}</div>
-                                            <div className="stat-label">Compounds Found</div>
+                                            <div className="stat-label">{t('glyphDetails.compoundsFound')}</div>
                                         </div>
                                     </>
                                 ) : (
@@ -217,25 +219,25 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                                         <div className="stat-card glass">
                                             <BarChart2 size={24} className="stat-icon" />
                                             <div className="stat-value">{stats.frequency}</div>
-                                            <div className="stat-label">Total Uses</div>
+                                            <div className="stat-label">{t('glyphDetails.totalUses')}</div>
                                         </div>
                                         <div className="stat-card glass">
                                             <BarChart2 size={24} className="stat-icon" />
                                             <div className="stat-value">{stats.percentage}%</div>
-                                            <div className="stat-label">of all characters</div>
+                                            <div className="stat-label">{t('glyphDetails.ofAllCharacters')}</div>
                                         </div>
                                         
                                         <div className="stat-context-card glass">
                                             <ArrowLeft size={16} className="context-icon" />
                                             <div className="context-content">
-                                                <div className="context-label">Most common preceding</div>
+                                                <div className="context-label">{t('glyphDetails.mostCommonPreceding')}</div>
                                                 <div className="context-value custom-font-text">{stats.topPredecessor}</div>
                                             </div>
                                         </div>
                                         <div className="stat-context-card glass">
                                             <ArrowRight size={16} className="context-icon" />
                                             <div className="context-content">
-                                                <div className="context-label">Most common following</div>
+                                                <div className="context-label">{t('glyphDetails.mostCommonFollowing')}</div>
                                                 <div className="context-value custom-font-text">{stats.topSuccessor}</div>
                                             </div>
                                         </div>
@@ -245,7 +247,7 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                         )}
 
                         <div className="glyph-words-list glass">
-                            <h3 className="words-list-title"><FileText size={18}/> {stats?.isWordMode ? `Compounds containing ${name}` : `Top Words containing ${name}`}</h3>
+                            <h3 className="words-list-title"><FileText size={18}/> {stats?.isWordMode ? t('glyphDetails.compoundsTitle', { name }) : t('glyphDetails.topWordsTitle', { name })}</h3>
                             {stats?.containingWords.length > 0 ? (
                                 <div className="words-grid">
                                     {stats.containingWords.map(word => (
@@ -256,7 +258,7 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                                     ))}
                                 </div>
                             ) : (
-                                <p className="no-words-text">{stats?.isWordMode ? "No compounds use this word yet." : "No words in the lexicon use this glyph yet."}</p>
+                                <p className="no-words-text">{stats?.isWordMode ? t('glyphDetails.noCompounds') : t('glyphDetails.noWords')}</p>
                             )}
                         </div>
                     </>

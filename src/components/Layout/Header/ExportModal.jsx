@@ -13,13 +13,15 @@ import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { MINECRAFT_KEYS, MINECRAFT_VERSIONS, buildPackMcmeta, DEFAULT_MINECRAFT_VERSION } from '../../../utils/minecraftExportData.js';
 import { TERRARIA_KEYS, TERRARIA_VERSIONS, TERRARIA_LANGUAGES, buildTerrariaHjson, buildBuildTxt, DEFAULT_TERRARIA_VERSION } from '../../../utils/terrariaExportData.js';
 import { autoMatchAll } from '../../../utils/gameExportMatch.js';
-
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 
 import { useTranslationGrid } from './useTranslationGrid.js';
 import TranslationGridControls from './TranslationGridControls.jsx';
 import './exportModal.css';
 
 export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
+    const { t } = useTranslation();
+
     // Standard Exporter States
     const [includeInflections, setIncludeInflections] = useState(true);
     const [inflectionMode, setInflectionMode] = useState('compact');
@@ -114,43 +116,43 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
     const templates = [
         { 
             id: 'academic', 
-            name: 'Academic Paper', 
-            desc: 'Classic serif typography, clean tables, and a formal layout. Best for linguistics papers.',
+            name: t('exportModal.templates.academic.name'), 
+            desc: t('exportModal.templates.academic.desc'),
             icon: Book,
             color: '#64748b'
         },
         { 
             id: 'modern', 
-            name: 'Modern Reference', 
-            desc: 'Bold purple accents, sans-serif fonts, and a sleek digital feel.',
+            name: t('exportModal.templates.modern.name'), 
+            desc: t('exportModal.templates.modern.desc'),
             icon: Sparkles,
             color: '#a855f7'
         },
         { 
             id: 'manuscript', 
-            name: 'Aesthetic Manuscript', 
-            desc: 'Typewriter fonts and off-white backgrounds for a classic worldbuilding vibe.',
+            name: t('exportModal.templates.manuscript.name'), 
+            desc: t('exportModal.templates.manuscript.desc'),
             icon: FileText,
             color: '#f59e0b'
         },
         {
             id: 'fantasy',
-            name: 'Fantasy Grimoire',
-            desc: 'Elegant serif fonts with rich gold and crimson accents. Perfect for high-fantasy conlangs.',
+            name: t('exportModal.templates.fantasy.name'), 
+            desc: t('exportModal.templates.fantasy.desc'),
             icon: BookOpen,
             color: '#b45309'
         },
         {
             id: 'cyberpunk',
-            name: 'Cyberpunk Datafile',
-            desc: 'Dark background, neon accents, and monospace terminal fonts for sci-fi worldbuilding.',
+            name: t('exportModal.templates.cyberpunk.name'), 
+            desc: t('exportModal.templates.cyberpunk.desc'),
             icon: Terminal,
             color: '#10b981'
         },
         {
             id: 'minimalist',
-            name: 'Clean Minimalist',
-            desc: 'High contrast, sans-serif typography with generous whitespace. Focuses purely on content.',
+            name: t('exportModal.templates.minimalist.name'), 
+            desc: t('exportModal.templates.minimalist.desc'),
             icon: Maximize,
             color: '#0f172a'
         }
@@ -212,8 +214,12 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
     };
 
     const getModalTitle = () => {
-        if (type === 'minecraft') return 'Minecraft Resource Pack';
-        if (type === 'terraria') return 'Terraria tModLoader Localization';
+        if (type === 'minecraft') return t('exportModal.formats.minecraft');
+        if (type === 'terraria') return t('exportModal.formats.terraria');
+        if (type === 'pdf') return t('exportModal.formats.pdf');
+        if (type === 'docx') return t('exportModal.formats.docx');
+        if (type === 'obsidian') return t('exportModal.formats.obsidian');
+        if (type === 'sheets') return t('exportModal.formats.sheets');
         return `${type?.toUpperCase()} Reference`;
     };
 
@@ -232,14 +238,14 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                     <div className="export-processing-overlay">
                         <Loader2 className="processing-spinner" size={48} />
                         <h3>
-                            {type === 'minecraft' ? 'Assembling Resource Pack...' 
-                            : type === 'terraria' ? 'Building Localization Pack...'
-                            : 'Processing Documentation...'}
+                            {type === 'minecraft' ? t('exportModal.processing.mcTitle')
+                            : type === 'terraria' ? t('exportModal.processing.trTitle')
+                            : t('exportModal.processing.docTitle')}
                         </h3>
                         <p>
-                            {type === 'minecraft' ? 'Compressing zip file and generating custom icon.' 
-                            : type === 'terraria' ? 'Compiling .hjson files and packaging your mod.'
-                            : 'Generating complex morphology tables. Please wait.'}
+                            {type === 'minecraft' ? t('exportModal.processing.mcDesc')
+                            : type === 'terraria' ? t('exportModal.processing.trDesc')
+                            : t('exportModal.processing.docDesc')}
                         </p>
                     </div>
                 )}
@@ -248,7 +254,7 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                 <div className="vrb-header">
                     <div className="vrb-header-title-group">
                         {getFormatIcon()}
-                        <h2>Export {getModalTitle()}</h2>
+                        <h2>{t('exportModal.title', { format: getModalTitle() })}</h2>
                     </div>
                     <button className="export-modal-close-btn" onClick={onClose} disabled={isProcessing}>
                         <X size={20} />
@@ -261,43 +267,43 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                             
                             {/* Left Panel: Pack Configuration */}
                             <div className="mc-settings-panel">
-                                <h3 className="panel-title"><Package size={16} /> Pack Settings</h3>
+                                <h3 className="panel-title"><Package size={16} /> {t('exportModal.minecraft.packSettings')}</h3>
                                 
                                 <div className="mc-field">
-                                    <label>Resource Pack Name</label>
+                                    <label>{t('exportModal.minecraft.packName')}</label>
                                     <input 
                                         type="text" 
                                         value={langName} 
                                         onChange={e => setLangName(e.target.value)} 
-                                        placeholder="e.g. High Elvish Language Pack"
+                                        placeholder={t('exportModal.minecraft.packNamePlaceholder')}
                                     />
                                 </div>
 
                                 <div className="mc-field-row">
                                     <div className="mc-field">
-                                        <label>Language Code</label>
+                                        <label>{t('exportModal.minecraft.langCode')}</label>
                                         <input 
                                             type="text" 
                                             value={langCode} 
                                             onChange={e => setLangCode(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} 
-                                            placeholder="e.g. qya_val"
+                                            placeholder={t('exportModal.minecraft.langCodePlaceholder')}
                                         />
-                                        <small>Lowercase alphanumeric (e.g. art_custom)</small>
+                                        <small>{t('exportModal.minecraft.langCodeHint')}</small>
                                     </div>
                                     <div className="mc-field">
-                                        <label>Region / Country</label>
+                                        <label>{t('exportModal.minecraft.region')}</label>
                                         <input 
                                             type="text" 
                                             value={regionName} 
                                             onChange={e => setRegionName(e.target.value)} 
-                                            placeholder="e.g. Valinor"
+                                            placeholder={t('exportModal.minecraft.regionPlaceholder')}
                                         />
-                                        <small>Where the conlang is spoken</small>
+                                        <small>{t('exportModal.minecraft.regionHint')}</small>
                                     </div>
                                 </div>
 
                                 <div className="mc-field">
-                                    <label>Minecraft Target Version</label>
+                                    <label>{t('exportModal.minecraft.targetVersion')}</label>
                                     <select value={mcVersion} onChange={e => setMcVersion(e.target.value)}>
                                         {MINECRAFT_VERSIONS.map(v => (
                                             <option key={v.id} value={v.id}>
@@ -306,9 +312,9 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                                         ))}
                                     </select>
                                     <small>
-                                                                                                                                                                                                                                                              {MINECRAFT_VERSIONS.find(v => v.id === mcVersion)?.era === 'New (min/max)'
-                                                                                                                                                                                                                                                                  ? 'Writes min_format / max_format arrays (1.21.9+)'
-                                                                                                                                                                                                                                                                  : 'Writes a single pack_format number'}
+                                        {MINECRAFT_VERSIONS.find(v => v.id === mcVersion)?.era === 'New (min/max)'
+                                            ? t('exportModal.minecraft.versionNewHint')
+                                            : t('exportModal.minecraft.versionOldHint')}
                                     </small>
                                 </div>
 
@@ -319,12 +325,12 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                                             checked={bidirectional} 
                                             onChange={e => setBidirectional(e.target.checked)} 
                                         />
-                                        <span>Right-to-Left (RTL) / Bidirectional</span>
+                                        <span>{t('exportModal.minecraft.rtl')}</span>
                                     </label>
                                 </div>
 
                                 <div className="mc-preview-card">
-                                    <h4>Real-Time pack.mcmeta Preview</h4>
+                                    <h4>{t('exportModal.minecraft.preview')}</h4>
                                     <div className="mc-code-box">
                                         <pre>{JSON.stringify(buildPackMcmeta({
                                             langName: langName || 'My Conlang Pack',
@@ -340,14 +346,14 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                             {/* Right Panel: Interactive Translation Mapper */}
                             <div className="mc-mapper-panel">
                                 <div className="mc-mapper-header">
-                                    <h3 className="panel-title"><Languages size={16} /> Translation Mapper</h3>
+                                    <h3 className="panel-title"><Languages size={16} /> {t('exportModal.mapper.title')}</h3>
                                     <span className="mc-progress-badge">
-                                        <CheckCircle2 size={12} /> {translatedCount} / {MINECRAFT_KEYS.length} Keys
+                                        <CheckCircle2 size={12} /> {t('exportModal.mapper.keysCount', { count: translatedCount, total: MINECRAFT_KEYS.length })}
                                     </span>
                                 </div>
                                 
                                 <p className="mc-mapper-desc">
-                                    Below are the most prominent translation keys in Minecraft. The engine automatically scanned your lexicon for matching glosses. You can override or manually enter terms below:
+                                    {t('exportModal.mapper.mcDesc')}
                                 </p>
 
                                 <TranslationGridControls
@@ -360,7 +366,7 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                                 
                                 <div className="plain-export-action" style={{ marginTop: '16px' }}>
                                     <Button variant="save" onClick={() => handleExportClick()} style={{ width: '100%', padding: '16px', fontSize: '1.05rem', gap: '8px' }}>
-                                        <Gamepad size={18} /> Compile & Download Resource Pack
+                                        <Gamepad size={18} /> {t('exportModal.minecraft.compileBtn')}
                                     </Button>
                                 </div>
                             </div>
@@ -371,22 +377,22 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
 
                             {/* Left Panel: Mod Configuration */}
                             <div className="mc-settings-panel">
-                                <h3 className="panel-title"><Package size={16} /> Mod Settings</h3>
+                                <h3 className="panel-title"><Package size={16} /> {t('exportModal.terraria.modSettings')}</h3>
 
                                 <div className="mc-field">
-                                    <label>Mod Internal Name</label>
+                                    <label>{t('exportModal.terraria.internalName')}</label>
                                     <input
                                         type="text"
                                         value={trModName}
                                         onChange={e => setTrModName(e.target.value.replace(/[^a-zA-Z0-9]/g, ''))}
-                                        placeholder="e.g. HighElvishMod"
+                                        placeholder={t('exportModal.terraria.internalNamePlaceholder')}
                                     />
-                                    <small>PascalCase, no spaces or special chars</small>
+                                    <small>{t('exportModal.terraria.internalNameHint')}</small>
                                 </div>
 
                                 <div className="mc-field-row">
                                     <div className="mc-field">
-                                        <label>Language Code</label>
+                                        <label>{t('exportModal.terraria.langCode')}</label>
                                             <select value={trLangCode} onChange={e => setTrLangCode(e.target.value)}>
                                                 {TERRARIA_LANGUAGES.map(l => (
                                                     <option key={l.code} value={l.code}>
@@ -397,44 +403,44 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                                             {trLangCode === 'en-US' ? (
                                                 <div className="export-warning-box" style={{ marginTop: '8px' }}>
                                                     <AlertTriangle size={14} />
-                                                    <span><b>Careful:</b> en-US overwrites Terraria's own English strings. Pick your conlang's locale.</span>
+                                                    <span>{t('exportModal.terraria.enWarning')}</span>
                                                 </div>
                                             ) : null}
-                                            <small>Output filename: {trLangCode}.hjson</small>
+                                            <small>{t('exportModal.terraria.filenameHint', { code: trLangCode })}</small>
                                     </div>
                                     <div className="mc-field">
-                                        <label>Version</label>
+                                        <label>{t('exportModal.terraria.version')}</label>
                                         <input
                                             type="text"
                                             value={trModVersion}
                                             onChange={e => setTrModVersion(e.target.value)}
-                                            placeholder="1.0.0"
+                                            placeholder={t('exportModal.terraria.versionPlaceholder')}
                                         />
-                                        <small>Semantic version (x.y.z)</small>
+                                        <small>{t('exportModal.terraria.versionHint')}</small>
                                     </div>
                                     <div className="mc-field">
-                                        <label>Terraria Version</label>
+                                        <label>{t('exportModal.terraria.gameVersion')}</label>
                                         <select value={trGameVersion} onChange={e => setTrGameVersion(e.target.value)}>
                                             {TERRARIA_VERSIONS.map(v => (
                                                 <option key={v.id} value={v.id}>{v.label}</option>
                                             ))}
                                         </select>
-                                        <small>Recorded in the .hjson header and description.txt</small>
+                                        <small>{t('exportModal.terraria.gameVersionHint')}</small>
                                     </div>
                                 </div>
 
                                 <div className="mc-field">
-                                    <label>Mod Author</label>
+                                    <label>{t('exportModal.terraria.modAuthor')}</label>
                                     <input
                                         type="text"
                                         value={trModAuthor}
                                         onChange={e => setTrModAuthor(e.target.value)}
-                                        placeholder="Your name"
+                                        placeholder={t('exportModal.terraria.modAuthorPlaceholder')}
                                     />
                                 </div>
 
                                 <div className="mc-preview-card">
-                                    <h4>build.txt Preview</h4>
+                                    <h4>{t('exportModal.terraria.buildTxtPreview')}</h4>
                                     <div className="mc-code-box">
                                             <pre>{buildBuildTxt({
                                                 displayName: config.conlangName || 'My Conlang',
@@ -446,7 +452,7 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                                 </div>
 
                                 <div className="mc-preview-card">
-                                    <h4>.hjson Structure Preview</h4>
+                                    <h4>{t('exportModal.terraria.hjsonPreview')}</h4>
                                     <div className="mc-code-box">
                                         <pre>{buildTerrariaHjson({"Items.IronSword.DisplayName":"Keth","Items.GoldenSword.DisplayName":"Duq","NPCs.Guide.DisplayName":"Vor"}, {
                                             modName: trModName || 'MyConlangMod',
@@ -459,19 +465,19 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                             {/* Right Panel: Translation Mapper */}
                             <div className="mc-mapper-panel">
                                 <div className="mc-mapper-header">
-                                    <h3 className="panel-title"><Languages size={16} /> Translation Mapper</h3>
+                                    <h3 className="panel-title"><Languages size={16} /> {t('exportModal.mapper.title')}</h3>
                                     <span className="mc-progress-badge">
-                                        <CheckCircle2 size={12} /> {translatedCount} / {totalKeyCount} Keys
+                                        <CheckCircle2 size={12} /> {t('exportModal.mapper.keysCount', { count: translatedCount, total: totalKeyCount })}
                                     </span>
                                     {missingCount > 0 && (
-                                        <span className="mc-progress-badge" title="Keys with no conlang form. These are omitted from the export so the game keeps its own text — fill them in to widen coverage.">
-                                            <AlertTriangle size={12} /> {missingCount} missing
+                                        <span className="mc-progress-badge" title={t('exportModal.mapper.missingTooltip')}>
+                                            <AlertTriangle size={12} /> {t('exportModal.mapper.missingCount', { count: missingCount })}
                                         </span>
                                     )}
                                 </div>
 
                                 <p className="mc-mapper-desc">
-                                    Below are prominent Terraria content keys for your conlang mod. The engine automatically scanned your lexicon for matches. Override them below:
+                                    {t('exportModal.mapper.trDesc')}
                                 </p>
 
                                 <TranslationGridControls
@@ -484,7 +490,7 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
 
                                 <div className="plain-export-action" style={{ marginTop: '16px' }}>
                                     <Button variant="save" onClick={() => handleExportClick()} style={{ width: '100%', padding: '16px', fontSize: '1.05rem', gap: '8px' }}>
-                                        <Swords size={18} /> Compile &amp; Download Mod Localization
+                                        <Swords size={18} /> {t('exportModal.terraria.compileBtn')}
                                     </Button>
                                 </div>
                             </div>
@@ -496,7 +502,7 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                                 <div className="export-option-row">
                                     <div className="option-info">
                                         <Table2 size={16} />
-                                        <span>Include Inflection Matrices</span>
+                                        <span>{t('exportModal.options.includeInflections')}</span>
                                     </div>
                                     <label className="switch">
                                         <input 
@@ -510,35 +516,35 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
 
                                 {includeInflections && (
                                     <div className="export-sub-options">
-                                        <label className="export-label">Matrix Detail Level</label>
+                                        <label className="export-label">{t('exportModal.options.matrixDetail')}</label>
                                         <div className="export-mode-grid">
                                             <button 
                                                 className={`mode-btn ${inflectionMode === 'compact' ? 'active' : ''}`}
                                                 onClick={() => setInflectionMode('compact')}
                                             >
-                                                <h4>Compact</h4>
-                                                <p>Rules only</p>
+                                                <h4>{t('exportModal.options.compact')}</h4>
+                                                <p>{t('exportModal.options.compactDesc')}</p>
                                             </button>
                                             <button 
                                                 className={`mode-btn ${inflectionMode === 'affix' ? 'active' : ''}`}
                                                 onClick={() => setInflectionMode('affix')}
                                             >
-                                                <h4>Full (Affix)</h4>
-                                                <p>Rules + Persons</p>
+                                                <h4>{t('exportModal.options.fullAffix')}</h4>
+                                                <p>{t('exportModal.options.fullAffixDesc')}</p>
                                             </button>
                                             <button 
                                                 className={`mode-btn ${inflectionMode === 'free' ? 'active' : ''}`}
                                                 onClick={() => setInflectionMode('free')}
                                             >
-                                                <h4>Full (Free)</h4>
-                                                <p>Rules + Pronouns</p>
+                                                <h4>{t('exportModal.options.fullFree')}</h4>
+                                                <p>{t('exportModal.options.fullFreeDesc')}</p>
                                             </button>
                                         </div>
                                         
                                         {inflectionMode !== 'compact' && (
                                             <div className="export-warning-box">
                                                 <AlertTriangle size={16} />
-                                                <span><b>Warning:</b> Full paradigms create huge files. Do not close the browser while processing.</span>
+                                                <span>{t('exportModal.options.paradigmWarning')}</span>
                                             </div>
                                         )}
                                     </div>
@@ -547,7 +553,7 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
 
                             {isRichDocument ? (
                                 <>
-                                    <p className="export-hint">Finally, choose a visual style for your document:</p>
+                                    <p className="export-hint">{t('exportModal.options.chooseStyle')}</p>
                                     <div className="template-grid">
                                         {templates.map(tmp => (
                                             <div
@@ -571,9 +577,9 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                                 </>
                             ) : (
                                 <div className="plain-export-action">
-                                    <p className="export-hint">This format does not support visual templates. Click below to generate your {type === 'sheets' ? 'Excel' : 'Markdown'} file.</p>
+                                    <p className="export-hint">{t('exportModal.options.noTemplatesHint', { format: type === 'sheets' ? 'Excel' : 'Markdown' })}</p>
                                     <Button variant="save" onClick={() => handleExportClick()} style={{ width: '100%', padding: '20px', fontSize: '1.1rem' }}>
-                                        <Download size={20} /> Generate {type?.toUpperCase()} Export
+                                        <Download size={20} /> {t('exportModal.options.generateBtn', { format: type?.toUpperCase() })}
                                     </Button>
                                 </div>
                             )}
@@ -583,7 +589,7 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
 
                 <div className="vrb-footer">
                     <Button variant="edit" onClick={onClose} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)' }} disabled={isProcessing}>
-                        Cancel
+                        {t('exportModal.cancel')}
                     </Button>
                 </div>
             </div>

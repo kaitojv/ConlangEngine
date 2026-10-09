@@ -3,6 +3,7 @@ import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { applyRuleToWord, expandWildcardDependencies } from '@/utils/morphologyEngine.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import Card from '@/components/UI/Card/Card.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
@@ -12,6 +13,7 @@ import PanZoomContainer from '@/components/UI/PanZoomContainer/PanZoomContainer.
 import './etymologyTab.css';
 
 export default function EtymologyTab() {
+    const { t } = useTranslation();
     const [searchInput, setSearchInput] = useState('');
 
     // Let's grab what we need from our global linguistic stores
@@ -88,17 +90,17 @@ export default function EtymologyTab() {
         <div className="etymology-container">
             <Card>
                 <h2 className="flex sg-title etymology-header-title">
-                    <Network /> Etymology & Derivation Map
+                    <Network /> {t('etymology.title')}
                 </h2>
                 <p className="etymology-description">
-                    Search for a root word in your lexicon to visualize all of its generated grammatical derivations.
+                    {t('etymology.desc')}
                 </p>
                 
                 <Input 
-                    label="Search Root Word" 
+                    label={t('etymology.searchRoot')} 
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
-                    placeholder="Type the exact base word here..."
+                    placeholder={t('etymology.searchPlaceholder')}
                     className="custom-font-text notranslate"
                 />
 
@@ -106,7 +108,7 @@ export default function EtymologyTab() {
                 {searchInput.trim() && !targetWord && (
                     <div className="etymology-error-box">
                         <AlertTriangle size={18} /> 
-                        <span>Root not found in lexicon. Make sure you typed the exact base word.</span>
+                        <span>{t('etymology.rootNotFound')}</span>
                     </div>
                 )}
             </Card>
@@ -114,8 +116,8 @@ export default function EtymologyTab() {
             {!searchInput.trim() && !targetWord && (
                 <EmptyState
                     icon={Network}
-                    title="Etymology Map"
-                    description="Visualize how words in your conlang are derived. Search for a root word to see its entire grammatical family tree, automatically generated from your grammar rules."
+                    title={t('etymology.emptyTitle')}
+                    description={t('etymology.emptyDesc')}
                 />
             )}
 
@@ -140,7 +142,7 @@ export default function EtymologyTab() {
                                     {/* Lexical Descendants Branch (Real Etymology) */}
                                     {lexicalDescendants.length > 0 && (
                                         <div className="tree-branch">
-                                            <div className="branch-header"><Network size={14}/> Lexical Descendants</div>
+                                            <div className="branch-header"><Network size={14}/> {t('etymology.lexicalDescendants')}</div>
                                             <div className="derivations-grid branch-grid">
                                                 {lexicalDescendants.map((desc, idx) => (
                                                     <div key={idx} className="derivation-card descendant-card">
@@ -156,7 +158,7 @@ export default function EtymologyTab() {
                                     {/* Grammatical Inflections Branch */}
                                     {derivations.length > 0 && (
                                         <div className="tree-branch">
-                                            <div className="branch-header"><Layers size={14}/> Grammatical Inflections</div>
+                                            <div className="branch-header"><Layers size={14}/> {t('etymology.grammaticalInflections')}</div>
                                             <div className="derivations-grid branch-grid">
                                                 {derivations.map((derivation, idx) => (
                                                     <div key={idx} className="derivation-card">
@@ -171,7 +173,7 @@ export default function EtymologyTab() {
                             </>
                         ) : (
                             <div className="no-derivations-msg">
-                                No descendants or grammatical rules apply to this root yet.
+                                {t('etymology.noDerivations')}
                             </div>
                         )}
                     </div>

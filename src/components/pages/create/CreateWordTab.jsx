@@ -476,18 +476,18 @@ export default function CreateWordTab() {
 
         setSelectedDerivs({});
         setCustomTranslations({});
-        toast.success((t) => (
+        toast.success((toastItem) => (
             <div className="toast-inner-flex">
-                <span>{keepRoot ? 'Meaning saved! Add another...' : 'Root and derivations saved!'}</span>
+                <span>{keepRoot ? t('createWord.savedAndNewSuccess') : t('createWord.savedSuccess')}</span>
                 {!keepRoot && (
                     <button
                         onClick={() => {
-                            toast.dismiss(t.id);
+                            toast.dismiss(toastItem.id);
                             navigate('/lexicon');
                         }}
                         className="toast-view-btn"
                     >
-                        View Lexicon
+                        {t('home.openLexicon')}
                     </button>
                 )}
             </div>
@@ -569,17 +569,17 @@ export default function CreateWordTab() {
                 warningMsg = "Duplicate detected: This word or translation is already in your dictionary.";
             }
 
-            showValidationToast((t) => (
+            showValidationToast((toastItem) => (
                 <div className="custom-toast-v">
-                    <strong>⚠️ Duplicate Detected</strong>
+                    <strong>⚠️ {t('createWord.toastDuplicateTitle')}</strong>
                     <span>{warningMsg}</span>
                     <div className="toast-actions-v">
                         <button onClick={() => {
-                            toast.dismiss(t.id);
+                            toast.dismiss(toastItem.id);
                             // Bypass duplicate check and continue to validation
                             proceedToHarmonyValidation(safeWord, cleanTrans, processedTags, 0, keepRoot);
-                        }} className="btn-v btn-err-v">Save Anyway</button>
-                        <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                        }} className="btn-v btn-err-v">{t('createWord.toastSaveAnyway')}</button>
+                        <button onClick={() => toast.dismiss(toastItem.id)} className="btn-v btn-sec-v">{t('createWord.toastCancel')}</button>
                     </div>
                 </div>
             ));
@@ -608,12 +608,12 @@ export default function CreateWordTab() {
 
             // Complete mode = strict block, no save bypass
             if (mode === 'complete') {
-                showValidationToast((t) => (
+                showValidationToast((toastItem) => (
                     <div className="custom-toast-v">
-                        <strong>⚠️ Vowel Harmony Violation</strong>
+                        <strong>⚠️ {t('createWord.toastHarmonyTitle')}</strong>
                         <span>Vowels [{validation.harmonyResult.foundVowels.join(', ')}] mix across harmony sets ({mixedNames}). Complete mode blocks all violations.</span>
                         <div className="toast-actions-v">
-                            <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                            <button onClick={() => toast.dismiss(toastItem.id)} className="btn-v btn-sec-v">{t('createWord.toastCancel')}</button>
                         </div>
                     </div>
                 ));
@@ -621,16 +621,16 @@ export default function CreateWordTab() {
             }
 
             // Flexible mode = blocked unless user explicitly saves anyway
-            showValidationToast((t) => (
+            showValidationToast((toastItem) => (
                 <div className="custom-toast-v">
-                    <strong>⚠️ Vowel Harmony (Not Exempted)</strong>
+                    <strong>⚠️ {t('createWord.toastHarmonyFlexibleTitle')}</strong>
                     <span>Vowels [{validation.harmonyResult.foundVowels.join(', ')}] mix across harmony sets ({mixedNames}). This word class/tag is not in the exempt list.</span>
                     <div className="toast-actions-v">
                         <button onClick={() => {
-                            toast.dismiss(t.id);
+                            toast.dismiss(toastItem.id);
                             proceedToValidation(safeWord, cleanTrans, processedTags, charIndex, keepRoot);
-                        }} className="btn-v btn-err-v">Save Anyway</button>
-                        <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                        }} className="btn-v btn-err-v">{t('createWord.toastSaveAnyway')}</button>
+                        <button onClick={() => toast.dismiss(toastItem.id)} className="btn-v btn-sec-v">{t('createWord.toastCancel')}</button>
                     </div>
                 </div>
             ));
@@ -660,31 +660,31 @@ export default function CreateWordTab() {
                     return proceedToGrammarValidation(safeWord, cleanTrans, processedTags, keepRoot);
                 }
 
-                showValidationToast((t) => (
+                showValidationToast((toastItem) => (
                     <div className="custom-toast-v">
-                        <strong className="char-violation-title">⚠️ Character Violation: "{char}"</strong>
-                        <span>The character "{char}" is not in your Phoneme settings. How should we handle it?</span>
+                        <strong className="char-violation-title">⚠️ {t('createWord.toastCharViolation', { char })}</strong>
+                        <span>{t('createWord.toastCharQuestion', { char })}</span>
                         <div className="toast-actions-v char-violation-actions">
                             <button onClick={() => {
-                                toast.dismiss(t.id);
+                                toast.dismiss(toastItem.id);
                                 handleAddCharsToInventory([char], 'consonants');
                                 // Delay slightly to let the toast animation complete before showing the next one
                                 setTimeout(() => proceedToValidation(safeWord, cleanTrans, processedTags, charIndex + 1, keepRoot), 100);
-                            }} className="btn-v btn-acc-v">Add to Consonants</button>
+                            }} className="btn-v btn-acc-v">{t('createWord.toastAddConsonants')}</button>
 
                             <button onClick={() => {
-                                toast.dismiss(t.id);
+                                toast.dismiss(toastItem.id);
                                 handleAddCharsToInventory([char], 'vowels');
                                 setTimeout(() => proceedToValidation(safeWord, cleanTrans, processedTags, charIndex + 1, keepRoot), 100);
-                            }} className="btn-v btn-acc2-v">Add to Vowels</button>
+                            }} className="btn-v btn-acc2-v">{t('createWord.toastAddVowels')}</button>
 
                             <button onClick={() => {
-                                toast.dismiss(t.id);
+                                toast.dismiss(toastItem.id);
                                 // Skip this character but keep going with the next one
                                 setTimeout(() => proceedToValidation(safeWord, cleanTrans, processedTags, charIndex + 1, keepRoot), 100);
-                            }} className="btn-v btn-err-v">Save as Irregular</button>
+                            }} className="btn-v btn-err-v">{t('createWord.toastIrregular')}</button>
 
-                            <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                            <button onClick={() => toast.dismiss(toastItem.id)} className="btn-v btn-sec-v">{t('createWord.toastCancel')}</button>
                         </div>
                         <div className="char-violation-progress">
                             {validation.invalidChars.length > 1 && `(Character ${charIndex + 1} of ${validation.invalidChars.length})`}
@@ -700,24 +700,24 @@ export default function CreateWordTab() {
             }
 
             // Pattern validation (runs after characters are cleared or skipped)
-            showValidationToast((t) => (
+            showValidationToast((toastItem) => (
                 <div className="custom-toast-v">
-                    <strong>⚠️ Phono-Syntax Warning</strong>
+                    <strong>⚠️ {t('createWord.toastPatternTitle')}</strong>
                     <span>{validation.reason}</span>
                     <p className="pattern-warning-p">Do you want to save it as an irregular exception anyway?</p>
                     <div className="toast-actions-v">
                         <button onClick={() => {
-                            toast.dismiss(t.id);
+                            toast.dismiss(toastItem.id);
                             proceedToGrammarValidation(safeWord, cleanTrans, processedTags, keepRoot);
-                        }} className="btn-v btn-err-v">Save Anyway</button>
+                        }} className="btn-v btn-err-v">{t('createWord.toastSaveAnyway')}</button>
 
                         {validation.type === 'invalid_pattern' && validation.detectedPattern && (
                             <button onClick={() => {
-                                toast.dismiss(t.id);
+                                toast.dismiss(toastItem.id);
                                 handleAddPattern(validation.detectedPattern, safeWord, cleanTrans, processedTags);
-                            }} className="btn-v btn-acc-v">Add as Syllable Pattern</button>
+                            }} className="btn-v btn-acc-v">{t('createWord.toastAddPattern')}</button>
                         )}
-                        <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                        <button onClick={() => toast.dismiss(toastItem.id)} className="btn-v btn-sec-v">{t('createWord.toastCancel')}</button>
                     </div>
                 </div>
             ));
@@ -731,16 +731,16 @@ export default function CreateWordTab() {
         // 3. POS CONFIRMATION (If new)
         const normalizedPOS = wordClass.toLowerCase().trim();
         if (normalizedPOS && !allWordClasses.includes(normalizedPOS)) {
-            showValidationToast((t) => (
+            showValidationToast((toastItem) => (
                 <div className="custom-toast-v">
-                    <strong>📝 New Part of Speech</strong>
-                    <span>"{normalizedPOS}" does not exist in your grammar settings. Add it globally?</span>
+                    <strong>📝 {t('createWord.toastPosTitle')}</strong>
+                    <span>{t('createWord.toastPosQuestion', { pos: normalizedPOS })}</span>
                     <div className="toast-actions-v">
                         <button onClick={() => {
-                            toast.dismiss(t.id);
+                            toast.dismiss(toastItem.id);
                             finalizeSave(safeWord, cleanTrans, processedTags, keepRoot);
-                        }} className="btn-v btn-acc-v">Add & Save</button>
-                        <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                        }} className="btn-v btn-acc-v">{t('createWord.toastAddAndSave')}</button>
+                        <button onClick={() => toast.dismiss(toastItem.id)} className="btn-v btn-sec-v">{t('createWord.toastCancel')}</button>
                     </div>
                 </div>
             ));
@@ -756,16 +756,16 @@ export default function CreateWordTab() {
             const markers = verbMarker.split(',').map(m => m.trim().replace(/^-/, ''));
             const match = markers.find(m => safeWord.endsWith(m));
             if (!match) {
-                showValidationToast((t) => (
+                showValidationToast((toastItem) => (
                     <div className="custom-toast-v">
                         <strong>⚠️ Verb Marker Missing</strong>
                         <span>This word is marked as a verb, but it doesn't end with any of your defined verb markers ({verbMarker}).</span>
                         <div className="toast-actions-v">
                             <button onClick={() => {
-                                toast.dismiss(t.id);
+                                toast.dismiss(toastItem.id);
                                 saveConfirmedWord(safeWord, cleanTrans, processedTags, keepRoot);
-                            }} className="btn-v btn-err-v">Save Anyway</button>
-                            <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                            }} className="btn-v btn-err-v">{t('createWord.toastSaveAnyway')}</button>
+                            <button onClick={() => toast.dismiss(toastItem.id)} className="btn-v btn-sec-v">{t('createWord.toastCancel')}</button>
                         </div>
                     </div>
                 ));
@@ -831,10 +831,10 @@ export default function CreateWordTab() {
                 </h2>
 
                 <Infobox title={t('createWord.guideTitle')}>
-                    • <b>Automatic Linking:</b> Words saved from the "Derivations" list are linked to this root. You can see this genealogy in the Lexicon Edit modal.<br />
-                    • <b>Target POS:</b> If a grammar rule (like "Adjectival") has a Target POS set, derived words will automatically be categorized correctly.<br />
-                    • <b>Duplicate Alerts:</b> The app checks for homonyms (same word) and synonyms (same translation) in real-time.<br />
-                    • <b>IPA Chart:</b> Click any field to focus it, then use the IPA chart to insert phonemes.
+                    • {t('createWord.guideLinking')}<br />
+                    • {t('createWord.guidePos')}<br />
+                    • {t('createWord.guideDuplicates')}<br />
+                    • {t('createWord.guideIpa')}
                 </Infobox>
 
                 <div className="input-grid">
@@ -915,7 +915,7 @@ export default function CreateWordTab() {
                 {/* IPA chart spans the full card width so it doesn't overflow the column grid */}
                 <div className="ipa-chart-status-wrap">
                     <p className="ipa-chart-status">
-                        IPA Chart pastes into: <strong className="ipa-active-field">{activeField === 'word' ? 'Word' : 'IPA'}</strong> field. Click a field above to change target.
+                        {t('createWord.ipaPastesInto', { field: activeField === 'word' ? t('createWord.fieldWord') : t('createWord.fieldIpa') })}
                     </p>
                     <IpaChart onSelect={handleIpaSelect} />
                 </div>
@@ -923,7 +923,7 @@ export default function CreateWordTab() {
                 {isLogographic && (
                     <div className="ideogram-section">
                         <div className="ideogram-header-row">
-                            <label className="form-label">IDEOGRAM / SYMBOL</label>
+                            <label className="form-label">{t('createWord.ideogramLabel')}</label>
                         </div>
                         <div className="ideogram-row">
                             <GlyphPreviewBadge
@@ -944,20 +944,20 @@ export default function CreateWordTab() {
                                     type="button"
                                     className="ideogram-btn ideogram-btn-edit"
                                     onClick={() => setIsFontStudioOpen(true)}
-                                    title={ideogram ? "Edit Symbol in Font Studio" : "Draw Symbol in Font Studio"}
+                                    title={ideogram ? t('createWord.editSymbol') : t('createWord.drawSymbol')}
                                 >
                                     <Brush size={14} />
-                                    <span>{ideogram ? 'Edit Symbol' : 'Draw Symbol'}</span>
+                                    <span>{ideogram ? t('createWord.editSymbol') : t('createWord.drawSymbol')}</span>
                                 </button>
                                 {ideogram && (
                                     <button
                                         type="button"
                                         className="ideogram-btn ideogram-btn-secondary"
                                         onClick={() => setIsStrokeOrderOpen(true)}
-                                        title="View & Reorder Stroke Order"
+                                        title={t('createWord.strokeOrder')}
                                     >
                                         <PenTool size={14} />
-                                        <span>Stroke Order</span>
+                                        <span>{t('createWord.strokeOrder')}</span>
                                     </button>
                                 )}
                                 {ideogram && (
@@ -965,7 +965,7 @@ export default function CreateWordTab() {
                                         type="button"
                                         className="ideogram-btn ideogram-btn-icon ideogram-btn-danger"
                                         onClick={() => updateField('ideogram', '')}
-                                        title="Clear Symbol"
+                                        title={t('createWord.clearSymbol')}
                                     >
                                         <X size={14} />
                                     </button>
@@ -977,13 +977,13 @@ export default function CreateWordTab() {
 
                 {scriptSystems.length > 1 && (
                     <div style={{ marginTop: '0.5rem' }}>
-                        <label className="form-label" style={{ marginBottom: '4px', display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--tx2)' }}>Script Override (Optional)</label>
+                        <label className="form-label" style={{ marginBottom: '4px', display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--tx2)' }}>{t('createWord.scriptOverride')}</label>
                         <select
                             className="select select-bordered w-full"
                             value={scriptOverride || ''}
                             onChange={(e) => updateField('scriptOverride', e.target.value || null)}
                         >
-                            <option value="">(Use rules / default)</option>
+                            <option value="">{t('createWord.scriptDefault')}</option>
                             {scriptSystems.map(s => (
                                 <option key={s.id} value={s.id}>{s.name}</option>
                             ))}
@@ -993,9 +993,9 @@ export default function CreateWordTab() {
 
                 {phonologyTypes === 'featural_block' && possibleBlockStructures.length > 0 && (
                     <div className="block-picker-section" style={{ marginTop: '1rem', background: 'var(--bg2)', padding: '1rem', borderRadius: '8px' }}>
-                        <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>Visual Block Structure</label>
+                        <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>{t('createWord.visualBlockTitle')}</label>
                         <p style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '12px', lineHeight: '1.4' }}>
-                            Choose how this word should be visually broken down into blocks. Select from the greedy-matched suggestions below, or manually type your own distribution using periods (e.g. <code>m.e.hak.iz</code>).
+                            {t('createWord.visualBlockDesc')}
                         </p>
 
                         <div style={{ marginBottom: '15px', display: 'flex', gap: '15px', alignItems: 'center' }}>
@@ -1003,7 +1003,7 @@ export default function CreateWordTab() {
                                 <Input
                                     value={ideogram || possibleBlockStructures[0]}
                                     onChange={(e) => updateField('ideogram', e.target.value.toLowerCase())}
-                                    placeholder="Type custom structure..."
+                                    placeholder={t('createWord.typeCustomStructure')}
                                 />
                             </div>
                             <div style={{ minWidth: '80px', textAlign: 'center', fontSize: '2.5rem', color: 'var(--acc)', border: '1px solid var(--bd)', borderRadius: 'var(--rad)', padding: '0 15px', background: 'var(--bg)' }} className="custom-font-text notranslate">
@@ -1032,9 +1032,9 @@ export default function CreateWordTab() {
                         </div>
 
                         <div style={{ marginTop: '15px', padding: '10px', background: 'var(--bg)', borderRadius: 'var(--rad)' }}>
-                            <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>Layout Overrides</label>
+                            <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>{t('createWord.layoutOverrides')}</label>
                             <p style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '12px' }}>
-                                Override the layout for specific syllables in this word.
+                                {t('createWord.layoutOverridesDesc')}
                             </p>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 {(ideogram || possibleBlockStructures[0] || '').split('.').map((blockWithOverride, bIdx) => {
@@ -1070,7 +1070,7 @@ export default function CreateWordTab() {
                                                     updateField('ideogram', blocks.join('.'));
                                                 }}
                                             >
-                                                <option value="">Default for this pattern</option>
+                                                <option value="">{t('createWord.defaultForPattern')}</option>
                                                 {validLayouts.map(([key, val]) => (
                                                     <option key={key} value={key}>{val.name}</option>
                                                 ))}
@@ -1085,7 +1085,7 @@ export default function CreateWordTab() {
 
                 <details className="tone-stress-details">
                     <summary className="tone-stress-summary">
-                        Tone & Stress Options
+                        {t('createWord.toneStressOptions')}
                     </summary>
                     <div className="tone-stress-content">
                         <ToneStressSelector
@@ -1101,23 +1101,23 @@ export default function CreateWordTab() {
                 <div className="input-grid trans-def-grid">
                     <div>
                         <Input
-                            label="Short Translation"
+                            label={t('createWord.shortTranslation')}
                             value={translation}
                             onChange={(e) => updateField('translation', e.target.value)}
-                            placeholder="Primary English word..."
+                            placeholder={t('createWord.primaryWordPlaceholder')}
                         />
                     </div>
                     <div>
                         <div className="auto-suggest-label-row">
-                            <label className="form-label">Full Definition (Optional)</label>
+                            <label className="form-label">{t('createWord.fullDefinition')}</label>
                             <button className="btn-link" onClick={autoSuggestDefinition} disabled={isFetchingDefinition}>
-                                <Wand2 size={12} /> {isFetchingDefinition ? 'Fetching...' : 'Auto-Fill'}
+                                <Wand2 size={12} /> {isFetchingDefinition ? t('createWord.fetching') : t('createWord.autoFill')}
                             </button>
                         </div>
                         <Input
                             value={definition}
                             onChange={(e) => updateField('definition', e.target.value)}
-                            placeholder="Extended description..."
+                            placeholder={t('createWord.defPlaceholder')}
                         />
                     </div>
                 </div>
@@ -1125,11 +1125,11 @@ export default function CreateWordTab() {
                 {wordClass.includes('pronoun') && (
                     <div style={{ marginTop: '1rem' }}>
                         <Input
-                            label="Person Category"
+                            label={t('createWord.personCategory')}
                             value={personCategory}
                             onChange={(e) => updateField('personCategory', e.target.value)}
                             list="create-person-cat-options"
-                            placeholder="e.g. 1st, 2nd, 3rd"
+                            placeholder={t('createWord.personPlaceholder')}
                         />
                         <datalist id="create-person-cat-options">
                             <option value="1st" />
@@ -1149,9 +1149,9 @@ export default function CreateWordTab() {
 
                 <div className="tags-section">
                     <div className="auto-suggest-label-row">
-                        <label className="form-label">Semantic Tags</label>
+                        <label className="form-label">{t('createWord.semanticTags')}</label>
                         <button className="btn-link" onClick={autoSuggestTags} disabled={isFetchingTags}>
-                            <Wand2 size={12} /> {isFetchingTags ? 'Searching...' : 'Auto-Suggest'}
+                            <Wand2 size={12} /> {isFetchingTags ? t('createWord.searching') : t('createWord.autoSuggest')}
                         </button>
                     </div>
                     <div className="tags-chip-container">
@@ -1163,7 +1163,7 @@ export default function CreateWordTab() {
                         ))}
                         <div className="tag-input-wrap">
                             <Input
-                                placeholder={formData.tags.length === 0 ? "Add tags (nature, emotion...)" : ""}
+                                placeholder={formData.tags.length === 0 ? t('createWord.tagPlaceholder') : ""}
                                 value={tagInput}
                                 onChange={(e) => setTagInput(e.target.value)}
                                 onInput={(e) => {
@@ -1207,9 +1207,9 @@ export default function CreateWordTab() {
 
                 <div style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
                     <div className="auto-suggest-label-row">
-                        <label className="form-label">Related Words</label>
+                        <label className="form-label">{t('createWord.relatedWordsTitle')}</label>
                         <button className="btn-link" onClick={autoSuggestRelated} disabled={isFetchingRelated}>
-                            <Wand2 size={12} /> {isFetchingRelated ? 'Searching...' : 'Auto-Suggest'}
+                            <Wand2 size={12} /> {isFetchingRelated ? t('createWord.searching') : t('createWord.autoSuggest')}
                         </button>
                     </div>
                     <div className="tags-chip-container">
@@ -1221,7 +1221,7 @@ export default function CreateWordTab() {
                         ))}
                         <div className="tag-input-wrap">
                             <Input
-                                placeholder={formData.relatedWords.length === 0 ? "Add related concept (e.g. water, ocean)..." : ""}
+                                placeholder={formData.relatedWords.length === 0 ? t('createWord.relatedPlaceholder') : ""}
                                 value={relatedInput}
                                 onChange={(e) => setRelatedInput(e.target.value)}
                                 onKeyDown={(e) => {
@@ -1241,7 +1241,7 @@ export default function CreateWordTab() {
                 {word && word.trim() && grammarRules.length > 0 && (
                     <div className="preview-box">
                         <span className="preview-title">
-                            Auto-Derivations Preview
+                            {t('createWord.autoDerivationsTitle')}
                         </span>
 
                         {derivedWords.length > 0 ? (
@@ -1251,7 +1251,7 @@ export default function CreateWordTab() {
                                         key={idx}
                                         className={`preview-item ${selectedDerivs[idx] ? 'selected' : ''}`}
                                         onClick={() => setSelectedDerivs(prev => ({ ...prev, [idx]: !prev[idx] }))}
-                                        title="Click to save alongside root"
+                                        title={t('createWord.clickToSaveAlongside')}
                                     >
                                         <div className="deriv-item-content">
                                             <span className="preview-word notranslate custom-font-text">
@@ -1273,7 +1273,7 @@ export default function CreateWordTab() {
                                 ))}
                             </div>
                         ) : (
-                            <i className="preview-empty">No matching grammar rules found for this class.</i>
+                            <i className="preview-empty">{t('createWord.noRulesForClass')}</i>
                         )}
                     </div>
                 )}
@@ -1309,7 +1309,7 @@ export default function CreateWordTab() {
                 <Modal
                     isOpen={isFontStudioOpen}
                     onClose={() => setIsFontStudioOpen(false)}
-                    title={ideogram ? "Edit Custom Ideogram" : "Draw Custom Ideogram"}
+                    title={ideogram ? t('createWord.editSymbol') : t('createWord.drawSymbol')}
                 >
                     <FontStudioModal
                         targetLabel={word || 'New Root'}

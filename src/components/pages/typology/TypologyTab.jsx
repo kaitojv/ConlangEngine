@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useShallow } from 'zustand/react/shallow';
 import Card from '@/components/UI/Card/Card.jsx';
@@ -56,6 +57,7 @@ function ScoreRing({ score, color }) {
 }
 
 export default function TypologyTab() {
+    const { t } = useTranslation();
     const conlangName = useConfigStore(state => state.conlangName);
     // analyzeTypology() reads exactly these ten fields of the config; see
     // src/utils/typologyEngine.js.
@@ -113,13 +115,10 @@ export default function TypologyTab() {
             {/* Header */}
             <div>
                 <h1 className="typ-header-title">
-                    <FlaskConical size={26} /> Naturalness &amp; Typology
+                    <FlaskConical size={26} /> {t('typology.title')}
                 </h1>
                 <p className="typ-description">
-                    See how <b>{conlangName || 'your conlang'}</b> compares to the world's natural
-                    languages. Every check is a cross-linguistic tendency drawn from typology (WALS) and
-                    Greenbergian universals — <i>guidance, not rules</i>. A boldly alien language is a perfectly
-                    valid goal.
+                    {t('typology.desc', { conlang: conlangName || t('typology.yourConlang') })}
                 </p>
             </div>
 
@@ -144,19 +143,19 @@ export default function TypologyTab() {
             <div className="typ-stat-grid">
                 <div className="typ-stat">
                     <span className="typ-stat-value">{inventory.consonantCount}</span>
-                    <span className="typ-stat-label">Consonants <em>({inventory.consonantClass})</em></span>
+                    <span className="typ-stat-label">{t('typology.consonants')} <em>({inventory.consonantClass})</em></span>
                 </div>
                 <div className="typ-stat">
                     <span className="typ-stat-value">{inventory.vowelCount}</span>
-                    <span className="typ-stat-label">Vowels <em>({inventory.vowelClass})</em></span>
+                    <span className="typ-stat-label">{t('typology.vowels')} <em>({inventory.vowelClass})</em></span>
                 </div>
                 <div className="typ-stat">
                     <span className="typ-stat-value">{inventory.ratio || '—'}</span>
-                    <span className="typ-stat-label">C : V ratio</span>
+                    <span className="typ-stat-label">{t('typology.cvRatio')}</span>
                 </div>
                 <div className="typ-stat">
                     <span className="typ-stat-value typ-stat-text">{inventory.syllableComplexity}</span>
-                    <span className="typ-stat-label">Syllable structure</span>
+                    <span className="typ-stat-label">{t('typology.syllableStructure')}</span>
                 </div>
             </div>
 
@@ -168,7 +167,7 @@ export default function TypologyTab() {
                         checked={reviewOnly}
                         onChange={(e) => setReviewOnly(e.target.checked)}
                     />
-                    <span>Show only things to review {reviewCount > 0 && `(${reviewCount})`}</span>
+                    <span>{reviewCount > 0 ? t('typology.showOnlyReview', { count: reviewCount }) : t('typology.showOnlyReview', { count: '' }).replace(/[()]/g, '').trim()}</span>
                 </label>
             </div>
 
@@ -178,8 +177,8 @@ export default function TypologyTab() {
                     <CheckCircle size={40} style={{ color: 'var(--ok)' }} />
                     <p>
                         {reviewOnly
-                            ? 'Nothing flagged for review — your language is tracking closely with natural-language norms. Nice work!'
-                            : 'Add a phonology and grammar in Settings to generate your naturalness report.'}
+                            ? t('typology.allGood')
+                            : t('typology.emptySetup')}
                     </p>
                 </Card>
             ) : (
@@ -222,10 +221,9 @@ export default function TypologyTab() {
             {/* Footer disclaimer */}
             <p className="typ-footnote">
                 <Info size={14} />
-                Typological tendencies describe what natural languages usually do — they are not laws.
-                Treat “unusual” flags as creative prompts, not errors.
+                {t('typology.disclaimer')}
                 <ChevronRight size={14} className="typ-footnote-arrow" />
-                Data patterns after the <i>World Atlas of Language Structures</i> (WALS).
+                {t('typology.dataPatterns')}
             </p>
         </div>
     );

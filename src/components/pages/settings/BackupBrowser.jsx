@@ -9,6 +9,7 @@ import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import { listProjects, getLatestBackup, getBackupVersion, deleteBackup, purgeOldBackups, deleteProject } from '../../../utils/backupClient.js';
 import { restoreBackupPayload } from '../../../utils/backupRestore.js';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import {
     RefreshCw, Loader, ChevronDown, ChevronRight,
     Clock, Layers, HardDrive, User, Check, AlertTriangle, Trash2, Scissors, FolderX,
@@ -32,6 +33,7 @@ function formatTime(iso) {
 }
 
 export default function BackupBrowser({ isOpen, onClose, endpoint }) {
+    const { t } = useTranslation();
     const activeProjectId = useConfigStore((s) => s.projectId);
 
     const [projects, setProjects] = useState([]);
@@ -176,19 +178,19 @@ export default function BackupBrowser({ isOpen, onClose, endpoint }) {
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Server Projects">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('backupBrowser.title')}>
             <div className="bb-toolbar">
                 <p className="bb-subtitle">
-                    Projects stored on <code>{endpoint}</code>. Select one to load it into your workspace.
+                    {t('backupBrowser.subtitle', { endpoint })}
                 </p>
                 <button className="bb-refresh" onClick={refresh} disabled={loading}>
                     {loading ? <Loader size={15} className="bb-spin" /> : <RefreshCw size={15} />}
-                    Refresh
+                    {t('backupBrowser.refreshBtn')}
                 </button>
             </div>
 
             {loading && projects.length === 0 && (
-                <div className="bb-state"><Loader size={20} className="bb-spin" /> Loading projects…</div>
+                <div className="bb-state"><Loader size={20} className="bb-spin" /> {t('backupBrowser.loading')}</div>
             )}
 
             {error && (
@@ -198,7 +200,7 @@ export default function BackupBrowser({ isOpen, onClose, endpoint }) {
             )}
 
             {!loading && !error && projects.length === 0 && (
-                <div className="bb-state">No projects found on the server yet.</div>
+                <div className="bb-state">{t('backupBrowser.empty')}</div>
             )}
 
             <div className="bb-list">
@@ -213,7 +215,7 @@ export default function BackupBrowser({ isOpen, onClose, endpoint }) {
                                 <div className="bb-info">
                                     <div className="bb-title-row">
                                         <span className="bb-name">{p.conlangName || 'Untitled'}</span>
-                                        {isActive && <span className="bb-badge-active"><Check size={12} /> Active</span>}
+                                        {isActive && <span className="bb-badge-active"><Check size={12} /> {t('backupBrowser.active')}</span>}
                                     </div>
                                     {p.description && <p className="bb-desc">{p.description}</p>}
 
@@ -240,7 +242,7 @@ export default function BackupBrowser({ isOpen, onClose, endpoint }) {
                                         {restoringKey === `${p.projectId}:latest`
                                             ? <Loader size={14} className="bb-spin" />
                                             : <Check size={14} />}
-                                        Use latest
+                                        {t('backupBrowser.useLatest')}
                                     </button>
                                     {Array.isArray(p.backups) && p.backups.length > 0 && (
                                         <button
@@ -248,7 +250,7 @@ export default function BackupBrowser({ isOpen, onClose, endpoint }) {
                                             onClick={() => setExpanded(isOpenRow ? null : p.projectId)}
                                         >
                                             {isOpenRow ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                            Versions
+                                            {t('backupBrowser.versions')}
                                         </button>
                                     )}
                                     <button
@@ -260,7 +262,7 @@ export default function BackupBrowser({ isOpen, onClose, endpoint }) {
                                         {deletingProjectId === p.projectId
                                             ? <Loader size={14} className="bb-spin" />
                                             : <FolderX size={14} />}
-                                        Delete project
+                                        {t('backupBrowser.deleteProject')}
                                     </button>
                                 </div>
                             </div>
@@ -268,7 +270,7 @@ export default function BackupBrowser({ isOpen, onClose, endpoint }) {
                             {isOpenRow && Array.isArray(p.backups) && (
                                 <div className="bb-versions">
                                     <div className="bb-purge-row">
-                                        <span className="bb-purge-label"><Scissors size={13} /> Keep newest</span>
+                                        <span className="bb-purge-label"><Scissors size={13} /> {t('backupBrowser.keepNewest')}</span>
                                         <input
                                             type="number"
                                             min="0"
@@ -285,7 +287,7 @@ export default function BackupBrowser({ isOpen, onClose, endpoint }) {
                                             {purgingId === p.projectId
                                                 ? <Loader size={12} className="bb-spin" />
                                                 : <Trash2 size={12} />}
-                                            Purge older
+                                            {t('backupBrowser.purgeOlder')}
                                         </button>
                                     </div>
                                     {p.backups.map((b) => (
@@ -300,7 +302,7 @@ export default function BackupBrowser({ isOpen, onClose, endpoint }) {
                                             >
                                                 {restoringKey === `${p.projectId}:${b.version}`
                                                     ? <Loader size={12} className="bb-spin" />
-                                                    : 'Load'}
+                                                    : t('backupBrowser.loadBtn')}
                                             </button>
                                             <button
                                                 className="bb-version-delete"

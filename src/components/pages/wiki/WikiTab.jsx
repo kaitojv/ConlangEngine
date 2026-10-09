@@ -5,6 +5,7 @@ import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { getUniqueParsings } from '@/utils/morphologyEngine.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { transliterateText } from '@/utils/transliteration.js';
 import { buildScriptConfig } from '@/utils/scriptResolver.js';
 import Card from '@/components/UI/Card/Card.jsx';
@@ -388,11 +389,12 @@ const COPULA_VERBS = new Set([
 
 
 function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
+    const { t } = useTranslation();
     const wa = config.wordAssistConfig || { triggers: [] };
     const triggers = wa.triggers || [];
 
     const updateTrigger = (id, field, value) => {
-        const newTriggers = triggers.map(t => t.id === id ? { ...t, [field]: value } : t);
+        const newTriggers = triggers.map(trig => trig.id === id ? { ...trig, [field]: value } : trig);
         updateConfig({ wordAssistConfig: { ...wa, triggers: newTriggers } });
     };
 
@@ -403,7 +405,7 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
     };
 
     const removeTrigger = (id) => {
-        const newTriggers = triggers.filter(t => t.id !== id);
+        const newTriggers = triggers.filter(trig => trig.id !== id);
         updateConfig({ wordAssistConfig: { ...wa, triggers: newTriggers } });
     };
 
@@ -415,14 +417,14 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
         newTriggers.splice(targetIdx, 0, moved);
         
         // Ensure priority matches the new array order so sorting works correctly
-        newTriggers.forEach((t, i) => { t.priority = i + 1; });
+        newTriggers.forEach((trig, i) => { trig.priority = i + 1; });
         
         updateConfig({ wordAssistConfig: { ...wa, triggers: newTriggers } });
     };
 
     const importFromGrammarRules = () => {
         const rules = grammarRules || [];
-        const existingNames = new Set(triggers.map(t => t.name.trim().toLowerCase()));
+        const existingNames = new Set(triggers.map(trig => trig.name.trim().toLowerCase()));
         const newTriggers = [...triggers];
         let added = 0;
         rules.forEach(rule => {
@@ -469,7 +471,7 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
     };
 
     const importableCount = (grammarRules || []).filter(r =>
-        r.affix && r.name && !triggers.some(t => t.name.trim().toLowerCase() === r.name.trim().toLowerCase())
+        r.affix && r.name && !triggers.some(trig => trig.name.trim().toLowerCase() === r.name.trim().toLowerCase())
     ).length;
 
     const roleLabels = {
@@ -538,9 +540,9 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
             <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(0,0,0,0.25)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.2)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <h4 style={{ fontSize: '0.8rem', fontWeight: 800, margin: 0, color: 'var(--acc)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Settings size={15} /> Syntactic Priority (Drag-and-Drop Order)
+                        <Settings size={15} /> {t('wiki.wordAssistSettings.syntacticPriority')}
                     </h4>
-                    <span style={{ fontSize: '0.62rem', color: 'var(--tx3)' }}>Drag cards or use arrows to sort conlang syntax order</span>
+                    <span style={{ fontSize: '0.62rem', color: 'var(--tx3)' }}>{t('wiki.wordAssistSettings.dragHint')}</span>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {syntaxOrder.split('').map((role, idx) => (
@@ -579,32 +581,32 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
             <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(0,0,0,0.25)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <h4 style={{ fontSize: '0.8rem', fontWeight: 800, margin: 0, color: 'var(--acc)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Settings size={15} /> Modifier Position
+                        <Settings size={15} /> {t('wiki.wordAssistSettings.modifierPosition')}
                     </h4>
                 </div>
                 <div style={{ display: 'flex', gap: '20px' }}>
                     <div style={{ flex: 1 }}>
-                        <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>Adjectives</label>
+                        <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>{t('wiki.wordAssistSettings.adjectives')}</label>
                         <select className="wa-select-v2" value={wa.adjPos || 'before'} onChange={(e) => updateConfig({ wordAssistConfig: { ...wa, adjPos: e.target.value } })}>
-                            <option value="before">Before Noun (e.g. red cat)</option>
-                            <option value="after">After Noun (e.g. cat red)</option>
-                            <option value="priority">Follow Syntactic Priority</option>
+                            <option value="before">{t('wiki.wordAssistSettings.beforeNoun')}</option>
+                            <option value="after">{t('wiki.wordAssistSettings.afterNoun')}</option>
+                            <option value="priority">{t('wiki.wordAssistSettings.followPriority')}</option>
                         </select>
                     </div>
                     <div style={{ flex: 1 }}>
-                        <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>Genitives/Possessives</label>
+                        <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>{t('wiki.wordAssistSettings.genitives')}</label>
                         <select className="wa-select-v2" value={wa.genPos || 'before'} onChange={(e) => updateConfig({ wordAssistConfig: { ...wa, genPos: e.target.value } })}>
-                            <option value="before">Before Noun (e.g. my cat)</option>
-                            <option value="after">After Noun (e.g. cat my)</option>
-                            <option value="priority">Follow Syntactic Priority</option>
+                            <option value="before">{t('wiki.wordAssistSettings.beforeNounGen')}</option>
+                            <option value="after">{t('wiki.wordAssistSettings.afterNounGen')}</option>
+                            <option value="priority">{t('wiki.wordAssistSettings.followPriority')}</option>
                         </select>
                     </div>
                     <div style={{ flex: 1 }}>
-                        <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>Adverbs</label>
+                        <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>{t('wiki.wordAssistSettings.adverbs')}</label>
                         <select className="wa-select-v2" value={wa.advPos || 'before'} onChange={(e) => updateConfig({ wordAssistConfig: { ...wa, advPos: e.target.value } })}>
-                            <option value="before">Before Verb (e.g. fast run)</option>
-                            <option value="after">After Verb (e.g. run fast)</option>
-                            <option value="priority">Follow Syntactic Priority</option>
+                            <option value="before">{t('wiki.wordAssistSettings.beforeVerb')}</option>
+                            <option value="after">{t('wiki.wordAssistSettings.afterVerb')}</option>
+                            <option value="priority">{t('wiki.wordAssistSettings.followPriority')}</option>
                         </select>
                     </div>
                 </div>
@@ -614,24 +616,24 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
             <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(0,0,0,0.25)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <h4 style={{ fontSize: '0.8rem', fontWeight: 800, margin: 0, color: 'var(--acc)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Settings size={15} /> Copula (To Be) Settings
+                        <Settings size={15} /> {t('wiki.wordAssistSettings.copulaTitle')}
                     </h4>
                 </div>
                 <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                     <div style={{ flex: 1, minWidth: '200px' }}>
-                        <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>Behavior</label>
+                        <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>{t('wiki.wordAssistSettings.copulaBehavior')}</label>
                         <select 
                             className="wa-select-v2" 
                             value={wa.copulaBehavior === 'replace' || wa.copulaBehavior === 'both' || wa.copulaBehavior === 'omit' ? 'zero_copula' : (wa.copulaBehavior || 'normal')} 
                             onChange={(e) => updateConfig({ wordAssistConfig: { ...wa, copulaBehavior: e.target.value } })}
                         >
-                            <option value="normal">Normal (Parse as Verb/Modal)</option>
-                            <option value="zero_copula">Enable Zero Copula</option>
+                            <option value="normal">{t('wiki.wordAssistSettings.copulaNormal')}</option>
+                            <option value="zero_copula">{t('wiki.wordAssistSettings.copulaZero')}</option>
                         </select>
                     </div>
                     {wa.copulaBehavior === 'zero_copula' && (
                         <div style={{ flex: 1, minWidth: '200px' }}>
-                            <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>Replacement Marker (Optional)</label>
+                            <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>{t('wiki.wordAssistSettings.copulaReplacement')}</label>
                             <Input 
                                 value={wa.copulaReplacement || ''} 
                                 onChange={(e) => updateConfig({ wordAssistConfig: { ...wa, copulaReplacement: e.target.value } })}
@@ -647,10 +649,10 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
             <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(0,0,0,0.25)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <h4 style={{ fontSize: '0.8rem', fontWeight: 800, margin: 0, color: 'var(--acc)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Settings size={15} /> Global Dictionary Overrides
+                        <Settings size={15} /> {t('wiki.wordAssistSettings.globalOverrides')}
                     </h4>
                     <Button variant="default" onClick={addRoleOverride} style={{ fontSize: '0.65rem', padding: '2px 8px' }}>
-                        <Plus size={12} /> Add Word
+                        <Plus size={12} /> {t('wiki.wordAssistSettings.addWord')}
                     </Button>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -659,7 +661,7 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
                             <Input 
                                 value={ro.word} 
                                 onChange={(e) => updateRoleOverride(idx, 'word', e.target.value)}
-                                placeholder="Words separated by commas (e.g. today, tomorrow)"
+                                placeholder={t('wiki.wordAssistSettings.overridesPlaceholder')}
                                 style={{ flex: 1, padding: '4px 8px', fontSize: '0.8rem' }}
                             />
                             <span style={{ color: 'var(--tx3)' }}>→</span>
@@ -671,13 +673,13 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
                             <button onClick={() => removeRoleOverride(idx)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '4px' }}><Trash2 size={14}/></button>
                         </div>
                     ))}
-                    {roleOverrides.length === 0 && <div style={{ fontSize: '0.7rem', color: 'var(--tx3)' }}>No overrides set. Use this to force specific English words into strict roles.</div>}
+                    {roleOverrides.length === 0 && <div style={{ fontSize: '0.7rem', color: 'var(--tx3)' }}>{t('wiki.wordAssistSettings.noOverrides')}</div>}
                 </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                 <span style={{ fontSize: '0.7rem', color: 'var(--tx3)', fontStyle: 'italic' }}>
-                    Define triggers (words or suffixes) and how they should be marked in your conlang.
+                    {t('wiki.wordAssistSettings.triggersDesc')}
                 </span>
                 <div style={{ display: 'flex', gap: '6px' }}>
                     {importableCount > 0 && (
@@ -686,18 +688,18 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
                             onClick={importFromGrammarRules}
                             style={{ fontSize: '0.7rem', padding: '4px 10px', borderColor: 'var(--acc)', color: 'var(--acc)' }}
                         >
-                            <Languages size={13} /> Import Grammar Rules ({importableCount})
+                            <Languages size={13} /> {t('wiki.wordAssistSettings.importGrammarRules', { count: importableCount })}
                         </Button>
                     )}
                     <Button variant="default" onClick={addTrigger} style={{ fontSize: '0.7rem', padding: '4px 10px' }}>
-                        <Plus size={14} /> Add New Trigger
+                        <Plus size={14} /> {t('wiki.wordAssistSettings.addNewTrigger')}
                     </Button>
                 </div>
             </div>
 
             <div className="wa-triggers-list">
-                {[...triggers].sort((a,b) => a.priority - b.priority).map((t, idx) => (
-                    <div key={t.id} className="wa-trigger-card">
+                {[...triggers].sort((a,b) => a.priority - b.priority).map((trig, idx) => (
+                    <div key={trig.id} className="wa-trigger-card">
                         <div className="wa-card-header">
                             <div className="wa-priority-controls">
                                 <button onClick={() => moveTrigger(idx, -1)} disabled={idx === 0}><ChevronUp size={14}/></button>
@@ -705,19 +707,19 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
                             </div>
                             <input 
                                 className="wa-title-input"
-                                value={t.name} 
-                                onChange={(e) => updateTrigger(t.id, 'name', e.target.value)}
-                                placeholder="Rule Name"
+                                value={trig.name} 
+                                onChange={(e) => updateTrigger(trig.id, 'name', e.target.value)}
+                                placeholder={t('wiki.wordAssistSettings.ruleName')}
                             />
-                            <button className="wa-remove-btn" onClick={() => removeTrigger(t.id)}><Trash2 size={14}/></button>
+                            <button className="wa-remove-btn" onClick={() => removeTrigger(trig.id)}><Trash2 size={14}/></button>
                         </div>
                         
                         <div className="wa-card-body">
                             <div className="wa-field">
-                                <label>{t.type === 'trigger' ? 'Syntactic Role' : 'English Trigger'}</label>
-                                {t.type === 'trigger' ? (
-                                    <select className="wa-select-v2" value={t.trigger} onChange={(e) => updateTrigger(t.id, 'trigger', e.target.value)}>
-                                        <option value="">Select Role...</option>
+                                <label>{trig.type === 'trigger' ? t('wiki.wordAssistSettings.syntacticRole') : t('wiki.wordAssistSettings.englishTrigger')}</label>
+                                {trig.type === 'trigger' ? (
+                                    <select className="wa-select-v2" value={trig.trigger} onChange={(e) => updateTrigger(trig.id, 'trigger', e.target.value)}>
+                                        <option value="">{t('wiki.wordAssistSettings.selectRole')}</option>
                                         <option value="S">Subject (Nominative / Agent)</option>
                                         <option value="V">Verb (Action)</option>
                                         <option value="O">Object (Accusative / Patient)</option>
@@ -735,47 +737,47 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
                                     </select>
                                 ) : (
                                     <Input 
-                                        value={t.trigger} 
-                                        onChange={(e) => updateTrigger(t.id, 'trigger', e.target.value)}
+                                        value={trig.trigger} 
+                                        onChange={(e) => updateTrigger(trig.id, 'trigger', e.target.value)}
                                         placeholder="e.g. not, from, -ing"
                                     />
                                 )}
                             </div>
                             <div className="wa-field">
-                                <label>Conlang Marker</label>
+                                <label>{t('wiki.wordAssistSettings.conlangMarker')}</label>
                                 <Input 
-                                    value={t.marker} 
-                                    onChange={(e) => updateTrigger(t.id, 'marker', e.target.value)}
+                                    value={trig.marker} 
+                                    onChange={(e) => updateTrigger(trig.id, 'marker', e.target.value)}
                                     placeholder="e.g. un, -m"
                                 />
                             </div>
                             <div className="wa-field">
-                                <label>Apply As</label>
-                                <select className="wa-select-v2" value={t.type} onChange={(e) => updateTrigger(t.id, 'type', e.target.value)}>
-                                    <option value="word">Word match</option>
-                                    <option value="suffix">English suffix</option>
-                                    <option value="trigger">Syntactic Role</option>
+                                <label>{t('wiki.wordAssistSettings.applyAs')}</label>
+                                <select className="wa-select-v2" value={trig.type} onChange={(e) => updateTrigger(trig.id, 'type', e.target.value)}>
+                                    <option value="word">{t('wiki.wordAssistSettings.typeWord')}</option>
+                                    <option value="suffix">{t('wiki.wordAssistSettings.typeSuffix')}</option>
+                                    <option value="trigger">{t('wiki.wordAssistSettings.typeTrigger')}</option>
                                 </select>
                             </div>
                             <div className="wa-field">
-                                <label>Position</label>
-                                <select className="wa-select-v2" value={t.position} onChange={(e) => updateTrigger(t.id, 'position', e.target.value)}>
-                                    <option value="prefix">Prefix</option>
-                                    <option value="suffix">Suffix</option>
-                                    <option value="before">Before target</option>
-                                    <option value="after">After target</option>
-                                    <option value="beforeVerb">Before Verb</option>
-                                    <option value="afterVerb">After Verb</option>
-                                    <option value="endOfSentence">End of Sentence</option>
-                                    <option value="thanTarget">Than-target (Reference)</option>
+                                <label>{t('wiki.wordAssistSettings.position')}</label>
+                                <select className="wa-select-v2" value={trig.position} onChange={(e) => updateTrigger(trig.id, 'position', e.target.value)}>
+                                    <option value="prefix">{t('wiki.wordAssistSettings.posPrefix')}</option>
+                                    <option value="suffix">{t('wiki.wordAssistSettings.posSuffix')}</option>
+                                    <option value="before">{t('wiki.wordAssistSettings.posBefore')}</option>
+                                    <option value="after">{t('wiki.wordAssistSettings.posAfter')}</option>
+                                    <option value="beforeVerb">{t('wiki.wordAssistSettings.posBeforeVerb')}</option>
+                                    <option value="afterVerb">{t('wiki.wordAssistSettings.posAfterVerb')}</option>
+                                    <option value="endOfSentence">{t('wiki.wordAssistSettings.posEndSentence')}</option>
+                                    <option value="thanTarget">{t('wiki.wordAssistSettings.posThanTarget')}</option>
                                 </select>
                             </div>
-                            {t.type === 'trigger' && (
+                            {trig.type === 'trigger' && (
                                 <div className="wa-field">
-                                    <label>Scope</label>
-                                    <select className="wa-select-v2" value={t.scope || 'all'} onChange={(e) => updateTrigger(t.id, 'scope', e.target.value)}>
-                                        <option value="all">All (nouns + pronouns)</option>
-                                        <option value="pronoun">Pronouns &amp; persons only</option>
+                                    <label>{t('wiki.wordAssistSettings.scope')}</label>
+                                    <select className="wa-select-v2" value={trig.scope || 'all'} onChange={(e) => updateTrigger(trig.id, 'scope', e.target.value)}>
+                                        <option value="all">{t('wiki.wordAssistSettings.scopeAll')}</option>
+                                        <option value="pronoun">{t('wiki.wordAssistSettings.scopePronoun')}</option>
                                     </select>
                                 </div>
                             )}
@@ -790,6 +792,7 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
 
 // The new Interlinear Editor Component
 function WordAssistTutorial({ onClose }) {
+    const { t } = useTranslation();
     const [step, setStep] = useState(1);
     
     return (
@@ -805,29 +808,29 @@ function WordAssistTutorial({ onClose }) {
                     <Languages size={18} />
                 </div>
                 <div style={{ flex: 1 }}>
-                    <h4 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: 700, color: 'var(--tx)' }}>Word Assist: The Ultimate Guide</h4>
+                    <h4 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: 700, color: 'var(--tx)' }}>{t('wiki.tutorial.title')}</h4>
                     
                     {step === 1 && (
                         <div>
-                            <h5 style={{ margin: '0 0 4px 0', color: '#8b5cf6', fontSize: '0.8rem' }}>1. How it works</h5>
+                            <h5 style={{ margin: '0 0 4px 0', color: '#8b5cf6', fontSize: '0.8rem' }}>{t('wiki.tutorial.step1Title')}</h5>
                             <p style={{ margin: '0 0 10px 0', fontSize: '0.78rem', color: 'var(--tx2)', lineHeight: '1.4' }}>
-                                Word Assist parses your English sentence and automatically assigns a <strong>Grammatical Role</strong> to each word (like Subject, Verb, or Object). It then uses your drag-and-drop Syntactic Priority to reorder the sentence into your conlang's syntax.
+                                {t('wiki.tutorial.step1Text')}
                             </p>
                         </div>
                     )}
                     {step === 2 && (
                         <div>
-                            <h5 style={{ margin: '0 0 4px 0', color: '#ec4899', fontSize: '0.8rem' }}>2. Creating Grammar Rules (Triggers)</h5>
+                            <h5 style={{ margin: '0 0 4px 0', color: '#ec4899', fontSize: '0.8rem' }}>{t('wiki.tutorial.step2Title')}</h5>
                             <p style={{ margin: '0 0 10px 0', fontSize: '0.78rem', color: 'var(--tx2)', lineHeight: '1.4' }}>
-                                Open the Word Assist Settings (gear icon) to create rules. You can map a specific role to a marker (e.g. "If a word is an Object, add the suffix '-m' for Accusative case"). The engine will automatically apply it for you.
+                                {t('wiki.tutorial.step2Text')}
                             </p>
                         </div>
                     )}
                     {step === 3 && (
                         <div>
-                            <h5 style={{ margin: '0 0 4px 0', color: '#f59e0b', fontSize: '0.8rem' }}>3. Manual Overrides (Maximum Precision)</h5>
+                            <h5 style={{ margin: '0 0 4px 0', color: '#f59e0b', fontSize: '0.8rem' }}>{t('wiki.tutorial.step3Title')}</h5>
                             <p style={{ margin: '0 0 10px 0', fontSize: '0.78rem', color: 'var(--tx2)', lineHeight: '1.4' }}>
-                                English is ambiguous! If the engine thinks a word is a Noun, but you meant it as a Verb, you can <strong>click the [role] badge</strong> under the suggested word to manually force it to be a Verb. You can also set permanent global overrides in the settings.
+                                {t('wiki.tutorial.step3Text')}
                             </p>
                         </div>
                     )}
@@ -847,11 +850,11 @@ function WordAssistTutorial({ onClose }) {
                             ))}
                         </div>
                         <div>
-                            {step > 1 && <Button variant="default" onClick={() => setStep(s => s - 1)} style={{ fontSize: '0.65rem', padding: '2px 8px', marginRight: '6px' }}>Back</Button>}
+                            {step > 1 && <Button variant="default" onClick={() => setStep(s => s - 1)} style={{ fontSize: '0.65rem', padding: '2px 8px', marginRight: '6px' }}>{t('wiki.tutorial.back')}</Button>}
                             {step < 3 ? (
-                                <Button variant="imp" onClick={() => setStep(s => s + 1)} style={{ fontSize: '0.65rem', padding: '2px 8px' }}>Next</Button>
+                                <Button variant="imp" onClick={() => setStep(s => s + 1)} style={{ fontSize: '0.65rem', padding: '2px 8px' }}>{t('wiki.tutorial.next')}</Button>
                             ) : (
-                                <Button variant="default" onClick={onClose} style={{ fontSize: '0.65rem', padding: '2px 8px' }}>Got it</Button>
+                                <Button variant="default" onClick={onClose} style={{ fontSize: '0.65rem', padding: '2px 8px' }}>{t('wiki.tutorial.gotIt')}</Button>
                             )}
                         </div>
                     </div>
@@ -862,6 +865,7 @@ function WordAssistTutorial({ onClose }) {
 }
 
 function CorpusEditor({ content, onSave, writingDirection: props_writingDirection }) {
+    const { t } = useTranslation();
     const [mode, setMode] = useState('edit');
     const [text, setText] = useState(content || '');
     const [wordAssist, setWordAssist] = useState(false);
@@ -1512,8 +1516,8 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div className="wiki-toolbar">
-                <Button variant={mode === 'edit' ? 'imp' : 'default'} onClick={() => setMode('edit')}>Edit Text</Button>
-                <Button variant={mode === 'read' ? 'imp' : 'default'} onClick={() => setMode('read')}>Interlinear Reader</Button>
+                <Button variant={mode === 'edit' ? 'imp' : 'default'} onClick={() => setMode('edit')}>{t('wiki.corpus.editText')}</Button>
+                <Button variant={mode === 'read' ? 'imp' : 'default'} onClick={() => setMode('read')}>{t('wiki.corpus.interlinearReader')}</Button>
                 <div style={{ flex: 1 }}></div>
 
                 {/* Word Assist toggle — only relevant in edit mode */}
@@ -1540,7 +1544,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                             }}
                         />
                         <Languages size={14} />
-                        Word Assist
+                        {t('wiki.corpus.wordAssist')}
                     </label>
                 )}
 
@@ -1549,14 +1553,14 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                         variant={isWaSettingsOpen ? 'imp' : 'default'} 
                         onClick={() => setIsWaSettingsOpen(!isWaSettingsOpen)}
                         style={{ padding: '4px 10px' }}
-                        title="Word Assist Grammar Settings"
+                        title={t('wiki.corpus.wordAssistSettings')}
                     >
                         <Settings size={16} />
                     </Button>
                 )}
 
                 <Button variant="save" onClick={() => onSave(text)}>
-                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}><Save size={16} /> Save Document</div>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}><Save size={16} /> {t('wiki.saveDocument')}</div>
                 </Button>
             </div>
 
@@ -1570,13 +1574,13 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                     {isWaSettingsOpen && (
                         <div className="wa-settings-overlay">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                                <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><Wand2 size={18} color="var(--acc)" /> Word Assist Configuration</h4>
-                                <Button variant="default" onClick={() => setIsWaSettingsOpen(false)} style={{ padding: '2px 8px' }}>Close</Button>
+                                <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><Wand2 size={18} color="var(--acc)" /> {t('wiki.corpus.configuration')}</h4>
+                                <Button variant="default" onClick={() => setIsWaSettingsOpen(false)} style={{ padding: '2px 8px' }}>{t('wiki.corpus.close')}</Button>
                             </div>
                             <WordAssistSettingsMenu config={{ wordAssistConfig: waConfig }} updateConfig={updateConfig} grammarRules={grammarRules} />
                             <div style={{ marginTop: '15px', padding: '10px', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '8px', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
                                 <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--tx3)', display: 'flex', gap: '6px' }}>
-                                    <Info size={14} /> These settings help the translation engine handle complex syntax. Changes take effect immediately as you type.
+                                    <Info size={14} /> {t('wiki.corpus.configHelp')}
                                 </p>
                             </div>
                         </div>
@@ -1601,8 +1605,14 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                         }}>
                             <Languages size={11} />
                             {suggestions.length > 0
-                                ? `${suggestions.length} match${suggestions.length > 1 ? 'es' : ''} for "${text.slice(wordRange.start, wordRange.end)}" — Tab to insert · ↑↓ navigate · Esc close`
-                                : `No lexicon match for "${text.slice(wordRange.start, wordRange.end)}" — keep typing or check your lexicon`}
+                                ? t('wiki.corpus.matchesInfo', {
+                                    count: suggestions.length,
+                                    plural: suggestions.length > 1 ? 'es' : '',
+                                    word: text.slice(wordRange.start, wordRange.end)
+                                  })
+                                : t('wiki.corpus.noMatchInfo', {
+                                    word: text.slice(wordRange.start, wordRange.end)
+                                  })}
                         </div>
                     )}
                     {/* Suggestions list with type/role badges */}
@@ -1743,11 +1753,11 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                                                                 border: '1px dashed rgba(255,255,255,0.3)',
                                                                 transition: 'all 0.1s'
                                                             }}
-                                                            title="Click to manually override this grammatical role"
+                                                            title={t('wiki.corpus.overrideRoleTooltip')}
                                                             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.2)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.8)'; }}
                                                             onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}
                                                         >
-                                                            [{breakdown.role === 'V' ? 'verb' : breakdown.role === 'S' ? 'subject' : breakdown.role === 'O' ? 'object' : breakdown.role}]
+                                                            [{breakdown.role === 'V' ? t('wiki.corpus.verb') : breakdown.role === 'S' ? t('wiki.corpus.subject') : breakdown.role === 'O' ? t('wiki.corpus.object') : breakdown.role}]
                                                         </span>
                                                         {breakdown.entry?.wordClass && <span>[{breakdown.entry.wordClass}]</span>}
                                                         {breakdown.ruleName && <span style={{ color: '#ffcc00' }}>({breakdown.ruleName})</span>}
@@ -1844,8 +1854,8 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                         onChange={handleTextChange}
                         onKeyDown={handleKeyDown}
                         placeholder={wordAssist
-                            ? "Type in English — suggestions from your lexicon will appear automatically..."
-                            : "Start typing your conlang text here..."}
+                            ? t('wiki.corpus.placeholderEnglish')
+                            : t('wiki.corpus.placeholderConlang')}
                     />
                 ) : (
                     renderInterlinear()
@@ -1859,6 +1869,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
 
 // The Classic Rich Text Editor - Upgraded to TipTap
 function LegacyWikiEditor({ content, onSave }) {
+    const { t } = useTranslation();
     // Fields read here, plus the ten buildScriptConfig() reads in
     // utils/scriptResolver.js.
     const config = useConfigStore(useShallow(state => ({
@@ -1991,74 +2002,74 @@ function LegacyWikiEditor({ content, onSave }) {
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div className="wiki-toolbar" style={{ flexWrap: 'wrap', gap: '4px' }}>
                 {/* History */}
-                <button className="wiki-tool-btn" onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Undo"><Undo size={16} /></button>
-                <button className="wiki-tool-btn" onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} title="Redo"><Redo size={16} /></button>
+                <button className="wiki-tool-btn" onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title={t('wiki.richText.undo')}><Undo size={16} /></button>
+                <button className="wiki-tool-btn" onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} title={t('wiki.richText.redo')}><Redo size={16} /></button>
                 <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px', height: '24px' }}></div>
                 
                 {/* Text Formatting */}
-                <button className={`wiki-tool-btn ${editor.isActive('bold') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleBold().run()} title="Bold"><Bold size={16} /></button>
-                <button className={`wiki-tool-btn ${editor.isActive('italic') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic"><Italic size={16} /></button>
-                <button className={`wiki-tool-btn ${editor.isActive('underline') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline"><UnderlineIcon size={16} /></button>
-                <button className={`wiki-tool-btn ${editor.isActive('strike') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleStrike().run()} title="Strikethrough"><Strikethrough size={16} /></button>
-                <button className={`wiki-tool-btn ${editor.isActive('highlight') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleHighlight().run()} title="Highlight"><Highlighter size={16} /></button>
-                <button className="wiki-tool-btn" onClick={() => editor.chain().focus().unsetAllMarks().run()} title="Clear Formatting"><Eraser size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('bold') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleBold().run()} title={t('wiki.richText.bold')}><Bold size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('italic') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleItalic().run()} title={t('wiki.richText.italic')}><Italic size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('underline') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleUnderline().run()} title={t('wiki.richText.underline')}><UnderlineIcon size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('strike') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleStrike().run()} title={t('wiki.richText.strikethrough')}><Strikethrough size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('highlight') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleHighlight().run()} title={t('wiki.richText.highlight')}><Highlighter size={16} /></button>
+                <button className="wiki-tool-btn" onClick={() => editor.chain().focus().unsetAllMarks().run()} title={t('wiki.richText.clearFormatting')}><Eraser size={16} /></button>
                 <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px', height: '24px' }}></div>
                 
                 {/* Alignment */}
-                <button className={`wiki-tool-btn ${editor.isActive({ textAlign: 'left' }) ? 'active' : ''}`} onClick={() => editor.chain().focus().setTextAlign('left').run()} title="Align Left"><AlignLeft size={16} /></button>
-                <button className={`wiki-tool-btn ${editor.isActive({ textAlign: 'center' }) ? 'active' : ''}`} onClick={() => editor.chain().focus().setTextAlign('center').run()} title="Align Center"><AlignCenter size={16} /></button>
-                <button className={`wiki-tool-btn ${editor.isActive({ textAlign: 'right' }) ? 'active' : ''}`} onClick={() => editor.chain().focus().setTextAlign('right').run()} title="Align Right"><AlignRight size={16} /></button>
-                <button className={`wiki-tool-btn ${editor.isActive({ textAlign: 'justify' }) ? 'active' : ''}`} onClick={() => editor.chain().focus().setTextAlign('justify').run()} title="Justify"><AlignJustify size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive({ textAlign: 'left' }) ? 'active' : ''}`} onClick={() => editor.chain().focus().setTextAlign('left').run()} title={t('wiki.richText.alignLeft')}><AlignLeft size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive({ textAlign: 'center' }) ? 'active' : ''}`} onClick={() => editor.chain().focus().setTextAlign('center').run()} title={t('wiki.richText.alignCenter')}><AlignCenter size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive({ textAlign: 'right' }) ? 'active' : ''}`} onClick={() => editor.chain().focus().setTextAlign('right').run()} title={t('wiki.richText.alignRight')}><AlignRight size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive({ textAlign: 'justify' }) ? 'active' : ''}`} onClick={() => editor.chain().focus().setTextAlign('justify').run()} title={t('wiki.richText.justify')}><AlignJustify size={16} /></button>
                 <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px', height: '24px' }}></div>
                 
                 {/* Headings */}
-                <button className={`wiki-tool-btn ${editor.isActive('heading', { level: 1 }) ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} title="Heading 1"><Heading1 size={16} /></button>
-                <button className={`wiki-tool-btn ${editor.isActive('heading', { level: 2 }) ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2"><Heading2 size={16} /></button>
-                <button className={`wiki-tool-btn ${editor.isActive('heading', { level: 3 }) ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title="Heading 3"><Heading3 size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('heading', { level: 1 }) ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} title={t('wiki.richText.heading1')}><Heading1 size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('heading', { level: 2 }) ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title={t('wiki.richText.heading2')}><Heading2 size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('heading', { level: 3 }) ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title={t('wiki.richText.heading3')}><Heading3 size={16} /></button>
                 
                 {/* Lists & Quotes */}
-                <button className={`wiki-tool-btn ${editor.isActive('bulletList') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleBulletList().run()} title="Bullet List"><List size={16} /></button>
-                <button className={`wiki-tool-btn ${editor.isActive('orderedList') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Numbered List"><ListOrdered size={16} /></button>
-                <button className={`wiki-tool-btn ${editor.isActive('blockquote') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleBlockquote().run()} title="Quote"><Quote size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('bulletList') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleBulletList().run()} title={t('wiki.richText.bulletList')}><List size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('orderedList') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleOrderedList().run()} title={t('wiki.richText.orderedList')}><ListOrdered size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('blockquote') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleBlockquote().run()} title={t('wiki.richText.quote')}><Quote size={16} /></button>
                 <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px', height: '24px' }}></div>
                 
                 {/* Sub/Superscript */}
-                <button className={`wiki-tool-btn ${editor.isActive('subscript') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleSubscript().run()} title="Subscript"><SubscriptIcon size={16} /></button>
-                <button className={`wiki-tool-btn ${editor.isActive('superscript') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleSuperscript().run()} title="Superscript"><SuperscriptIcon size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('subscript') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleSubscript().run()} title={t('wiki.richText.subscript')}><SubscriptIcon size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('superscript') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleSuperscript().run()} title={t('wiki.richText.superscript')}><SuperscriptIcon size={16} /></button>
                 
                 {/* Inserts */}
-                <button className="wiki-tool-btn" onClick={() => setIconPickerOpen(true)} title="Insert Icon"><Smile size={16} /></button>
-                <button className={`wiki-tool-btn ${editor.isActive('link') ? 'active' : ''}`} onClick={() => setLinkModalOpen(true)} title="Insert Link"><Link size={16} /></button>
-                <button className="wiki-tool-btn" title="Format as Conlang Font" onClick={handleConlangBtnClick}><Type size={16} /> <span style={{fontSize: '0.7rem', marginLeft: '4px', fontWeight: 'bold'}}>CONLANG</span></button>
+                <button className="wiki-tool-btn" onClick={() => setIconPickerOpen(true)} title={t('wiki.richText.insertIcon')}><Smile size={16} /></button>
+                <button className={`wiki-tool-btn ${editor.isActive('link') ? 'active' : ''}`} onClick={() => setLinkModalOpen(true)} title={t('wiki.richText.insertLink')}><Link size={16} /></button>
+                <button className="wiki-tool-btn" title={t('wiki.richText.formatConlang')} onClick={handleConlangBtnClick}><Type size={16} /> <span style={{fontSize: '0.7rem', marginLeft: '4px', fontWeight: 'bold'}}>{t('wiki.richText.conlangBadge')}</span></button>
                 
                 <div style={{ flex: 1 }}></div>
-                <Button variant="save" onClick={() => onSave(editor.getHTML())}><div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}><Save size={16} /> Save Document</div></Button>
+                <Button variant="save" onClick={() => onSave(editor.getHTML())}><div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}><Save size={16} /> {t('wiki.saveDocument')}</div></Button>
             </div>
             
             {/* Table Toolbar (Contextual) */}
             {editor.can().deleteTable() && (
                 <div className="wiki-toolbar" style={{ background: 'var(--s3)', borderTop: 'none', borderBottom: '1px solid var(--bd)' }}>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--tx2)', margin: '0 8px', fontWeight: 'bold' }}>TABLE:</span>
-                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().addColumnBefore().run()} title="Add Column Before"><ArrowLeftFromLine size={14} /></button>
-                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().addColumnAfter().run()} title="Add Column After"><ArrowRightFromLine size={14} /></button>
-                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().deleteColumn().run()} title="Delete Column" style={{ color: '#f87171' }}><Columns size={14} /></button>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--tx2)', margin: '0 8px', fontWeight: 'bold' }}>{t('wiki.richText.table')}</span>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().addColumnBefore().run()} title={t('wiki.richText.addColumnBefore')}><ArrowLeftFromLine size={14} /></button>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().addColumnAfter().run()} title={t('wiki.richText.addColumnAfter')}><ArrowRightFromLine size={14} /></button>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().deleteColumn().run()} title={t('wiki.richText.deleteColumn')} style={{ color: '#f87171' }}><Columns size={14} /></button>
                     <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px', height: '20px' }}></div>
-                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().addRowBefore().run()} title="Add Row Before"><ArrowUpFromLine size={14} /></button>
-                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().addRowAfter().run()} title="Add Row After"><ArrowDownFromLine size={14} /></button>
-                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().deleteRow().run()} title="Delete Row" style={{ color: '#f87171' }}><Rows size={14} /></button>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().addRowBefore().run()} title={t('wiki.richText.addRowBefore')}><ArrowUpFromLine size={14} /></button>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().addRowAfter().run()} title={t('wiki.richText.addRowAfter')}><ArrowDownFromLine size={14} /></button>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().deleteRow().run()} title={t('wiki.richText.deleteRow')} style={{ color: '#f87171' }}><Rows size={14} /></button>
                     <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px', height: '20px' }}></div>
-                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().mergeCells().run()} title="Merge Cells">Merge</button>
-                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().splitCell().run()} title="Split Cell">Split</button>
-                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().toggleHeaderRow().run()} title="Toggle Header Row">Header Row</button>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().mergeCells().run()} title={t('wiki.richText.mergeCells')}>{t('wiki.richText.mergeCells')}</button>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().splitCell().run()} title={t('wiki.richText.splitCell')}>{t('wiki.richText.splitCell')}</button>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().toggleHeaderRow().run()} title={t('wiki.richText.toggleHeaderRow')}>{t('wiki.richText.toggleHeaderRow')}</button>
                     <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px', height: '20px' }}></div>
-                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().deleteTable().run()} title="Delete Table" style={{ color: '#f87171' }}><Trash2 size={14} /></button>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().deleteTable().run()} title={t('wiki.richText.deleteTable')} style={{ color: '#f87171' }}><Trash2 size={14} /></button>
                 </div>
             )}
             
             {/* Only show Add Table if not in a table */}
             {!editor.can().deleteTable() && (
                 <div className="wiki-toolbar" style={{ background: 'var(--s3)', borderTop: 'none', borderBottom: '1px solid var(--bd)', padding: '4px 10px' }}>
-                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><TableIcon size={14} style={{ marginRight: '4px' }} /> Insert Table</button>
+                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><TableIcon size={14} style={{ marginRight: '4px' }} /> {t('wiki.richText.insertTable')}</button>
                 </div>
             )}
 
@@ -2069,14 +2080,14 @@ function LegacyWikiEditor({ content, onSave }) {
                 />
             </div>
 
-            <Modal isOpen={linkModalOpen} onClose={() => setLinkModalOpen(false)} title="Insert Link">
-                <Input label="Target URL" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." autoFocus />
+            <Modal isOpen={linkModalOpen} onClose={() => setLinkModalOpen(false)} title={t('wiki.richText.insertLink')}>
+                <Input label={t('wiki.richText.targetUrl')} value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." autoFocus />
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
-                    <Button variant="imp" onClick={setLink}>Insert</Button>
+                    <Button variant="imp" onClick={setLink}>{t('wiki.richText.insertBtn')}</Button>
                 </div>
             </Modal>
 
-            <Modal isOpen={iconPickerOpen} onClose={() => setIconPickerOpen(false)} title="Insert Icon">
+            <Modal isOpen={iconPickerOpen} onClose={() => setIconPickerOpen(false)} title={t('wiki.richText.insertIcon')}>
                 <div className="icon-picker-grid">
                     {PREDEFINED_ICONS.map(iconName => {
                         const IconComponent = icons[iconName];
@@ -2098,12 +2109,12 @@ function LegacyWikiEditor({ content, onSave }) {
             <Modal
                 isOpen={conlangModalOpen}
                 onClose={() => setConlangModalOpen(false)}
-                title="Conlang Formatting"
+                title={t('wiki.richText.conlangModalTitle')}
                 maxWidth="400px"
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', paddingTop: '10px' }}>
                     <div>
-                        <label style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px', display: 'block' }}>Target Script</label>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px', display: 'block' }}>{t('wiki.richText.targetScript')}</label>
                         <select 
                             className="select select-bordered w-full"
                             style={{ height: '42px' }}
@@ -2116,20 +2127,20 @@ function LegacyWikiEditor({ content, onSave }) {
                         </select>
                     </div>
                     <div>
-                        <label style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px', display: 'block' }}>Writing Direction</label>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px', display: 'block' }}>{t('wiki.richText.writingDirection')}</label>
                         <select 
                             className="select select-bordered w-full"
                             style={{ height: '42px' }}
                             value={writingDirection}
                             onChange={(e) => setWritingDirection(e.target.value)}
                         >
-                            <option value="horizontal">Horizontal</option>
-                            <option value="vertical">Vertical (Upright)</option>
+                            <option value="horizontal">{t('wiki.richText.horizontal')}</option>
+                            <option value="vertical">{t('wiki.richText.vertical')}</option>
                         </select>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                        <Button variant="ghost" onClick={() => setConlangModalOpen(false)}>Cancel</Button>
-                        <Button variant="imp" onClick={applyConlangFontWithOptions}>Apply</Button>
+                        <Button variant="ghost" onClick={() => setConlangModalOpen(false)}>{t('wiki.richText.cancel')}</Button>
+                        <Button variant="imp" onClick={applyConlangFontWithOptions}>{t('wiki.richText.apply')}</Button>
                     </div>
                 </div>
             </Modal>
@@ -2138,6 +2149,7 @@ function LegacyWikiEditor({ content, onSave }) {
 }
 
 export default function WikiTab() {
+    const { t } = useTranslation();
     const wikiPages = useConfigStore((state) => state.wikiPages) || {};
     const saveWikiPage = useConfigStore((state) => state.saveWikiPage);
     const addWikiPage = useConfigStore((state) => state.addWikiPage);
@@ -2203,7 +2215,7 @@ export default function WikiTab() {
     const handleCreatePage = () => {
         try {
             if (!newPageTitle.trim()) {
-                alert("Title cannot be empty!");
+                alert(t('wiki.alerts.titleRequired'));
                 return;
             }
             const pageId = crypto.randomUUID();
@@ -2224,7 +2236,7 @@ export default function WikiTab() {
             setNewPageParentId('root');
             setIsCreateModalOpen(false);
         } catch (err) {
-            alert("Error creating page: " + err.message);
+            alert(t('wiki.alerts.createError') + err.message);
         }
     };
 
@@ -2233,8 +2245,8 @@ export default function WikiTab() {
         const p = wikiPages[pageId];
         const isNotebook = p && typeof p === 'object' && p.type === 'notebook';
         const msg = isNotebook 
-            ? "Are you sure you want to delete this notebook and ALL chapters inside it?" 
-            : "Are you sure you want to delete this document?";
+            ? t('wiki.alerts.deleteNotebookConfirm') 
+            : t('wiki.alerts.deleteDocConfirm');
             
         if (!window.confirm(msg)) return;
         
@@ -2260,7 +2272,7 @@ export default function WikiTab() {
 
     const handleSaveEdit = () => {
         if (!editTitle.trim()) {
-            alert("Title cannot be empty!");
+            alert(t('wiki.alerts.titleRequired'));
             return;
         }
         updateWikiPageMetadata(editingPageId, editTitle.trim(), editIcon);
@@ -2301,11 +2313,11 @@ export default function WikiTab() {
                     <span style={{ fontWeight: 'bold', color: 'var(--tx)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{pTitle}</span>
                 </div>
                 <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }} className="wiki-item-controls">
-                    <button className="wiki-del-btn" title="Move Up" onClick={(e) => { e.stopPropagation(); reorderWikiPage(pageId, 'up'); }}><ChevronUp size={14} /></button>
-                    <button className="wiki-del-btn" title="Move Down" onClick={(e) => { e.stopPropagation(); reorderWikiPage(pageId, 'down'); }}><ChevronDown size={14} /></button>
+                    <button className="wiki-del-btn" title={t('wiki.moveUp')} onClick={(e) => { e.stopPropagation(); reorderWikiPage(pageId, 'up'); }}><ChevronUp size={14} /></button>
+                    <button className="wiki-del-btn" title={t('wiki.moveDown')} onClick={(e) => { e.stopPropagation(); reorderWikiPage(pageId, 'down'); }}><ChevronDown size={14} /></button>
                     
-                    <button className="wiki-del-btn" title="Edit Details" onClick={(e) => handleOpenEdit(pageId, e)}><Edit2 size={14} /></button>
-                    <button className="wiki-del-btn" title="Delete" onClick={(e) => handleDeletePage(pageId, e)}><Trash2 size={14} /></button>
+                    <button className="wiki-del-btn" title={t('wiki.editDetails')} onClick={(e) => handleOpenEdit(pageId, e)}><Edit2 size={14} /></button>
+                    <button className="wiki-del-btn" title={t('wiki.delete')} onClick={(e) => handleDeletePage(pageId, e)}><Trash2 size={14} /></button>
                 </div>
             </div>
         );
@@ -2319,16 +2331,16 @@ export default function WikiTab() {
     return (
         <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
             <Card style={{ flex: '1', minWidth: '260px', maxWidth: '320px' }}>
-                <h2 className='flex sg-title' style={{ marginBottom: '15px' }}><Book /> Library & Writing</h2>
+                <h2 className='flex sg-title' style={{ marginBottom: '15px' }}><Book /> {t('wiki.title')}</h2>
                 <Button variant="imp" style={{ width: '100%', marginBottom: '20px' }} onClick={() => setIsCreateModalOpen(true)}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        <Plus size={18} /> New Document
+                        <Plus size={18} /> {t('wiki.newDocument')}
                     </div>
                 </Button>
 
                 <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '500px', overflowY: 'auto', paddingRight: '5px' }}>
                     {Object.keys(wikiPages).length === 0 ? (
-                        <p style={{ textAlign: 'center', color: 'var(--tx3)', fontStyle: 'italic', marginTop: '20px' }}>No documents created yet.</p>
+                        <p style={{ textAlign: 'center', color: 'var(--tx3)', fontStyle: 'italic', marginTop: '20px' }}>{t('wiki.noDocumentsYet')}</p>
                     ) : (
                         <>
                             {rootItems.map(itemId => {
@@ -2358,15 +2370,15 @@ export default function WikiTab() {
                                                     <span style={{ fontWeight: 'bold', color: 'var(--tx)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nb.title}</span>
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }} className="wiki-item-controls">
-                                                    <button className="wiki-del-btn" title="Move Up" onClick={(e) => { e.stopPropagation(); reorderWikiPage(nbId, 'up'); }}><ChevronUp size={14} /></button>
-                                                    <button className="wiki-del-btn" title="Move Down" onClick={(e) => { e.stopPropagation(); reorderWikiPage(nbId, 'down'); }}><ChevronDown size={14} /></button>
-                                                    <button className="wiki-del-btn" title="Edit Notebook" onClick={(e) => handleOpenEdit(nbId, e)}><Edit2 size={14} /></button>
-                                                    <button className="wiki-del-btn" title="Delete" onClick={(e) => handleDeletePage(nbId, e)}><Trash2 size={14} /></button>
+                                                    <button className="wiki-del-btn" title={t('wiki.moveUp')} onClick={(e) => { e.stopPropagation(); reorderWikiPage(nbId, 'up'); }}><ChevronUp size={14} /></button>
+                                                    <button className="wiki-del-btn" title={t('wiki.moveDown')} onClick={(e) => { e.stopPropagation(); reorderWikiPage(nbId, 'down'); }}><ChevronDown size={14} /></button>
+                                                    <button className="wiki-del-btn" title={t('wiki.editNotebook')} onClick={(e) => handleOpenEdit(nbId, e)}><Edit2 size={14} /></button>
+                                                    <button className="wiki-del-btn" title={t('wiki.delete')} onClick={(e) => handleDeletePage(nbId, e)}><Trash2 size={14} /></button>
                                                 </div>
                                             </div>
                                             {isExpanded && (
                                                 <div className="wiki-notebook-children">
-                                                    {children.length === 0 && <div style={{ padding: '8px 20px', fontSize: '0.8rem', color: 'var(--tx3)', fontStyle: 'italic', borderLeft: '2px solid var(--bd)', marginLeft: '12px' }}>Empty notebook</div>}
+                                                    {children.length === 0 && <div style={{ padding: '8px 20px', fontSize: '0.8rem', color: 'var(--tx3)', fontStyle: 'italic', borderLeft: '2px solid var(--bd)', marginLeft: '12px' }}>{t('wiki.emptyNotebook')}</div>}
                                                     {children.map(childId => renderPageItem(childId, true))}
                                                 </div>
                                             )}
@@ -2400,38 +2412,38 @@ export default function WikiTab() {
                 ) : (
                     <div style={{ textAlign: 'center', color: 'var(--tx3)', padding: '50px 0' }}>
                         <Book size={48} style={{ opacity: 0.2, marginBottom: '15px' }} />
-                        <h3>Select or create a document to start writing.</h3>
+                        <h3>{t('wiki.selectDocToStart')}</h3>
                     </div>
                 )}
             </Card>
 
-            <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Create New Document">
-                <Input label="Document Title" value={newPageTitle} onChange={(e) => setNewPageTitle(e.target.value)} placeholder="e.g. Genesis Translation, Phonotactics..." autoFocus />
+            <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title={t('wiki.createModal.title')}>
+                <Input label={t('wiki.createModal.docTitle')} value={newPageTitle} onChange={(e) => setNewPageTitle(e.target.value)} placeholder={t('wiki.createModal.docTitlePlaceholder')} autoFocus />
                 
                 <div style={{ marginTop: '20px' }}>
-                    <label className="form-label">Document Type</label>
+                    <label className="form-label">{t('wiki.createModal.docType')}</label>
                     <select 
                         className="fi" 
                         value={newPageType}
                         onChange={(e) => setNewPageType(e.target.value)}
                         style={{ width: '100%', padding: '10px', background: 'var(--s1)', color: 'var(--tx)', border: '1px solid var(--bd)', borderRadius: '6px' }}
                     >
-                        <option value="wiki">Wiki Chapter (Rich Text)</option>
-                        <option value="corpus">Corpus Text (Interlinear Glossing)</option>
-                        <option value="notebook">Notebook (Folder to group chapters)</option>
+                        <option value="wiki">{t('wiki.createModal.typeWiki')}</option>
+                        <option value="corpus">{t('wiki.createModal.typeCorpus')}</option>
+                        <option value="notebook">{t('wiki.createModal.typeNotebook')}</option>
                     </select>
                 </div>
 
                 {newPageType !== 'notebook' && notebooks.length > 0 && (
                     <div style={{ marginTop: '20px' }}>
-                        <label className="form-label">Location</label>
+                        <label className="form-label">{t('wiki.createModal.location')}</label>
                         <select 
                             className="fi" 
                             value={newPageParentId}
                             onChange={(e) => setNewPageParentId(e.target.value)}
                             style={{ width: '100%', padding: '10px', background: 'var(--s1)', color: 'var(--tx)', border: '1px solid var(--bd)', borderRadius: '6px' }}
                         >
-                            <option value="root">Root Library (No Notebook)</option>
+                            <option value="root">{t('wiki.createModal.rootLibrary')}</option>
                             {notebooks.map(nb => (
                                 <option key={nb} value={nb}>{wikiPages[nb].title}</option>
                             ))}
@@ -2439,21 +2451,21 @@ export default function WikiTab() {
                     </div>
                 )}
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}><Button variant="imp" onClick={handleCreatePage}>Create</Button></div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}><Button variant="imp" onClick={handleCreatePage}>{t('wiki.createModal.createBtn')}</Button></div>
             </Modal>
 
-            <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Details">
-                <Input label="Title" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="e.g. Genesis Translation..." autoFocus />
+            <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title={t('wiki.editModal.title')}>
+                <Input label={t('wiki.editModal.titleField')} value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder={t('wiki.editModal.titlePlaceholder')} autoFocus />
                 
                 <div style={{ marginTop: '20px' }}>
                     <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Choose Icon</span>
+                        <span>{t('wiki.editModal.chooseIcon')}</span>
                         {editIcon && (
                             <span 
                                 style={{ color: 'var(--acc)', cursor: 'pointer', fontSize: '0.8rem' }} 
                                 onClick={() => setEditIcon('')}
                             >
-                                Clear Icon
+                                {t('wiki.editModal.clearIcon')}
                             </span>
                         )}
                     </label>
@@ -2483,14 +2495,14 @@ export default function WikiTab() {
 
                 {editingPageId && wikiPages[editingPageId] && wikiPages[editingPageId].type !== 'notebook' && notebooks.length > 0 && (
                     <div style={{ marginTop: '20px' }}>
-                        <label className="form-label">Location</label>
+                        <label className="form-label">{t('wiki.editModal.location')}</label>
                         <select 
                             className="fi" 
                             value={editParentId}
                             onChange={(e) => setEditParentId(e.target.value)}
                             style={{ width: '100%', padding: '10px', background: 'var(--s1)', color: 'var(--tx)', border: '1px solid var(--bd)', borderRadius: '6px' }}
                         >
-                            <option value="root">Root Library (No Notebook)</option>
+                            <option value="root">{t('wiki.editModal.rootLibrary')}</option>
                             {notebooks.map(nb => (
                                 <option key={nb} value={nb}>{wikiPages[nb].title}</option>
                             ))}
@@ -2499,7 +2511,7 @@ export default function WikiTab() {
                 )}
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
-                    <Button variant="imp" onClick={handleSaveEdit}>Save Changes</Button>
+                    <Button variant="imp" onClick={handleSaveEdit}>{t('wiki.editModal.saveBtn')}</Button>
                 </div>
             </Modal>
         </div>

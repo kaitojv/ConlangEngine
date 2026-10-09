@@ -7,10 +7,12 @@ import { supabase } from '@/utils/supabaseClient.js';
 import Modal from '@/components/UI/Modal/Modal.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import { sanitizeConfig, sanitizeLexicon, decompressPayloadAsync } from '@/utils/schemaValidator.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import toast from 'react-hot-toast';
 import { CloudDownload, HardDriveUpload, AlertTriangle } from 'lucide-react';
 
 export default function SyncConflictManager() {
+    const { t } = useTranslation();
     const {
         projectId, lastCloudSync, syncConflictStatus,
         updateConfig, setFullConfig,
@@ -119,23 +121,23 @@ export default function SyncConflictManager() {
                 updateConfig({ syncConflictStatus: 'ignored' });
                 setCloudPayload(null);
             }} 
-            title={<><AlertTriangle color="var(--err)" style={{ position: 'relative', top: '2px', marginRight: '5px' }}/> Sync Conflict Detected</>}
+            title={<><AlertTriangle color="var(--err)" style={{ position: 'relative', top: '2px', marginRight: '5px' }}/> {t('syncConflict.title')}</>}
         >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '10px 0' }}>
                 <p style={{ margin: 0, color: 'var(--tx)' }}>
-                    It looks like this project was recently modified and saved to the cloud on <b>another device</b>.
+                    {t('syncConflict.desc')}
                 </p>
                 
                 <p style={{ margin: 0, color: 'var(--tx2)', fontSize: '0.9rem' }}>
-                    What would you like to do? Note: Your auto-sync has been temporarily paused to prevent accidentally overwriting the cloud.
+                    {t('syncConflict.question')}
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
                     <Button variant="imp" onClick={handlePullCloud} style={{ width: '100%', justifyContent: 'flex-start' }}>
-                        <div className="btn-content"><CloudDownload /> Pull Cloud Version (Overwrite Local)</div>
+                        <div className="btn-content"><CloudDownload /> {t('syncConflict.pullCloud')}</div>
                     </Button>
                     <Button variant="default" onClick={handleKeepLocal} style={{ width: '100%', justifyContent: 'flex-start' }}>
-                        <div className="btn-content"><HardDriveUpload /> Keep Local Version (Overwrite Cloud)</div>
+                        <div className="btn-content"><HardDriveUpload /> {t('syncConflict.keepLocal')}</div>
                     </Button>
                 </div>
             </div>

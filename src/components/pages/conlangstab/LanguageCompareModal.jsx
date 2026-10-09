@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import Input from '@/components/UI/Input/Input.jsx';
 import { Search, Settings2, Link } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import './languageCompare.css';
 
 export default function LanguageCompareModal({ baseProject, localProjects }) {
+    const { t } = useTranslation();
     // 1. Find Relatives
     const motherId = baseProject?.project_data?.config?.parentId;
     const mother = localProjects.find(p => p.id === motherId);
@@ -80,9 +82,9 @@ export default function LanguageCompareModal({ baseProject, localProjects }) {
     if (allRelatives.length === 0) {
         return (
             <div style={{ padding: '20px', textAlign: 'center', color: 'var(--tx2)' }}>
-                <p><strong>{baseProject.project_data?.config?.conlangName || "This language"}</strong> has no evolutionary relatives.</p>
+                <p><strong>{baseProject.project_data?.config?.conlangName || "This language"}</strong> {t('conlangs.compareEmptyTitle', { name: '' }).replace(/^\s*/, '')}</p>
                 <p style={{ marginTop: '10px', fontSize: '0.9rem' }}>
-                    Use the "Set Mother Language" or "Derive Daughter" buttons in the Workspaces tab to build a family tree, and then come back here to compare their lexicons!
+                    {t('conlangs.compareEmptyDesc')}
                 </p>
             </div>
         );
@@ -95,7 +97,7 @@ export default function LanguageCompareModal({ baseProject, localProjects }) {
                     <Search size={16} className="search-icon" />
                     <input 
                         className="search-input"
-                        placeholder="Search concepts or words..."
+                        placeholder={t('conlangs.compareSearchPlaceholder')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -103,7 +105,7 @@ export default function LanguageCompareModal({ baseProject, localProjects }) {
                 
                 <div className="compare-lang-toggles">
                     <span style={{ fontSize: '0.8rem', color: 'var(--tx2)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Settings2 size={14} /> Compare:
+                        <Settings2 size={14} /> {t('conlangs.compareLabel')}
                     </span>
                     <label className={`compare-toggle ${selectedLangIds.includes(baseProject.id) ? 'active' : ''}`}>
                         <input 
@@ -132,7 +134,7 @@ export default function LanguageCompareModal({ baseProject, localProjects }) {
                 <table className="compare-table">
                     <thead>
                         <tr>
-                            <th className="concept-col">Concept</th>
+                            <th className="concept-col">{t('conlangs.conceptHeader')}</th>
                             {selectedProjects.map(p => (
                                 <th key={p.id}>{p.project_data?.config?.conlangName || "Untitled"}</th>
                             ))}
@@ -161,7 +163,7 @@ export default function LanguageCompareModal({ baseProject, localProjects }) {
                         {concepts.length === 0 && (
                             <tr>
                                 <td colSpan={selectedProjects.length + 1} style={{ textAlign: 'center', padding: '30px', color: 'var(--tx3)' }}>
-                                    No matching concepts found between these languages.
+                                    {t('conlangs.noMatchingConcepts')}
                                 </td>
                             </tr>
                         )}

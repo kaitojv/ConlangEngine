@@ -138,15 +138,15 @@ export default function Header({ openMenu, onBackupNow }) {
                         }
                     });
                     if (importedCount > 0) {
-                        alert(`Project loaded! ${importedCount} workspaces restored to archive.`);
+                        alert(t('header.loadRestoredAlert', { count: importedCount }));
                         return;
                     }
                 }
 
-                alert("Project loaded successfully!");
+                alert(t('header.loadSuccessAlert'));
             } catch (err) {
                 console.error("Failed to parse save file:", err);
-                alert(`Invalid save file! ${err.message || 'Ensure it is a valid JSON backup.'}`);
+                alert(t('header.loadErrorAlert', { error: err.message || t('header.loadErrorDefault') }));
             }
         };
         
@@ -300,16 +300,16 @@ export default function Header({ openMenu, onBackupNow }) {
                             </Button>
                             <div className="export-dropdown">
                                 <button className="export-opt" onClick={() => handleSave(false)}>
-                                    <Save size={14} /> Current Workspace
+                                    <Save size={14} /> {t('header.currentWorkspace')}
                                 </button>
                                 <button className="export-opt" onClick={() => handleSave(true)}>
-                                    <Database size={14} /> All Workspaces
+                                    <Database size={14} /> {t('header.allWorkspaces')}
                                 </button>
                             </div>
                         </div>
                         <div className="export-menu-wrapper">
                             <Button className="hdr-btn export-trigger">
-                                <FolderUp /> <span>Load</span>
+                                <FolderUp /> <span>{t('header.load')}</span>
                             </Button>
                             <div className="export-dropdown">
                                 <input 
@@ -327,19 +327,19 @@ export default function Header({ openMenu, onBackupNow }) {
                                     className="hidden-file-input"
                                 />
                                 <button className="export-opt" onClick={() => fileInputSingleRef.current.click()}>
-                                    <FolderUp size={14} /> Current Workspace
+                                    <FolderUp size={14} /> {t('header.currentWorkspace')}
                                 </button>
                                 <button className="export-opt" onClick={() => fileInputRef.current.click()}>
-                                    <Database size={14} /> All Workspaces
+                                    <Database size={14} /> {t('header.allWorkspaces')}
                                 </button>
                                 <button className="export-opt" onClick={() => setIsCsvModalOpen(true)}>
-                                    <Table size={14} /> Import CSV
+                                    <Table size={14} /> {t('header.importCsv')}
                                 </button>
                             </div>
                         </div>
                     </div>
                     
-                    <NavLink to="/profile" className="profile-header-button" title="Profile">
+                    <NavLink to="/profile" className="profile-header-button" title={t('header.profile')}>
                         <User size={20} />
                     </NavLink>
                 </div>

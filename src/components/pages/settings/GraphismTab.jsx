@@ -18,6 +18,7 @@ import GlyphLightenBackupModal from '../../UI/GlyphLightenBackupModal/GlyphLight
 import { SCRIPT_MAPS } from '../../../utils/transliteration.js';
 import { pushProjectToCloud } from '../../../hooks/useSharing.jsx';
 import { useProjectStore } from '../../../store/useProjectStore.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import toast from 'react-hot-toast';
 import './graphismTab.css';
 
@@ -29,6 +30,7 @@ const TYPE_LABELS = {
 };
 
 export default function TypographyStudio() {
+    const { t } = useTranslation();
     const consonants = useConfigStore(state => state.consonants) || '';
     const vowels = useConfigStore(state => state.vowels) || '';
     const otherPhonemes = useConfigStore(state => state.otherPhonemes) || '';
@@ -229,13 +231,13 @@ export default function TypographyStudio() {
 
         const all = { ...topLevel, ...Object.assign({}, ...Object.values(byScript)) };
         if (Object.keys(all).length === 0) {
-            toast.error('No custom glyphs to lighten.');
+            toast.error(t('settings.graphism.noGlyphsToLighten'));
             return;
         }
 
         const preview = previewSimplification(all, { tolerance: glyphLightenTolerance, precision: 2 });
         if (preview.beforePoints <= preview.afterPoints || preview.byteReduction <= 0) {
-            toast('Your glyphs cannot be reduced further at this tolerance level.');
+            toast(t('settings.graphism.glyphsCannotBeReducedFurther'));
             return;
         }
 
@@ -260,7 +262,7 @@ export default function TypographyStudio() {
         } catch (err) {
             console.error('Backup download failed:', err);
             setDownloadError(
-                'The backup could not be created. Nothing has been changed. Please try again.'
+                t('settings.graphism.backupCreateError')
             );
         }
     };
@@ -272,7 +274,7 @@ export default function TypographyStudio() {
     };
 
     const handleConfirmLighten = async () => {
-        const tId = toast.loading('Lightening glyphs and syncing to database...');
+        const tId = toast.loading(t('settings.graphism.toastLighteningGlyphs'));
         try {
             const { topLevel, byScript } = lightenModal;
             const storeState = useConfigStore.getState();
@@ -307,19 +309,19 @@ export default function TypographyStudio() {
 
             handleCloseLightenModal();
             if (cloudSynced) {
-                toast.success('Glyphs lightened & database storage freed!', { id: tId });
+                toast.success(t('settings.graphism.toastGlyphsLightenedSuccess'), { id: tId });
             } else {
-                toast.success('Glyphs lightened and saved to local database.', { id: tId });
+                toast.success(t('settings.graphism.toastGlyphsLightenedLocal'), { id: tId });
             }
         } catch (err) {
             console.error('Lighten all glyphs failed:', err);
-            toast.error('Could not lighten glyphs. Nothing was changed.', { id: tId });
+            toast.error(t('settings.graphism.toastGlyphsLightenedError'), { id: tId });
             handleCloseLightenModal();
         }
     };
 
     const handleRecompileFont = async () => {
-        const tId = toast.loading("Recompiling custom font...");
+        const tId = toast.loading(t('settings.graphism.toastRecompilingFont'));
         try {
             const storeState = useConfigStore.getState();
             const currentSettings = storeState.typographySettings || {};
@@ -340,10 +342,10 @@ export default function TypographyStudio() {
                     customFont: base64Font
                 });
             }
-            toast.success("Font recompiled successfully!", { id: tId });
+            toast.success(t('settings.graphism.toastFontRecompiledSuccess'), { id: tId });
         } catch (err) {
             console.error(err);
-            toast.error("Failed to recompile font.", { id: tId });
+            toast.error(t('settings.graphism.toastFontRecompiledError'), { id: tId });
         }
     };
 
@@ -430,9 +432,9 @@ export default function TypographyStudio() {
 
         if (count > 0) {
             writeAlphabetGlyphs(newGlyphs);
-            toast.success(`Auto-mapped ${count} missing characters!`);
+            toast.success(t('settings.graphism.toastAutoMappedSuccess', { count }));
         } else {
-            toast('No missing characters to map.', { icon: 'ℹ️' });
+            toast(t('settings.graphism.toastNoMissingToMap'), { icon: 'ℹ️' });
         }
     };
 
@@ -445,11 +447,11 @@ export default function TypographyStudio() {
                 <Modal 
                     isOpen={!!drawingChar} 
                     onClose={() => setDrawingChar(null)}
-                    title={`Draw Custom Symbol`}
+                    title={t('settings.graphism.drawCustomSymbol')}
                     className="modal-wide"
                 >
                     <FontStudioModal
-                        targetLabel={`Letter: ${drawingChar}`}
+                        targetLabel={t('settings.graphism.letterLabel', { char: drawingChar })}
                         existingCharCode={(() => {
                             const key = editingMode === 'Base' ? drawingChar : `${drawingChar}_${editingMode.toLowerCase()}`;
                             const existingUnicode = alphabetGlyphs[key];
@@ -464,24 +466,23 @@ export default function TypographyStudio() {
             <Modal 
                 isOpen={showKeyboardManager} 
                 onClose={() => setShowKeyboardManager(false)}
-                title="Custom Keyboard Exporter"
+                title={t('settings.graphism.customKeyboardExporter')}
             >
                 <KeyboardManager allChars={allChars} alphabetGlyphs={alphabetGlyphs} />
             </Modal>
 
-            <Infobox title="Graphism & Typography Studio">
-                Create multiple typography variations for your characters, such as <b>Cursive</b>, <b>Formal</b>, or <b>Calligraphy</b>. 
-                Select a mode to edit, then click <b>Draw</b> to assign custom glyphs specifically for that typography mode!
+            <Infobox title={t('settings.graphism.title')}>
+                <span dangerouslySetInnerHTML={{ __html: t('settings.graphism.guideDesc') }} />
             </Infobox>
 
             {hasMultipleScripts && (
                 <Card style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                         <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', margin: 0 }}>
-                            Editing Script
+                            {t('settings.graphism.editingScript')}
                         </h3>
                         <p style={{ fontSize: '0.8rem', color: 'var(--tx2)', margin: 0 }}>
-                            Two writing systems can share the same script type. Pick which one this Graphism page edits.
+                            {t('settings.graphism.editingScriptDesc')}
                         </p>
                     </div>
                     <select
@@ -492,8 +493,8 @@ export default function TypographyStudio() {
                     >
                         {scriptSystems.map(s => (
                             <option key={s.id} value={s.id}>
-                                {s.name} — {TYPE_LABELS[s.type] || s.type}
-                                {s.id === defaultScriptId ? ' (default)' : ''}
+                                {s.name} — {t(`orthography.scriptManager.types.${s.type}`, { defaultValue: TYPE_LABELS[s.type] || s.type })}
+                                {s.id === defaultScriptId ? ` (${t('orthography.scriptManager.isDefault').toLowerCase()})` : ''}
                             </option>
                         ))}
                     </select>
@@ -515,18 +516,18 @@ export default function TypographyStudio() {
             <Card style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
                     <div style={{ flex: '1 1 300px' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>Writing Direction</h3>
-                        <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '1rem' }}>Define how the language is written on the page.</p>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>{t('settings.graphism.writingDirection')}</h3>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '1rem' }}>{t('settings.graphism.writingDirectionDesc')}</p>
                         <select 
                             className="sg-select" 
                             style={{ width: '100%', padding: '0.5rem' }}
                             value={writingDirection}
                             onChange={handleWritingDirection}
                         >
-                            <option value="ltr">Horizontal (Left to Right)</option>
-                            <option value="rtl">Horizontal (Right to Left)</option>
-                            <option value="vertical-rl">Vertical (Top to Bottom, R-L)</option>
-                            <option value="vertical-lr">Vertical (Top to Bottom, L-R)</option>
+                            <option value="ltr">{t('settings.graphism.dirLtr')}</option>
+                            <option value="rtl">{t('settings.graphism.dirRtl')}</option>
+                            <option value="vertical-rl">{t('settings.graphism.dirVrl')}</option>
+                            <option value="vertical-lr">{t('settings.graphism.dirVlr')}</option>
                         </select>
                     </div>
                 </div>
@@ -535,28 +536,28 @@ export default function TypographyStudio() {
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', justifyContent: 'space-between' }}>
                     <div style={{ flex: '1 1 300px' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>Typography Modes</h3>
-                        <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '1rem' }}>Define custom styles or contextual forms.</p>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>{t('settings.graphism.typographyModes')}</h3>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '1rem' }}>{t('settings.graphism.typographyModesDesc')}</p>
                         
                         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
                             <input 
                                 type="text" 
                                 className="sg-input" 
-                                placeholder="e.g. Cursive, Handwritten..."
+                                placeholder={t('settings.graphism.newModePlaceholder')}
                                 value={newMode}
                                 onChange={e => setNewMode(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && handleAddMode()}
                                 style={{ flex: 1 }}
                             />
-                            <Button variant="primary" onClick={handleAddMode}><Plus size={16}/> Add</Button>
+                            <Button variant="primary" onClick={handleAddMode}><Plus size={16}/> {t('settings.graphism.addModeBtn')}</Button>
                         </div>
                         
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                             <div style={{ background: 'var(--s3)', padding: '0.25rem 0.75rem', borderRadius: '1rem', fontSize: '0.85rem', color: 'var(--tx)', border: '1px solid var(--bd)' }}>
-                                Base (Default)
+                                {t('settings.graphism.modeBase')}
                             </div>
                             <div style={{ background: 'var(--s3)', padding: '0.25rem 0.75rem', borderRadius: '1rem', fontSize: '0.85rem', color: 'var(--tx)', border: '1px solid var(--bd)' }}>
-                                Uppercase
+                                {t('settings.graphism.modeUppercase')}
                             </div>
                             {customModes.map(mode => (
                                 <div key={mode} style={{ background: 'var(--acc)', color: 'white', padding: '0.25rem 0.75rem', borderRadius: '1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -569,10 +570,10 @@ export default function TypographyStudio() {
                     
                     <div style={{ flex: '1 1 300px', background: 'var(--s2)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid var(--bd)' }}>
                         <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Monitor size={16} className="text-accent" /> Active Display Mode
+                            <Monitor size={16} className="text-accent" /> {t('settings.graphism.activeDisplayMode')}
                         </h3>
                         <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '1rem' }}>
-                            Select which mode should be applied automatically to the Lexicon and other pages. Words will render in this mode if a drawn character exists.
+                            {t('settings.graphism.activeDisplayModeDesc')}
                         </p>
                         <select 
                             className="sg-select" 
@@ -580,17 +581,17 @@ export default function TypographyStudio() {
                             value={typographySettings.activeDisplayMode || 'Base'}
                             onChange={handleUpdateDisplayMode}
                         >
-                            <option value="Base">Base (Default)</option>
-                            <option value="Uppercase">Uppercase</option>
+                            <option value="Base">{t('settings.graphism.modeBase')}</option>
+                            <option value="Uppercase">{t('settings.graphism.modeUppercase')}</option>
                             {customModes.map(mode => (
                                 <option key={mode} value={mode}>{mode}</option>
                             ))}
                         </select>
                         
                         <div style={{ marginTop: '1.5rem' }}>
-                            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>Letter Spacing (Horizontal Gap)</h3>
+                            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>{t('settings.graphism.letterSpacingTitle')}</h3>
                             <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '1rem' }}>
-                                Adjust the horizontal gap between custom characters.
+                                {t('settings.graphism.letterSpacingDesc')}
                             </p>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                 <input 
@@ -609,9 +610,9 @@ export default function TypographyStudio() {
                         </div>
 
                         <div style={{ marginTop: '1.5rem' }}>
-                            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>Vertical Gap</h3>
+                            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>{t('settings.graphism.verticalGapTitle')}</h3>
                             <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '1rem' }}>
-                                Adjust the gap between characters for Vertical Scripts. Set to negative values to fix overly spaced fonts.
+                                {t('settings.graphism.verticalGapDesc')}
                             </p>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                 <input 
@@ -630,9 +631,9 @@ export default function TypographyStudio() {
                         </div>
 
                         <div style={{ marginTop: '1.5rem' }}>
-                            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>Custom Font Scale</h3>
+                            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>{t('settings.graphism.customFontScaleTitle')}</h3>
                             <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '1rem' }}>
-                                Scale up or down the size of the compiled font across the entire application. Requires a re-compile after changing.
+                                {t('settings.graphism.customFontScaleDesc')}
                             </p>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                 <input 
@@ -651,9 +652,9 @@ export default function TypographyStudio() {
                         </div>
 
                         <div style={{ marginTop: '1.5rem' }}>
-                            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>Trace Width</h3>
+                            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>{t('settings.graphism.traceWidthTitle')}</h3>
                             <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '1rem' }}>
-                                Adjust the stroke thickness of compiled block characters. Requires a re-compile after changing.
+                                {t('settings.graphism.traceWidthDesc')}
                             </p>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                 <input 
@@ -673,7 +674,7 @@ export default function TypographyStudio() {
 
                         <div style={{ marginTop: '2rem' }}>
                             <Button variant="imp" onClick={handleRecompileFont} style={{ width: '100%' }}>
-                                <RefreshCw size={16} /> Apply Settings & Recompile Font
+                                <RefreshCw size={16} /> {t('settings.graphism.applySettingsRecompile')}
                             </Button>
                         </div>
 
@@ -681,18 +682,15 @@ export default function TypographyStudio() {
                             otherwise grow until saves fail or storage fills up. */}
                         <div className="gt-lighten-block">
                             <div className="gt-lighten-header">
-                                <h4 className="gt-lighten-title">Lighten all glyphs</h4>
+                                <h4 className="gt-lighten-title">{t('settings.graphism.lightenTitle')}</h4>
                                 <p className="gt-lighten-desc">
-                                    Font Studio samples strokes densely so drawing stays precise, but that
-                                    makes saved glyphs large. This rewrites every glyph in a lighter,
-                                    pixel-perfect form (recommended: 0.5px saves ~90% space with sub-pixel fidelity).
-                                    You will be asked to export a backup first, since it cannot be undone.
+                                    {t('settings.graphism.lightenDesc')}
                                 </p>
                             </div>
                             <div className="gt-lighten-tolerance">
                                 <div className="gt-lighten-tolerance-header">
                                     <span style={{ fontWeight: 600, color: 'var(--tx)' }}>
-                                        Fidelity tolerance:
+                                        {t('settings.graphism.fidelityTolerance')}
                                     </span>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                         <input
@@ -708,7 +706,7 @@ export default function TypographyStudio() {
                                                 }
                                             }}
                                             className="gt-lighten-tolerance-input"
-                                            title="Pixel-perfect tolerance (0.05px to 2.0px)"
+                                            title={t('settings.graphism.toleranceTooltip')}
                                         />
                                         <span style={{ fontSize: '0.82rem', color: 'var(--tx2)' }}>px</span>
                                     </div>
@@ -723,15 +721,15 @@ export default function TypographyStudio() {
                                     onChange={(e) => setGlyphLightenTolerance(parseFloat(e.target.value))}
                                 />
                                 <div className="gt-lighten-tolerance-ticks">
-                                    <span>0.1px (Ultra crisp)</span>
+                                    <span>{t('settings.graphism.tickUltraCrisp')}</span>
                                     <span>0.3px</span>
-                                    <span style={{ color: 'var(--ok, #10b981)', fontWeight: 600 }}>0.5px (Pixel Perfect - Recommended)</span>
+                                    <span style={{ color: 'var(--ok, #10b981)', fontWeight: 600 }}>{t('settings.graphism.tickRecommended')}</span>
                                     <span>1.0px</span>
-                                    <span>2.0px (Max safe)</span>
+                                    <span>{t('settings.graphism.tickMaxSafe')}</span>
                                 </div>
                             </div>
                             <Button variant="edit" onClick={handleLightenAllGlyphs} style={{ width: '100%' }}>
-                                <Spline size={16} /> Lighten all glyphs
+                                <Spline size={16} /> {t('settings.graphism.lightenTitle')}
                             </Button>
                             </div>
                         </div>
@@ -756,7 +754,7 @@ export default function TypographyStudio() {
             {allChars.length > 0 && (
                 <div className="alphabet-table-container">
                     <div style={{ padding: '1rem', background: 'var(--s2)', borderBottom: '1px solid var(--bd)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Currently Editing:</h3>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>{t('settings.graphism.currentlyEditing')}</h3>
                         <select 
                             className="sg-select" 
                             style={{ width: '200px' }}
@@ -764,7 +762,9 @@ export default function TypographyStudio() {
                             onChange={e => setEditingMode(e.target.value)}
                         >
                             {allModes.map(mode => (
-                                <option key={mode} value={mode}>{mode}</option>
+                                <option key={mode} value={mode}>
+                                    {mode === 'Base' ? t('settings.graphism.modeBase') : (mode === 'Uppercase' ? t('settings.graphism.modeUppercase') : mode)}
+                                </option>
                             ))}
                         </select>
                         <Button 
@@ -772,9 +772,9 @@ export default function TypographyStudio() {
                             className="btn-sm" 
                             style={{ marginLeft: 'auto' }}
                             onClick={handleAutoMap}
-                            title={`Auto-fill missing characters using ${alphabeticScript} mapping`}
+                            title={t('settings.graphism.autoMapTitle', { script: alphabeticScript })}
                         >
-                            <Wand2 size={14} style={{ marginRight: '6px' }}/> Auto-Map
+                            <Wand2 size={14} style={{ marginRight: '6px' }}/> {t('settings.graphism.autoMapBtn')}
                         </Button>
                     </div>
 
@@ -783,10 +783,10 @@ export default function TypographyStudio() {
                             <table className="alphabet-table">
                                 <thead>
                                     <tr>
-                                        <th>Letter</th>
-                                        <th>Name</th>
-                                        <th>{editingMode} Glyph</th>
-                                        <th>Actions</th>
+                                        <th>{t('settings.graphism.thLetter')}</th>
+                                        <th>{t('settings.graphism.thName')}</th>
+                                        <th>{t('settings.graphism.thGlyph', { mode: editingMode === 'Base' ? t('settings.graphism.modeBase') : (editingMode === 'Uppercase' ? t('settings.graphism.modeUppercase') : editingMode) })}</th>
+                                        <th>{t('settings.graphism.thActions')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -816,7 +816,7 @@ export default function TypographyStudio() {
                                                                 autoFocus
                                                                 className="sg-input"
                                                                 value={alphabetNames[char] || ''}
-                                                                placeholder="Name..."
+                                                                placeholder={t('settings.graphism.namePlaceholder')}
                                                                 onChange={(e) => updateName(char, e.target.value)}
                                                                 onBlur={() => setEditingCharName(null)}
                                                                 onKeyDown={(e) => e.key === 'Enter' && setEditingCharName(null)}
@@ -825,7 +825,7 @@ export default function TypographyStudio() {
                                                         </div>
                                                     ) : (
                                                         <div className="name-display" style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                                                            <span>{alphabetNames[char] || <span style={{ color: 'var(--tx3)', fontStyle: 'italic' }}>unnamed</span>}</span>
+                                                            <span>{alphabetNames[char] || <span style={{ color: 'var(--tx3)', fontStyle: 'italic' }}>{t('settings.graphism.unnamed')}</span>}</span>
                                                         </div>
                                                     )}
                                                 </td>
@@ -842,7 +842,7 @@ export default function TypographyStudio() {
                                                             color: editingMode === 'Base' ? 'var(--tx)' : 'var(--acc)',
                                                             fontWeight: 'bold'
                                                         }}
-                                                        placeholder="Not drawn"
+                                                        placeholder={t('settings.graphism.notDrawnPlaceholder')}
                                                         value={customGlyph || ''}
                                                         onChange={(e) => updateGlyph(char, e.target.value)}
                                                     />
@@ -858,7 +858,7 @@ export default function TypographyStudio() {
                                                                 setDrawingChar(char);
                                                             }}
                                                         >
-                                                            <Brush size={14} /> {customGlyph ? 'Redraw' : 'Draw'}
+                                                            <Brush size={14} /> {customGlyph ? t('settings.graphism.redrawBtn') : t('settings.graphism.drawBtn')}
                                                         </button>
                                                         {customGlyph && (
                                                             <button 
@@ -883,9 +883,9 @@ export default function TypographyStudio() {
                     ) : (
                         <div className="empty-state glass">
                             <Type size={48} className="text-tx2 opacity-20" />
-                            <p>No characters found in your Phonology settings.</p>
+                            <p>{t('orthography.noCharsFound')}</p>
                             <button className="btn-link" onClick={() => window.location.hash = '#/settings'}>
-                                Go to Phonology Settings
+                                {t('settings.graphism.goToPhonology')}
                             </button>
                         </div>
                     )}
@@ -895,13 +895,13 @@ export default function TypographyStudio() {
             {allChars.length > 0 && (
                 <Card style={{ padding: '1.5rem', marginTop: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--tx)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Keyboard size={18} /> OS Keyboard Layout Exporter
+                        <Keyboard size={18} /> {t('settings.graphism.keyboardExporterTitle')}
                     </h3>
                     <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', textAlign: 'center', maxWidth: '500px', margin: 0 }}>
-                        Map your custom drawn characters to physical keys and download a Windows <code>.klc</code> file to type natively on your computer!
+                        <span dangerouslySetInnerHTML={{ __html: t('settings.graphism.keyboardExporterDesc') }} />
                     </p>
                     <Button variant="imp" onClick={() => setShowKeyboardManager(true)}>
-                        <Keyboard size={16} /> Open Keyboard Manager
+                        <Keyboard size={16} /> {t('settings.graphism.openKeyboardManager')}
                     </Button>
                 </Card>
             )}
@@ -909,10 +909,10 @@ export default function TypographyStudio() {
             {unusedGlyphKeys && unusedGlyphKeys.length > 0 && (
                 <Card style={{ padding: '1.5rem', marginTop: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', border: '1px solid var(--err, #ef4444)' }}>
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--err, #ef4444)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Trash2 size={18} /> Unassigned Saved SVGs & Custom Glyphs ({unusedGlyphKeys.length})
+                        <Trash2 size={18} /> {t('settings.graphism.unassignedTitle', { count: unusedGlyphKeys.length })}
                     </h3>
                     <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', textAlign: 'center', maxWidth: '580px', margin: 0 }}>
-                        We detected <strong>{unusedGlyphKeys.length}</strong> saved SVG image(s) or custom glyphs in your project that are not assigned to any alphabet letter or syllable. These take up storage space and bloat your compiled font export.
+                        <span dangerouslySetInnerHTML={{ __html: t('settings.graphism.unassignedDesc', { count: unusedGlyphKeys.length }) }} />
                     </p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center', maxHeight: '130px', overflowY: 'auto', width: '100%', padding: '10px', background: 'var(--s1)', borderRadius: '8px', border: '1px solid var(--bd)' }}>
                         {unusedGlyphKeys.map(key => (
@@ -920,7 +920,7 @@ export default function TypographyStudio() {
                                 Glyph #{key}
                                 <button
                                     onClick={() => handleCleanUnusedGlyphs([key])}
-                                    title="Delete this unused glyph"
+                                    title={t('settings.graphism.deleteUnusedTooltip')}
                                     style={{ background: 'transparent', border: 'none', color: 'var(--err, #ef4444)', cursor: 'pointer', padding: '0 2px', display: 'flex', alignItems: 'center', fontSize: '1rem', lineHeight: 1 }}
                                 >
                                     &times;
@@ -929,7 +929,7 @@ export default function TypographyStudio() {
                         ))}
                     </div>
                     <Button variant="error" onClick={() => handleCleanUnusedGlyphs(unusedGlyphKeys)}>
-                        <Trash2 size={16} /> Delete All {unusedGlyphKeys.length} Unused Glyphs & Recompile Font
+                        <Trash2 size={16} /> {t('settings.graphism.deleteAllUnusedBtn', { count: unusedGlyphKeys.length })}
                     </Button>
                 </Card>
             )}

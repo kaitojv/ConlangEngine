@@ -15,9 +15,11 @@ import {
     Check
 } from 'lucide-react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import './grammartab.css';
 
 export default function GrammarTab() {
+    const { t } = useTranslation();
     const [subTab, setSubTab] = useState('morphology');
 
     const syntaxOrder = useConfigStore((state) => state.syntaxOrder) || 'SVO';
@@ -34,13 +36,13 @@ export default function GrammarTab() {
     const orderPills = useMemo(() => {
         const letters = (syntaxOrder || 'SVO').toUpperCase().split('');
         const map = {
-            'S': { label: 'Subject', className: 'subject' },
-            'V': { label: 'Verb', className: 'verb' },
-            'O': { label: 'Object', className: 'object' },
-            'A': { label: 'Adverb', className: 'adverb' }
+            'S': { label: t('settings.grammar.subject'), className: 'subject' },
+            'V': { label: t('settings.grammar.verb'), className: 'verb' },
+            'O': { label: t('settings.grammar.object'), className: 'object' },
+            'A': { label: t('settings.grammar.adverb'), className: 'adverb' }
         };
         return letters.map((char) => map[char] || { label: char, className: 'subject' });
-    }, [syntaxOrder]);
+    }, [syntaxOrder, t]);
 
     return (
         <div className="grammar-tab-container">
@@ -52,7 +54,7 @@ export default function GrammarTab() {
                     onClick={() => setSubTab('morphology')}
                 >
                     <Layers size={16} />
-                    <span>Morphology & Rules</span>
+                    <span>{t('settings.grammar.morphologyTab')}</span>
                 </button>
 
                 <button
@@ -61,7 +63,7 @@ export default function GrammarTab() {
                     onClick={() => setSubTab('syntax')}
                 >
                     <TextAlignStart size={16} />
-                    <span>Syntax & Word Order</span>
+                    <span>{t('settings.grammar.syntaxTab')}</span>
                 </button>
 
                 <button
@@ -70,7 +72,7 @@ export default function GrammarTab() {
                     onClick={() => setSubTab('paradigm')}
                 >
                     <Play size={16} />
-                    <span>Paradigm Tester</span>
+                    <span>{t('settings.grammar.paradigmTab')}</span>
                 </button>
 
                 <button
@@ -79,7 +81,7 @@ export default function GrammarTab() {
                     onClick={() => setSubTab('reference')}
                 >
                     <BookOpen size={16} />
-                    <span>Linguistic Reference</span>
+                    <span>{t('settings.grammar.referenceTab')}</span>
                 </button>
             </nav>
 
@@ -88,10 +90,10 @@ export default function GrammarTab() {
                 <div className="grammar-tab-content">
                     <Card>
                         <h2 className="flex sg-title">
-                            <Layers /> Grammatical Rules & Inflections
+                            <Layers /> {t('settings.grammar.rulesTitle')}
                         </h2>
                         <p className="settings-description">
-                            Define prefixes, suffixes, infixes, and phonological stem mutations for word classes and roots.
+                            {t('settings.grammar.rulesDesc')}
                         </p>
                         <RulesManager />
                     </Card>
@@ -104,10 +106,10 @@ export default function GrammarTab() {
                     {/* Word Order Card */}
                     <Card>
                         <h2 className="flex sg-title">
-                            <Sliders /> Constituent Word Order
+                            <Sliders /> {t('settings.grammar.wordOrderTitle')}
                         </h2>
                         <p className="settings-description">
-                            Sets the canonical ordering of primary arguments (Subject, Verb, Object) for translation and parsing engines.
+                            {t('settings.grammar.wordOrderDesc')}
                         </p>
 
                         <div className="word-order-diagram">
@@ -126,20 +128,20 @@ export default function GrammarTab() {
                         </div>
 
                         <div className="input-wrapper">
-                            <label className="form-label" htmlFor="syntax-order-select">Word Order Pattern</label>
+                            <label className="form-label" htmlFor="syntax-order-select">{t('settings.grammar.wordOrderPattern')}</label>
                             <select
                                 id="syntax-order-select"
                                 className="fi custom-select"
                                 value={syntaxOrder}
                                 onChange={(e) => updateConfig({ syntaxOrder: e.target.value })}
                             >
-                                <option value="SVO">SVO - Subject Verb Object (e.g. English, Mandarin)</option>
-                                <option value="SOV">SOV - Subject Object Verb (e.g. Japanese, Turkish)</option>
-                                <option value="VSO">VSO - Verb Subject Object (e.g. Arabic, Irish)</option>
-                                <option value="VOS">VOS - Verb Object Subject (e.g. Malagasy, Fijian)</option>
-                                <option value="OVS">OVS - Object Verb Subject (e.g. Hixkaryana, Klingon)</option>
-                                <option value="OSV">OSV - Object Subject Verb (e.g. Xavante)</option>
-                                <option value="OVA">OVA - Object Verb Adverb</option>
+                                <option value="SVO">{t('settings.grammar.svoOption')}</option>
+                                <option value="SOV">{t('settings.grammar.sovOption')}</option>
+                                <option value="VSO">{t('settings.grammar.vsoOption')}</option>
+                                <option value="VOS">{t('settings.grammar.vosOption')}</option>
+                                <option value="OVS">{t('settings.grammar.ovsOption')}</option>
+                                <option value="OSV">{t('settings.grammar.osvOption')}</option>
+                                <option value="OVA">{t('settings.grammar.ovaOption')}</option>
                             </select>
                         </div>
                     </Card>
@@ -147,35 +149,35 @@ export default function GrammarTab() {
                     {/* Modifiers & Agreement Card */}
                     <Card>
                         <h2 className="flex sg-title">
-                            <Sparkles /> Nominal Modifiers & Agreement
+                            <Sparkles /> {t('settings.grammar.modifiersTitle')}
                         </h2>
                         <p className="settings-description">
-                            Controls the placement of adjectives relative to the nouns they modify, and inflection agreement rules.
+                            {t('settings.grammar.modifiersDesc')}
                         </p>
 
                         <div className="syntax-options-grid">
                             <div className="input-wrapper">
-                                <label className="form-label" htmlFor="adjective-placement-select">Adjective Placement</label>
+                                <label className="form-label" htmlFor="adjective-placement-select">{t('settings.grammar.adjPlacementLabel')}</label>
                                 <select
                                     id="adjective-placement-select"
                                     className="fi custom-select"
                                     value={adjectivePlacement}
                                     onChange={(e) => updateConfig({ adjectivePlacement: e.target.value })}
                                 >
-                                    <option value="pre-nominal">Pre-nominal (e.g. Big dog)</option>
-                                    <option value="post-nominal">Post-nominal (e.g. Dog big)</option>
+                                    <option value="pre-nominal">{t('settings.grammar.adjPreNominal')}</option>
+                                    <option value="post-nominal">{t('settings.grammar.adjPostNominal')}</option>
                                 </select>
                             </div>
 
                             <div className="input-wrapper">
-                                <label className="form-label">Agreement Rules</label>
+                                <label className="form-label">{t('settings.grammar.agreementRulesLabel')}</label>
                                 <label className="syntax-checkbox-label">
                                     <input
                                         type="checkbox"
                                         checked={adjectiveAgreement}
                                         onChange={(e) => updateConfig({ adjectiveAgreement: e.target.checked })}
                                     />
-                                    <span>Adjectives copy noun affixes (Case / Number)</span>
+                                    <span>{t('settings.grammar.adjectivesCopyAffixes')}</span>
                                 </label>
                             </div>
                         </div>
@@ -184,39 +186,39 @@ export default function GrammarTab() {
                     {/* Markers, Clitics & Copula Card */}
                     <Card>
                         <h2 className="flex sg-title">
-                            <Link2 /> Markers, Clitics & Copula
+                            <Link2 /> {t('settings.grammar.markersTitle')}
                         </h2>
                         <p className="settings-description">
-                            Configure bound particles, base verb forms for lexeme detection, and zero-copula handling.
+                            {t('settings.grammar.markersDesc')}
                         </p>
 
                         <div className="syntax-options-grid">
                             <div className="input-wrapper">
-                                <label className="form-label" htmlFor="verb-marker-input">Verb Base Marker(s)</label>
+                                <label className="form-label" htmlFor="verb-marker-input">{t('settings.grammar.verbMarkerLabel')}</label>
                                 <input
                                     id="verb-marker-input"
                                     type="text"
                                     className="fi"
                                     value={verbMarker}
-                                    placeholder="e.g. -r, -ar, -en (comma separated)"
+                                    placeholder={t('settings.grammar.verbMarkerPlaceholder')}
                                     onChange={(e) => updateConfig({ verbMarker: e.target.value })}
                                 />
                             </div>
 
                             <div className="input-wrapper">
-                                <label className="form-label" htmlFor="clitics-input">Clitics</label>
+                                <label className="form-label" htmlFor="clitics-input">{t('settings.grammar.cliticsLabel')}</label>
                                 <input
                                     id="clitics-input"
                                     type="text"
                                     className="fi"
                                     value={cliticsRules}
-                                    placeholder="e.g. s, ll, ne (comma separated)"
+                                    placeholder={t('settings.grammar.cliticsPlaceholder')}
                                     onChange={(e) => updateConfig({ cliticsRules: e.target.value })}
                                 />
                             </div>
 
                             <div className="input-wrapper">
-                                <label className="form-label" htmlFor="copula-select">Copula (To Be) Behavior</label>
+                                <label className="form-label" htmlFor="copula-select">{t('settings.grammar.copulaLabel')}</label>
                                 <select
                                     id="copula-select"
                                     className="fi custom-select"
@@ -233,20 +235,20 @@ export default function GrammarTab() {
                                         })
                                     }
                                 >
-                                    <option value="normal">Normal (Parse as verb / modal)</option>
-                                    <option value="zero_copula">Enable Zero Copula</option>
+                                    <option value="normal">{t('settings.grammar.copulaNormal')}</option>
+                                    <option value="zero_copula">{t('settings.grammar.copulaZero')}</option>
                                 </select>
                             </div>
 
                             {waConfig.copulaBehavior === 'zero_copula' && (
                                 <div className="input-wrapper">
-                                    <label className="form-label" htmlFor="copula-replacement-input">Copula Replacement Marker</label>
+                                    <label className="form-label" htmlFor="copula-replacement-input">{t('settings.grammar.copulaReplacement')}</label>
                                     <input
                                         id="copula-replacement-input"
                                         type="text"
                                         className="fi"
                                         value={waConfig.copulaReplacement || ''}
-                                        placeholder="e.g. vu"
+                                        placeholder={t('settings.grammar.copulaReplacementPlaceholder')}
                                         onChange={(e) =>
                                             updateConfig({
                                                 wordAssistConfig: { ...waConfig, copulaReplacement: e.target.value }
@@ -265,10 +267,10 @@ export default function GrammarTab() {
                 <div className="grammar-tab-content">
                     <Card>
                         <h2 className="flex sg-title">
-                            <Play /> Paradigm Matrix & Inflection Tester
+                            <Play /> {t('settings.grammar.paradigmTesterTitle')}
                         </h2>
                         <p className="settings-description">
-                            Test all inflectional rules and sandhi mutations live against any root word or lexicon entry.
+                            {t('settings.grammar.paradigmTesterDesc')}
                         </p>
                         <ParadigmMatrix />
                     </Card>
@@ -280,10 +282,10 @@ export default function GrammarTab() {
                 <div className="grammar-tab-content">
                     <Card>
                         <h2 className="flex sg-title">
-                            <BookOpen /> Linguistic Formula Reference & Guide
+                            <BookOpen /> {t('settings.grammar.referenceTitle')}
                         </h2>
                         <p className="settings-description">
-                            Quick reference for affix notation, regex stem mutations, phonological environments, and rule chaining.
+                            {t('settings.grammar.referenceDesc')}
                         </p>
 
                         <div className="reference-cards-grid">
@@ -291,27 +293,23 @@ export default function GrammarTab() {
                             <div className="reference-card">
                                 <div className="reference-card-header">
                                     <Code2 size={18} />
-                                    <h4 className="reference-card-title">Affix Position Notation</h4>
+                                    <h4 className="reference-card-title">{t('settings.grammar.refAffixTitle')}</h4>
                                 </div>
                                 <p className="reference-card-body">
-                                    Affixes attach to word boundaries or target phonological slots based on the hyphen position:
+                                    {t('settings.grammar.refAffixDesc')}
                                 </p>
                                 <div className="reference-example-box">
                                     <div className="reference-example-line">
-                                        <span className="reference-example-label">Suffix:</span>
-                                        <code>-s</code> or <code>-ed</code> (attaches to end)
+                                        {t('settings.grammar.refAffixSuffix')}
                                     </div>
                                     <div className="reference-example-line">
-                                        <span className="reference-example-label">Prefix:</span>
-                                        <code>ir-</code> or <code>un-</code> (attaches to start)
+                                        {t('settings.grammar.refAffixPrefix')}
                                     </div>
                                     <div className="reference-example-line">
-                                        <span className="reference-example-label">Infix:</span>
-                                        <code>-ma-@V</code> (inserts before first vowel)
+                                        {t('settings.grammar.refAffixInfixV')}
                                     </div>
                                     <div className="reference-example-line">
-                                        <span className="reference-example-label">Infix:</span>
-                                        <code>-n-@C</code> (inserts after first consonant)
+                                        {t('settings.grammar.refAffixInfixC')}
                                     </div>
                                 </div>
                             </div>
@@ -320,27 +318,23 @@ export default function GrammarTab() {
                             <div className="reference-card">
                                 <div className="reference-card-header">
                                     <Sparkles size={18} />
-                                    <h4 className="reference-card-title">Stem Mutations & Formulas</h4>
+                                    <h4 className="reference-card-title">{t('settings.grammar.refStemTitle')}</h4>
                                 </div>
                                 <p className="reference-card-body">
-                                    Use the <code>=&gt;</code> transformation operator to alter internal letters or endings:
+                                    {t('settings.grammar.refStemDesc')}
                                 </p>
                                 <div className="reference-example-box">
                                     <div className="reference-example-line">
-                                        <span className="reference-example-label">Ablaut:</span>
-                                        <code>i =&gt; a</code> (e.g. sing &rarr; sang)
+                                        {t('settings.grammar.refStemAblaut')}
                                     </div>
                                     <div className="reference-example-line">
-                                        <span className="reference-example-label">Truncate:</span>
-                                        <code>um$ =&gt; i</code> (turns <i>kum</i> into <i>ki</i>)
+                                        {t('settings.grammar.refStemTruncate')}
                                     </div>
                                     <div className="reference-example-line">
-                                        <span className="reference-example-label">Assimilation:</span>
-                                        <code>n(?=[pb]) =&gt; m</code> (sandhi before labials)
+                                        {t('settings.grammar.refStemAssim')}
                                     </div>
                                     <div className="reference-example-line">
-                                        <span className="reference-example-label">Reduplication:</span>
-                                        <code>^(.&#123;2&#125;)(.*) =&gt; $1$1$2</code>
+                                        {t('settings.grammar.refStemRedup')}
                                     </div>
                                 </div>
                             </div>
@@ -349,27 +343,23 @@ export default function GrammarTab() {
                             <div className="reference-card">
                                 <div className="reference-card-header">
                                     <Link2 size={18} />
-                                    <h4 className="reference-card-title">Rule Chaining & Dependencies</h4>
+                                    <h4 className="reference-card-title">{t('settings.grammar.refChainingTitle')}</h4>
                                 </div>
                                 <p className="reference-card-body">
-                                    Rules can execute sequentially in an ordered pipeline using the <b>Depends on</b> field:
+                                    {t('settings.grammar.refChainingDesc')}
                                 </p>
                                 <div className="reference-example-box">
                                     <div className="reference-example-line">
-                                        <span className="reference-example-label">Specific:</span>
-                                        <code>Depends on: plural</code> (runs after plural)
+                                        {t('settings.grammar.refChainSpecific')}
                                     </div>
                                     <div className="reference-example-line">
-                                        <span className="reference-example-label">Wildcard:</span>
-                                        <code>*suffix</code> (runs after any suffix rule)
+                                        {t('settings.grammar.refChainWildcardSuffix')}
                                     </div>
                                     <div className="reference-example-line">
-                                        <span className="reference-example-label">Wildcard:</span>
-                                        <code>*prefix</code> (runs after any prefix rule)
+                                        {t('settings.grammar.refChainWildcardPrefix')}
                                     </div>
                                     <div className="reference-example-line">
-                                        <span className="reference-example-label">Universal:</span>
-                                        <code>*affix</code> (runs after all morphology)
+                                        {t('settings.grammar.refChainWildcardAffix')}
                                     </div>
                                 </div>
                             </div>
@@ -378,23 +368,20 @@ export default function GrammarTab() {
                             <div className="reference-card">
                                 <div className="reference-card-header">
                                     <Check size={18} />
-                                    <h4 className="reference-card-title">Target Constraints & Shifts</h4>
+                                    <h4 className="reference-card-title">{t('settings.grammar.refConstraintsTitle')}</h4>
                                 </div>
                                 <p className="reference-card-body">
-                                    Filter which words receive the rule and update their grammatical classification:
+                                    {t('settings.grammar.refConstraintsDesc')}
                                 </p>
                                 <div className="reference-example-box">
                                     <div className="reference-example-line">
-                                        <span className="reference-example-label">Applies To:</span>
-                                        Restricts execution to specific parts of speech
+                                        {t('settings.grammar.refConstApplies')}
                                     </div>
                                     <div className="reference-example-line">
-                                        <span className="reference-example-label">Target POS:</span>
-                                        Converts lexeme class (e.g. Verb &rarr; Noun derivation)
+                                        {t('settings.grammar.refConstTarget')}
                                     </div>
                                     <div className="reference-example-line">
-                                        <span className="reference-example-label">Standalone:</span>
-                                        Rule conjugates independently without requiring root inflections
+                                        {t('settings.grammar.refConstStandalone')}
                                     </div>
                                 </div>
                             </div>

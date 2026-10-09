@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight, Search, SlidersHorizontal } from 'lucide-rea
 import { PAGE_SIZE } from './useTranslationGrid.js';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { autoMatchLexicon, searchLexicon } from '../../../utils/gameExportMatch.js';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 
 /**
  * The controls above a translation grid: category tabs (derived from the data),
@@ -17,6 +18,7 @@ import { autoMatchLexicon, searchLexicon } from '../../../utils/gameExportMatch.
 export default function TranslationGridControls({
     grid, keys, translations, onChange, idPrefix,
 }) {
+    const { t } = useTranslation();
     const lexicon = useLexiconStore((s) => s.lexicon);
     const {
         categories, activeCategory, selectCategory,
@@ -30,6 +32,8 @@ export default function TranslationGridControls({
     const firstShown = filtered.length === 0 ? 0 : page * PAGE_SIZE + 1;
     const lastShown = Math.min((page + 1) * PAGE_SIZE, filtered.length);
 
+    const getCategoryLabel = (cat) => t('exportModal.mapper.categories.' + cat, { defaultValue: cat });
+
     return (
         <>
             <div className="mc-tabs">
@@ -39,7 +43,7 @@ export default function TranslationGridControls({
                         className={`mc-tab-btn ${activeCategory === cat ? 'active' : ''}`}
                         onClick={() => selectCategory(cat)}
                     >
-                        {cat}
+                        {getCategoryLabel(cat)}
                     </button>
                 ))}
             </div>
@@ -51,8 +55,8 @@ export default function TranslationGridControls({
                         type="text"
                         value={query}
                         onChange={e => setSearch(e.target.value)}
-                        placeholder="Search English or key…"
-                        aria-label="Search keys"
+                        placeholder={t('exportModal.mapper.searchPlaceholder')}
+                        aria-label={t('exportModal.mapper.searchPlaceholder')}
                     />
                 </div>
                 <button
@@ -62,16 +66,16 @@ export default function TranslationGridControls({
                     aria-pressed={onlyMissing}
                 >
                     <SlidersHorizontal size={14} />
-                    Untranslated only
+                    {t('exportModal.mapper.untranslatedOnly')}
                 </button>
             </div>
 
             <div className="mc-grid-status">
                 {filtered.length === 0
-                    ? `No matches in ${activeCategory}`
-                    : `Showing ${firstShown}–${lastShown} of ${filtered.length} in ${activeCategory}`}
+                    ? t('exportModal.mapper.noMatches', { category: getCategoryLabel(activeCategory) })
+                    : t('exportModal.mapper.showingRange', { from: firstShown, to: lastShown, total: filtered.length, category: getCategoryLabel(activeCategory) })}
                 {' · '}
-                {translatedCount} / {keys.length} translated
+                {t('exportModal.mapper.translatedRatio', { translated: translatedCount, total: keys.length })}
             </div>
 
             <div className="mc-keys-scroll">
@@ -92,13 +96,13 @@ export default function TranslationGridControls({
                                         type="text"
                                         value={translations[item.key] || ''}
                                         onChange={e => onChange(item.key, e.target.value)}
-                                        placeholder={`Translate: "${item.english}"`}
+                                        placeholder={t('exportModal.mapper.translatePlaceholder', { english: item.english })}
                                         className={isAutoMatched ? 'auto-matched' : ''}
                                         list={listId}
                                     />
                                     {isAutoMatched && (
-                                        <span className="mc-match-badge" title="Automatically pre-filled from your lexicon">
-                                            Lexicon Match
+                                        <span className="mc-match-badge" title={t('exportModal.mapper.lexiconMatchTitle')}>
+                                            {t('exportModal.mapper.lexiconMatch')}
                                         </span>
                                     )}
                                 </div>
@@ -123,7 +127,7 @@ export default function TranslationGridControls({
                     >
                         <ChevronLeft size={16} />
                     </button>
-                    <span>Page {page + 1} of {pageCount}</span>
+                    <span>{t('exportModal.mapper.pageOf', { current: page + 1, total: pageCount })}</span>
                     <button
                         type="button"
                         onClick={() => setPage(Math.min(pageCount - 1, page + 1))}

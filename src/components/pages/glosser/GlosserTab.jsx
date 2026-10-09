@@ -5,6 +5,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { segmentToken, getUniqueParsings } from '@/utils/morphologyEngine.jsx';
 import { findParticleBySurface, resolveSense, getNeighborPOS } from '@/utils/particleEngine.js';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import Card from '@/components/UI/Card/Card.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
@@ -18,6 +19,7 @@ import toast from 'react-hot-toast';
 import './glosserTab.css';
 
 export default function GlosserTab() {
+    const { t } = useTranslation();
     const [inputText, setInputText] = useState('');
     const [readerMode, setReaderMode] = useState('read'); // 'read', 'gloss', 'tree', 'build'
     const [processedWords, setProcessedWords] = useState([]);
@@ -185,7 +187,7 @@ export default function GlosserTab() {
                     }
 
                     return (
-                        <span key={index} className="custom-font-text notranslate" style={{ color: 'var(--err)', borderBottom: '2px wavy var(--err)', cursor: 'help', padding: '0 2px' }} title="Unknown root">
+                        <span key={index} className="custom-font-text notranslate" style={{ color: 'var(--err)', borderBottom: '2px wavy var(--err)', cursor: 'help', padding: '0 2px' }} title={t('reader.unknownRoot')}>
                             {transliterate(tokenData.text)}
                         </span>
                     );
@@ -245,7 +247,7 @@ export default function GlosserTab() {
                     <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
                         <input 
                             type="text" 
-                            placeholder="Type the free translation here..." 
+                            placeholder={t('reader.freeTranslationPlaceholder')} 
                             value={freeTranslation}
                             onChange={(e) => setFreeTranslation(e.target.value)}
                             style={{ flex: 1, padding: '10px 15px', background: 'var(--s4)', border: '1px solid var(--bd)', borderRadius: 'var(--rad-sm)', color: 'var(--tx)', fontStyle: 'italic', fontSize: '1.05rem', outline: 'none' }}
@@ -253,10 +255,10 @@ export default function GlosserTab() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', background: 'var(--s2)', padding: '10px 14px', borderRadius: 'var(--rad)', border: '1px solid var(--bd)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--tx2)' }}>Export Leipzig:</span>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--tx2)' }}>{t('reader.exportLeipzig')}</span>
                             <div className="leipzig-format-tabs" style={{ display: 'flex', gap: '4px' }}>
                                 {[
-                                    { id: 'monospace', label: 'Aligned Text' },
+                                    { id: 'monospace', label: t('reader.alignedText') },
                                     { id: 'markdown', label: 'Markdown' },
                                     { id: 'latex', label: 'LaTeX' },
                                     { id: 'tsv', label: 'TSV' }
@@ -285,7 +287,7 @@ export default function GlosserTab() {
                         <Button variant="edit" onClick={() => handleCopyLeipzig(exportFormat)}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 {copiedFormat ? <Check size={16} /> : <Copy size={16} />}
-                                {copiedFormat ? 'Copied!' : `Copy ${exportFormat === 'monospace' ? 'Aligned' : exportFormat.toUpperCase()}`}
+                                {copiedFormat ? t('reader.copied') : (exportFormat === 'monospace' ? t('reader.copyAligned') : `Copy ${exportFormat.toUpperCase()}`)}
                             </div>
                         </Button>
                     </div>
@@ -318,9 +320,9 @@ export default function GlosserTab() {
     };
 
     const handleReadAloud = async () => {
-        if (!inputText.trim()) return toast.error("Nothing to read.");
+        if (!inputText.trim()) return toast.error(t('reader.nothingToRead'));
         
-        const toastId = toast.loading("Generating audio...");
+        const toastId = toast.loading(t('reader.generatingAudio'));
         try {
             const cleanText = inputText.replace(/[.\-*]/g, '');
             await playAzureTTS({
@@ -359,22 +361,22 @@ export default function GlosserTab() {
 
     const renderBuilderUI = () => (
         <div style={{ marginTop: '10px', padding: '15px', background: 'var(--s2)', borderRadius: 'var(--rad)', border: '1px solid var(--bd)' }}>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '15px', color: 'var(--tx)' }}>Sentence Builder</h3>
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '15px', color: 'var(--tx)' }}>{t('reader.sentenceBuilder')}</h3>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '15px', minHeight: '50px', padding: '10px', background: 'var(--s1)', borderRadius: 'var(--rad)', border: '1px dashed var(--bd)' }}>
-                {builderTokens.length === 0 && <span style={{ color: 'var(--tx3)', fontStyle: 'italic', alignSelf: 'center' }}>Search and add words to build a sentence...</span>}
-                {builderTokens.map((t, idx) => (
-                    <div key={t.id} style={{ display: 'flex', alignItems: 'center', background: 'var(--acc)', color: 'white', padding: '6px 10px', borderRadius: '6px', gap: '8px', boxShadow: 'var(--shadow)' }}>
+                {builderTokens.length === 0 && <span style={{ color: 'var(--tx3)', fontStyle: 'italic', alignSelf: 'center' }}>{t('reader.builderHint')}</span>}
+                {builderTokens.map((tItem, idx) => (
+                    <div key={tItem.id} style={{ display: 'flex', alignItems: 'center', background: 'var(--acc)', color: 'white', padding: '6px 10px', borderRadius: '6px', gap: '8px', boxShadow: 'var(--shadow)' }}>
                         <ChevronLeft size={16} style={{ cursor: 'pointer', opacity: 0.8 }} onClick={() => moveToken(idx, -1)} />
-                        <span className="custom-font-text notranslate" style={{ fontWeight: 'bold' }}>{transliterate(t.word)}</span>
+                        <span className="custom-font-text notranslate" style={{ fontWeight: 'bold' }}>{transliterate(tItem.word)}</span>
                         <ChevronRight size={16} style={{ cursor: 'pointer', opacity: 0.8 }} onClick={() => moveToken(idx, 1)} />
                         <div style={{ width: '1px', height: '14px', background: 'rgba(255,255,255,0.3)', margin: '0 4px' }}></div>
-                        <X size={16} style={{ cursor: 'pointer' }} onClick={() => removeBuilderToken(t.id)} />
+                        <X size={16} style={{ cursor: 'pointer' }} onClick={() => removeBuilderToken(tItem.id)} />
                     </div>
                 ))}
             </div>
             
             <div style={{ position: 'relative' }}>
-                <Input value={builderSearch} onChange={(e) => setBuilderSearch(e.target.value)} placeholder="Search lexicon to add word..." />
+                <Input value={builderSearch} onChange={(e) => setBuilderSearch(e.target.value)} placeholder={t('reader.searchLexiconPlaceholder')} />
                 {builderSearch && filteredLexicon.length > 0 && (
                     <div role="listbox" aria-label="Lexicon search results" style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--card)', border: '1px solid var(--bd)', borderRadius: 'var(--rad)', zIndex: 100, maxHeight: '200px', overflowY: 'auto', boxShadow: 'var(--shadow)' }}>
                         {filteredLexicon.map(entry => (
@@ -396,8 +398,8 @@ export default function GlosserTab() {
             </div>
             
             <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
-                <Button variant="imp" onClick={handleProcess} style={{ flex: 1 }}><div className="btn-content-flex"><Wand2 size={16} /> Process Built Sentence</div></Button>
-                <Button variant="default" onClick={handleReadAloud}><div className="btn-content-flex"><Volume2 size={16} /> Read Aloud</div></Button>
+                <Button variant="imp" onClick={handleProcess} style={{ flex: 1 }}><div className="btn-content-flex"><Wand2 size={16} /> {t('reader.processBuilt')}</div></Button>
+                <Button variant="default" onClick={handleReadAloud}><div className="btn-content-flex"><Volume2 size={16} /> {t('reader.readAloud')}</div></Button>
             </div>
         </div>
     );
@@ -405,32 +407,32 @@ export default function GlosserTab() {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <Card>
-                <h2 className='flex sg-title' style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><BookOpen /> Interactive Reader & Glosser</h2>
-                <p style={{ color: 'var(--tx2)', marginBottom: '20px' }}>Paste text in your conlang to generate an interactive reading interface or an Interlinear Glossed Text (IGT) breakdown.</p>
+                <h2 className='flex sg-title' style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><BookOpen /> {t('reader.title')}</h2>
+                <p style={{ color: 'var(--tx2)', marginBottom: '20px' }}>{t('reader.desc')}</p>
                 
                 {readerMode !== 'build' ? (
-                    <Input value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="Enter conlang text here..." className="custom-font-text notranslate" />
+                    <Input value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder={t('reader.inputPlaceholder')} className="custom-font-text notranslate" />
                 ) : (
                     renderBuilderUI()
                 )}
                 
                 <div className="glosser-controls" style={{ marginTop: '20px' }}>
                     <div className="glosser-mode-toggles">
-                        <Button variant={readerMode === 'read' ? 'imp' : 'default'} onClick={() => setReaderMode('read')}><div className="btn-content-flex"><BookOpen size={16} /> Reading Mode</div></Button>
-                        <Button variant={readerMode === 'gloss' ? 'imp' : 'default'} onClick={() => setReaderMode('gloss')}><div className="btn-content-flex"><List size={16} /> IGT Gloss Mode</div></Button>
-                        <Button variant={readerMode === 'tree' ? 'imp' : 'default'} onClick={() => setReaderMode('tree')}><div className="btn-content-flex"><Wand2 size={16} /> Syntax Tree</div></Button>
-                        <Button variant={readerMode === 'build' ? 'imp' : 'default'} onClick={() => setReaderMode('build')}><div className="btn-content-flex"><Plus size={16} /> Builder Mode</div></Button>
+                        <Button variant={readerMode === 'read' ? 'imp' : 'default'} onClick={() => setReaderMode('read')}><div className="btn-content-flex"><BookOpen size={16} /> {t('reader.readingMode')}</div></Button>
+                        <Button variant={readerMode === 'gloss' ? 'imp' : 'default'} onClick={() => setReaderMode('gloss')}><div className="btn-content-flex"><List size={16} /> {t('reader.glossMode')}</div></Button>
+                        <Button variant={readerMode === 'tree' ? 'imp' : 'default'} onClick={() => setReaderMode('tree')}><div className="btn-content-flex"><Wand2 size={16} /> {t('reader.syntaxTree')}</div></Button>
+                        <Button variant={readerMode === 'build' ? 'imp' : 'default'} onClick={() => setReaderMode('build')}><div className="btn-content-flex"><Plus size={16} /> {t('reader.builderMode')}</div></Button>
                     </div>
                     {readerMode !== 'build' && (
                         <div style={{ display: 'flex', gap: '10px' }}>
-                            <Button onClick={handleProcess} className="glosser-process-btn"><div className="btn-content-flex"><Wand2 size={18} /> Process Text</div></Button>
-                            <Button variant="default" onClick={handleReadAloud} title="Read Aloud"><div className="btn-content-flex"><Volume2 size={18} /></div></Button>
+                            <Button onClick={handleProcess} className="glosser-process-btn"><div className="btn-content-flex"><Wand2 size={18} /> {t('reader.processText')}</div></Button>
+                            <Button variant="default" onClick={handleReadAloud} title={t('reader.readAloud')}><div className="btn-content-flex"><Volume2 size={18} /></div></Button>
                         </div>
                     )}
                 </div>
             </Card>
 
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={readerMode === 'read' ? 'Interactive Reader' : readerMode === 'gloss' ? 'IGT Glossing Breakdown' : 'Visual Syntax Tree'}>
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={readerMode === 'read' ? t('reader.modalReader') : readerMode === 'gloss' ? t('reader.modalGloss') : t('reader.modalTree')}>
                 {processedWords.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                         {readerMode === 'read' ? renderReadingMode() : readerMode === 'gloss' ? renderGlossingMode() : <SyntaxTreeRenderer processedWords={processedWords} />}

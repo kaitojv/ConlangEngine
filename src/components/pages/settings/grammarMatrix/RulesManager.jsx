@@ -2,23 +2,25 @@ import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { RuleRow } from './RuleRow.jsx';
 import { useConfigStore } from '../../../../store/useConfigStore.jsx';
 import { useLexiconStore } from '../../../../store/useLexiconStore.jsx';
+import { useTranslation } from '../../../../hooks/useTranslation.jsx';
 import { Plus, ListX, Search, X, ChevronDown, Layers, Wand2 } from 'lucide-react';
 import './rulesManager.css';
 
 const TEMPLATES = [
-    { label: 'Plural Suffix', name: 'Plural', affix: '-s', appliesTo: 'noun', gloss: 'PL', example: '-s' },
-    { label: 'Past Tense', name: 'Past Tense', affix: '-ed', appliesTo: 'verb', gloss: 'PST', example: '-ed' },
-    { label: 'Future Tense', name: 'Future Tense', affix: '-ra', appliesTo: 'verb', gloss: 'FUT', example: '-ra' },
-    { label: 'Accusative Case', name: 'Accusative', affix: '-m', appliesTo: 'noun', gloss: 'ACC', example: '-m' },
-    { label: 'Negative Prefix', name: 'Negative', affix: 'un-', appliesTo: 'all', gloss: 'NEG', example: 'un-' },
-    { label: 'Agent Derivation (Verb → Noun)', name: 'Agent Noun', affix: '-er', appliesTo: 'verb', targetPOS: 'noun', isDerivational: true, gloss: 'AGT', example: '-er' },
-    { label: 'Sound Change / Mutation', name: 'Vowel Shift', affix: 'a => e', appliesTo: 'all', gloss: 'MUT', example: 'a => e' },
-    { label: 'Custom Blank Rule', name: '', affix: '', appliesTo: 'all', gloss: '', example: 'blank' },
+    { key: 'tmplPlural', name: 'Plural', affix: '-s', appliesTo: 'noun', gloss: 'PL', example: '-s' },
+    { key: 'tmplPast', name: 'Past Tense', affix: '-ed', appliesTo: 'verb', gloss: 'PST', example: '-ed' },
+    { key: 'tmplFuture', name: 'Future Tense', affix: '-ra', appliesTo: 'verb', gloss: 'FUT', example: '-ra' },
+    { key: 'tmplAccusative', name: 'Accusative', affix: '-m', appliesTo: 'noun', gloss: 'ACC', example: '-m' },
+    { key: 'tmplNegative', name: 'Negative', affix: 'un-', appliesTo: 'all', gloss: 'NEG', example: 'un-' },
+    { key: 'tmplAgent', name: 'Agent Noun', affix: '-er', appliesTo: 'verb', targetPOS: 'noun', isDerivational: true, gloss: 'AGT', example: '-er' },
+    { key: 'tmplMutation', name: 'Vowel Shift', affix: 'a => e', appliesTo: 'all', gloss: 'MUT', example: 'a => e' },
+    { key: 'tmplBlank', name: '', affix: '', appliesTo: 'all', gloss: '', example: 'blank' },
 ];
 
 const createRuleId = () => `rule_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
 export const RulesManager = () => {
+    const { t } = useTranslation();
     const rawRules = useConfigStore((state) => state.grammarRules);
     const rules = useMemo(() => rawRules || [], [rawRules]);
     const updateConfig = useConfigStore((state) => state.updateConfig);
@@ -160,7 +162,7 @@ export const RulesManager = () => {
                         className={`rules-category-btn ${selectedCategory === 'all' ? 'active' : ''}`}
                         onClick={() => setSelectedCategory('all')}
                     >
-                        <span>All</span>
+                        <span>{t('settings.grammar.catAll')}</span>
                         <span className="rules-category-count">{categoryCounts.all}</span>
                     </button>
                     <button 
@@ -168,7 +170,7 @@ export const RulesManager = () => {
                         className={`rules-category-btn ${selectedCategory === 'noun' ? 'active' : ''}`}
                         onClick={() => setSelectedCategory('noun')}
                     >
-                        <span>Nouns</span>
+                        <span>{t('settings.grammar.catNouns')}</span>
                         <span className="rules-category-count">{categoryCounts.noun}</span>
                     </button>
                     <button 
@@ -176,7 +178,7 @@ export const RulesManager = () => {
                         className={`rules-category-btn ${selectedCategory === 'verb' ? 'active' : ''}`}
                         onClick={() => setSelectedCategory('verb')}
                     >
-                        <span>Verbs</span>
+                        <span>{t('settings.grammar.catVerbs')}</span>
                         <span className="rules-category-count">{categoryCounts.verb}</span>
                     </button>
                     <button 
@@ -184,7 +186,7 @@ export const RulesManager = () => {
                         className={`rules-category-btn ${selectedCategory === 'adjective' ? 'active' : ''}`}
                         onClick={() => setSelectedCategory('adjective')}
                     >
-                        <span>Adjectives</span>
+                        <span>{t('settings.grammar.catAdjectives')}</span>
                         <span className="rules-category-count">{categoryCounts.adjective}</span>
                     </button>
                     <button 
@@ -192,7 +194,7 @@ export const RulesManager = () => {
                         className={`rules-category-btn ${selectedCategory === 'derivation' ? 'active' : ''}`}
                         onClick={() => setSelectedCategory('derivation')}
                     >
-                        <span>Derivations</span>
+                        <span>{t('settings.grammar.catDerivations')}</span>
                         <span className="rules-category-count">{categoryCounts.derivation}</span>
                     </button>
                     <button 
@@ -200,7 +202,7 @@ export const RulesManager = () => {
                         className={`rules-category-btn ${selectedCategory === 'sound' ? 'active' : ''}`}
                         onClick={() => setSelectedCategory('sound')}
                     >
-                        <span>Sound Changes</span>
+                        <span>{t('settings.grammar.catSoundChanges')}</span>
                         <span className="rules-category-count">{categoryCounts.sound}</span>
                     </button>
                 </div>
@@ -212,7 +214,7 @@ export const RulesManager = () => {
                         <input 
                             type="text" 
                             className="rules-search-input"
-                            placeholder="Filter rules by name, affix, or gloss..."
+                            placeholder={t('settings.grammar.filterRulesPlaceholder')}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -221,7 +223,7 @@ export const RulesManager = () => {
                                 type="button"
                                 className="rules-search-clear"
                                 onClick={() => setSearchQuery('')}
-                                title="Clear filter"
+                                title={t('settings.grammar.clearFilter')}
                             >
                                 <X size={14} />
                             </button>
@@ -236,21 +238,21 @@ export const RulesManager = () => {
                             onClick={() => setIsTemplateMenuOpen(prev => !prev)}
                         >
                             <Plus size={16} />
-                            <span>Add Rule</span>
+                            <span>{t('settings.grammar.addRule')}</span>
                             <ChevronDown size={14} />
                         </button>
 
                         {isTemplateMenuOpen && (
                             <div className="rules-template-menu">
-                                <span className="rules-template-header">Choose a Template</span>
+                                <span className="rules-template-header">{t('settings.grammar.chooseTemplate')}</span>
                                 {TEMPLATES.map((tmpl) => (
                                     <button
-                                        key={tmpl.label}
+                                        key={tmpl.key}
                                         type="button"
                                         className="rules-template-item"
                                         onClick={() => handleAddRule(tmpl)}
                                     >
-                                        <span>{tmpl.label}</span>
+                                        <span>{t(`settings.grammar.${tmpl.key}`)}</span>
                                         <span className="rules-template-item-example">{tmpl.example}</span>
                                     </button>
                                 ))}
@@ -265,14 +267,14 @@ export const RulesManager = () => {
                 {rules.length === 0 ? (
                     <div className="rules-empty-state">
                         <ListX size={44} className="empty-state-icon" />
-                        <h3>No Grammar Rules Yet</h3>
-                        <p>Click "Add Rule" above to create your first noun inflection, verb conjugation, or sound change rule.</p>
+                        <h3>{t('settings.grammar.noRulesTitle')}</h3>
+                        <p>{t('settings.grammar.noRulesDesc')}</p>
                     </div>
                 ) : filteredRules.length === 0 ? (
                     <div className="rules-empty-state">
                         <Search size={40} className="empty-state-icon" />
-                        <h3>No Matching Rules Found</h3>
-                        <p>No rules match your filter criteria. Try selecting "All" or clearing the search query.</p>
+                        <h3>{t('settings.grammar.noMatchingTitle')}</h3>
+                        <p>{t('settings.grammar.noMatchingDesc')}</p>
                     </div>
                 ) : (
                     filteredRules.map(rule => (

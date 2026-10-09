@@ -10,10 +10,12 @@ import { MessageSquare, Plus, Search, Edit2, Trash2, Volume2 } from 'lucide-reac
 import PhraseEditModal from './PhraseEditModal.jsx';
 import EmptyState from '@/components/UI/EmptyState/EmptyState.jsx';
 import { playAzureTTS } from '@/utils/azureTTS.js';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import toast from 'react-hot-toast';
 import './phrasesTab.css';
 
 export default function PhrasesTab() {
+    const { t } = useTranslation();
     const phrases = useLexiconStore(state => state.phrases || []);
     const deletePhrase = useLexiconStore(state => state.deletePhrase);
     const { azureTtsUseIpa, azureTtsVoice } = useConfigStore(useShallow(state => ({
@@ -43,14 +45,14 @@ export default function PhrasesTab() {
     };
 
     const handleDelete = (id) => {
-        if (window.confirm("Are you sure you want to delete this phrase?")) {
+        if (window.confirm(t('phrases.deleteConfirm'))) {
             deletePhrase(id);
-            toast.success("Phrase deleted.");
+            toast.success(t('phrases.deleted'));
         }
     };
 
     const handleReadAloud = async (text) => {
-        const toastId = toast.loading("Generating audio...");
+        const toastId = toast.loading(t('phrases.generatingAudio'));
         try {
             await playAzureTTS({
                 text: text.replace(/[.\-*]/g, ''),
@@ -71,10 +73,10 @@ export default function PhrasesTab() {
         <div className="phrases-container">
             <Card>
                 <div className="phrases-header">
-                    <h2 className='flex sg-title' style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}><MessageSquare /> Phrases & Idioms</h2>
+                    <h2 className='flex sg-title' style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}><MessageSquare /> {t('phrases.title')}</h2>
                     <Button variant="imp" onClick={handleAdd}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Plus size={16} /> Add Phrase
+                            <Plus size={16} /> {t('phrases.addPhrase')}
                         </div>
                     </Button>
                 </div>
@@ -84,14 +86,14 @@ export default function PhrasesTab() {
                     <Input 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search phrases by conlang or meaning..."
+                        placeholder={t('phrases.searchPlaceholder')}
                         className="phrases-search-input"
                     />
                 </div>
 
                 {filteredPhrases.length === 0 ? (
-                    <EmptyState icon={MessageSquare} title="No phrases found">
-                        {searchQuery ? "Try a different search term." : "Click 'Add Phrase' to create your first multi-word expression."}
+                    <EmptyState icon={MessageSquare} title={t('phrases.noPhrases')}>
+                        {searchQuery ? t('phrases.noPhrasesSearch') : t('phrases.noPhrasesEmpty')}
                     </EmptyState>
                 ) : (
                     <div className="phrases-list">
@@ -114,18 +116,18 @@ export default function PhrasesTab() {
                                     </div>
                                     {phrase.literalTranslation && (
                                         <div style={{ fontSize: '0.9rem', color: 'var(--tx3)', fontStyle: 'italic' }}>
-                                            Lit: "{phrase.literalTranslation}"
+                                            {t('phrases.litPrefix')} "{phrase.literalTranslation}"
                                         </div>
                                     )}
                                 </div>
                                 <div className="phrase-actions">
-                                    <Button variant="default" onClick={() => handleReadAloud(phrase.phrase)} title="Read Aloud" style={{ padding: '8px' }}>
+                                    <Button variant="default" onClick={() => handleReadAloud(phrase.phrase)} title={t('phrases.readAloud')} style={{ padding: '8px' }}>
                                         <Volume2 size={16} />
                                     </Button>
-                                    <Button variant="edit" onClick={() => handleEdit(phrase)} title="Edit Phrase" style={{ padding: '8px' }}>
+                                    <Button variant="edit" onClick={() => handleEdit(phrase)} title={t('phrases.editPhraseTooltip')} style={{ padding: '8px' }}>
                                         <Edit2 size={16} />
                                     </Button>
-                                    <Button variant="danger" onClick={() => handleDelete(phrase.id)} title="Delete Phrase" style={{ padding: '8px' }}>
+                                    <Button variant="danger" onClick={() => handleDelete(phrase.id)} title={t('phrases.deletePhraseTooltip')} style={{ padding: '8px' }}>
                                         <Trash2 size={16} />
                                     </Button>
                                 </div>

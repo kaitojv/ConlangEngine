@@ -5,6 +5,7 @@ import Button from '../../UI/Buttons/Buttons.jsx';
 import GlyphPreviewBadge from '../../UI/Glyph/GlyphPreviewBadge.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { findNumeralGlyphCandidates, findCharGlyph } from '../../UI/Glyph/resolveNumeralGlyphs.js';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { Sparkles, Star, RotateCcw, Check, Type, BookA, PenTool, Hash } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './numeralGlyphPickerModal.css';
@@ -19,6 +20,7 @@ export default function NumeralGlyphPickerModal({
     currentOverride,
     onSelectGlyph
 }) {
+    const { t } = useTranslation();
     const [customInput, setCustomInput] = useState('');
     const [filterQuery, setFilterQuery] = useState('');
     const updateWord = useLexiconStore((state) => state.updateWord);
@@ -85,27 +87,27 @@ export default function NumeralGlyphPickerModal({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title={`Choose Main Glyph for ${item.label || item.key} (${item.name || 'unnamed'})`}
+            title={t('numeralPicker.title', { label: item.label || item.key, name: item.name || 'unnamed' })}
             className="modal-wide numeral-glyph-picker-modal"
         >
             <div className="picker-modal-body">
                 {/* Active Selection Banner */}
                 <div className="picker-active-banner">
                     <div className="picker-active-info">
-                        <span className="picker-active-title">Current Setting:</span>
+                        <span className="picker-active-title">{t('numeralPicker.currentSetting')}</span>
                         <div className="picker-active-badge-wrap">
                             {currentOverride ? (
                                 <>
                                     <span className="picker-override-pill">
-                                        <Sparkles size={13} /> Custom Override Pinned: <b>{currentOverride}</b>
+                                        <Sparkles size={13} /> {t('numeralPicker.overridePinned', { glyph: currentOverride })}
                                     </span>
                                     <Button variant="default" className="btn-sm" onClick={handleResetToAutomatic}>
-                                        <RotateCcw size={13} /> Reset to Automatic
+                                        <RotateCcw size={13} /> {t('numeralPicker.resetAuto')}
                                     </Button>
                                 </>
                             ) : (
                                 <span className="picker-auto-pill">
-                                    Automatic Resolution (uses dictionary ideogram or script transliteration)
+                                    {t('numeralPicker.autoResolution')}
                                 </span>
                             )}
                         </div>
@@ -117,14 +119,14 @@ export default function NumeralGlyphPickerModal({
                     <div className="picker-section-header">
                         <div className="picker-section-title">
                             <BookA size={16} />
-                            <span>Dictionary Candidates & Ideograms</span>
+                            <span>{t('numeralPicker.dictCandidatesTitle')}</span>
                             <span className="picker-count-badge">({filteredLexiconCandidates.length})</span>
                         </div>
                         {lexiconCandidates.length > 4 && (
                             <input
                                 type="text"
                                 className="picker-search-input"
-                                placeholder="Filter candidates..."
+                                placeholder={t('numeralPicker.filterPlaceholder')}
                                 value={filterQuery}
                                 onChange={(e) => setFilterQuery(e.target.value)}
                             />
@@ -157,18 +159,18 @@ export default function NumeralGlyphPickerModal({
                                                 <span className="candidate-trans">"{entry?.translation}"</span>
                                                 {entry?.isPrimary && (
                                                     <span className="homophone-primary-badge-inline" title="This is the conlang's main reading for this sound">
-                                                        ★ Main Word
+                                                        ★ {t('numeralPicker.mainWord')}
                                                     </span>
                                                 )}
                                                 {cand.isExactName && (
-                                                    <span className="picker-tag-match">Matches Name</span>
+                                                    <span className="picker-tag-match">{t('numeralPicker.matchesName')}</span>
                                                 )}
                                             </div>
 
                                             {entry?.tags && entry.tags.length > 0 && (
                                                 <div className="candidate-tags-row">
-                                                    {entry.tags.map((t, ti) => (
-                                                        <span key={ti} className="candidate-tag">#{t}</span>
+                                                    {entry.tags.map((tItem, ti) => (
+                                                        <span key={ti} className="candidate-tag">#{tItem}</span>
                                                     ))}
                                                 </div>
                                             )}
@@ -191,7 +193,7 @@ export default function NumeralGlyphPickerModal({
                                                 title="Select as main number glyph"
                                             >
                                                 {isSelected ? <Check size={13} /> : null}
-                                                {isSelected ? 'Chosen' : 'Use Glyph'}
+                                                {isSelected ? t('numeralPicker.chosen') : t('numeralPicker.useGlyph')}
                                             </Button>
                                         </div>
                                     </div>
@@ -200,7 +202,7 @@ export default function NumeralGlyphPickerModal({
                         </div>
                     ) : (
                         <div className="picker-empty-note">
-                            No direct dictionary matches found for "{item.name}". You can select any drawn script glyph below or enter a custom character.
+                            {t('numeralPicker.noMatches', { name: item.name })}
                         </div>
                     )}
                 </div>
@@ -211,7 +213,7 @@ export default function NumeralGlyphPickerModal({
                         <div className="picker-section-header">
                             <div className="picker-section-title">
                                 <PenTool size={16} />
-                                <span>Active Script Drawings ({scriptGlyphs.length})</span>
+                                <span>{t('numeralPicker.activeDrawings', { count: scriptGlyphs.length })}</span>
                             </div>
                         </div>
 
@@ -248,7 +250,7 @@ export default function NumeralGlyphPickerModal({
                     <div className="picker-section-header">
                         <div className="picker-section-title">
                             <Type size={16} />
-                            <span>Direct Unicode / Ideogram Input</span>
+                            <span>{t('numeralPicker.directInput')}</span>
                         </div>
                     </div>
 
@@ -256,7 +258,7 @@ export default function NumeralGlyphPickerModal({
                         <input
                             type="text"
                             className="fi picker-custom-input"
-                            placeholder="Paste or type character, e.g. 二 or 𓏥..."
+                            placeholder={t('numeralPicker.inputPlaceholder')}
                             value={customInput}
                             onChange={(e) => setCustomInput(e.target.value)}
                             onKeyDown={(e) => {
@@ -270,7 +272,7 @@ export default function NumeralGlyphPickerModal({
                             disabled={!customInput.trim()}
                             onClick={() => handleApplyOverride(customInput.trim())}
                         >
-                            Set Custom Glyph
+                            {t('numeralPicker.setCustomGlyph')}
                         </Button>
                     </div>
                 </div>

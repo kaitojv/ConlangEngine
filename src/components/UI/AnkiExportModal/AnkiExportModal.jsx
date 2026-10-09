@@ -6,10 +6,12 @@ import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { generateAnkiTSV, downloadAnkiTSV } from '@/utils/ankiExporter.js';
 import { Download, Copy, Check, Sparkles, Layers } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import toast from 'react-hot-toast';
 import './ankiExportModal.css';
 
 export default function AnkiExportModal({ isOpen, onClose, defaultTag = 'all', deckWords = null }) {
+    const { t } = useTranslation();
     const rawLexicon = useLexiconStore((state) => state.lexicon);
     const lexicon = useMemo(() => Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []), [rawLexicon]);
     const config = useConfigStore();
@@ -66,56 +68,56 @@ export default function AnkiExportModal({ isOpen, onClose, defaultTag = 'all', d
 
     const handleDownload = () => {
         if (!generatedTSV) {
-            return toast.error("No entries to export.");
+            return toast.error(t('ankiExport.noEntriesToast'));
         }
         const conlangName = (config.conlangName || 'conlang').toLowerCase().replace(/\s+/g, '_');
         const filename = `${conlangName}_anki_deck.tsv`;
         downloadAnkiTSV(generatedTSV, filename);
-        toast.success(`Exported ${cardCount} cards to ${filename}`);
+        toast.success(t('ankiExport.exportedToast', { count: cardCount, filename }));
         onClose();
     };
 
     const handleCopy = async () => {
         if (!generatedTSV) {
-            return toast.error("No entries to copy.");
+            return toast.error(t('ankiExport.noEntriesToast'));
         }
         try {
             await navigator.clipboard.writeText(generatedTSV);
             setCopied(true);
-            toast.success(`Copied ${cardCount} cards to clipboard!`);
+            toast.success(t('ankiExport.copiedToast', { count: cardCount }));
             setTimeout(() => setCopied(false), 2000);
         } catch {
-            toast.error("Failed to copy to clipboard.");
+            toast.error(t('ankiExport.copyErrorToast'));
         }
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Export Anki Flashcard Deck (.tsv)">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('ankiExport.title')}>
             <div className="anki-modal-wrapper">
                 <p className="anki-modal-desc">
-                    Generate an Anki-compatible TSV deck complete with IPA pronunciation, native script transliteration, part-of-speech tags, and definitions.
+                    {t('ankiExport.desc')}
                 </p>
 
                 <div className="anki-stats-badge">
                     <Layers size={14} />
-                    <span>Cards to Export: <strong className="anki-stats-count">{cardCount}</strong> ({targetEntries.length} entries)</span>
+                    <span>{t('ankiExport.cardsToExport')} <strong className="anki-stats-count">{cardCount}</strong> ({t('ankiExport.entriesLabel', { count: targetEntries.length })})</span>
                 </div>
 
                 <div className="anki-form-group">
-                    <label className="anki-form-label">Deck Scope</label>
+                    <label className="anki-form-label">{t('ankiExport.deckScope')}</label>
                     <select className="anki-select" value={scope} onChange={(e) => setScope(e.target.value)}>
-                        <option value="all">Entire Lexicon ({lexicon.length} words)</option>
-                        {allTags.length > 0 && <option value="tag">Filter by Semantic Tag</option>}
-                        <option value="due">SRS Review Due Cards</option>
-                        {deckWords && <option value="custom">Current Study Deck ({deckWords.length} words)</option>}
+                        <option value="all">{t('ankiExport.scopeAll', { count: lexicon.length })}</option>
+                        {allTags.length > 0 && <option value="tag">{t('ankiExport.scopeTag')}</option>}
+                        <option value="due">{t('ankiExport.scopeDue')}</option>
+                        {deckWords && <option value="custom">{t('ankiExport.scopeCustom', { count: deckWords.length })}</option>}
                     </select>
                 </div>
 
                 {scope === 'tag' && (
                     <div className="anki-form-group">
-                        <label className="anki-form-label">Select Tag</label>
+                        <label className="anki-form-label">{t('ankiExport.selectTag')}</label>
                         <select className="anki-select" value={selectedTag} onChange={(e) => setSelectedTag(e.target.value)}>
-                            <option value="">-- Choose Tag --</option>
+                            <option value="">{t('ankiExport.chooseTagPlaceholder')}</option>
                             {allTags.map(tag => (
                                 <option key={tag} value={tag}>#{tag}</option>
                             ))}
@@ -124,54 +126,54 @@ export default function AnkiExportModal({ isOpen, onClose, defaultTag = 'all', d
                 )}
 
                 <div className="anki-form-group">
-                    <label className="anki-form-label">Card Direction</label>
+                    <label className="anki-form-label">{t('ankiExport.cardDirection')}</label>
                     <select className="anki-select" value={direction} onChange={(e) => setDirection(e.target.value)}>
-                        <option value="toEnglish">Conlang → Translation (Recognition)</option>
-                        <option value="toConlang">Translation → Conlang (Production)</option>
-                        <option value="bidirectional">Bidirectional (2 cards per word)</option>
+                        <option value="toEnglish">{t('ankiExport.dirToEnglish')}</option>
+                        <option value="toConlang">{t('ankiExport.dirToConlang')}</option>
+                        <option value="bidirectional">{t('ankiExport.dirBidirectional')}</option>
                     </select>
                 </div>
 
                 <div className="anki-form-group">
-                    <label className="anki-form-label">Card Fields & Columns</label>
+                    <label className="anki-form-label">{t('ankiExport.cardFields')}</label>
                     <div className="anki-checkbox-grid">
                         <label className="anki-checkbox-label">
                             <input type="checkbox" checked={includeIPA} onChange={(e) => setIncludeIPA(e.target.checked)} />
-                            IPA Pronunciation
+                            {t('ankiExport.fieldIPA')}
                         </label>
                         <label className="anki-checkbox-label">
                             <input type="checkbox" checked={includeScript} onChange={(e) => setIncludeScript(e.target.checked)} />
-                            Native Script / Conscript
+                            {t('ankiExport.fieldScript')}
                         </label>
                         <label className="anki-checkbox-label">
                             <input type="checkbox" checked={includePOS} onChange={(e) => setIncludePOS(e.target.checked)} />
-                            Part of Speech
+                            {t('ankiExport.fieldPOS')}
                         </label>
                         <label className="anki-checkbox-label">
                             <input type="checkbox" checked={includeNotes} onChange={(e) => setIncludeNotes(e.target.checked)} />
-                            Notes & Etymology
+                            {t('ankiExport.fieldNotes')}
                         </label>
                         <label className="anki-checkbox-label">
                             <input type="checkbox" checked={includeTags} onChange={(e) => setIncludeTags(e.target.checked)} />
-                            Anki Tags
+                            {t('ankiExport.fieldTags')}
                         </label>
                     </div>
                 </div>
 
                 <div className="anki-info-box">
-                    <strong>Tip for Anki:</strong> In the desktop Anki app, click <em>File → Import</em> and select the exported <code>.tsv</code> file. Anki will automatically configure HTML cards, tabs, and tags based on the embedded headers!
+                    {t('ankiExport.ankiTip')}
                 </div>
 
                 <div className="anki-modal-actions">
                     <Button variant="default" onClick={handleCopy}>
                         <div className="btn-content-flex">
                             {copied ? <Check size={16} /> : <Copy size={16} />}
-                            {copied ? 'Copied' : 'Copy TSV'}
+                            {copied ? t('ankiExport.copied') : t('ankiExport.copyTsv')}
                         </div>
                     </Button>
                     <Button variant="imp" onClick={handleDownload} disabled={cardCount === 0}>
                         <div className="btn-content-flex">
-                            <Download size={16} /> Download .tsv
+                            <Download size={16} /> {t('ankiExport.downloadTsv')}
                         </div>
                     </Button>
                 </div>

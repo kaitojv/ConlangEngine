@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { exportKLC, exportMac, exportLinux } from '../../../utils/keyboardExporter.js';
 import Modal from '../Modal/Modal.jsx';
 import Button from '../Buttons/Buttons.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { Download, Layout } from 'lucide-react';
 import './keyboardManager.css';
 
@@ -33,6 +34,7 @@ const QWERTY_ROWS = [
 ];
 
 export default function KeyboardManager({ allChars, alphabetGlyphs }) {
+    const { t } = useTranslation();
     const [mappings, setMappings] = useState({}); // { VK_Q: { base: 'a', shift: 'A' } }
     const [isShift, setIsShift] = useState(false);
     const [selectedKey, setSelectedKey] = useState(null);
@@ -88,7 +90,7 @@ export default function KeyboardManager({ allChars, alphabetGlyphs }) {
     return (
         <div className="km-container">
             <p style={{ color: 'var(--tx2)', fontSize: '0.85rem', textAlign: 'center', maxWidth: '600px' }}>
-                Map your phonemes and custom glyphs to physical keys. Click a key to assign a character to it. Toggle Shift to map uppercase variants.
+                {t('keyboardManager.desc')}
             </p>
 
             <div className="km-keyboard">
@@ -115,7 +117,7 @@ export default function KeyboardManager({ allChars, alphabetGlyphs }) {
                     </div>
                 ))}
                 <div className="km-row">
-                    <div className="km-key space special">Space</div>
+                    <div className="km-key space special">{t('keyboardManager.space')}</div>
                 </div>
             </div>
 
@@ -134,7 +136,7 @@ export default function KeyboardManager({ allChars, alphabetGlyphs }) {
             <Modal 
                 isOpen={!!selectedKey} 
                 onClose={() => setSelectedKey(null)}
-                title={`Map Key: ${isShift ? 'Shift + ' : ''}${selectedKey?.label}`}
+                title={t('keyboardManager.mapKey', { key: `${isShift ? 'Shift + ' : ''}${selectedKey?.label}` })}
             >
                 <div className="km-modal-grid">
                     {availableItems.map((item, idx) => (
@@ -148,7 +150,7 @@ export default function KeyboardManager({ allChars, alphabetGlyphs }) {
                         </button>
                     ))}
                     <button className="km-char-btn clear" onClick={() => handleSelectChar(null)}>
-                        Clear Mapping
+                        {t('keyboardManager.clearMapping')}
                     </button>
                 </div>
             </Modal>

@@ -11,6 +11,7 @@ import Infobox from '../../UI/Infobox/Infobox.jsx';
 import { Cloud, CheckCircle2, XCircle, Server, FolderOpen } from 'lucide-react';
 import { checkHealth } from '../../../utils/backupClient.js';
 import BackupBrowser from './BackupBrowser.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import toast from 'react-hot-toast';
 import './backuptab.css';
 
@@ -35,6 +36,7 @@ const STATUS_TEXT = {
 };
 
 export default function BackupTab() {
+    const { t } = useTranslation();
     const settings = useConfigStore((s) => s.backupSettings) || DEFAULTS;
     const updateConfig = useConfigStore((s) => s.updateConfig);
     const status = useBackupStore((s) => s.status);
@@ -67,37 +69,30 @@ export default function BackupTab() {
         const ok = await checkHealth(settings.endpoint);
         setTesting(false);
         setServerOnline(ok);
-        if (ok) toast.success('Connected to backup server');
-        else toast.error('Could not reach backup server');
+        if (ok) toast.success(t('settings.backup.connected'));
+        else toast.error(t('settings.backup.unreachable'));
     };
 
     return (
         <Card>
-            <h2 className="flex sg-title"><Cloud /> REST API Backup</h2>
+            <h2 className="flex sg-title"><Cloud /> {t('settings.backup.title')}</h2>
             <p className="settings-description">
-                Automatically back up this project to a self-hosted REST API server.
-                Runs alongside cloud sync and manual save/export without affecting them.
-                Settings are saved per project.
+                {t('settings.backup.desc')}
             </p>
 
             <Infobox>
-                These settings target a backup server implementing the Conlang Engine
-                Backup API. Each backup stores your full config, lexicon, and project
-                archive.
+                {t('settings.backup.apiGuideDesc')}
             </Infobox>
 
-            <Infobox title="Obsidian Plugin Integration">
-                To sync your projects with Obsidian:
-                <br/>1. Download the <a href="https://github.com/niruhsa/ConlangEngine-Obsidian-Backup" target="_blank" rel="noreferrer" style={{color: 'var(--acc)', textDecoration: 'underline'}}>Obsidian Backup Plugin</a> and place it in your vault's <code>.obsidian/plugins</code> folder.
-                <br/>2. Enable the plugin in Obsidian and set its storage directory to <code>.conlang-backups</code>.
-                <br/>3. Leave the endpoint below as <code>http://localhost:3000</code> and enable backup!
+            <Infobox title={t('settings.backup.obsidianGuideTitle')}>
+                <span dangerouslySetInnerHTML={{ __html: t('settings.backup.obsidianGuideDesc') }} />
             </Infobox>
 
             {/* Master enable */}
             <label className="bk-toggle-row">
                 <div>
-                    <span className="bk-toggle-title">Enable backup for this project</span>
-                    <span className="bk-toggle-sub">Turn the entire backup system on or off.</span>
+                    <span className="bk-toggle-title">{t('settings.backup.enableBackup')}</span>
+                    <span className="bk-toggle-sub">{t('settings.backup.enableBackupDesc')}</span>
                 </div>
                 <input
                     type="checkbox"
@@ -116,7 +111,7 @@ export default function BackupTab() {
             {/* Endpoint */}
             <div className="bk-section">
                 <Input
-                    label="Server endpoint"
+                    label={t('settings.backup.serverEndpoint')}
                     placeholder="http://localhost:3000"
                     value={settings.endpoint}
                     onChange={(e) => patch({ endpoint: e.target.value })}
@@ -128,7 +123,7 @@ export default function BackupTab() {
                 <div className="bk-btn-row">
                     <button className="bk-test-btn" onClick={testConnection} disabled={testing}>
                         {testing ? <Server size={15} /> : <CheckCircle2 size={15} />}
-                        {testing ? 'Testing…' : 'Test connection'}
+                        {testing ? t('settings.backup.testing') : t('settings.backup.testConnection')}
                     </button>
                     <button
                         className="bk-test-btn"
@@ -140,12 +135,12 @@ export default function BackupTab() {
                                 ? 'Checking connection to the backup server…'
                                 : 'Unavailable — the backup server is offline. Reconnect to browse projects.'}
                     >
-                        <FolderOpen size={15} /> Browse server projects
+                        <FolderOpen size={15} /> {t('settings.backup.browseProjects')}
                     </button>
                 </div>
                 {serverOnline === false && (
                     <span className="bk-offline-hint">
-                        <XCircle size={13} /> Backup server offline — browsing projects is disabled until the connection is restored.
+                        <XCircle size={13} /> {t('settings.backup.serverOffline')}
                     </span>
                 )}
             </div>

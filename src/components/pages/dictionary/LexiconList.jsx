@@ -447,17 +447,17 @@ export default function LexiconList() {
 
     // Quick action to bin a word
     const handleDelete = (id) => {
-        toast.custom((t) => (
+        toast.custom((toastItem) => (
             <div className="delete-toast-container">
-                <strong>⚠️ Delete Word</strong>
-                <span>Are you sure you want to delete this root?</span>
+                <strong>⚠️ {t('lexicon.deleteModalTitle')}</strong>
+                <span>{t('lexicon.deleteModalConfirm')}</span>
                 <div className="delete-toast-actions">
                     <button onClick={() => {
-                        toast.dismiss(t.id);
+                        toast.dismiss(toastItem.id);
                         deleteWord(id);
-                        toast.success("Word deleted.");
-                    }} className="delete-toast-btn">Delete</button>
-                    <button onClick={() => toast.dismiss(t.id)} className="delete-cancel-btn">Cancel</button>
+                        toast.success(t('lexicon.wordDeleted'));
+                    }} className="delete-toast-btn">{t('common.delete')}</button>
+                    <button onClick={() => toast.dismiss(toastItem.id)} className="delete-cancel-btn">{t('common.cancel')}</button>
                 </div>
             </div>
         ), { duration: Infinity });
@@ -556,10 +556,10 @@ export default function LexiconList() {
                         value={filters.sort}
                         onChange={(e) => updateFilter('sort', e.target.value)}
                     >
-                        <option value="newest">Newest First</option>
-                        <option value="oldest">Oldest First</option>
-                        <option value="az">A to Z</option>
-                        <option value="za">Z to A</option>
+                        <option value="newest">{t('lexicon.sortNewest')}</option>
+                        <option value="oldest">{t('lexicon.sortOldest')}</option>
+                        <option value="az">{t('lexicon.sortAz')}</option>
+                        <option value="za">{t('lexicon.sortZa')}</option>
                     </select>
 
                     <select 
@@ -570,7 +570,7 @@ export default function LexiconList() {
                         <option value="all">{t('lexicon.allClasses')}</option>
                         {uniqueClasses.map(cls => (
                             <option key={cls} value={cls}>
-                                {cls === 'bound-morpheme' ? 'Bound Morphemes' : cls}
+                                {cls === 'bound-morpheme' ? t('lexicon.boundMorphemes') : cls}
                             </option>
                         ))}
                     </select>
@@ -582,8 +582,8 @@ export default function LexiconList() {
                             onChange={(e) => setActiveDisplayScript(e.target.value)}
                             title="Switch active script display in dictionary"
                         >
-                            <option value="auto">Script: Auto (Per-Word)</option>
-                            <option value="latin">Script: Latin (Romanized)</option>
+                            <option value="auto">{t('lexicon.scriptAuto')}</option>
+                            <option value="latin">{t('lexicon.scriptLatin')}</option>
                             {scriptSystems.map(s => (
                                 <option key={s.id} value={s.id}>
                                     Script: {s.name || s.id} ({s.type})
@@ -599,7 +599,7 @@ export default function LexiconList() {
                             checked={showBoundMorphemes}
                             onChange={(e) => setShowBoundMorphemes(e.target.checked)}
                         />
-                        Show Affixes
+                        {t('lexicon.showAffixes')}
                     </label>
 
                     {isScriptMode && (
@@ -610,7 +610,7 @@ export default function LexiconList() {
                                 checked={showRomanization}
                                 onChange={(e) => setShowRomanization(e.target.checked)}
                             />
-                            Show Romanization
+                            {t('lexicon.showRomanization')}
                         </label>
                     )}
                     <label className="bound-toggle">
@@ -620,7 +620,7 @@ export default function LexiconList() {
                             checked={filters.showTones}
                             onChange={(e) => updateFilter('showTones', e.target.checked)}
                         />
-                        Tones/Stress
+                        {t('lexicon.tonesStress')}
                     </label>
                     <label className="bound-toggle">
                         <input 
@@ -629,7 +629,7 @@ export default function LexiconList() {
                             checked={filters.showRelated}
                             onChange={(e) => updateFilter('showRelated', e.target.checked)}
                         />
-                        Related Words
+                        {t('lexicon.relatedWords')}
                     </label>
                     <label className="bound-toggle">
                         <input 
@@ -638,7 +638,7 @@ export default function LexiconList() {
                             checked={filters.showProtoRoots}
                             onChange={(e) => updateFilter('showProtoRoots', e.target.checked)}
                         />
-                        Proto-Roots
+                        {t('lexicon.protoRoots')}
                     </label>
                     <label className="bound-toggle">
                         <input 
@@ -647,14 +647,14 @@ export default function LexiconList() {
                             checked={showAlphaBar}
                             onChange={(e) => handleToggleAlphaBar(e.target.checked)}
                         />
-                        Character Bar
+                        {t('lexicon.characterBar')}
                     </label>
                 </div>
 
                 {/* Active Filters Bar */}
                 {(filters.search || filters.tag !== 'all' || filters.type !== 'all' || filters.letter !== 'all') && (
                     <div className="active-filters-bar">
-                        <span className="filters-label">Active Filters:</span>
+                        <span className="filters-label">{t('lexicon.activeFilters')}</span>
                         {filters.tag !== 'all' && (
                             <button type="button" className="tag-chip" aria-label={`Remove tag filter ${filters.tag}`} onClick={() => updateFilter('tag', 'all')}>#{filters.tag} <X size={12} /></button>
                         )}
@@ -663,7 +663,7 @@ export default function LexiconList() {
                         )}
                         {filters.letter !== 'all' && (
                             <button type="button" className="tag-chip letter-filter-chip" aria-label="Remove starting-letter filter" onClick={() => updateFilter('letter', 'all')}>
-                                Starts with{' '}
+                                {t('lexicon.startsWith')}{' '}
                                 <span className={`letter-filter-val notranslate custom-font-text conlang-script-${defaultScriptId}`}>
                                     <GlyphPreviewBadge 
                                         glyph={filters.letter} 
@@ -680,7 +680,7 @@ export default function LexiconList() {
                             className="btn-v btn-sec-v clear-filters-btn" 
                             onClick={() => setFilters({ search: '', tag: 'all', type: 'all', letter: 'all', sort: 'newest' })}
                         >
-                            Clear All
+                            {t('lexicon.clearAll')}
                         </button>
                     </div>
                 )}
@@ -690,15 +690,15 @@ export default function LexiconList() {
                         <div className="alpha-filter-bar-header">
                             <div className="alpha-bar-title">
                                 <Filter size={14} className="alpha-icon" />
-                                <span>Quick Character Jump ({firstLetters.length})</span>
+                                <span>{t('lexicon.quickJump', { count: firstLetters.length })}</span>
                             </div>
                             <button 
                                 type="button"
                                 className="alpha-hide-btn"
                                 onClick={() => handleToggleAlphaBar(false)}
-                                title="Hide character bar"
+                                title={t('lexicon.hide')}
                             >
-                                <ChevronUp size={14} /> Hide
+                                <ChevronUp size={14} /> {t('lexicon.hide')}
                             </button>
                         </div>
                         <div className="alpha-filter-buttons">
@@ -738,21 +738,21 @@ export default function LexiconList() {
                 </span>
                 <div className="list-header-actions">
                     <span className="list-total">
-                        <span className="list-total-count">{groupedLexicon.length}</span> {t('common.words').toLowerCase()} <span style={{fontSize: '0.75rem', opacity: 0.7}}>({filteredLexicon.length} entries)</span>
+                        <span className="list-total-count">{groupedLexicon.length}</span> {t('common.words').toLowerCase()} <span style={{fontSize: '0.75rem', opacity: 0.7}}>{t('lexicon.entriesCount', { count: filteredLexicon.length })}</span>
                     </span>
                     
                     <div className="layout-toggle-group">
                         <button 
                             className={`layout-toggle-btn ${layoutMode === 'list' ? 'active' : ''}`}
                             onClick={() => setLayoutMode('list')}
-                            title="List View"
+                            title={t('lexicon.listView')}
                         >
                             <List size={16} />
                         </button>
                         <button 
                             className={`layout-toggle-btn ${layoutMode === 'grid' ? 'active' : ''}`}
                             onClick={() => setLayoutMode('grid')}
-                            title="Grid View"
+                            title={t('lexicon.gridView')}
                         >
                             <LayoutGrid size={16} />
                         </button>
@@ -762,7 +762,7 @@ export default function LexiconList() {
                     {session && (
                         <Button variant="default" className="btn-sm" onClick={handleShareLink} disabled={isSharing}>
                             <Share2 size={14} className={isSharing ? 'animate-spin' : ''} /> 
-                            {isSharing ? 'Sharing...' : 'Share'}
+                            {isSharing ? t('lexicon.sharing') : t('lexicon.share')}
                         </Button>
                     )}
                     <Button variant="edit" className="btn-sm" onClick={() => navigate('/create')}>
@@ -771,12 +771,12 @@ export default function LexiconList() {
                 </div>
             </div>
 
-            <Infobox title="Lexicon Pro Tips">
-                • <b>Search:</b> You can search by word, translation, or even tag (e.g. "#aquatic").<br />
-                • <b>Sound Search:</b> Start with <code>/</code> to search by phonemes — <code>/#st</code> (starts with /st/), <code>/VnV</code>, <code>/[+voiced,fricative]V#</code>. <code>#</code> anchors word edges, <code>*</code> is a wildcard.<br />
-                • <b>Reverse Dictionary:</b> Start with <code>=</code> to search by meaning — <code>=happy</code> also finds entries glossed "glad" or tagged with the same theme.<br />
-                • <b>Filtering:</b> Use the alphabetic bar to quickly jump to words starting with a specific letter.<br />
-                • <b>Affixes:</b> Enable "Show Affixes" to see bound morphemes like prefixes and suffixes in the list.
+            <Infobox title={t('lexicon.proTipsTitle')}>
+                • <b>Search:</b> {t('lexicon.proTipsSearch')}<br />
+                • <b>Sound Search:</b> {t('lexicon.proTipsSound')}<br />
+                • <b>Reverse Dictionary:</b> {t('lexicon.proTipsReverse')}<br />
+                • <b>Filtering:</b> {t('lexicon.proTipsFilter')}<br />
+                • <b>Affixes:</b> {t('lexicon.proTipsAffixes')}
             </Infobox>
 
             {lexicon.length === 0 && (
@@ -789,7 +789,7 @@ export default function LexiconList() {
                             <PlusCircle size={16} /> {t('lexicon.addWord')}
                         </Button>
                         <Button variant="default" onClick={() => navigate('/settings')}>
-                            <Settings2 size={16} /> Configure Phonology
+                            <Settings2 size={16} /> {t('lexicon.configurePhonology')}
                         </Button>
                     </div>
                 </div>
@@ -797,7 +797,7 @@ export default function LexiconList() {
 
             {lexicon.length > 0 && filteredLexicon.length === 0 && (
                 <div className="empty-state-search">
-                    <p>No words found matching your search criteria.</p>
+                    <p>{t('lexicon.emptySearch')}</p>
                 </div>
             )}
 
@@ -860,7 +860,7 @@ export default function LexiconList() {
                                                         name: baseEntry.translation || baseEntry.word,
                                                         isWord: true
                                                     })}
-                                                    title="Click to analyze"
+                                                    title={t('lexicon.clickToAnalyze')}
                                                 >
                                                     {displayWord}
                                                 </span>
@@ -874,12 +874,12 @@ export default function LexiconList() {
                                         )}
                                         {group.isHomophone && (
                                             group.baseEntry.isPrimary ? (
-                                                <span className="homophone-primary-badge-inline" title="This word is set as the main / primary reading for this pronunciation">
-                                                    ★ Main
+                                                <span className="homophone-primary-badge-inline" title={t('lexicon.mainReadingTooltip')}>
+                                                    {t('lexicon.mainBadge')}
                                                 </span>
                                             ) : (
-                                                <span className="homophone-badge-inline" title="Multiple words share this pronunciation">
-                                                    Homophone
+                                                <span className="homophone-badge-inline" title={t('lexicon.setMainReadingTooltip')}>
+                                                    {t('lexicon.homophoneBadge')}
                                                 </span>
                                             )
                                         )}
@@ -913,13 +913,13 @@ export default function LexiconList() {
 
                                     {filters.showTones && displayTone && (
                                         <span className="notranslate entry-tone" style={{fontSize: '0.8rem', opacity: isAutoComputed && !baseEntry.tone ? 0.5 : 0.7, marginLeft: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px'}}>
-                                            <Music size={12} /> {displayTone} Tone{isAutoComputed && !baseEntry.tone ? ' (auto)' : ''}
+                                            <Music size={12} /> {t('lexicon.toneBadge', { tone: displayTone })}{isAutoComputed && !baseEntry.tone ? ` ${t('lexicon.autoBadge')}` : ''}
                                         </span>
                                     )}
 
                                     {filters.showTones && displayStress && (
                                         <span className="notranslate entry-stress" style={{fontSize: '0.8rem', opacity: isAutoComputed && !baseEntry.stress ? 0.5 : 0.7, marginLeft: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px'}}>
-                                            <Zap size={12} /> {displayStress} Stress{isAutoComputed && !baseEntry.stress ? ' (auto)' : ''}
+                                            <Zap size={12} /> {t('lexicon.stressBadge', { stress: displayStress })}{isAutoComputed && !baseEntry.stress ? ` ${t('lexicon.autoBadge')}` : ''}
                                         </span>
                                     )}
 
@@ -928,9 +928,9 @@ export default function LexiconList() {
                                         if (!displayEtymology) return null;
                                         return (
                                             <span className="notranslate entry-etymology-top" style={{fontSize: '0.75rem', color: 'var(--tx2)', marginLeft: '10px', display: 'inline-flex', alignItems: 'center', gap: '4px', borderLeft: '1px solid var(--bd)', paddingLeft: '10px'}}>
-                                                origin proto-root: 
-                                                <span style={{ color: 'var(--acc)', cursor: 'pointer' }} title={String(displayEtymology).startsWith('project:') ? 'from mother language' : 'click to edit'}>
-                                                    {String(displayEtymology).startsWith('project:') ? 'mother language root' : (rawLexicon.find(w => w.id === displayEtymology)?.word || 'Unknown')}
+                                                {t('lexicon.originProtoRoot')} 
+                                                <span style={{ color: 'var(--acc)', cursor: 'pointer' }} title={String(displayEtymology).startsWith('project:') ? t('lexicon.fromMotherLang') : t('lexicon.clickToEdit')}>
+                                                    {String(displayEtymology).startsWith('project:') ? t('lexicon.motherLanguageRoot') : (rawLexicon.find(w => w.id === displayEtymology)?.word || t('lexicon.unknown'))}
                                                 </span>
                                             </span>
                                         );
@@ -943,18 +943,18 @@ export default function LexiconList() {
                                             variant={baseEntry.isPrimary ? "accent" : "default"} 
                                             className={`btn-icon-only ${baseEntry.isPrimary ? 'active-star-btn' : ''}`}
                                             onClick={() => handleSetPrimaryWord(baseEntry)} 
-                                            title={baseEntry.isPrimary ? "Main reading for this pronunciation (click to unset)" : "Set as main reading / primary homophone"}
+                                            title={baseEntry.isPrimary ? t('lexicon.mainReadingTooltip') : t('lexicon.setMainReadingTooltip')}
                                         >
                                             <Star size={16} fill={baseEntry.isPrimary ? "currentColor" : "none"} />
                                         </Button>
                                     )}
-                                    <Button variant="default" className="btn-icon-only" onClick={() => setSelectedWordForProto(baseEntry)} title="Convert to Proto-Root">
+                                    <Button variant="default" className="btn-icon-only" onClick={() => setSelectedWordForProto(baseEntry)} title={t('lexicon.convertToProto')}>
                                         <Hash size={16} />
                                     </Button>
-                                    <Button variant="listen" onClick={() => handleListen(senses)} title="Listen" className="btn-icon-only">
+                                    <Button variant="listen" onClick={() => handleListen(senses)} title={t('lexicon.listen')} className="btn-icon-only">
                                         <Volume2 size={16} />
                                     </Button>
-                                    <Button variant="edit" onClick={() => setNewSenseBase(baseEntry)} title="Add new definition" className="btn-icon-only">
+                                    <Button variant="edit" onClick={() => setNewSenseBase(baseEntry)} title={t('lexicon.addDefinition')} className="btn-icon-only">
                                         <PlusCircle size={16} />
                                     </Button>
                                     {(!['alphabetic', 'abjad', 'abugida'].includes(phonologyTypes || 'alphabetic')) && (
@@ -973,14 +973,14 @@ export default function LexiconList() {
                                                             name: baseEntry.translation || baseEntry.word,
                                                             isWord: true
                                                         })} 
-                                                        title="View Stroke Order" 
+                                                        title={t('lexicon.viewStrokeOrder')} 
                                                         className="btn-icon-only"
                                                     >
                                                         <PenTool size={16} />
                                                     </Button>
                                                 );
                                             })()}
-                                            <Button variant="default" onClick={() => exportTextAsSVG(displayWord, `${safeWord}.svg`)} title="Download SVG" className="btn-icon-only">
+                                            <Button variant="default" onClick={() => exportTextAsSVG(displayWord, `${safeWord}.svg`)} title={t('lexicon.downloadSvg')} className="btn-icon-only">
                                                 <Download size={16} />
                                             </Button>
                                         </>
@@ -1004,7 +1004,7 @@ export default function LexiconList() {
                                                             </span>
                                                         );
                                                     }) : (
-                                                        <span className="word-class-badge badge-other">Other</span>
+                                                        <span className="word-class-badge badge-other">{t('lexicon.otherBadge')}</span>
                                                     )}
                                                 </div>
                                                 <div className="entry-translation">{entry.translation}</div>
@@ -1012,7 +1012,7 @@ export default function LexiconList() {
 
                                             {entry.isProtoRoot && (
                                                 <div style={{ marginTop: '8px', fontSize: '0.8rem', color: 'var(--tx3)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                    <Hash size={12} /> This is a Proto-Root (Hidden from main Lexicon)
+                                                    <Hash size={12} /> {t('lexicon.protoHidden')}
                                                 </div>
                                             )}
 
@@ -1038,7 +1038,7 @@ export default function LexiconList() {
 
                                             {filters.showRelated && entry.relatedWords && entry.relatedWords.length > 0 && (
                                                 <div className="entry-related" style={{ marginTop: '0.5rem', display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                                    <span style={{ fontSize: '0.75rem', color: 'var(--tx2)' }}>Related:</span>
+                                                    <span style={{ fontSize: '0.75rem', color: 'var(--tx2)' }}>{t('lexicon.relatedLabel')}</span>
                                                     {entry.relatedWords.map((rw, i) => {
                                                         const cleanRw = rw.toLowerCase().trim();
                                                         // Check if this concept already exists in the lexicon
@@ -1078,9 +1078,9 @@ export default function LexiconList() {
                                         </div>
 
                                         <div className="sense-actions">
-                                            <button className="sense-btn" onClick={() => setSelectedWordForEdit(entry)} title="Edit Entry"><Edit size={14}/></button>
-                                            <button className="sense-btn" onClick={() => setSelectedWordForMatrix(entry)} title="Inflection Matrix"><Table2 size={14}/></button>
-                                            <button className="sense-btn sense-btn-err" onClick={() => handleDelete(entry.id)} title="Delete Entry"><Trash2 size={14}/></button>
+                                            <button className="sense-btn" onClick={() => setSelectedWordForEdit(entry)} title={t('lexicon.editEntry')}><Edit size={14}/></button>
+                                            <button className="sense-btn" onClick={() => setSelectedWordForMatrix(entry)} title={t('lexicon.inflectionMatrix')}><Table2 size={14}/></button>
+                                            <button className="sense-btn sense-btn-err" onClick={() => handleDelete(entry.id)} title={t('lexicon.deleteEntry')}><Trash2 size={14}/></button>
                                         </div>
                                     </div>
                                 ))}
@@ -1093,7 +1093,7 @@ export default function LexiconList() {
             {visibleCount < groupedLexicon.length && (
                 <div style={{ textAlign: 'center', marginTop: '2rem' }}>
                     <Button variant="sec" onClick={() => setVisibleCount(prev => prev + 50)}>
-                        Load More Words
+                        {t('lexicon.loadMore')}
                     </Button>
                 </div>
             )}
@@ -1104,15 +1104,15 @@ export default function LexiconList() {
                 oldWord={selectedWordForProto} 
             />
 
-            <Modal isOpen={!!selectedWordForMatrix} onClose={() => setSelectedWordForMatrix(null)} title="Word Inflection Matrix">
+            <Modal isOpen={!!selectedWordForMatrix} onClose={() => setSelectedWordForMatrix(null)} title={t('lexicon.matrixModalTitle')}>
                 <MatrixModal key={selectedWordForMatrix?.id} wordObj={selectedWordForMatrix} />
             </Modal>
 
-            <Modal isOpen={!!selectedWordForEdit} onClose={() => setSelectedWordForEdit(null)} title="Edit Lexicon Entry">
+            <Modal isOpen={!!selectedWordForEdit} onClose={() => setSelectedWordForEdit(null)} title={t('lexicon.editModalTitle')}>
                 <LexiconEditModal key={selectedWordForEdit?.id} wordObj={selectedWordForEdit} onClose={() => setSelectedWordForEdit(null)} />
             </Modal>
 
-            <Modal isOpen={!!newSenseBase} onClose={() => setNewSenseBase(null)} title="Add New Definition">
+            <Modal isOpen={!!newSenseBase} onClose={() => setNewSenseBase(null)} title={t('lexicon.addSenseModalTitle')}>
                 {newSenseBase && (
                     <LexiconEditModal 
                         key={`sense-${newSenseBase.id}`} 

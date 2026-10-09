@@ -1,13 +1,28 @@
 import React from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { computeProsody } from '../../../utils/prosodyEngine.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 
 const TONE_OPTIONS = ["High", "Low", "Mid", "Rising", "Falling", "Dipping", "Peaking"];
 
 export default function ToneStressSelector({ word, tone, stress, onToneChange, onStressChange }) {
+    const { t } = useTranslation();
     const customVowelsStr = useConfigStore(state => state.vowels);
     const stressRules = useConfigStore(state => state.stressRules) || [];
     const toneRules = useConfigStore(state => state.toneRules) || [];
+
+    const getToneLabel = (val) => {
+        const map = {
+            'High': t('createWord.toneHigh'),
+            'Low': t('createWord.toneLow'),
+            'Mid': t('createWord.toneMid'),
+            'Rising': t('createWord.toneRising'),
+            'Falling': t('createWord.toneFalling'),
+            'Dipping': t('createWord.toneDipping'),
+            'Peaking': t('createWord.tonePeaking')
+        };
+        return map[val] || val;
+    };
 
     // Compute auto values from prosody rules
     const hasRules = stressRules.length > 0 || toneRules.length > 0;
@@ -58,7 +73,7 @@ export default function ToneStressSelector({ word, tone, stress, onToneChange, o
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', margin: '8px 0', width: '100%' }}>
             <div>
-                <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--tx2)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', display: 'block' }}>Stress Position</label>
+                <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--tx2)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', display: 'block' }}>{t('createWord.stressPositionLabel')}</label>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
                     {Array.from({ length: count }).map((_, i) => {
                         const isActive = currentIndex === i;
@@ -79,27 +94,27 @@ export default function ToneStressSelector({ word, tone, stress, onToneChange, o
                                     userSelect: 'none'
                                 }}
                             >
-                                Syllable {i + 1}
+                                {t('createWord.syllableBadge', { num: i + 1 })}
                             </div>
                         );
                     })}
                 </div>
                 {hasRules && computed?.stress && !stress && (
                     <div style={{ marginTop: '6px', fontSize: '0.72rem', color: 'var(--acc2)', opacity: 0.8, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        ⚡ Auto-computed: syllable {computed.stress} — click above to override
+                        {t('createWord.autoComputedStress', { num: computed.stress })}
                     </div>
                 )}
             </div>
 
             <div>
-                <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--tx2)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', display: 'block' }}>Tone (Optional)</label>
+                <label className="form-label" style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--tx2)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', display: 'block' }}>{t('createWord.toneLabel')}</label>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
-                    {TONE_OPTIONS.map(t => {
-                        const isActive = tone === t;
+                    {TONE_OPTIONS.map(opt => {
+                        const isActive = tone === opt;
                         return (
                             <div 
-                                key={t}
-                                onClick={() => onToneChange(isActive ? '' : t)}
+                                key={opt}
+                                onClick={() => onToneChange(isActive ? '' : opt)}
                                 style={{
                                     padding: '6px 12px',
                                     borderRadius: '6px',
@@ -113,7 +128,7 @@ export default function ToneStressSelector({ word, tone, stress, onToneChange, o
                                     userSelect: 'none'
                                 }}
                             >
-                                {t}
+                                {getToneLabel(opt)}
                             </div>
                         );
                     })}
@@ -137,7 +152,7 @@ export default function ToneStressSelector({ word, tone, stress, onToneChange, o
                 </div>
                 {hasRules && computed?.tone && !tone && (
                     <div style={{ marginTop: '6px', fontSize: '0.72rem', color: 'var(--acc2)', opacity: 0.8, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        🎵 Auto-computed: {computed.tone} — click above to override
+                        {t('createWord.autoComputedTone', { tone: getToneLabel(computed.tone) })}
                     </div>
                 )}
             </div>

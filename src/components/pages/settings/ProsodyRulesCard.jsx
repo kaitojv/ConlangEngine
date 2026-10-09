@@ -10,15 +10,42 @@ import {
 } from '../../../utils/prosodyEngine.jsx';
 import StressWave from '../../UI/StressWave/StressWave.jsx';
 import { Zap, Music, ArrowRight, Plus, X, Beaker, Trash2, Scale } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import './prosodyRulesCard.css';
 
 export default function ProsodyRulesCard() {
+    const { t } = useTranslation();
     const vowels = useConfigStore(s => s.vowels) || '';
     const stressRules = useConfigStore(s => s.stressRules) || [];
     const toneRules = useConfigStore(s => s.toneRules) || [];
     const updateConfig = useConfigStore(s => s.updateConfig);
 
     const [testWord, setTestWord] = useState('makina');
+
+    const stressPositionLabels = {
+        initial: t('settings.phonology.stressInitial'),
+        penultimate: t('settings.phonology.stressPenultimate'),
+        ultimate: t('settings.phonology.stressUltimate'),
+        antepenultimate: t('settings.phonology.stressAntepenultimate')
+    };
+
+    const toneConditionLabels = {
+        stressed: t('settings.phonology.toneStressed'),
+        unstressed: t('settings.phonology.toneUnstressed'),
+        initial: t('settings.phonology.toneInitial'),
+        final: t('settings.phonology.toneFinal'),
+        all: t('settings.phonology.toneAll')
+    };
+
+    const toneOptionLabels = {
+        High: t('settings.phonology.toneHigh'),
+        Low: t('settings.phonology.toneLow'),
+        Mid: t('settings.phonology.toneMid'),
+        Rising: t('settings.phonology.toneRising'),
+        Falling: t('settings.phonology.toneFalling'),
+        Dipping: t('settings.phonology.toneDipping'),
+        Peaking: t('settings.phonology.tonePeaking'),
+    };
 
     // ─── Stress rule helpers ───
     // We support one stress rule at a time (the "primary stress strategy")
@@ -104,19 +131,19 @@ export default function ProsodyRulesCard() {
 
     return (
         <Card className="prosody-card">
-            <h2 className="flex sg-title"><Zap /> Stress & Tone Rules</h2>
+            <h2 className="flex sg-title"><Zap /> {t('settings.phonology.prosodyCardTitle')}</h2>
 
-            <Infobox title="How Prosody Rules Work">
-                Define <b>language-wide rules</b> that automatically compute stress and tone for every word.<br />
-                • <b>Stress Rules:</b> Pick where primary stress falls (e.g., always on the penultimate syllable).<br />
-                • <b>Tone Rules:</b> Assign tones based on position (e.g., stressed syllable gets High tone).<br />
-                • <b>Manual Override:</b> Per-word stress/tone set in the Edit Modal always takes priority.
+            <Infobox title={t('settings.phonology.howProsodyWorks')}>
+                <span dangerouslySetInnerHTML={{ __html: t('settings.phonology.prosodyGuideIntro') }} /><br />
+                • <span dangerouslySetInnerHTML={{ __html: t('settings.phonology.prosodyGuideStress') }} /><br />
+                • <span dangerouslySetInnerHTML={{ __html: t('settings.phonology.prosodyGuideTone') }} /><br />
+                • <span dangerouslySetInnerHTML={{ __html: t('settings.phonology.prosodyGuideOverride') }} />
             </Infobox>
 
             {/* ─── STRESS SECTION ─── */}
             <div className="prosody-section">
                 <div className="prosody-section-title">
-                    <Zap size={14} /> Primary Stress Rule
+                    <Zap size={14} /> {t('settings.phonology.primaryStressRule')}
                 </div>
 
                 <div className="prosody-stress-type-row">
@@ -126,7 +153,7 @@ export default function ProsodyRulesCard() {
                             className={`prosody-type-btn ${currentStressType === 'fixed' && currentStressValue === pos.value ? 'active' : ''}`}
                             onClick={() => handleStressClick(pos.value)}
                         >
-                            {pos.label}
+                            {stressPositionLabels[pos.value] || pos.label}
                         </button>
                     ))}
                     <button
@@ -134,20 +161,20 @@ export default function ProsodyRulesCard() {
                         onClick={handleWeightClick}
                     >
                         <Scale size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-                        Weight-Based (Heaviest)
+                        {t('settings.phonology.weightBased')}
                     </button>
                 </div>
 
                 {currentStressType === 'weight' && (
                     <div className="prosody-fallback-row">
-                        <span className="prosody-fallback-label">If no heavy syllable, fall back to:</span>
+                        <span className="prosody-fallback-label">{t('settings.phonology.fallbackLabel')}</span>
                         <select
                             className="prosody-fallback-select"
                             value={currentFallback}
                             onChange={(e) => handleFallbackChange(e.target.value)}
                         >
                             {STRESS_POSITIONS.map(pos => (
-                                <option key={pos.value} value={pos.value}>{pos.label}</option>
+                                <option key={pos.value} value={pos.value}>{stressPositionLabels[pos.value] || pos.label}</option>
                             ))}
                         </select>
                     </div>
@@ -156,7 +183,7 @@ export default function ProsodyRulesCard() {
                 {stressRules.length > 0 && (
                     <div className="prosody-clear-row">
                         <button className="prosody-clear-btn" onClick={clearStressRules}>
-                            <Trash2 size={12} /> Clear Stress Rule
+                            <Trash2 size={12} /> {t('settings.phonology.clearStressRule')}
                         </button>
                     </div>
                 )}
@@ -165,7 +192,7 @@ export default function ProsodyRulesCard() {
             {/* ─── TONE SECTION ─── */}
             <div className="prosody-section">
                 <div className="prosody-section-title">
-                    <Music size={14} /> Tone Assignment Rules
+                    <Music size={14} /> {t('settings.phonology.toneRulesTitle')}
                 </div>
 
                 {toneRules.length > 0 ? (
@@ -178,7 +205,7 @@ export default function ProsodyRulesCard() {
                                     onChange={(e) => updateToneRule(rule.id, 'condition', e.target.value)}
                                 >
                                     {TONE_CONDITIONS.map(c => (
-                                        <option key={c.value} value={c.value}>{c.label}</option>
+                                        <option key={c.value} value={c.value}>{toneConditionLabels[c.value] || c.label}</option>
                                     ))}
                                 </select>
 
@@ -189,15 +216,15 @@ export default function ProsodyRulesCard() {
                                     value={rule.value}
                                     onChange={(e) => updateToneRule(rule.id, 'value', e.target.value)}
                                 >
-                                    {TONE_OPTIONS.map(t => (
-                                        <option key={t} value={t}>{t}</option>
+                                    {TONE_OPTIONS.map(tOpt => (
+                                        <option key={tOpt} value={tOpt}>{toneOptionLabels[tOpt] || tOpt}</option>
                                     ))}
                                 </select>
 
                                 <button
                                     className="prosody-tone-remove"
                                     onClick={() => removeToneRule(rule.id)}
-                                    title="Remove this rule"
+                                    title={t('settings.phonology.removeRuleTooltip')}
                                 >
                                     <X size={14} />
                                 </button>
@@ -206,18 +233,18 @@ export default function ProsodyRulesCard() {
                     </div>
                 ) : (
                     <div className="prosody-empty">
-                        No tone rules defined. Words won't receive auto-computed tones.
+                        {t('settings.phonology.noToneRules')}
                     </div>
                 )}
 
                 <button className="prosody-add-tone-btn" onClick={addToneRule}>
-                    <Plus size={14} /> Add Tone Rule
+                    <Plus size={14} /> {t('settings.phonology.addToneRule')}
                 </button>
 
                 {toneRules.length > 0 && (
                     <div className="prosody-clear-row">
                         <button className="prosody-clear-btn" onClick={clearToneRules}>
-                            <Trash2 size={12} /> Clear All Tone Rules
+                            <Trash2 size={12} /> {t('settings.phonology.clearToneRules')}
                         </button>
                     </div>
                 )}
@@ -227,14 +254,14 @@ export default function ProsodyRulesCard() {
             {hasAnyRules && (
                 <div className="prosody-preview">
                     <div className="prosody-preview-title">
-                        <Beaker size={14} /> Live Preview
+                        <Beaker size={14} /> {t('settings.phonology.livePreview')}
                     </div>
 
                     <div className="prosody-preview-input-row">
                         <input
                             className="prosody-preview-input"
                             type="text"
-                            placeholder="Type a word to test (e.g., makina)"
+                            placeholder={t('settings.phonology.testWordPlaceholder')}
                             value={testWord}
                             onChange={(e) => setTestWord(e.target.value)}
                         />
@@ -257,21 +284,21 @@ export default function ProsodyRulesCard() {
                             )}
                             <div className="prosody-preview-result">
                             <span className="prosody-preview-badge syllables">
-                                {preview.syllableCount} syllable{preview.syllableCount !== 1 ? 's' : ''}
+                                {t(preview.syllableCount === 1 ? 'settings.phonology.syllablesCount' : 'settings.phonology.syllablesCountPlural', { count: preview.syllableCount })}
                             </span>
                             {preview.stress && (
                                 <span className="prosody-preview-badge stress">
-                                    <Zap size={12} /> Stress: syllable {preview.stress}
+                                    <Zap size={12} /> {t('settings.phonology.stressBadge', { num: preview.stress })}
                                 </span>
                             )}
                             {preview.tone && (
                                 <span className="prosody-preview-badge tone">
-                                    <Music size={12} /> {preview.tone} Tone
+                                    <Music size={12} /> {t('settings.phonology.toneBadge', { tone: toneOptionLabels[preview.tone] || preview.tone })}
                                 </span>
                             )}
                             {!preview.stress && !preview.tone && (
                                 <span className="prosody-preview-badge syllables">
-                                    No rules matched this word
+                                    {t('settings.phonology.noRulesMatched')}
                                 </span>
                             )}
                                 </div>

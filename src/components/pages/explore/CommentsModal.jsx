@@ -3,6 +3,7 @@ import Modal from '../../UI/Modal/Modal.jsx';
 import { supabase } from '../../../utils/supabaseClient.js';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { Send, Trash2, MessageSquare, Loader2, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './commentsModal.css';
@@ -30,6 +31,7 @@ export default function CommentsModal({
     sessionUser, 
     onCommentsCountChange 
 }) {
+    const { t } = useTranslation();
     const [comments, setComments] = useState([]);
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -221,7 +223,7 @@ export default function CommentsModal({
             <div className="comments-modal-title-text">
                 <h3 className="comments-modal-conlang-name">{conlangName}</h3>
                 <span className="comments-modal-subtitle">
-                    <User size={11} /> by {conlangAuthor}
+                    <User size={11} /> {t('commentsModal.byAuthor', { author: conlangAuthor })}
                     <span className="comments-modal-count-badge">
                         <MessageSquare size={11} /> {comments.length}
                     </span>
@@ -243,14 +245,14 @@ export default function CommentsModal({
                     {loading ? (
                         <div className="comments-loading-state">
                             <Loader2 size={24} className="comments-spin-icon" />
-                            <span>Loading discussion...</span>
+                            <span>{t('commentsModal.loading')}</span>
                         </div>
                     ) : comments.length === 0 ? (
                         <div className="comments-empty-state">
                             <MessageSquare size={36} opacity={0.4} />
-                            <h4>No comments yet</h4>
+                            <h4>{t('commentsModal.noCommentsTitle')}</h4>
                             <p>
-                                Be the first to share your thoughts, questions, or feedback on {conlangName}!
+                                {t('commentsModal.noCommentsDesc', { conlangName })}
                             </p>
                         </div>
                     ) : (
@@ -276,7 +278,7 @@ export default function CommentsModal({
                                                 </span>
                                                 {isCreator && (
                                                     <span className="comment-creator-badge">
-                                                        Creator
+                                                        {t('commentsModal.creatorBadge')}
                                                     </span>
                                                 )}
                                                 <span className="comment-timestamp">
@@ -288,7 +290,7 @@ export default function CommentsModal({
                                                     type="button"
                                                     className="comment-delete-btn"
                                                     onClick={() => handleDeleteComment(comment.id)}
-                                                    title="Delete comment"
+                                                    title={t('commentsModal.deleteTitle')}
                                                 >
                                                     <Trash2 size={14} />
                                                 </button>
@@ -309,7 +311,7 @@ export default function CommentsModal({
                             <div className="comments-textarea-wrapper">
                                 <textarea
                                     className="comments-textarea"
-                                    placeholder={`Leave a comment on ${conlangName}...`}
+                                    placeholder={t('commentsModal.placeholder', { conlangName })}
                                     value={commentText}
                                     onChange={(e) => setCommentText(e.target.value)}
                                     maxLength={1000}
@@ -325,10 +327,10 @@ export default function CommentsModal({
                                 <span
                                     className={`comments-char-count ${
                                         commentText.length > 900
-                                            ? 'error'
-                                            : commentText.length > 750
-                                            ? 'warning'
-                                            : ''
+                                             ? 'error'
+                                             : commentText.length > 750
+                                             ? 'warning'
+                                             : ''
                                     }`}
                                 >
                                     {commentText.length} / 1,000
@@ -343,13 +345,13 @@ export default function CommentsModal({
                                     ) : (
                                         <Send size={14} />
                                     )}
-                                    <span>{submitting ? 'Posting...' : 'Post'}</span>
+                                    <span>{submitting ? t('commentsModal.posting') : t('commentsModal.post')}</span>
                                 </button>
                             </div>
                         </form>
                     ) : (
                         <div className="comments-guest-notice">
-                            Sign in to join the discussion and leave feedback on this conlang.
+                            {t('commentsModal.guestNotice')}
                         </div>
                     )}
                 </div>

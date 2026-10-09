@@ -7,10 +7,12 @@ import Button from '../Buttons/Buttons.jsx';
 import Modal from '../Modal/Modal.jsx';
 import FontStudioModal from '../Fontstudio/FontStudio.jsx';
 import Infobox from '../Infobox/Infobox.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { Brush, Grid3X3, Settings2, Info, Layers, Trash2, Eraser } from 'lucide-react';
 import './blockManager.css';
 
 export default function BlockManager({ scriptId } = {}) {
+    const { t } = useTranslation();
     const {
         consonants, vowels, otherPhonemes, updateConfig,
         scriptRules, scriptSystems, scriptDataById,
@@ -447,7 +449,7 @@ export default function BlockManager({ scriptId } = {}) {
             <Modal 
                 isOpen={!!drawingForComp} 
                 onClose={() => setDrawingForComp(null)} 
-                title="Draw Base Character"
+                title={t('settings.graphism.drawBaseCharacter')}
             >
                 <FontStudioModal 
                     targetLabel={drawingForComp} 

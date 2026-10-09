@@ -6,6 +6,7 @@ import Input from '@/components/UI/Input/Input.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import Mascot from './Mascot.jsx';
 import { X, Check, Share2, Star } from 'lucide-react';
 import { calculateStars, calculateXP } from '@/utils/xpSystem.js';
@@ -53,6 +54,7 @@ const EXERCISE_PLAYER_CONFIG_KEYS = [
 ];
 
 export default function ExercisePlayer({ levelNode, onComplete, onExit, customLexicon, customConfig }) {
+    const { t } = useTranslation();
     const storeLexicon = useLexiconStore((state) => state.lexicon);
     // Store fields this component and its callees read. resolveWordStrokes
     // (utils/strokeOrderResolver.js) reads the first twelve; the rest are used
@@ -398,9 +400,9 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
         return (
             <Card className="exercise-player">
                 <div style={{ textAlign: 'center', padding: '2rem' }}>
-                    <h2>No phrases found!</h2>
-                    <p>You need to add phrases to this level using the Course Builder.</p>
-                    <Button variant="default" onClick={onExit}>Return to Map</Button>
+                    <h2>{t('exercisePlayer.noPhrasesFound')}</h2>
+                    <p>{t('exercisePlayer.noPhrasesDesc')}</p>
+                    <Button variant="default" onClick={onExit}>{t('exercisePlayer.returnToMap')}</Button>
                 </div>
             </Card>
         );
@@ -415,7 +417,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
         return (
             <Card className="exercise-player finished-screen" style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
                 <Mascot state="correct" isSpeaking={false} />
-                <h2 style={{ fontSize: '2.5rem', margin: '20px 0 10px 0', color: 'var(--acc)' }}>Lesson Complete!</h2>
+                <h2 style={{ fontSize: '2.5rem', margin: '20px 0 10px 0', color: 'var(--acc)' }}>{t('exercisePlayer.lessonComplete')}</h2>
                 
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', margin: '15px 0' }}>
                     {[1, 2, 3].map(s => (
@@ -425,25 +427,25 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
 
                 <div className="ep-summary-stats" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', background: 'var(--s1)', padding: '20px', borderRadius: '12px', marginBottom: '20px' }}>
                     <div className="stat-box">
-                        <div style={{ color: 'var(--tx2)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Score</div>
+                        <div style={{ color: 'var(--tx2)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>{t('exercisePlayer.score')}</div>
                         <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{sessionStats.correct} / {sessionStats.total}</div>
-                        <div style={{ color: 'var(--tx2)' }}>{Math.round((sessionStats.correct / sessionStats.total) * 100) || 0}% Accuracy</div>
+                        <div style={{ color: 'var(--tx2)' }}>{Math.round((sessionStats.correct / sessionStats.total) * 100) || 0}% {t('exercisePlayer.accuracy')}</div>
                     </div>
                     <div className="stat-box">
-                        <div style={{ color: 'var(--tx2)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>XP Earned</div>
+                        <div style={{ color: 'var(--tx2)', fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '1px' }}>{t('exercisePlayer.xpEarned')}</div>
                         <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--ok)' }}>+{xp} XP</div>
-                        {timeTaken && <div style={{ color: 'var(--tx2)' }}>Time: {timeTaken}s</div>}
+                        {timeTaken && <div style={{ color: 'var(--tx2)' }}>{t('exercisePlayer.time', { time: timeTaken })}</div>}
                     </div>
                 </div>
 
                 {failedExercises.length > 0 && (
                     <div className="ep-missed-words" style={{ textAlign: 'left', background: 'var(--s1)', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid var(--bd2)' }}>
-                        <h4 style={{ margin: '0 0 10px 0', color: 'var(--tx)' }}>Needs more practice:</h4>
+                        <h4 style={{ margin: '0 0 10px 0', color: 'var(--tx)' }}>{t('exercisePlayer.needsPractice')}</h4>
                         <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--tx2)' }}>
                             {failedExercises.slice(0, 5).map((e, i) => (
                                 <li key={i} className="custom-font-text notranslate">{e.englishSentence || e.type}</li>
                             ))}
-                            {failedExercises.length > 5 && <li>...and {failedExercises.length - 5} more</li>}
+                            {failedExercises.length > 5 && <li>{t('exercisePlayer.andMore', { count: failedExercises.length - 5 })}</li>}
                         </ul>
                     </div>
                 )}
@@ -451,9 +453,9 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                 <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
                     <Button variant="imp" onClick={() => {
                         onComplete(levelNode?.id, { ...sessionStats, stars });
-                    }} style={{ padding: '15px', fontSize: '1.2rem', fontWeight: 'bold' }}>Continue to Path</Button>
+                    }} style={{ padding: '15px', fontSize: '1.2rem', fontWeight: 'bold' }}>{t('exercisePlayer.continueToPath')}</Button>
                     <Button variant="default" onClick={handleShareScore} style={{ padding: '12px' }}>
-                        <Share2 size={18} style={{ marginRight: '8px' }} /> Share Score
+                        <Share2 size={18} style={{ marginRight: '8px' }} /> {t('exercisePlayer.shareScore')}
                     </Button>
                 </div>
             </Card>
@@ -465,7 +467,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
             <Card className="exercise-player">
                 <div className="ep-header">
                     <Button variant="default" onClick={onExit} style={{ padding: '8px' }}><X size={18} /></Button>
-                    <h3 className="sg-title" style={{ margin: 0, paddingRight: '40px', flex: 1, textAlign: 'center' }}>Lesson Guide</h3>
+                    <h3 className="sg-title" style={{ margin: 0, paddingRight: '40px', flex: 1, textAlign: 'center' }}>{t('exercisePlayer.lessonGuide')}</h3>
                 </div>
                 <div className="ep-content" style={{ padding: '20px', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
                     <div className="custom-font-text notranslate" style={{ background: 'var(--s1)', padding: '20px', borderRadius: '8px', border: '1px solid var(--bd)' }}>
@@ -473,7 +475,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                     </div>
                 </div>
                 <div className="ep-footer">
-                    <Button variant="imp" onClick={() => setCurrentIndex(0)} style={{ width: '100%' }}>Start Exercises</Button>
+                    <Button variant="imp" onClick={() => setCurrentIndex(0)} style={{ width: '100%' }}>{t('exercisePlayer.startExercises')}</Button>
                 </div>
             </Card>
         );
@@ -497,22 +499,22 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
             <div className="ep-content">
                 {currentEx.type === 'teach' && (
                     <h3 className="ep-instruction" style={{ color: 'var(--acc)' }}>
-                        Lesson Information
+                        {t('exercisePlayer.lessonInfo')}
                     </h3>
                 )}
                 {currentEx.type !== 'teach' && (
                     <h3 className="ep-instruction">
-                        {currentEx.type === 'translate_to_english' ? 'Translate this sentence into English:' 
-                        : currentEx.type === 'translate_to_conlang' ? `Translate into ${config.conlangName || 'your conlang'}:`
-                        : currentEx.type === 'word_bank' || currentEx.type === 'sentence_reorder' ? `Translate into ${config.conlangName || 'your conlang'}:`
-                        : currentEx.type === 'multiple_choice' ? 'Select the correct translation:'
-                        : currentEx.type === 'listening' ? 'Listen and type what you hear:'
-                        : currentEx.type === 'fill_blank' ? 'Fill in the missing word:'
-                        : currentEx.type === 'picture_match' ? 'What does this image represent?'
-                        : currentEx.type === 'true_false' ? 'Is this translation correct?'
-                        : currentEx.type === 'conjugation_drill' ? 'Follow the instruction:'
-                        : currentEx.type === 'glyph_drawing' ? `Draw this ${currentEx.targetText}:`
-                        : 'Match the pairs:'}
+                        {currentEx.type === 'translate_to_english' ? t('exercisePlayer.translateToEnglish') 
+                        : currentEx.type === 'translate_to_conlang' ? t('exercisePlayer.translateToConlang', { conlang: config.conlangName || 'your conlang' })
+                        : currentEx.type === 'word_bank' || currentEx.type === 'sentence_reorder' ? t('exercisePlayer.translateToConlang', { conlang: config.conlangName || 'your conlang' })
+                        : currentEx.type === 'multiple_choice' ? t('exercisePlayer.selectTranslation')
+                        : currentEx.type === 'listening' ? t('exercisePlayer.listeningInstruction')
+                        : currentEx.type === 'fill_blank' ? t('exercisePlayer.fillBlankInstruction')
+                        : currentEx.type === 'picture_match' ? t('exercisePlayer.pictureMatchInstruction')
+                        : currentEx.type === 'true_false' ? t('exercisePlayer.trueFalseInstruction')
+                        : currentEx.type === 'conjugation_drill' ? t('exercisePlayer.conjugationDrillInstruction')
+                        : currentEx.type === 'glyph_drawing' ? t('exercisePlayer.drawGlyphInstruction', { target: currentEx.targetText })
+                        : t('exercisePlayer.matchingPairsInstruction')}
                     </h3>
                 )}
 
@@ -567,7 +569,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                             const url = getCourseAudioUrl(currentEx);
                             if (url) new Audio(url).play().catch(e => console.warn('Audio play error:', e));
                         }}
-                        title="Play pronunciation"
+                        title={t('exercisePlayer.playPronunciation')}
                     >
                         <LucideIcons.Volume2 size={18} />
                     </button>
@@ -578,14 +580,13 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                         {!currentEx.hasStrokes ? (
                             <div className="ep-glyph-missing">
                                 <p>
-                                    No stroke data was found for <strong>{currentEx.targetText}</strong>.
+                                    {t('exercisePlayer.noStrokeDataTitle', { target: currentEx.targetText })}
                                 </p>
                                 <p className="ep-glyph-missing-hint">
-                                    Draw or generate this glyph in the Orthography or Font Studio page first,
-                                    then the student will be asked to trace it.
+                                    {t('exercisePlayer.noStrokeDataDesc')}
                                 </p>
                                 <Button variant="imp" onClick={() => { if (!feedback) checkAnswer(); else advanceToNext(); }}>
-                                    {feedback ? 'Continue' : 'Skip'}
+                                    {feedback ? t('exercisePlayer.continue') : t('exercisePlayer.skip')}
                                 </Button>
                             </div>
                         ) : (
@@ -599,8 +600,8 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                                 />
                                 {currentEx.checkOrder && (
                                     <p className="ep-glyph-hint">
-                                        Draw each stroke in the correct order
-                                        {feedback && drawResult?.reversedCount > 0 ? ' — one or more were backwards.' : '.'}
+                                        {t('exercisePlayer.strokeOrderHint')}
+                                        {feedback && drawResult?.reversedCount > 0 ? t('exercisePlayer.reversedStrokeHint') : '.'}
                                     </p>
                                 )}
                             </>
@@ -613,7 +614,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                         <Input 
                             value={currentAnswer}
                             onChange={(e) => setCurrentAnswer(e.target.value)}
-                            placeholder={currentEx.type === 'translate_to_english' || currentEx.type === 'picture_match' || currentEx.type === 'fill_blank' || currentEx.type === 'conjugation_drill' ? "Type your answer..." : "Type your Conlang translation..."}
+                            placeholder={currentEx.type === 'translate_to_english' || currentEx.type === 'picture_match' || currentEx.type === 'fill_blank' || currentEx.type === 'conjugation_drill' ? t('exercisePlayer.typeAnswer') : t('exercisePlayer.typeConlangTranslation')}
                             autoFocus
                             disabled={!!feedback}
                             className="custom-font-text notranslate"
@@ -637,10 +638,10 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                 ) : currentEx.type === 'true_false' ? (
                     <div className="ep-multiple-choice" style={{ display: 'flex', gap: '20px', width: '100%', maxWidth: '400px' }}>
                         <Button variant={selectedOption === 'True' ? 'imp' : 'default'} onClick={() => setSelectedOption('True')} disabled={!!feedback} style={{ flex: 1, padding: '15px', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                            <Check size={20} /> True
+                            <Check size={20} /> {t('exercisePlayer.true')}
                         </Button>
                         <Button variant={selectedOption === 'False' ? 'error' : 'default'} onClick={() => setSelectedOption('False')} disabled={!!feedback} style={{ flex: 1, padding: '15px', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                            <X size={20} /> False
+                            <X size={20} /> {t('exercisePlayer.false')}
                         </Button>
                     </div>
                 ) : currentEx.type === 'matching_pairs' ? (
@@ -684,7 +685,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                 ) : currentEx.type === 'word_bank' || currentEx.type === 'sentence_reorder' ? (
                     <div className="ep-word-bank-area">
                         <div className="ep-sentence-builder custom-font-text notranslate">
-                            {wordBankSelected.length > 0 ? transliterate(wordBankSelected.join(' ')) : <span className="ep-placeholder">Construct your sentence...</span>}
+                            {wordBankSelected.length > 0 ? transliterate(wordBankSelected.join(' ')) : <span className="ep-placeholder">{t('exercisePlayer.constructSentence')}</span>}
                         </div>
                         <div className="ep-word-bank">
                             {currentEx.bank.map((word, i) => (
@@ -714,7 +715,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                         style={{ width: '100%', padding: '15px' }}
                         className="ep-check-btn"
                     >
-                        Got it! Continue
+                        {t('exercisePlayer.gotItContinue')}
                     </Button>
                 ) : (
                     <>
@@ -730,7 +731,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                             disabled={!feedback && currentEx.type === 'matching_pairs' && matchedPairs.length !== currentEx.pairs.length}
                             className="ep-check-btn"
                         >
-                            {feedback ? 'Continue' : 'Check'}
+                            {feedback ? t('exercisePlayer.continue') : t('exercisePlayer.check')}
                         </Button>
                     </>
                 )}

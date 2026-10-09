@@ -4,6 +4,7 @@ import Infobox from '../../UI/Infobox/Infobox.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { resolveParticleSenses, generateGlossLine } from '@/utils/particleEngine.js';
 import { Atom, Plus, Trash2, Edit2, Save, X, ChevronDown, ChevronUp, Layers, GitMerge, Play, Settings } from 'lucide-react';
 import './particleTab.css';
@@ -323,6 +324,7 @@ function ParticlePreview({ particleDatabase, compositeParticles, lexicon, allowR
 
 // ── Main Particle Tab ──
 export default function ParticleTab() {
+    const { t } = useTranslation();
     const particleDatabase = useConfigStore((state) => state.particleDatabase) || [];
     const compositeParticles = useConfigStore((state) => state.compositeParticles) || [];
     const allowRecursive = useConfigStore((state) => state.allowRecursiveComposites) || false;
@@ -375,13 +377,9 @@ export default function ParticleTab() {
     return (
         <div className="particle-tab-container">
             <Card>
-                <h2 className="flex sg-title"><Atom /> Particle Database</h2>
-                <Infobox title="Particle System Guide">
-                    Particles are functional words whose meaning changes based on grammatical context.
-                    <br /><br />
-                    • <b>Context-dependent senses:</b> A particle like <code>-wi</code> can mean "accusative" after a noun but "progressive" after a verb.<br />
-                    • <b>Composites:</b> Combine particles into new particles with emergent meanings (e.g., water + falling + purpose = showering).<br />
-                    • <b>Recursive composites:</b> When enabled, composites can be built from other composites for deeper semantics.
+                <h2 className="flex sg-title"><Atom /> {t('settings.particles.title')}</h2>
+                <Infobox title={t('settings.particles.guideTitle')}>
+                    {t('settings.particles.guideDesc')}
                 </Infobox>
 
                 {/* Settings toggle */}
@@ -392,7 +390,7 @@ export default function ParticleTab() {
                             checked={allowRecursive}
                             onChange={(e) => updateConfig({ allowRecursiveComposites: e.target.checked })}
                         />
-                        <span>Allow recursive composites (composites of composites)</span>
+                        <span>{t('settings.particles.allowRecursive')}</span>
                     </label>
                 </div>
             </Card>
@@ -401,9 +399,9 @@ export default function ParticleTab() {
                 {/* ── Left: Primitives ── */}
                 <Card>
                     <div className="section-header">
-                        <h3><Layers size={18} /> Primitive Particles ({particleDatabase.length})</h3>
+                        <h3><Layers size={18} /> {t('settings.particles.primitives')} ({particleDatabase.length})</h3>
                         <button onClick={() => { setShowNewParticle(true); setEditingParticle(null); }} className="btn-add">
-                            <Plus size={14} /> Add Particle
+                            <Plus size={14} /> {t('settings.particles.addParticle')}
                         </button>
                     </div>
 
@@ -416,7 +414,7 @@ export default function ParticleTab() {
                     )}
 
                     {!isEditingPrimitive && particleDatabase.length === 0 && (
-                        <div className="empty-state"><Layers size={32} /><p>No particles defined yet.</p></div>
+                        <div className="empty-state"><Layers size={32} /><p>{t('settings.particles.noParticles')}</p></div>
                     )}
 
                     {!isEditingPrimitive && particleDatabase.map(p => (
@@ -463,9 +461,9 @@ export default function ParticleTab() {
                 {/* ── Right: Composites ── */}
                 <Card>
                     <div className="section-header">
-                        <h3><GitMerge size={18} /> Composite Particles ({compositeParticles.length})</h3>
+                        <h3><GitMerge size={18} /> {t('settings.particles.composites')} ({compositeParticles.length})</h3>
                         <button onClick={() => { setShowNewComposite(true); setEditingComposite(null); }} className="btn-add">
-                            <Plus size={14} /> Add Composite
+                            <Plus size={14} /> {t('settings.particles.addComposite')}
                         </button>
                     </div>
 
@@ -481,7 +479,7 @@ export default function ParticleTab() {
                     )}
 
                     {!isEditingComposite && compositeParticles.length === 0 && (
-                        <div className="empty-state"><GitMerge size={32} /><p>No composites defined yet.</p></div>
+                        <div className="empty-state"><GitMerge size={32} /><p>{t('settings.particles.noComposites')}</p></div>
                     )}
 
                     {!isEditingComposite && compositeParticles.map(c => (

@@ -41,7 +41,7 @@ const NAV_GROUPS = [
             { id: '/orthography', key: 'orthography', label: 'Orthography & Numbers', Icon: Languages },
             { id: '/analyzer', key: 'analyzer', label: 'Analyzer', Icon: Activity },
             { id: '/typology', key: 'typology', label: 'Naturalness', Icon: FlaskConical },
-            { id: 'rootmap', key: 'rootmap', label: 'Root Map', Icon: Map },
+            { id: '/rootmap', key: 'rootmap', label: 'Root Map', Icon: Map },
             { id: '/aligner', key: 'aligner', label: 'Sentence Mapper', Icon: Link2 },
         ]
     },

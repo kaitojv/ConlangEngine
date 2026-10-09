@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
@@ -64,6 +65,7 @@ const useScriptScopedData = (scriptId) => {
 };
 
 const NumberDerivationView = ({ generateNumberName }) => {
+    const { t } = useTranslation();
     const numberMatrix = useConfigStore(state => state.numberMatrix) || {};
     const numberDerivedRules = useConfigStore(state => state.numberDerivedRules) || { ordinal: '', fractional: '', multiplier: '' };
     const timeSystemVocab = useConfigStore(state => state.timeSystemVocab) || { second: '', minute: '', hour: '', day: '', week: '', month: '', year: '' };
@@ -146,52 +148,52 @@ const NumberDerivationView = ({ generateNumberName }) => {
                     style={{ display: 'flex', gap: '8px', alignItems: 'center', padding: '0.6rem 1.5rem', height: 'auto', borderRadius: '0.75rem', fontSize: '1rem', whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(124, 58, 237, 0.3)' }} 
                     onClick={handleSaveToLexicon}
                 >
-                    <Check size={18} /> Save to Lexicon
+                    <Check size={18} /> {t('orthography.numerals.saveToLexicon')}
                 </button>
             </div>
 
             <Card className="matrix-card">
                 <div className="matrix-header" style={{ marginBottom: '1.5rem' }}>
-                    <h2 className="sg-title" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Derived Mathematical Forms Engine</h2>
-                    <p style={{ color: 'var(--tx2)' }}>Define affixes (using hyphens, e.g. <code>-stu</code> or <code>ka-</code>) to automatically generate forms for infinite numbers.</p>
+                    <h2 className="sg-title" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{t('orthography.numerals.derivedEngineTitle')}</h2>
+                    <p style={{ color: 'var(--tx2)' }}>{t('orthography.numerals.derivedEngineDesc')}</p>
                 </div>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tx2)' }}>Ordinal Affix</label>
+                        <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tx2)' }}>{t('orthography.numerals.ordinalAffix')}</label>
                         <input className="fi" placeholder="e.g. -stu" value={numberDerivedRules.ordinal} onChange={(e) => handleRuleChange('ordinal', e.target.value)} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tx2)' }}>Fractional Affix</label>
+                        <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tx2)' }}>{t('orthography.numerals.fractionalAffix')}</label>
                         <input className="fi" placeholder="e.g. -ly" value={numberDerivedRules.fractional} onChange={(e) => handleRuleChange('fractional', e.target.value)} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tx2)' }}>Multiplier Affix</label>
+                        <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tx2)' }}>{t('orthography.numerals.multiplierAffix')}</label>
                         <input className="fi" placeholder="e.g. -ce" value={numberDerivedRules.multiplier} onChange={(e) => handleRuleChange('multiplier', e.target.value)} />
                     </div>
                 </div>
 
                 <div style={{ background: 'var(--s2)', padding: '1.5rem', borderRadius: '1rem', border: '1px solid var(--bd)' }}>
                     <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.5rem' }}>
-                        <h3 className="sg-title" style={{ fontSize: '1.1rem', color: 'var(--acc)' }}>Live Tester</h3>
+                        <h3 className="sg-title" style={{ fontSize: '1.1rem', color: 'var(--acc)' }}>{t('orthography.numerals.liveTester')}</h3>
                         <input type="number" min="0" className="fi" style={{ width: '120px' }} value={testNum} onChange={(e) => setTestNum(parseInt(e.target.value) || 0)} />
                     </div>
                     
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
                         <div style={{ background: 'var(--s4)', padding: '1rem', borderRadius: '0.75rem', border: '1px dashed var(--acc)' }}>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 700 }}>Base</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 700 }}>{t('orthography.numerals.baseLabel')}</div>
                             <div className="custom-font-text" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{transliterate(testBaseForm || '') || '-'}</div>
                         </div>
                         <div style={{ background: 'var(--s4)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--bd)' }}>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 700 }}>Ordinal</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 700 }}>{t('orthography.numerals.ordinalLabel')}</div>
                             <div className="custom-font-text" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{transliterate(testOrdinal || '') || '-'}</div>
                         </div>
                         <div style={{ background: 'var(--s4)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--bd)' }}>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 700 }}>Fractional</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 700 }}>{t('orthography.numerals.fractionalLabel')}</div>
                             <div className="custom-font-text" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{transliterate(testFractional || '') || '-'}</div>
                         </div>
                         <div style={{ background: 'var(--s4)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--bd)' }}>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 700 }}>Multiplier</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 700 }}>{t('orthography.numerals.multiplierLabel')}</div>
                             <div className="custom-font-text" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{transliterate(testMultiplier || '') || '-'}</div>
                         </div>
                     </div>
@@ -200,18 +202,26 @@ const NumberDerivationView = ({ generateNumberName }) => {
 
             <Card className="matrix-card">
                 <div style={{ marginBottom: '1.5rem' }}>
-                    <h2 className="sg-title" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Time & Calendar System</h2>
-                    <p style={{ color: 'var(--tx2)' }}>Define words for time units. These can be combined with base numbers (e.g. <code>uri fle</code> for 'hour one').</p>
+                    <h2 className="sg-title" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{t('orthography.numerals.timeSystemTitle')}</h2>
+                    <p style={{ color: 'var(--tx2)' }}>{t('orthography.numerals.timeSystemDesc')}</p>
                 </div>
                 
-                <h3 className="sg-title" style={{ fontSize: '1.1rem', marginBottom: '1rem', color: 'var(--acc)' }}>Core Time Vocabulary</h3>
+                <h3 className="sg-title" style={{ fontSize: '1.1rem', marginBottom: '1rem', color: 'var(--acc)' }}>{t('orthography.numerals.coreTimeVocab')}</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2.5rem' }}>
-                    {Object.entries({ second: 'Second', minute: 'Minute', hour: 'Hour (e.g. fle)', day: 'Day', week: 'Week', month: 'Month', year: 'Year' }).map(([key, label]) => (
+                    {[
+                        { key: 'second', label: t('orthography.numerals.timeSecond') },
+                        { key: 'minute', label: t('orthography.numerals.timeMinute') },
+                        { key: 'hour', label: t('orthography.numerals.timeHour') },
+                        { key: 'day', label: t('orthography.numerals.timeDay') },
+                        { key: 'week', label: t('orthography.numerals.timeWeek') },
+                        { key: 'month', label: t('orthography.numerals.timeMonth') },
+                        { key: 'year', label: t('orthography.numerals.timeYear') },
+                    ].map(({ key, label }) => (
                         <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                             <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--tx2)' }}>{label}</label>
                             <input 
                                 className="fi" 
-                                placeholder={`Word for ${key}`}
+                                placeholder={t('orthography.numerals.wordForUnit', { unit: key })}
                                 value={timeSystemVocab[key] || ''} 
                                 onChange={(e) => handleTimeChange(key, e.target.value)} 
                             />
@@ -221,22 +231,22 @@ const NumberDerivationView = ({ generateNumberName }) => {
 
                 <div style={{ width: '100%', height: '1px', background: 'var(--bd)', marginBottom: '2.5rem' }}></div>
 
-                <h3 className="sg-title" style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: 'var(--acc)' }}>Specific Calendar Names (Optional)</h3>
-                <p style={{ color: 'var(--tx2)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Only fill these if your language has specific names for each day/month instead of just using numbered days (like "Day One").</p>
+                <h3 className="sg-title" style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: 'var(--acc)' }}>{t('orthography.numerals.specificCalendarNames')}</h3>
+                <p style={{ color: 'var(--tx2)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>{t('orthography.numerals.specificCalendarDesc')}</p>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
                     <div className="matrix-table-wrapper">
                         <table className="matrix-table">
                             <thead>
                                 <tr>
-                                    <th>Day of the Week</th>
-                                    <th>Word</th>
+                                    <th>{t('orthography.numerals.dayOfWeekHeader')}</th>
+                                    <th>{t('orthography.numerals.wordHeader')}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {[1,2,3,4,5,6,7].map(day => (
                                     <tr key={day}>
-                                        <td className="matrix-num-cell" style={{ color: 'var(--tx2)' }}>Day {day}</td>
+                                        <td className="matrix-num-cell" style={{ color: 'var(--tx2)' }}>{t('orthography.numerals.dayN', { num: day })}</td>
                                         <td>
                                             <input 
                                                 className="fi matrix-input" 
@@ -255,14 +265,14 @@ const NumberDerivationView = ({ generateNumberName }) => {
                         <table className="matrix-table">
                             <thead>
                                 <tr>
-                                    <th>Month of the Year</th>
-                                    <th>Word</th>
+                                    <th>{t('orthography.numerals.monthOfYearHeader')}</th>
+                                    <th>{t('orthography.numerals.wordHeader')}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {[1,2,3,4,5,6,7,8,9,10,11,12].map(month => (
                                     <tr key={month}>
-                                        <td className="matrix-num-cell" style={{ color: 'var(--tx2)' }}>Month {month}</td>
+                                        <td className="matrix-num-cell" style={{ color: 'var(--tx2)' }}>{t('orthography.numerals.monthN', { num: month })}</td>
                                         <td>
                                             <input 
                                                 className="fi matrix-input" 
@@ -283,6 +293,7 @@ const NumberDerivationView = ({ generateNumberName }) => {
 };
 
 const MeasurementSystemView = () => {
+    const { t } = useTranslation();
     const measurementSystem = useConfigStore(state => state.measurementSystem) || { units: [] };
     const updateConfig = useConfigStore(state => state.updateConfig);
     
@@ -311,11 +322,11 @@ const MeasurementSystemView = () => {
             <Card className="matrix-card">
                 <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                     <div>
-                        <h2 className="sg-title" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Units of Measurement</h2>
-                        <p style={{ color: 'var(--tx2)' }}>Define your custom units and map them to real-world equivalents or other conlang units.</p>
+                        <h2 className="sg-title" style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{t('orthography.numerals.measurementTitle')}</h2>
+                        <p style={{ color: 'var(--tx2)' }}>{t('orthography.numerals.measurementDesc')}</p>
                     </div>
                     <button className="btn-add" onClick={addUnit} style={{ display: 'flex', alignItems: 'center', gap: '6px', height: 'fit-content' }}>
-                        <Plus size={16} /> Add Unit
+                        <Plus size={16} /> {t('orthography.numerals.addUnitBtn')}
                     </button>
                 </div>
                 
@@ -323,25 +334,25 @@ const MeasurementSystemView = () => {
                     {units.map(unit => (
                         <div key={unit.id} style={{ background: 'var(--s2)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--bd)', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
                             <div style={{ flex: '1 1 150px' }}>
-                                <label style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '4px', display: 'block', fontWeight: 600 }}>Unit Name</label>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '4px', display: 'block', fontWeight: 600 }}>{t('orthography.numerals.unitNameLabel')}</label>
                                 <input className="fi" placeholder="e.g. schmekal" value={unit.name} onChange={(e) => updateUnit(unit.id, 'name', e.target.value)} />
                             </div>
                             <div style={{ flex: '1 1 120px' }}>
-                                <label style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '4px', display: 'block', fontWeight: 600 }}>Type</label>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '4px', display: 'block', fontWeight: 600 }}>{t('orthography.numerals.unitTypeLabel')}</label>
                                 <select className="select select-bordered select-sm w-full" value={unit.type} onChange={(e) => updateUnit(unit.id, 'type', e.target.value)} style={{ height: '42px' }}>
-                                    <option value="length">Length</option>
-                                    <option value="mass">Mass / Weight</option>
-                                    <option value="volume">Volume</option>
-                                    <option value="time">Time</option>
-                                    <option value="other">Other</option>
+                                    <option value="length">{t('orthography.numerals.typeLength')}</option>
+                                    <option value="mass">{t('orthography.numerals.typeMass')}</option>
+                                    <option value="volume">{t('orthography.numerals.typeVolume')}</option>
+                                    <option value="time">{t('orthography.numerals.typeTime')}</option>
+                                    <option value="other">{t('orthography.numerals.typeOther')}</option>
                                 </select>
                             </div>
                             <div style={{ flex: '2 1 200px' }}>
-                                <label style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '4px', display: 'block', fontWeight: 600 }}>Equivalent</label>
+                                <label style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '4px', display: 'block', fontWeight: 600 }}>{t('orthography.numerals.unitEquivalentLabel')}</label>
                                 <input className="fi" placeholder="e.g. 27 schmems or 1 kg" value={unit.baseEquivalent} onChange={(e) => updateUnit(unit.id, 'baseEquivalent', e.target.value)} />
                             </div>
                             <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', height: '100%', paddingTop: '1.5rem' }}>
-                                <button className="irr-del" onClick={() => removeUnit(unit.id)} title="Remove Unit" style={{ padding: '8px' }}>
+                                <button className="irr-del" onClick={() => removeUnit(unit.id)} title={t('orthography.numerals.removeUnit')} style={{ padding: '8px' }}>
                                     <Trash2 size={16} />
                                 </button>
                             </div>
@@ -349,7 +360,7 @@ const MeasurementSystemView = () => {
                     ))}
                     {units.length === 0 && (
                         <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--tx3)' }}>
-                            No units defined. Click "Add Unit" to create one.
+                            {t('orthography.numerals.noUnits')}
                         </div>
                     )}
                 </div>
@@ -359,6 +370,7 @@ const MeasurementSystemView = () => {
 };
 
 const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
+    const { t } = useTranslation();
     const numeralBase = useConfigStore(state => state.numeralBase) || 10;
     const numberSystem = useConfigStore(state => state.numberSystem) || {
         zero: '',
@@ -551,7 +563,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                 name: `${key} (${name})`,
                                 scriptType: activeScriptType
                             })}
-                            title="Edit / view stroke order"
+                            title={t('orthography.numerals.viewStroke')}
                         >
                             <PenTool size={13} />
                         </button>
@@ -559,7 +571,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                             type="button"
                             className={`num-icon-btn ${revealedNumbers[key] ? 'active' : ''}`}
                             onClick={() => setRevealedNumbers(prev => ({ ...prev, [key]: !prev[key] }))}
-                            title={revealedNumbers[key] ? 'Hide number' : 'Show number'}
+                            title={revealedNumbers[key] ? t('orthography.numerals.hideGlyph') : t('orthography.numerals.showGlyph')}
                         >
                             {revealedNumbers[key] ? <EyeOff size={13} /> : <Eye size={13} />}
                         </button>
@@ -567,7 +579,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                             type="button"
                             className={`num-icon-btn ${isPinned ? 'active pinned' : ''}`}
                             onClick={openPicker}
-                            title={isPinned ? `Pinned main glyph: "${numberSystem.digitGlyphs[key]}". Click to change.` : "Choose or pin main glyph"}
+                            title={isPinned ? t('orthography.numerals.pinnedMainGlyph', { glyph: numberSystem.digitGlyphs[key] }) : t('orthography.numerals.chooseMainGlyph')}
                         >
                             <Sparkles size={13} />
                         </button>
@@ -577,7 +589,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                     className="digit-glyphs-inline" 
                                     style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', cursor: 'pointer' }}
                                     onClick={openPicker}
-                                    title="Click to choose / customize main glyph"
+                                    title={t('orthography.numerals.clickToChooseGlyph')}
                                 >
                                     {resolved.chars.map((c, i) => (
                                         <GlyphPreviewBadge
@@ -597,7 +609,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                     className="custom-font-text notranslate digit-glyphs-inline" 
                                     style={{ fontSize: '0.9rem', color: 'var(--tx2)', cursor: 'pointer' }}
                                     onClick={openPicker}
-                                    title="Click to choose / customize main glyph"
+                                    title={t('orthography.numerals.clickToChooseGlyph')}
                                 >
                                     {resolved.chars.map(c => c.char).join('') || name}
                                     {isPinned && <span className="pinned-dot" title="User-chosen main glyph">★</span>}
@@ -620,35 +632,35 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
             <div className="matrix-toggle-container" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
                 <div className="tabs tabs-boxed page-subnav">
                     <button className={`tab ${viewMode === 'basic' ? 'tab-active' : ''}`} onClick={() => setViewMode('basic')}>
-                        <Settings size={16} style={{ marginRight: '6px' }}/> Basic Setup
+                        <Settings size={16} style={{ marginRight: '6px' }}/> {t('orthography.numerals.tabs.basic')}
                     </button>
                     <button className={`tab ${viewMode === 'matrix' ? 'tab-active' : ''}`} onClick={() => setViewMode('matrix')}>
-                        <Table2 size={16} style={{ marginRight: '6px' }}/> Vocabulary Matrix
+                        <Table2 size={16} style={{ marginRight: '6px' }}/> {t('orthography.numerals.tabs.matrix')}
                     </button>
                     <button className={`tab ${viewMode === 'measurement' ? 'tab-active' : ''}`} onClick={() => setViewMode('measurement')}>
-                        <Rows size={16} style={{ marginRight: '6px' }}/> Units of Measurement
+                        <Rows size={16} style={{ marginRight: '6px' }}/> {t('orthography.numerals.tabs.measurement')}
                     </button>
                 </div>
             </div>
 
             {viewMode === 'basic' ? (
                 <>
-                    <Infobox title="Building your Number System">
-                        <p>This engine uses a <b>Recursive Base System</b> to name any quantity:</p>
+                    <Infobox title={t('orthography.numerals.infobox.title')}>
+                        <p>{t('orthography.numerals.infobox.intro')}</p>
                         <ul style={{ paddingLeft: '1.2rem', marginTop: '0.5rem' }}>
-                    <li><b>Base Digits</b>: The names for 0 to base-1 (e.g., 2 = <i>paro</i>).</li>
-                    <li><b>Powers</b>: Multipliers like Base^1 (Ten), Base^2 (Hundred).</li>
-                    <li><b>Advanced Fusion & Ordering</b>:
-                        <ul style={{ paddingLeft: '1.2rem', opacity: 0.8, fontSize: '0.9em', marginTop: '0.25rem' }}>
-                            <li><b>Internal Fusion</b>: Merges a digit with its power (e.g. 2 * 10 = <i>pardeko</i>).</li>
-                            <li><b>Global Fusion</b>: Removes spaces between all number components (e.g. 10 + 2 = <i>dekopar</i>).</li>
-                            <li><b>Internal Word Order</b>: Choose if the multiplier comes first (<i>Two-Ten</i>) or last (<i>Ten-Two</i>).</li>
-                            <li><b>Magnitude Order</b>: Choose if the sequence starts with big numbers (100, 10, 1) or units (1, 10, 100).</li>
-                            <li><b>Separator</b>: The character placed between parts of the number when fusion is disabled (usually a space or hyphen).</li>
+                            <li>{t('orthography.numerals.infobox.baseDigits')}</li>
+                            <li>{t('orthography.numerals.infobox.powers')}</li>
+                            <li><b>{t('orthography.numerals.infobox.fusionTitle')}</b>
+                                <ul style={{ paddingLeft: '1.2rem', opacity: 0.8, fontSize: '0.9em', marginTop: '0.25rem' }}>
+                                    <li>{t('orthography.numerals.infobox.internalFusion')}</li>
+                                    <li>{t('orthography.numerals.infobox.globalFusion')}</li>
+                                    <li>{t('orthography.numerals.infobox.internalOrder')}</li>
+                                    <li>{t('orthography.numerals.infobox.magnitudeOrder')}</li>
+                                    <li>{t('orthography.numerals.infobox.separator')}</li>
+                                </ul>
+                            </li>
                         </ul>
-                    </li>
-                </ul>
-            </Infobox>
+                    </Infobox>
 
             <div className="numbers-layout">
                 <div className="numbers-main">
@@ -656,10 +668,10 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
                             <h2 className="flex sg-title items-center gap-2" style={{ margin: 0 }}>
                                 <Settings size={20} />
-                                Base Digits (1-{numeralBase - 1})
+                                {t('orthography.numerals.baseDigitsTitle', { base: numeralBase - 1 })}
                             </h2>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <span style={{ fontSize: '0.8rem', color: 'var(--tx2)', fontWeight: 600 }}>Columns</span>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--tx2)', fontWeight: 600 }}>{t('orthography.numerals.columns')}</span>
                                 <input 
                                     type="range" 
                                     min="1" max="4" 
@@ -673,9 +685,9 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                         <div className="digits-grid-wide" style={{ '--grid-cols': `repeat(${listCols}, 1fr)` }}>
                             {Array.from({ length: listCols }).map((_, i) => (
                                 <div key={`header-${i}`} className="digit-entry-header">
-                                    <span>Num</span>
-                                    <span>Full Name</span>
-                                    <span>Stem (for fusion)</span>
+                                    <span>{t('orthography.numerals.num')}</span>
+                                    <span>{t('orthography.numerals.fullName')}</span>
+                                    <span>{t('orthography.numerals.stem')}</span>
                                 </div>
                             ))}
                             <div className="digit-row-entry">
@@ -684,7 +696,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                     className="char-name-input"
                                     value={numberSystem.zero || ''}
                                     onChange={(e) => updateSystem('zero', e.target.value)}
-                                    placeholder="e.g. Zero"
+                                    placeholder={t('orthography.numerals.zeroPlaceholder')}
                                 />
                                 <div className="digit-stem-cell">
                                     {renderDigitControls('0', numberSystem.zero, 0)}
@@ -697,14 +709,14 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                         className="char-name-input"
                                         value={numberSystem.digits?.[d] || ''}
                                         onChange={(e) => updateMap('digits', d, e.target.value)}
-                                        placeholder="Name"
+                                        placeholder={t('orthography.numerals.namePlaceholder')}
                                     />
                                     <div className="digit-stem-cell">
                                         <input 
                                             className="char-name-input stem-input"
                                             value={numberSystem.stems?.[d] || ''}
                                             onChange={(e) => updateMap('stems', d, e.target.value)}
-                                            placeholder="Stem"
+                                            placeholder={t('orthography.numerals.stemPlaceholder')}
                                         />
                                         {renderDigitControls(String(d), numberSystem.digits?.[d], d)}
                                     </div>
@@ -716,7 +728,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                     <Card>
                         <h2 className="flex sg-title items-center gap-2">
                             <Plus size={20} />
-                            Powers of {numeralBase}
+                            {t('orthography.numerals.powersTitle', { base: numeralBase })}
                         </h2>
                         <div className="powers-grid">
                             {Array.from({ length: powerCount }, (_, i) => i + 1).map(p => {
@@ -731,7 +743,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                                 className="char-name-input power-name-input"
                                                 value={numberSystem.powers?.[val] || ''}
                                                 onChange={(e) => updateMap('powers', val, e.target.value)}
-                                                placeholder={`Name for ${labelVal}`}
+                                                placeholder={t('orthography.numerals.nameForPower', { value: labelVal })}
                                             />
                                             {renderDigitControls(`power-${val}`, numberSystem.powers?.[val], val)}
                                             {p === powerCount && p > 6 && (
@@ -742,7 +754,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                                         updateMap('powers', val, '');
                                                         setPowerCount(prev => prev - 1);
                                                     }}
-                                                    title="Remove this power"
+                                                    title={t('orthography.numerals.removePower')}
                                                 >
                                                     <Trash2 size={13} />
                                                 </button>
@@ -757,14 +769,14 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                             style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}
                             onClick={() => setPowerCount(prev => prev + 1)}
                         >
-                            <Plus size={14} /> Add Power
+                            <Plus size={14} /> {t('orthography.numerals.addPower')}
                         </button>
                     </Card>
 
                     <Card>
                         <h2 className="flex sg-title items-center gap-2">
                             <Trash2 size={20} />
-                            Irregulars & Overrides
+                            {t('orthography.numerals.irregularsTitle')}
                         </h2>
                         <div className="irregulars-list">
                             {Object.entries(numberSystem.irregulars || {}).map(([val, name]) => (
@@ -781,7 +793,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                                 type="button"
                                                 className="num-stroke-preview-btn" 
                                                 onClick={() => setSelectedNumberForStroke({ word: name, name: `${val} (${name})` })}
-                                                title="View stroke order"
+                                                title={t('orthography.numerals.viewStroke')}
                                             >
                                                 <span className="custom-font-text notranslate">{transliterate(name)}</span>
                                                 <PenTool size={12} />
@@ -794,9 +806,9 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                 </div>
                             ))}
                             <div className="add-irregular">
-                                <input type="number" ref={newIrrValRef} placeholder="Num" className="small-num-input" />
-                                <input type="text" ref={newIrrNameRef} placeholder="Name" className="small-name-input" />
-                                <button className="btn-add" onClick={handleAddIrregular}>Add</button>
+                                <input type="number" ref={newIrrValRef} placeholder={t('orthography.numerals.num')} className="small-num-input" />
+                                <input type="text" ref={newIrrNameRef} placeholder={t('orthography.numerals.namePlaceholder')} className="small-name-input" />
+                                <button className="btn-add" onClick={handleAddIrregular}>{t('orthography.numerals.add')}</button>
                             </div>
                         </div>
                     </Card>
@@ -806,11 +818,11 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                     <Card className="settings-card">
                         <h2 className="flex sg-title items-center gap-2">
                             <Settings size={20} />
-                            Naming Strategy
+                            {t('orthography.numerals.namingStrategy')}
                         </h2>
                         <div className="strategy-options">
                             <div className="toggle-row">
-                                <label className="strategy-label">Hide '1' on Powers</label>
+                                <label className="strategy-label">{t('orthography.numerals.hideOne')}</label>
                                 <label className="switch">
                                     <input 
                                         type="checkbox" 
@@ -821,7 +833,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                 </label>
                             </div>
                             <div className="toggle-row">
-                                <label className="strategy-label">Internal Fusion</label>
+                                <label className="strategy-label">{t('orthography.numerals.internalFusion')}</label>
                                 <label className="switch">
                                     <input 
                                         type="checkbox" 
@@ -832,7 +844,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                 </label>
                             </div>
                             <div className="toggle-row">
-                                <label className="strategy-label">Global Fusion</label>
+                                <label className="strategy-label">{t('orthography.numerals.globalFusion')}</label>
                                 <label className="switch">
                                     <input 
                                         type="checkbox" 
@@ -843,7 +855,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                 </label>
                             </div>
                             <div className="toggle-row">
-                                <label className="strategy-label">Use Stems for Units</label>
+                                <label className="strategy-label">{t('orthography.numerals.useStemsForUnits')}</label>
                                 <label className="switch">
                                     <input 
                                         type="checkbox" 
@@ -855,31 +867,31 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                             </div>
                             
                             <div className="select-row">
-                                <label>Internal Word Order</label>
+                                <label>{t('orthography.numerals.internalOrder')}</label>
                                 <select 
                                     className="select select-bordered select-sm w-full"
                                     value={numberSystem.settings?.internalOrder || 'digit-first'}
                                     onChange={(e) => updateSystem('settings', { ...numberSystem.settings, internalOrder: e.target.value })}
                                 >
-                                    <option value="digit-first">Digit + Power (Eng)</option>
-                                    <option value="unit-first">Power + Digit (Old Eng)</option>
+                                    <option value="digit-first">{t('orthography.numerals.digitPlusPower')}</option>
+                                    <option value="unit-first">{t('orthography.numerals.powerPlusDigit')}</option>
                                 </select>
                             </div>
 
                             <div className="select-row">
-                                <label>Magnitude Order</label>
+                                <label>{t('orthography.numerals.magnitudeOrder')}</label>
                                 <select 
                                     className="select select-bordered select-sm w-full"
                                     value={numberSystem.settings?.magnitudeOrder || 'standard'}
                                     onChange={(e) => updateSystem('settings', { ...numberSystem.settings, magnitudeOrder: e.target.value })}
                                 >
-                                    <option value="standard">High to Low (100, 10, 1)</option>
-                                    <option value="unit-first">Low to High (1, 10, 100)</option>
+                                    <option value="standard">{t('orthography.numerals.highToLow')}</option>
+                                    <option value="unit-first">{t('orthography.numerals.lowToHigh')}</option>
                                 </select>
                             </div>
 
                             <div className="input-row">
-                                <label>Separator</label>
+                                <label>{t('orthography.numerals.separator')}</label>
                                 <input 
                                     className="fi w-full"
                                     value={numberSystem.settings?.separator ?? ' '}
@@ -892,7 +904,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                     <Card className="preview-card sticky-top">
                         <h2 className="flex sg-title items-center gap-2">
                             <Calculator size={20} />
-                            Preview
+                            {t('orthography.numerals.preview')}
                         </h2>
                         <div className="preview-body">
                             <div className="preview-input-row">
@@ -901,7 +913,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                     className="fi test-input"
                                     value={testNumber}
                                     onChange={(e) => setTestNumber(e.target.value)}
-                                    placeholder="42"
+                                    placeholder={t('orthography.numerals.previewPlaceholder')}
                                 />
                                 {testResult && (
                                     <>
@@ -916,7 +928,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                                 name: `${testNumber || 'Result'}: ${testResult}`,
                                                 scriptType: activeScriptType
                                             })}
-                                            title="View stroke order"
+                                            title={t('orthography.numerals.viewStroke')}
                                         >
                                             <PenTool size={13} />
                                         </button>
@@ -924,7 +936,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                             type="button"
                                             className={`num-icon-btn ${showTestResult ? 'active' : ''}`}
                                             onClick={() => setShowTestResult(prev => !prev)}
-                                            title={showTestResult ? 'Hide glyph' : 'Show glyph'}
+                                            title={showTestResult ? t('orthography.numerals.hideGlyph') : t('orthography.numerals.showGlyph')}
                                         >
                                             {showTestResult ? <EyeOff size={13} /> : <Eye size={13} />}
                                         </button>
@@ -932,16 +944,16 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                 )}
                             </div>
                             <div className="result-display">
-                                <span className="result-label">Result:</span>
+                                <span className="result-label">{t('orthography.numerals.resultLabel')}</span>
                                 {/* Default: the written (romanized) form. The eye toggle
                                     swaps this for the drawn glyph. */}
                                 {testResult ? (
                                     showTestResult ? (
                                         testHasGlyph ? (
                                             /* Glyphs sit on a shared baseline and are spaced by
-                                               each glyph's own character gaps, matching the
-                                               compiled font. Not one badge per glyph - connected
-                                               scripts must read as a continuous run. */
+                                                each glyph's own character gaps, matching the
+                                                compiled font. Not one badge per glyph - connected
+                                                scripts must read as a continuous run. */
                                             <GlyphBaselineRow
                                                 parts={testGlyphParts}
                                                 separator={testGlyphSeparator}
@@ -950,7 +962,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                         ) : (
                                             <div className="result-no-glyph">
                                                 <FileXIcon size={24} />
-                                                <span>No glyph entry for this number</span>
+                                                <span>{t('orthography.numerals.noGlyph')}</span>
                                             </div>
                                         )
                                     ) : (
@@ -961,7 +973,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                                 name: `${testNumber || 'Result'}: ${testResult}`,
                                                 scriptType: activeScriptType
                                             })}
-                                            title="Click to view stroke order"
+                                            title={t('orthography.numerals.viewStroke')}
                                         >
                                             <span>{testResult}</span>
                                         </div>
@@ -1018,6 +1030,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
 };
 
 const AlphabeticShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
+    const { t } = useTranslation();
     const consonants = useConfigStore(state => state.consonants) || '';
     const vowels = useConfigStore(state => state.vowels) || '';
     const otherPhonemes = useConfigStore(state => state.otherPhonemes) || '';
@@ -1048,8 +1061,8 @@ const AlphabeticShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
 
     return (
         <div className="tab-pane-container">
-            <Infobox title="Alphabetic Register">
-                This is the complete register of your language's alphabet. You can manage the names and draw the custom glyphs for these characters in the <b>System &rarr; Phonology</b> tab.
+            <Infobox title={t('orthography.alphabeticRegisterTitle')}>
+                <span dangerouslySetInnerHTML={{ __html: t('orthography.alphabeticRegisterDesc') }} />
             </Infobox>
 
             <div className="alphabet-grid" style={registerCols > 0 ? { '--grid-cols': `repeat(${registerCols}, 1fr)` } : {}}>
@@ -1081,9 +1094,9 @@ const AlphabeticShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
                 ) : (
                     <div className="empty-state glass">
                         <Type size={48} className="text-tx2 opacity-20" />
-                        <p>No characters found in your Phonology settings.</p>
+                        <p>{t('orthography.noCharsFound')}</p>
                         <button className="btn-link" onClick={() => window.location.hash = '#/settings'}>
-                            Go to Phonology Settings
+                            {t('orthography.goToPhonologyBtn')}
                         </button>
                     </div>
                 )}
@@ -1095,6 +1108,7 @@ const AlphabeticShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
 // ─── SYLLABARY SHOWCASE ───────────────────────────────────────────────────────
 
 const SyllabaryShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
+    const { t } = useTranslation();
     const { syllabaryMap, customGlyphs } = useScriptScopedData(scriptId);
     const consonants   = useConfigStore(state => state.consonants) || '';
     const vowels       = useConfigStore(state => state.vowels) || '';
@@ -1166,13 +1180,13 @@ const SyllabaryShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
 
     return (
         <div className="tab-pane-container">
-            <Infobox title="Syllabary Register">
-                Read-only showcase of every syllable mapped in your writing system. Draw and edit syllables in <b>System &rarr; Phonology</b>.
+            <Infobox title={t('orthography.syllabaryRegisterTitle')}>
+                <span dangerouslySetInnerHTML={{ __html: t('orthography.syllabaryRegisterDesc') }} />
             </Infobox>
             {allEntries.length === 0 ? (
                 <div className="empty-state glass">
                     <Type size={48} style={{ opacity: 0.2 }} />
-                    <p>No syllables mapped yet. Add them in Phonology Settings.</p>
+                    <p>{t('orthography.noSyllablesMapped')}</p>
                 </div>
             ) : (
                 <div className="showcase-syllabary-grid" style={registerCols > 0 ? { '--grid-cols': `repeat(${registerCols}, 1fr)` } : {}}>
@@ -1195,6 +1209,7 @@ const SyllabaryShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
 // ─── LOGOGRAPHIC SHOWCASE ─────────────────────────────────────────────────────
 
 const LogographicShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
+    const { t } = useTranslation();
     const lexicon = useLexiconStore(state => state.lexicon) || [];
     const { customGlyphs } = useScriptScopedData(scriptId);
 
@@ -1264,13 +1279,13 @@ const LogographicShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
 
     return (
         <div className="tab-pane-container">
-            <Infobox title="Logographic Register">
-                Every word in your lexicon that has a custom ideogram/character assigned appears here. Manage ideograms on individual lexicon entries.
+            <Infobox title={t('orthography.logographicRegisterTitle')}>
+                {t('orthography.logographicRegisterDesc')}
             </Infobox>
             {logographicWords.length === 0 ? (
                 <div className="empty-state glass">
                     <Languages size={48} style={{ opacity: 0.2 }} />
-                    <p>No logographic entries found. Add ideograms to words in your Lexicon.</p>
+                    <p>{t('orthography.noLogographicFound')}</p>
                 </div>
             ) : (
                 <div className="alphabet-grid" style={registerCols > 0 ? { '--grid-cols': `repeat(${registerCols}, 1fr)` } : {}}>
@@ -1298,6 +1313,7 @@ const LogographicShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
 // ─── HELPER COMPONENTS ───────────────────────────────────────────────────────────
 
 const BlockShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
+    const { t } = useTranslation();
     const { syllabaryMap, featuralComponents, customGlyphs } = useScriptScopedData(scriptId);
     const consonants         = useConfigStore(state => state.consonants) || '';
     const vowels             = useConfigStore(state => state.vowels) || '';
@@ -1383,15 +1399,13 @@ const BlockShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
     if (drawnComponents.length === 0 && blockEntries.length === 0) {
         return (
             <div className="tab-pane-container">
-                <Infobox title="Featural Block Register">
-                    Showcase of your compiled block script. Draw base characters and compile in <b>System &rarr; Phonology</b>.
+                <Infobox title={t('orthography.blockRegisterTitle')}>
+                    <span dangerouslySetInnerHTML={{ __html: t('orthography.blockRegisterDesc') }} />
                 </Infobox>
                 <div className="empty-state glass">
                     <Hash size={48} style={{ opacity: 0.2 }} />
-                    <p style={{ fontWeight: 700 }}>No base characters drawn yet.</p>
-                    <p style={{ fontSize: '0.9rem', color: 'var(--tx2)' }}>
-                        Go to <b>System &rarr; Phonology</b>, draw each base character, then click <b>Compile Block Font</b> to generate your script.
-                    </p>
+                    <p style={{ fontWeight: 700 }}>{t('orthography.noBaseCharsDrawn')}</p>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--tx2)' }} dangerouslySetInnerHTML={{ __html: t('orthography.noBaseCharsDrawnDesc') }} />
                 </div>
             </div>
         );
@@ -1399,15 +1413,15 @@ const BlockShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
 
     return (
         <div className="tab-pane-container">
-            <Infobox title="Featural Block Register">
-                Showcase of your compiled block script. Draw base characters and compile in <b>System &rarr; Phonology</b>.
+            <Infobox title={t('orthography.blockRegisterTitle')}>
+                <span dangerouslySetInnerHTML={{ __html: t('orthography.blockRegisterDesc') }} />
             </Infobox>
 
             {/* Base Characters */}
             {drawnComponents.length > 0 && (
                 <>
                     <h3 style={{ marginBottom: '1rem', color: 'var(--tx2)', fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Base Characters ({drawnComponents.length})
+                        {t('orthography.baseCharsHeader', { count: drawnComponents.length })}
                     </h3>
                     <div className="showcase-block-base-grid" style={registerCols > 0 ? { '--grid-cols': `repeat(${registerCols}, 1fr)` } : {}}>
                         {drawnComponents.map(comp => (
@@ -1450,7 +1464,7 @@ const BlockShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
             {blockEntries.length > 0 ? (
                 <>
                     <h3 style={{ margin: '2rem 0 1rem', color: 'var(--tx2)', fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                        Compiled Blocks ({blockEntries.length})
+                        {t('orthography.compiledBlocksHeader', { count: blockEntries.length })}
                     </h3>
                     <div className="showcase-syllabary-grid" style={registerCols > 0 ? { '--grid-cols': `repeat(${registerCols}, 1fr)` } : {}}>
                         {blockEntries.map(([key, val]) => (
@@ -1474,10 +1488,8 @@ const BlockShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
             ) : (
                 <div className="empty-state glass" style={{ marginTop: '2rem' }}>
                     <Hash size={40} style={{ opacity: 0.2 }} />
-                    <p style={{ fontWeight: 700 }}>Base characters ready — blocks not compiled yet.</p>
-                    <p style={{ fontSize: '0.9rem', color: 'var(--tx2)' }}>
-                        Go to <b>System &rarr; Phonology</b> and click <b>Compile Block Font</b> to generate the full block grid.
-                    </p>
+                    <p style={{ fontWeight: 700 }}>{t('orthography.baseCharsReady')}</p>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--tx2)' }} dangerouslySetInnerHTML={{ __html: t('orthography.baseCharsReadyDesc') }} />
                 </div>
             )}
         </div>
@@ -1488,6 +1500,7 @@ const BlockShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 
 export default function OrthographyPage() {
+    const { t } = useTranslation();
     const phonologyTypes = useConfigStore(state => state.phonologyTypes);
     const activeScriptSystemId = useConfigStore(state => state.activeScriptSystemId);
     const scriptSystems = useConfigStore(state => state.scriptSystems) || [];
@@ -1508,14 +1521,14 @@ export default function OrthographyPage() {
         if (!showScriptPicker) return null;
         return (
             <div className="script-active-dropdown-wrap">
-                <label className="script-active-dropdown-label">Editing script:</label>
+                <label className="script-active-dropdown-label">{t('orthography.editingScript')}</label>
                 <select
                     className="script-active-dropdown"
                     value={activeScriptSystemId || defaultScriptId}
                     onChange={e => setActiveScriptSystem(e.target.value)}
                 >
                     {scriptSystems.map(s => (
-                        <option key={s.id} value={s.id}>{s.name}{s.id === defaultScriptId ? ' (default)' : ''}</option>
+                        <option key={s.id} value={s.id}>{s.name}{s.id === defaultScriptId ? ` (${t('orthography.scriptManager.isDefault').toLowerCase()})` : ''}</option>
                     ))}
                 </select>
             </div>
@@ -1547,10 +1560,10 @@ export default function OrthographyPage() {
                 <div className="header-content">
                     <h1 className="flex gap-3 items-center">
                         <Languages className="text-accent" size={32} />
-                        Writing System & Numerals
+                        {t('orthography.title')}
                     </h1>
                     <p className="subtitle">
-                        Define how your language represents sounds, quantities, and time.
+                        {t('orthography.subtitle')}
                     </p>
                 </div>
 
@@ -1559,31 +1572,31 @@ export default function OrthographyPage() {
                         className={`tab ${activeTab === 'scripts' ? 'tab-active' : ''}`}
                         onClick={() => setActiveTab('scripts')}
                     >
-                        <PenTool size={18} /> Scripts
+                        <PenTool size={18} /> {t('orthography.tabs.scripts')}
                     </button>
                     <button 
                         className={`tab ${activeTab === 'script' ? 'tab-active' : ''}`}
                         onClick={() => setActiveTab('script')}
                     >
-                        <BookA size={18} /> Script Register
+                        <BookA size={18} /> {t('orthography.tabs.script')}
                     </button>
                     <button 
                         className={`tab ${activeTab === 'rules' ? 'tab-active' : ''}`}
                         onClick={() => setActiveTab('rules')}
                     >
-                        <ListChecks size={18} /> Rules
+                        <ListChecks size={18} /> {t('orthography.tabs.rules')}
                     </button>
                     <button 
                         className={`tab ${activeTab === 'numbers' ? 'tab-active' : ''}`}
                         onClick={() => setActiveTab('numbers')}
                     >
-                        <Hash size={18} /> Numeric System
+                        <Hash size={18} /> {t('orthography.tabs.numbers')}
                     </button>
                     <button 
                         className={`tab ${activeTab === 'ipa' ? 'tab-active' : ''}`}
                         onClick={() => setActiveTab('ipa')}
                     >
-                        <Mic2 size={18} /> IPA Reference
+                        <Mic2 size={18} /> {t('orthography.tabs.ipa')}
                     </button>
                 </nav>
             </header>
@@ -1597,24 +1610,24 @@ export default function OrthographyPage() {
                 {activeTab === 'script'  && (
                     <div className="tab-pane-container">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', background: 'var(--s2)', padding: '0.75rem 1rem', borderRadius: '1rem', border: '1px solid var(--bd)', flexWrap: 'wrap', gap: '1rem' }}>
-                            {renderActiveScriptDropdown() || <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tx)' }}>Script Register</div>}
+                            {renderActiveScriptDropdown() || <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tx)' }}>{t('orthography.scriptRegister')}</div>}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                <span style={{ fontSize: '0.85rem', color: 'var(--tx2)', fontWeight: 600, whiteSpace: 'nowrap' }}>Grid Columns</span>
+                                <span style={{ fontSize: '0.85rem', color: 'var(--tx2)', fontWeight: 600, whiteSpace: 'nowrap' }}>{t('orthography.gridColumns')}</span>
                                 <select 
                                     className="select select-bordered" 
                                     style={{ height: '40px', minHeight: '40px' }}
                                     value={registerCols} 
                                     onChange={e => setRegisterCols(parseInt(e.target.value))}
                                 >
-                                    <option value={0}>Auto Layout</option>
-                                    <option value={1}>1 Column</option>
-                                    <option value={2}>2 Columns</option>
-                                    <option value={3}>3 Columns</option>
-                                    <option value={4}>4 Columns</option>
-                                    <option value={5}>5 Columns</option>
-                                    <option value={6}>6 Columns</option>
-                                    <option value={8}>8 Columns</option>
-                                    <option value={10}>10 Columns</option>
+                                    <option value={0}>{t('orthography.autoLayout')}</option>
+                                    <option value={1}>{t('orthography.column1')}</option>
+                                    <option value={2}>{t('orthography.columnsN', { count: 2 })}</option>
+                                    <option value={3}>{t('orthography.columnsN', { count: 3 })}</option>
+                                    <option value={4}>{t('orthography.columnsN', { count: 4 })}</option>
+                                    <option value={5}>{t('orthography.columnsN', { count: 5 })}</option>
+                                    <option value={6}>{t('orthography.columnsN', { count: 6 })}</option>
+                                    <option value={8}>{t('orthography.columnsN', { count: 8 })}</option>
+                                    <option value={10}>{t('orthography.columnsN', { count: 10 })}</option>
                                 </select>
                             </div>
                         </div>

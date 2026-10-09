@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useShallow } from 'zustand/react/shallow';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
@@ -13,6 +14,7 @@ import { fetchSynonymOptions, fetchDefinitionForWord } from '../../../utils/sema
 import './lexiconTab.css';
 
 export default function LexiconTab() {
+    const { t } = useTranslation();
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
     const updateWord = useLexiconStore((state) => state.updateWord);
     
@@ -340,24 +342,24 @@ export default function LexiconTab() {
 
         // Show confirmation toast with overwrite checkbox
         let overwriteChecked = false;
-        toast.custom((t) => (
+        toast.custom((toastInstance) => (
             <div className="custom-toast-v">
-                <strong>Ã°Å¸â€œâ€“ Generate Full Definitions</strong>
-                <span>This will look up English definitions for all <b>{lexicon.length}</b> entries using Datamuse and Wiktionary. This may take a few minutes.</span>
+                <strong>{t('settings.lexiconTab.defModalTitle')}</strong>
+                <span>{t('settings.lexiconTab.defModalDesc', { count: lexicon.length })}</span>
                 <label className="auto-define-overwrite-label">
                     <input
                         type="checkbox"
                         defaultChecked={false}
                         onChange={(e) => { overwriteChecked = e.target.checked; }}
                     />
-                    Regenerate existing definitions too
+                    {t('settings.lexiconTab.defModalOverwrite')}
                 </label>
                 <div className="toast-actions-v">
                     <button onClick={() => {
-                        toast.dismiss(t.id);
+                        toast.dismiss(toastInstance.id);
                         doAutoDefine(overwriteChecked);
-                    }} className="btn-v btn-acc-v">Generate Definitions</button>
-                    <button onClick={() => toast.dismiss(t.id)} className="btn-v btn-sec-v">Cancel</button>
+                    }} className="btn-v btn-acc-v">{t('settings.lexiconTab.defModalGenerate')}</button>
+                    <button onClick={() => toast.dismiss(toastInstance.id)} className="btn-v btn-sec-v">{t('common.cancel')}</button>
                 </div>
             </div>
         ), { duration: Infinity, id: 'auto-define-confirm' });
@@ -366,37 +368,37 @@ export default function LexiconTab() {
     return (
         <Card className="lexicon-settings-tab">
             <h2 className="flex sg-title">
-                <BookOpen /> Global Lexicon Management
+                <BookOpen /> {t('settings.lexiconTab.globalTitle')}
             </h2>
             <p className="settings-description">
-                Manage your Parts of Speech and Semantic Tags globally. Renaming or deleting here will update all lexicon entries.
+                {t('settings.lexiconTab.globalDesc')}
             </p>
 
             <div className="auto-tagger-banner">
                 <div className="auto-tagger-info">
-                    <h4><Sparkles size={16}/> Smart Auto-Categorizer</h4>
-                    <p>Missing tags? Let the engine use NLP and WordNet to automatically categorize your entire <b>{lexicon.length}</b> word lexicon into themes like Food, Animals, and Family.</p>
+                    <h4><Sparkles size={16}/> {t('settings.lexiconTab.autoCategorizerTitle')}</h4>
+                    <p>{t('settings.lexiconTab.autoCategorizerDesc', { count: lexicon.length })}</p>
                 </div>
                 {isAutoTagging ? (
                     <div className="auto-tagger-progress">
                         <Loader2 className="spinner" size={20} />
-                        <span>Processing Tags... {autoTagProgress}%</span>
+                        <span>{t('settings.lexiconTab.processingTags', { progress: autoTagProgress })}</span>
                     </div>
                 ) : (
                     <Button variant="primary" onClick={handleAutoCategorize} style={{marginBottom: '0.5rem'}}>
-                        Bulk Auto-Categorize Lexicon
+                        {t('settings.lexiconTab.autoCategorizeBtn')}
                     </Button>
                 )}
 
                 {isAutoRelating ? (
                     <div className="auto-tagger-progress">
                         <Loader2 className="spinner" size={20} />
-                        <span>Finding Links... {autoRelateProgress}%</span>
+                        <span>{t('settings.lexiconTab.findingLinks', { progress: autoRelateProgress })}</span>
                     </div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <Button variant="save" onClick={handleAutoRelate} style={{ width: '100%' }}>
-                            <Link size={16} style={{marginRight: '6px'}}/> Bulk Auto-Link Related Words
+                            <Link size={16} style={{marginRight: '6px'}}/> {t('settings.lexiconTab.autoLinkBtn')}
                         </Button>
                     </div>
                 )}
@@ -405,34 +407,34 @@ export default function LexiconTab() {
                     <div className="auto-tagger-progress" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Loader2 className="spinner" size={20} />
-                            <span>Generating Definitions... {autoDefineProgress}%</span>
+                            <span>{t('settings.lexiconTab.generatingDefs', { progress: autoDefineProgress })}</span>
                         </div>
                         <Button variant="err" className="btn-sm" onClick={() => { abortDefRef.current = true; }}>
-                            Cancel
+                            {t('common.cancel')}
                         </Button>
                     </div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <Button variant="save" onClick={handleAutoDefine} style={{ width: '100%' }}>
-                            <FileText size={16} style={{marginRight: '6px'}}/> Bulk Generate Full Definitions
+                            <FileText size={16} style={{marginRight: '6px'}}/> {t('settings.lexiconTab.autoDefineBtn')}
                         </Button>
                     </div>
                 )}
 
                 <span style={{ fontSize: '0.75rem', color: 'var(--tx2)', marginTop: '4px', textAlign: 'center', width: '100%' }}>
-                    * These processes may take a few minutes for larger lexicons to respect API rate limits.
+                    {t('settings.lexiconTab.rateLimitNote')}
                 </span>
             </div>
 
-            <Infobox title="Lexicon Management Tips">
-                Ã¢â‚¬Â¢ <b>Global Rename:</b> Renaming a Part of Speech or Tag here will automatically update every single word in your lexicon.<br />
-                Ã¢â‚¬Â¢ <b>Custom Classes:</b> Add unique categories (like "classifier" or "ideophone") to make your grammar matrix more precise.<br />
-                Ã¢â‚¬Â¢ <b>Clean Slate:</b> Deleting a category here removes it from all words globally. Use this to prune unused tags.
+            <Infobox title={t('settings.lexiconTab.guideTitle')}>
+                • {t('settings.lexiconTab.guideRename')}<br />
+                • {t('settings.lexiconTab.guideCustomClasses')}<br />
+                • {t('settings.lexiconTab.guideCleanSlate')}
             </Infobox>
 
             <div className="search-bar-management">
                 <Input 
-                    placeholder="Search for a POS or Tag..."
+                    placeholder={t('settings.lexiconTab.searchPlaceholder')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 >
@@ -443,17 +445,17 @@ export default function LexiconTab() {
             <div className="management-grid">
                 <section>
                     <h4 className="management-title pos-title">
-                        <BookOpen size={18} /> Parts of Speech ({filteredPOS.length})
+                        <BookOpen size={18} /> {t('settings.lexiconTab.posTitle')} ({filteredPOS.length})
                     </h4>
                     <div className="add-management-item">
                         <input 
                             className="management-add-input"
-                            placeholder="New POS (e.g. classifier)"
+                            placeholder={t('settings.lexiconTab.newPosPlaceholder')}
                             value={newPOS}
                             onChange={(e) => setNewPOS(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleAddPOS()}
                         />
-                        <Button variant="save" onClick={handleAddPOS} className="btn-sm add-mgmt-btn">Add</Button>
+                        <Button variant="save" onClick={handleAddPOS} className="btn-sm add-mgmt-btn">{t('settings.lexiconTab.addBtn')}</Button>
                     </div>
                     <div className="management-list">
                         {filteredPOS.map(pos => (
@@ -485,17 +487,17 @@ export default function LexiconTab() {
 
                 <section>
                     <h4 className="management-title tag-title">
-                        <Tag size={18} /> Semantic Tags ({filteredTags.length})
+                        <Tag size={18} /> {t('settings.lexiconTab.tagsTitle')} ({filteredTags.length})
                     </h4>
                     <div className="add-management-item">
                         <input 
                             className="management-add-input"
-                            placeholder="New Tag (e.g. aquatic)"
+                            placeholder={t('settings.lexiconTab.newTagPlaceholder')}
                             value={newTag}
                             onChange={(e) => setNewTag(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
                         />
-                        <Button variant="save" onClick={handleAddTag} className="btn-sm add-mgmt-btn">Add</Button>
+                        <Button variant="save" onClick={handleAddTag} className="btn-sm add-mgmt-btn">{t('settings.lexiconTab.addBtn')}</Button>
                     </div>
                     <div className="management-list">
                         {filteredTags.map(tag => (

@@ -5,8 +5,10 @@ import Infobox from '../../UI/Infobox/Infobox.jsx';
 import { Bolt, Atom } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getDefaultScriptId } from '../../../utils/scriptResolver.js';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 
 export default function SettingsGeneral() {
+    const { t } = useTranslation();
     const conlangName = useConfigStore((state) => state.conlangName);
 
     const description = useConfigStore((state) => state.description) || '';
@@ -22,10 +24,10 @@ export default function SettingsGeneral() {
     const handleTypologyChange = (newType) => {
         if (newType === phonologyTypes) return;
 
-        toast((t) => (
+        toast((toastObj) => (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <span style={{ fontWeight: 'bold', color: 'var(--err)' }}>⚠️ Warning: Changing Typology</span>
-                <span>Switching modes (e.g., Hangul to Syllabic) may break how your current lexicon words are rendered. We highly recommend <b>saving a backup</b> first.</span>
+                <span style={{ fontWeight: 'bold', color: 'var(--err)' }}>{t('settings.general.warningTypologyTitle')}</span>
+                <span>{t('settings.general.warningTypologyDesc')}</span>
                 <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                     <button 
                         onClick={() => {
@@ -35,17 +37,17 @@ export default function SettingsGeneral() {
                                 updateScriptSystem(defaultScriptId, { type: newType });
                             }
                             useConfigStore.getState().unlockBadge('typologist', 'Typologist');
-                            toast.dismiss(t.id);
+                            toast.dismiss(toastObj.id);
                         }}
                         style={{ background: 'var(--acc)', color: 'white', border: 'none', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer' }}
                     >
-                        Change Anyway
+                        {t('settings.general.changeAnyway')}
                     </button>
                     <button 
-                        onClick={() => toast.dismiss(t.id)}
+                        onClick={() => toast.dismiss(toastObj.id)}
                         style={{ background: 'var(--s3)', color: 'var(--tx)', border: 'none', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer' }}
                     >
-                        Cancel
+                        {t('common.cancel')}
                     </button>
                 </div>
             </div>
@@ -56,44 +58,42 @@ export default function SettingsGeneral() {
         
         <Card>
             
-            <h2 className="flex sg-title"> <Bolt/>Basic Settings</h2>
+            <h2 className="flex sg-title"> <Bolt/>{t('settings.general.title')}</h2>
             
             <p className="settings-description">
-                Set the base identity of your conlang here. Changing the typology will unlock different tools in the engine.
+                {t('settings.general.desc')}
             </p>
 
-
-
             <Input 
-                label="Language Name" 
-                placeholder="English, Esperanto, Mani..."
+                label={t('settings.general.langName')} 
+                placeholder={t('settings.general.langNamePlaceholder')}
                 value={conlangName}
                 onChange={(e) => updateConfig({ conlangName: e.target.value })}
             />
 
             <div className="sg-input-group">
-                <label className="form-label">Description & Lore</label>
+                <label className="form-label">{t('settings.general.loreLabel')}</label>
                 <textarea 
                     className="fi sg-textarea-lore" 
-                    placeholder="Describe the philosophy, history, or core rules of your conlang..."
+                    placeholder={t('settings.general.lorePlaceholder')}
                     value={description}
                     onChange={(e) => updateConfig({ description: e.target.value })}
                 />
             </div>
 
             <div className="sg-input-group">
-                <label className="form-label">Language Typology</label>
+                <label className="form-label">{t('settings.general.typologyLabel')}</label>
                 <select 
                     className="fi settings-select-full" 
                     value={phonologyTypes}
                     onChange={(e) => handleTypologyChange(e.target.value)}
                 >
-                    <option value="alphabetic">Alphabetic / Root-based</option>
-                    <option value="abjad">Abjad (Consonant-heavy)</option>
-                    <option value="abugida">Abugida (Alpha-syllabary)</option>
-                    <option value="syllabic">Syllabic (Grid-based)</option>
-                    <option value="featural_block">Featural Block (Hangul-style)</option>
-                    <option value="logographic">Logographic (Ideograms)</option>
+                    <option value="alphabetic">{t('settings.general.typologyOptions.alphabetic')}</option>
+                    <option value="abjad">{t('settings.general.typologyOptions.abjad')}</option>
+                    <option value="abugida">{t('settings.general.typologyOptions.abugida')}</option>
+                    <option value="syllabic">{t('settings.general.typologyOptions.syllabic')}</option>
+                    <option value="featural_block">{t('settings.general.typologyOptions.featural_block')}</option>
+                    <option value="logographic">{t('settings.general.typologyOptions.logographic')}</option>
                 </select>
             </div>
 
@@ -107,16 +107,16 @@ export default function SettingsGeneral() {
                         style={{ transform: 'scale(1.2)' }}
                     />
                     <div>
-                        <span style={{ fontWeight: 600 }}>Uses Particles</span>
+                        <span style={{ fontWeight: 600 }}>{t('settings.general.particlesTitle')}</span>
                         <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginTop: '2px' }}>
-                            Enable the particle system for isolating or particle-based languages. Unlocks the Particles tab in settings.
+                            {t('settings.general.particlesDesc')}
                         </span>
                     </div>
                 </label>
             </div>
 
             <div className="sg-input-group">
-                <label className="form-label">Pre-existing Script Mapping</label>
+                <label className="form-label">{t('settings.general.scriptMappingLabel')}</label>
                 <select 
                     className="fi settings-select-full" 
                     value={alphabeticScript === 'custom' ? 'latin' : (alphabeticScript || 'latin')}
@@ -125,47 +125,47 @@ export default function SettingsGeneral() {
                         if (defaultScriptId) updateScriptSystem(defaultScriptId, { alphabeticScript: e.target.value });
                     }}
                 >
-                    <option value="latin">Latin (Default)</option>
+                    <option value="latin">{t('settings.general.scriptOptions.latin')}</option>
                     {['alphabetic', 'abjad', 'abugida'].includes(phonologyTypes || 'alphabetic') && (
                         <>
-                            <option value="cyrillic">Cyrillic</option>
-                            <option value="greek">Greek</option>
-                            <option value="runic">Runic</option>
-                            <option value="georgian">Georgian</option>
-                            <option value="arabic">Arabic</option>
-                            <option value="hebrew">Hebrew</option>
-                            <option value="devanagari">Devanagari</option>
-                            <option value="thai">Thai</option>
+                            <option value="cyrillic">{t('settings.general.scriptOptions.cyrillic')}</option>
+                            <option value="greek">{t('settings.general.scriptOptions.greek')}</option>
+                            <option value="runic">{t('settings.general.scriptOptions.runic')}</option>
+                            <option value="georgian">{t('settings.general.scriptOptions.georgian')}</option>
+                            <option value="arabic">{t('settings.general.scriptOptions.arabic')}</option>
+                            <option value="hebrew">{t('settings.general.scriptOptions.hebrew')}</option>
+                            <option value="devanagari">{t('settings.general.scriptOptions.devanagari')}</option>
+                            <option value="thai">{t('settings.general.scriptOptions.thai')}</option>
                         </>
                     )}
                     {phonologyTypes === 'syllabic' && (
                         <>
-                            <option value="hiragana">Hiragana</option>
-                            <option value="katakana">Katakana</option>
-                            <option value="cherokee">Cherokee</option>
-                            <option value="inuktitut">Inuktitut</option>
-                            <option value="hangul_syllables">Hangul Syllables</option>
+                            <option value="hiragana">{t('settings.general.scriptOptions.hiragana')}</option>
+                            <option value="katakana">{t('settings.general.scriptOptions.katakana')}</option>
+                            <option value="cherokee">{t('settings.general.scriptOptions.cherokee')}</option>
+                            <option value="inuktitut">{t('settings.general.scriptOptions.inuktitut')}</option>
+                            <option value="hangul_syllables">{t('settings.general.scriptOptions.hangul_syllables')}</option>
                         </>
                     )}
                     {phonologyTypes === 'logographic' && (
                         <>
-                            <option value="hanzi">Hanzi / Kanji (Basic Starter)</option>
-                            <option value="hieroglyphs">Egyptian Hieroglyphs (Basic Starter)</option>
+                            <option value="hanzi">{t('settings.general.scriptOptions.hanzi')}</option>
+                            <option value="hieroglyphs">{t('settings.general.scriptOptions.hieroglyphs')}</option>
                         </>
                     )}
                     {phonologyTypes === 'featural_block' && (
                         <>
-                            <option value="hangul_jamo">Hangul Jamo</option>
+                            <option value="hangul_jamo">{t('settings.general.scriptOptions.hangul_jamo')}</option>
                         </>
                     )}
                 </select>
             </div>
             
-            <Infobox title="Writing System Guide">
-                • <b>Alphabetic / Abjad / Abugida:</b> Linear root-based system. Uses your consonants, vowels, and syllable patterns. Maps to various scripts.<br />
-                • <b>Syllabic:</b> Unlocks the Syllabary Manager.<br />
-                • <b>Featural Block:</b> Unlocks the Block Manager. Dynamically composes syllables into square blocks.<br />
-                • <b>Logographic:</b> Whole words become symbols.
+            <Infobox title={t('settings.general.guideTitle')}>
+                • <b>{t('settings.general.guideAlphabeticLabel')}:</b> {t('settings.general.guideAlphabeticDesc')}<br />
+                • <b>{t('settings.general.guideSyllabicLabel')}:</b> {t('settings.general.guideSyllabicDesc')}<br />
+                • <b>{t('settings.general.guideFeaturalLabel')}:</b> {t('settings.general.guideFeaturalDesc')}<br />
+                • <b>{t('settings.general.guideLogographicLabel')}:</b> {t('settings.general.guideLogographicDesc')}
             </Infobox>
 
         </Card>

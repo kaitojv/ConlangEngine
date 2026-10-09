@@ -340,10 +340,9 @@ export default function SystemTab() {
     return (
         <>
             <Card>
-                <h2 className='flex sg-title'><Globe /> Visibility & Sharing</h2>
+                <h2 className='flex sg-title'><Globe /> {t('settings.system.visibilityTitle')}</h2>
                 <p>
-                    Make your conlang public so others can see it in the Explore tab. 
-                    Anyone with the link can view your dictionary and grammar rules.
+                    {t('settings.system.visibilityDesc')}
                 </p>
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '1rem' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
@@ -353,13 +352,13 @@ export default function SystemTab() {
                             onChange={handleVisibilityToggle} 
                             style={{ transform: 'scale(1.2)' }}
                         />
-                        <span style={{ fontWeight: 600 }}>Publicly Visible</span>
+                        <span style={{ fontWeight: 600 }}>{t('settings.system.publiclyVisible')}</span>
                     </label>
                 </div>
                 
                 <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <label style={{ fontWeight: 600, fontSize: '0.85rem' }}>Conlang Icon</label>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--tx2)', marginBottom: '0.5rem' }}>Pick an icon to represent your conlang in your workspaces.</p>
+                    <label style={{ fontWeight: 600, fontSize: '0.85rem' }}>{t('settings.system.conlangIcon')}</label>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--tx2)', marginBottom: '0.5rem' }}>{t('settings.system.conlangIconDesc')}</p>
                     
                     <div style={{ 
                         display: 'grid', 
@@ -395,10 +394,10 @@ export default function SystemTab() {
                     <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         <div style={{ marginTop: '0.5rem' }}>
                             <Button variant="primary" onClick={handleManualUpdatePublic} style={{ width: '100%' }}>
-                                <Globe size={16} /> Update Public Conlang
+                                <Globe size={16} /> {t('settings.system.updatePublicBtn')}
                             </Button>
                             <p style={{ fontSize: '0.75rem', color: 'var(--tx2)', marginTop: '0.5rem', textAlign: 'center' }}>
-                                Click this button whenever you add new words or change settings to update your public page.
+                                {t('settings.system.updatePublicDesc')}
                             </p>
                         </div>
                     </div>
@@ -406,16 +405,15 @@ export default function SystemTab() {
             </Card>
 
             <Card>
-                <h2 className='flex sg-title'><Code /> API Integrations</h2>
+                <h2 className='flex sg-title'><Code /> {t('settings.system.apiTitle')}</h2>
                 <p>
-                    Access your lexicon in real-time from Obsidian, Notion, desktop apps, or custom scripts using our read-only API. 
-                    Your language must be marked as <b>Publicly Visible</b> and <b>Updated</b> for the API to fetch the latest data.
+                    {t('settings.system.apiDesc')}
                 </p>
                 
                 {(!isPublic || !currentProjectId) ? (
                     <div style={{ marginTop: '1rem', padding: '15px', background: 'var(--s1)', borderRadius: 'var(--rad-sm)', border: '1px dashed var(--bd)' }}>
                         <p style={{ color: 'var(--tx2)', fontSize: '0.9rem', textAlign: 'center' }}>
-                            ⚠️ You must make your conlang public (in the Visibility card above) to enable API access.
+                            {t('settings.system.apiPublicWarning')}
                         </p>
                     </div>
                 ) : (
@@ -473,10 +471,9 @@ export default function SystemTab() {
             </Card>
 
             <Card>
-                <h2 className='flex sg-title'><Type /> App Typography</h2>
+                <h2 className='flex sg-title'><Type /> {t('settings.system.typographyTitle')}</h2>
                 <p>
-                    Choose the font family used for the application's interface. 
-                    This does not affect how your conlang dictionary words are rendered.
+                    {t('settings.system.typographyDesc')}
                 </p>
                 <div style={{ marginTop: '1rem' }}>
                     <select 
@@ -503,12 +500,12 @@ export default function SystemTab() {
             </Card>
 
             <Card>
-                <h2 className='flex sg-title'><Database /> Legacy Importer</h2>
-                <p>Import a JSON save file from the old version of Conlang Engine. This will convert your old data and overwrite your current active workspace.</p>
+                <h2 className='flex sg-title'><Database /> {t('settings.system.legacyTitle')}</h2>
+                <p>{t('settings.system.legacyDesc')}</p>
                 <div className='font-btns'>
                     <label className='fontUp-btn'>
                         <input className='file-input-hidden' type="file" accept=".json" onClick={(e) => { e.target.value = null }} onChange={handleLegacyImport} ref={legacyInputRef} />
-                        <h4>Import Legacy JSON</h4>
+                        <h4>{t('settings.system.legacyBtn')}</h4>
                     </label>
                 </div>
             </Card>
@@ -541,16 +538,16 @@ export default function SystemTab() {
             </Card>
 
             <Card>
-                <h2 className='flex sg-title'><Palette /> Aesthetics and Theme</h2>
-                <p>Customize the look and feel of the app.</p>
+                <h2 className='flex sg-title'><Palette /> {t('settings.themeTitle')}</h2>
+                <p>{t('settings.themeDesc')}</p>
                 <Button variant="primary" onClick={() => setIsThemeModalOpen(true)} style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-                    Open Theme Gallery
+                    {t('settings.openThemeGallery')}
                 </Button>
                 
-                <Modal isOpen={isThemeModalOpen} onClose={() => setIsThemeModalOpen(false)} title="Theme Gallery">
+                <Modal isOpen={isThemeModalOpen} onClose={() => setIsThemeModalOpen(false)} title={t('settings.system.themeGalleryModalTitle')}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxHeight: '60vh', overflowY: 'auto', paddingRight: '10px' }}>
                         <div>
-                            <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>Dark Themes</p>
+                            <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>{t('settings.system.darkThemes')}</p>
                             <div className='theme-btn-box'>
                                 {DARK_THEMES.map((theme, i) => (
                                     <button
@@ -565,7 +562,7 @@ export default function SystemTab() {
                         </div>
 
                         <div>
-                            <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>Light Themes</p>
+                            <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>{t('settings.system.lightThemes')}</p>
                             <div className='theme-btn-box'>
                                 {LIGHT_THEMES.map((theme, i) => (
                                     <button
@@ -580,7 +577,7 @@ export default function SystemTab() {
                         </div>
 
                         <div>
-                            <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>Dark Pride Flags</p>
+                            <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>{t('settings.system.darkPrideFlags')}</p>
                             <div className='theme-btn-box'>
                                 {PRIDE_THEMES_DARK.map((theme, i) => (
                                     <button
@@ -595,7 +592,7 @@ export default function SystemTab() {
                         </div>
                         
                         <div>
-                            <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>Light Pride Flags</p>
+                            <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>{t('settings.system.lightPrideFlags')}</p>
                             <div className='theme-btn-box'>
                                 {PRIDE_THEMES_LIGHT.map((theme, i) => (
                                     <button
@@ -611,7 +608,7 @@ export default function SystemTab() {
                     </div>
                 </Modal>
                 <br />
-                <h2>Custom Theme</h2>
+                <h2>{t('settings.system.customThemeTitle')}</h2>
                 <div className='pick-colors' style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                     {[
                         { key: 'bg', label: 'Background', fallback: '#0b0f19' },
@@ -643,8 +640,8 @@ export default function SystemTab() {
 
                 <br />
                 <hr style={{ borderColor: 'var(--bd)', margin: '1rem 0' }} />
-                <h2>Dynamic Background</h2>
-                <p>Customize the animated floating background.</p>
+                <h2>{t('settings.system.dynamicBgTitle')}</h2>
+                <p>{t('settings.system.dynamicBgDesc')}</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                         <input 
@@ -653,7 +650,7 @@ export default function SystemTab() {
                             onChange={(e) => updateConfig({ floatingBackground: { ...floatingBackground, enabled: e.target.checked } })} 
                             style={{ transform: 'scale(1.2)' }}
                         />
-                        <span style={{ fontWeight: 600 }}>Enable Background Animation</span>
+                        <span style={{ fontWeight: 600 }}>{t('settings.system.enableBgAnim')}</span>
                     </label>
 
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
@@ -663,11 +660,11 @@ export default function SystemTab() {
                             onChange={(e) => updateConfig({ floatingBackground: { ...floatingBackground, global: e.target.checked } })} 
                             style={{ transform: 'scale(1.2)' }}
                         />
-                        <span style={{ fontWeight: 600 }}>Show on All Tabs (Not just Home)</span>
+                        <span style={{ fontWeight: 600 }}>{t('settings.system.showAllTabs')}</span>
                     </label>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <label style={{ fontWeight: 600 }}>Background Style</label>
+                        <label style={{ fontWeight: 600 }}>{t('settings.system.bgStyle')}</label>
                         <select 
                             value={floatingBackground.type} 
                             onChange={(e) => updateConfig({ floatingBackground: { ...floatingBackground, type: e.target.value } })}
@@ -689,12 +686,12 @@ export default function SystemTab() {
             </Card>
 
             <Card>
-                <h2 className='flex sg-title'><Type /> Terminology & Labels</h2>
-                <p>Customize the terminology used throughout the app to match your worldbuilding project. Leave a field blank to use the default name.</p>
+                <h2 className='flex sg-title'><Type /> {t('settings.terminologyTitle')}</h2>
+                <p>{t('settings.terminologyDesc')}</p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
                     
                     <Input 
-                        label="App Title"
+                        label={t('settings.appTitle')}
                         placeholder="ConlangEngine" 
                         value={customLabels.appTitle || ''}
                         onChange={(e) => updateConfig({ customLabels: { ...(useConfigStore.getState().customLabels || {}), appTitle: e.target.value } })}
@@ -719,7 +716,7 @@ export default function SystemTab() {
             </Card>
 
             <Card>
-                <h2 className='flex sg-title'><ToggleLeft /> Workflow Preferences</h2>
+                <h2 className='flex sg-title'><ToggleLeft /> {t('settings.workflowPreferences')}</h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600 }}>
                         <input 
@@ -728,10 +725,10 @@ export default function SystemTab() {
                             checked={!!autoReturnToLexicon}
                             onChange={(e) => updateConfig({ autoReturnToLexicon: e.target.checked })}
                         />
-                        Auto-return to Lexicon after word creation
+                        {t('settings.autoReturnToLexicon')}
                     </label>
                     <p style={{ color: 'var(--tx2)', fontSize: '0.9rem', marginLeft: '26px' }}>
-                        If enabled, the app will automatically navigate back to the dictionary view after you successfully save a new root in the Create Word tab.
+                        {t('settings.system.autoReturnToLexiconDesc')}
                     </p>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '1rem' }}>
@@ -742,18 +739,18 @@ export default function SystemTab() {
                             checked={!!suppressDuplicateWarnings}
                             onChange={(e) => updateConfig({ suppressDuplicateWarnings: e.target.checked })}
                         />
-                        Suppress duplicate word/translation warnings during creation
+                        {t('settings.suppressDuplicateWarnings')}
                     </label>
                     <p style={{ color: 'var(--tx2)', fontSize: '0.9rem', marginLeft: '26px' }}>
-                        If enabled, the app will skip the blocking toast warning when creating duplicate words or translations (homophones/synonyms).
+                        {t('settings.system.suppressDuplicateWarningsDesc')}
                     </p>
                 </div>
             </Card>
 
             <Card>
-                <h2>Danger Zone</h2>
-                <p>This action will permanently delete your current local project. Your entire lexicon, grammar rules, and settings will be wiped out.</p>
-                <Button variant='error' onClick={handleWipeWorkspace}>Delete Local Project</Button>
+                <h2>{t('settings.system.dangerTitle')}</h2>
+                <p>{t('settings.system.dangerDesc')}</p>
+                <Button variant='error' onClick={handleWipeWorkspace}>{t('settings.system.deleteProjectBtn')}</Button>
             </Card>
 
         </>

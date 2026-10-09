@@ -12,6 +12,7 @@ import ExercisePlayer from './ExercisePlayer.jsx';
 import { hasCourseAudio } from '@/utils/courseAudio.js';
 import { Plus, Trash2, Save, ArrowLeft, ArrowRight, ArrowUp, Wand2, X, Play, ChevronUp, ChevronDown, ChevronRight, Search, Mic, Volume2, AlertTriangle, Bold, Italic, Underline, Smile, Zap, Star, Crown, Book, Brain, Flame, Dumbbell, Sword, Shield, Check } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import './courseBuilder.css';
 
 const COMMON_ICONS = ['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'Heart', 'Star', 'Check', 'X', 'AlertCircle', 'Info', 'Book', 'Brain', 'Volume2', 'Ear', 'Eye', 'Pencil', 'Flame', 'Sparkles', 'ThumbsUp', 'Coffee', 'Globe', 'Music', 'MessageCircle', 'Lightbulb', 'Zap', 'Shield', 'Smile'];
@@ -274,6 +275,7 @@ const COURSE_BUILDER_CONFIG_KEYS = [
 ];
 
 export default function CourseBuilder({ onExit }) {
+    const { t } = useTranslation();
     // Select only the config fields this component and its two callees read.
     // Verified by call graph:
     //   resolveWordStrokes  (utils/strokeOrderResolver.js) -> 12 keys
@@ -684,25 +686,25 @@ export default function CourseBuilder({ onExit }) {
         <Card className="course-builder">
             <div className="cb-header">
                 <div className="cb-header-title">
-                    <Button variant="default" onClick={onExit} style={{ padding: '8px' }} title="Back to learning path">
+                    <Button variant="default" onClick={onExit} style={{ padding: '8px' }} title={t('courseBuilder.backToMap')}>
                         <ArrowLeft size={18} />
                     </Button>
-                    <h2 className="flex sg-title mb-0">Course Builder</h2>
+                    <h2 className="flex sg-title mb-0">{t('courseBuilder.title')}</h2>
                 </div>
                 <div className="cb-header-actions">
                     {isDirty && (
-                        <span className="cb-dirty-badge" title="You have unsaved changes">
-                            <span className="cb-dirty-dot" /> Unsaved changes
+                        <span className="cb-dirty-badge" title={t('courseBuilder.unsavedChanges')}>
+                            <span className="cb-dirty-dot" /> {t('courseBuilder.unsavedChanges')}
                         </span>
                     )}
                     <Button variant="imp" onClick={saveCourse}>
-                        <Save size={16} /> Save Course
+                        <Save size={16} /> {t('courseBuilder.saveCourse')}
                     </Button>
                 </div>
             </div>
 
             <div className="cb-intro">
-                <p>Create your own Duolingo-style learning path! Add levels, and define the specific sentence translations you want to teach.</p>
+                <p>{t('courseBuilder.intro')}</p>
             </div>
 
             <div className="cb-toolbar">
@@ -712,7 +714,7 @@ export default function CourseBuilder({ onExit }) {
                         type="text"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search levels and phrases..."
+                        placeholder={t('courseBuilder.searchPlaceholder')}
                         className="cb-search-input notranslate"
                     />
                     {search && (
@@ -720,7 +722,7 @@ export default function CourseBuilder({ onExit }) {
                             type="button"
                             className="cb-search-clear"
                             onClick={() => setSearch('')}
-                            title="Clear search"
+                            title={t('courseBuilder.clearSearch')}
                         >
                             <X size={14} />
                         </button>
@@ -729,7 +731,7 @@ export default function CourseBuilder({ onExit }) {
                 <div className="cb-toolbar-right">
                     {totalIssues > 0 && (
                         <span className="cb-issue-badge" title="Phrases with missing or incomplete content">
-                            <AlertTriangle size={14} /> {totalIssues} incomplete
+                            <AlertTriangle size={14} /> {totalIssues} {t('courseBuilder.incomplete')}
                         </span>
                     )}
                     <Button
@@ -739,7 +741,7 @@ export default function CourseBuilder({ onExit }) {
                         className="cb-toolbar-btn"
                     >
                         {allCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-                        {allCollapsed ? 'Expand all' : 'Collapse all'}
+                        {allCollapsed ? t('courseBuilder.expandAll') : t('courseBuilder.collapseAll')}
                     </Button>
                 </div>
             </div>
@@ -747,8 +749,8 @@ export default function CourseBuilder({ onExit }) {
             {visibleData.length === 0 && (
                 <div className="cb-empty">
                     {search
-                        ? `No levels or phrases match "${search}".`
-                        : 'No levels yet. Create your first level to get started.'}
+                        ? t('courseBuilder.noLevelsMatch', { search })
+                        : t('courseBuilder.noLevelsYet')}
                 </div>
             )}
 
@@ -796,11 +798,11 @@ export default function CourseBuilder({ onExit }) {
                                 <span className="cb-level-name">{level.title || 'Untitled Level'}</span>
                                 <span className="cb-level-badges">
                                     <span className="cb-badge">
-                                        {(level.phrases || []).length} phrase{(level.phrases || []).length === 1 ? '' : 's'}
+                                        {(level.phrases || []).length} {(level.phrases || []).length === 1 ? t('courseBuilder.phrase') : t('courseBuilder.phrases')}
                                     </span>
                                     {(level.prerequisites || []).length > 0 && (
                                         <span className="cb-badge cb-badge-muted">
-                                            {(level.prerequisites || []).length} prereq
+                                            {(level.prerequisites || []).length} {t('courseBuilder.prereq')}
                                         </span>
                                     )}
                                 </span>
@@ -818,7 +820,7 @@ export default function CourseBuilder({ onExit }) {
                                     type="button"
                                     className="cb-ctrl-btn cb-ctrl-btn-icon" 
                                     onClick={() => duplicateLevel(level.id)} 
-                                    title="Duplicate Level"
+                                    title={t('courseBuilder.duplicateLevel')}
                                 >
                                     <Plus size={16} />
                                 </button>
@@ -826,15 +828,15 @@ export default function CourseBuilder({ onExit }) {
                                     type="button"
                                     className="cb-ctrl-btn" 
                                     onClick={() => setPreviewLevel(level)} 
-                                    title="Preview Level"
+                                    title={t('courseBuilder.previewLevel')}
                                 >
-                                    <Play size={14} /> Preview
+                                    <Play size={14} /> {t('courseBuilder.preview')}
                                 </button>
                                 <button 
                                     type="button"
                                     className="cb-ctrl-btn-danger" 
                                     onClick={() => deleteLevel(level.id)} 
-                                    title="Delete Level"
+                                    title={t('courseBuilder.deleteLevel')}
                                 >
                                     <Trash2 size={16} />
                                 </button>
@@ -845,12 +847,12 @@ export default function CourseBuilder({ onExit }) {
                         <div className="cb-level-body" id={`cb-level-body-${level.id}`}>
                         <div className="cb-level-settings">
                             <div className="cb-level-title-field">
-                                <label htmlFor={`cb-level-title-${level.id}`}>Level Title</label>
+                                <label htmlFor={`cb-level-title-${level.id}`}>{t('courseBuilder.levelTitle')}</label>
                                 <Input
                                     id={`cb-level-title-${level.id}`}
                                     value={level.title || ''}
                                     onChange={(e) => updateLevelTitle(level.id, e.target.value)}
-                                    placeholder="Level Title (e.g. Basics 1)"
+                                    placeholder={t('courseBuilder.levelTitlePlaceholder')}
                                     className="notranslate"
                                 />
                             </div>
@@ -865,15 +867,15 @@ export default function CourseBuilder({ onExit }) {
                                 >
                                     <span className="cb-prereq-trigger-left">
                                         <span className="cb-prereq-icon">⑂</span>
-                                        <span className="cb-prereq-label">Branching / Prerequisites:</span>
+                                        <span className="cb-prereq-label">{t('courseBuilder.prereqBranching')}</span>
                                         <span className="cb-prereq-status">
                                             {(level.prerequisites || []).length > 0 
-                                                ? `${(level.prerequisites || []).length === 1 ? '1 required' : `${(level.prerequisites || []).length} connected (any unlocks)`} (${courseData.filter(l => (level.prerequisites || []).includes(l.id)).map(l => l.title || 'Untitled').join(', ')})`
-                                                : 'Linear progression (Default)'}
+                                                ? `${(level.prerequisites || []).length === 1 ? t('courseBuilder.oneRequired') : t('courseBuilder.connectedAnyUnlocks', { count: (level.prerequisites || []).length })} (${courseData.filter(l => (level.prerequisites || []).includes(l.id)).map(l => l.title || 'Untitled').join(', ')})`
+                                                : t('courseBuilder.linearProgression')}
                                         </span>
                                     </span>
                                     <span className="cb-prereq-action">
-                                        {openPrereqs.has(level.id) ? 'Done' : (level.prerequisites || []).length > 0 ? 'Edit' : 'Configure'}
+                                        {openPrereqs.has(level.id) ? t('courseBuilder.done') : (level.prerequisites || []).length > 0 ? t('courseBuilder.edit') : t('courseBuilder.configure')}
                                         {openPrereqs.has(level.id) ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                     </span>
                                 </button>
@@ -881,7 +883,7 @@ export default function CourseBuilder({ onExit }) {
                                 {openPrereqs.has(level.id) && (
                                     <div className="cb-prereq-body">
                                         <p className="cb-prereq-desc">
-                                            Select levels below for custom branching paths (if multiple are connected, completing any one unlocks this level):
+                                            {t('courseBuilder.prereqDesc')}
                                         </p>
                                         <div className="cb-prereq-list">
                                             {courseData.filter(l => l.id !== level.id).map(l => {
@@ -928,14 +930,14 @@ export default function CourseBuilder({ onExit }) {
                                             return (
                                                 <div className="cb-prereq-order-hint">
                                                     <span className="cb-prereq-hint-text">
-                                                        This level requires levels below it in the list. In the path tree, it will be placed after them.
+                                                        {t('courseBuilder.prereqOrderHint')}
                                                     </span>
                                                     <button
                                                         type="button"
                                                         className="cb-prereq-move-btn"
                                                         onClick={() => moveLevelBelowPrereqs(level.id)}
                                                     >
-                                                        Move level below prerequisites
+                                                        {t('courseBuilder.moveLevelBelowPrereqs')}
                                                     </button>
                                                 </div>
                                             );
@@ -946,7 +948,7 @@ export default function CourseBuilder({ onExit }) {
                                                 className="cb-prereq-reset-btn"
                                                 onClick={() => updateLevelField(level.id, 'prerequisites', undefined)}
                                             >
-                                                Reset to linear progression (no branching)
+                                                {t('courseBuilder.resetToLinear')}
                                             </button>
                                         )}
                                     </div>
@@ -958,7 +960,7 @@ export default function CourseBuilder({ onExit }) {
 
                         <div className="cb-phrases">
                             {(level.phrases || []).length === 0 && (
-                                <div className="cb-empty cb-empty-inline">No phrases yet. Add the first one below.</div>
+                                <div className="cb-empty cb-empty-inline">{t('courseBuilder.noPhrasesYet')}</div>
                             )}
                             {(level.phrases || []).map((phrase, pIdx) => {
                                 const phraseCollapsed = !search && collapsedPhrases.has(phrase.id);
@@ -990,7 +992,7 @@ export default function CourseBuilder({ onExit }) {
                                                 </span>
                                             )}
                                             {hasAudio && (
-                                                <span className="cb-phrase-has-audio" title="Audio attached"><Volume2 size={13} /></span>
+                                                <span className="cb-phrase-has-audio" title={t('courseBuilder.audioAttached')}><Volume2 size={13} /></span>
                                             )}
                                         </button>
                                         <div className="cb-phrase-actions">
@@ -999,7 +1001,7 @@ export default function CourseBuilder({ onExit }) {
                                                     type="button"
                                                     className={`cb-audio-chip ${audioVisible ? 'open' : ''}`}
                                                     onClick={() => toggleInSet(setAudioOpen, phrase.id)}
-                                                    title={audioVisible ? 'Hide pronunciation audio' : 'Add pronunciation audio'}
+                                                    title={audioVisible ? t('courseBuilder.hidePronunciation') : t('courseBuilder.addPronunciation')}
                                                 >
                                                     {audioVisible ? <ChevronDown size={14} /> : <Mic size={14} />}
                                                     Audio
@@ -1012,28 +1014,28 @@ export default function CourseBuilder({ onExit }) {
                                                 className="cb-type-select"
                                                 aria-label="Exercise type"
                                             >
-                                                <option value="translate_to_english">English Typing</option>
-                                                <option value="translate_to_conlang">Conlang Typing</option>
-                                                <option value="word_bank">Word Bank</option>
-                                                <option value="multiple_choice">Multiple Choice</option>
-                                                <option value="matching_pairs">Matching Pairs</option>
-                                                <option value="teach">Teaching Card (Info)</option>
-                                                <option value="listening">Listening Exercise</option>
-                                                <option value="fill_blank">Fill-in-the-Blank</option>
-                                                <option value="sentence_reorder">Sentence Reorder</option>
-                                                <option value="picture_match">Picture Match</option>
-                                                <option value="true_false">True or False</option>
-                                                <option value="conjugation_drill">Conjugation Drill</option>
-                                                <option value="glyph_drawing">Draw the Glyph</option>
+                                                <option value="translate_to_english">{t('courseBuilder.types.translate_to_english')}</option>
+                                                <option value="translate_to_conlang">{t('courseBuilder.types.translate_to_conlang')}</option>
+                                                <option value="word_bank">{t('courseBuilder.types.word_bank')}</option>
+                                                <option value="multiple_choice">{t('courseBuilder.types.multiple_choice')}</option>
+                                                <option value="matching_pairs">{t('courseBuilder.types.matching_pairs')}</option>
+                                                <option value="teach">{t('courseBuilder.types.teach')}</option>
+                                                <option value="listening">{t('courseBuilder.types.listening')}</option>
+                                                <option value="fill_blank">{t('courseBuilder.types.fill_blank')}</option>
+                                                <option value="sentence_reorder">{t('courseBuilder.types.sentence_reorder')}</option>
+                                                <option value="picture_match">{t('courseBuilder.types.picture_match')}</option>
+                                                <option value="true_false">{t('courseBuilder.types.true_false')}</option>
+                                                <option value="conjugation_drill">{t('courseBuilder.types.conjugation_drill')}</option>
+                                                <option value="glyph_drawing">{t('courseBuilder.types.glyph_drawing')}</option>
                                             </select>
                                             <div className="cb-move-buttons">
-                                                <button className="cb-move-phrase" onClick={() => movePhrase(level.id, pIdx, 'up')} disabled={pIdx === 0} title="Move phrase up">
+                                                <button className="cb-move-phrase" onClick={() => movePhrase(level.id, pIdx, 'up')} disabled={pIdx === 0} title={t('courseBuilder.moveUp')}>
                                                     <ChevronUp size={18} />
                                                 </button>
-                                                <button className="cb-move-phrase" onClick={() => movePhrase(level.id, pIdx, 'down')} disabled={pIdx === (level.phrases || []).length - 1} title="Move phrase down">
+                                                <button className="cb-move-phrase" onClick={() => movePhrase(level.id, pIdx, 'down')} disabled={pIdx === (level.phrases || []).length - 1} title={t('courseBuilder.moveDown')}>
                                                     <ChevronDown size={18} />
                                                 </button>
-                                                <button className="cb-delete-phrase" onClick={() => deletePhrase(level.id, phrase.id)} title="Delete phrase">
+                                                <button className="cb-delete-phrase" onClick={() => deletePhrase(level.id, phrase.id)} title={t('courseBuilder.deletePhrase')}>
                                                     <Trash2 size={18} />
                                                 </button>
                                             </div>
@@ -1045,7 +1047,7 @@ export default function CourseBuilder({ onExit }) {
                                         <div className="cb-phrase-fields">
                                         {phrase.type === 'teach' && (
                                             <div>
-                                                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>Teaching Content</label>
+                                                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>{t('courseBuilder.teachingContent')}</label>
                                                 <TextcardEditor 
                                                     value={phrase.english || ''}
                                                     onChange={(newVal) => updatePhrase(level.id, phrase.id, 'english', newVal)}
@@ -1062,7 +1064,7 @@ export default function CourseBuilder({ onExit }) {
                                                          phrase.type === 'fill_blank' ? 'Conlang Sentence (use ____ for blank)' :
                                                          phrase.type === 'listening' ? 'Conlang Audio Text' :
                                                          phrase.type === 'glyph_drawing' ? 'Glyph to Draw (word / syllable / letter)' :
-                                                         'Conlang Sentence'}
+                                                         t('courseBuilder.conlangSentence')}
                                                     </label>
                                                     <Input 
                                                         value={phrase.conlang || ''}
@@ -1086,7 +1088,7 @@ export default function CourseBuilder({ onExit }) {
                                                              phrase.type === 'true_false' ? "Displayed Translation (to judge)" :
                                                              phrase.type === 'conjugation_drill' ? "Conlang Answer" :
                                                              phrase.type === 'listening' ? "Reference English (Optional)" :
-                                                             "Target English Translation"}
+                                                             t('courseBuilder.targetEnglishTranslation')}
                                                         </label>
                                                         <Input 
                                                             value={phrase.english || ''}
@@ -1107,32 +1109,32 @@ export default function CourseBuilder({ onExit }) {
 
                                         {phrase.type === 'true_false' && (
                                             <div>
-                                                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>Is the translation Correct?</label>
+                                                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>{t('courseBuilder.isTranslationCorrect')}</label>
                                                 <select 
                                                     value={phrase.isTrue ? 'true' : 'false'}
                                                     onChange={(e) => updatePhrase(level.id, phrase.id, 'isTrue', e.target.value === 'true')}
                                                     style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--bd)', background: 'var(--bg)', color: 'var(--tx)', width: '100%', outline: 'none' }}
                                                 >
-                                                    <option value="true">True (Matches)</option>
-                                                    <option value="false">False (Doesn't match)</option>
+                                                    <option value="true">{t('courseBuilder.trueMatches')}</option>
+                                                    <option value="false">{t('courseBuilder.falseDoesntMatch')}</option>
                                                 </select>
                                             </div>
                                         )}
 
                                         {phrase.type === 'multiple_choice' && (
                                             <div>
-                                                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>Wrong Options (Distractors)</label>
+                                                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>{t('courseBuilder.wrongDistractors')}</label>
                                                 <div className="cb-distractors-row">
                                                     {[0, 1, 2].map(idx => (
                                                         <Input 
-                                                            key={idx}
+                                                            key={idx} 
                                                             value={phrase.options?.[idx] || ''}
                                                             onChange={(e) => {
                                                                 const newOptions = [...(phrase.options || ['', '', ''])];
                                                                 newOptions[idx] = e.target.value;
                                                                 updatePhrase(level.id, phrase.id, 'options', newOptions);
                                                             }}
-                                                            placeholder={`Incorrect option ${idx + 1}`}
+                                                            placeholder={t('courseBuilder.incorrectOption', { index: idx + 1 })}
                                                             className="custom-font-text notranslate"
                                                             style={{ flex: 1 }}
                                                         />
@@ -1143,7 +1145,7 @@ export default function CourseBuilder({ onExit }) {
 
                                         {phrase.type === 'word_bank' && (
                                             <div>
-                                                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>Extra Word Bank Distractors (Comma Separated)</label>
+                                                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>{t('courseBuilder.extraDistractors')}</label>
                                                 <Input 
                                                     value={phrase.distractors || ''}
                                                     onChange={(e) => updatePhrase(level.id, phrase.id, 'distractors', e.target.value)}
@@ -1156,7 +1158,7 @@ export default function CourseBuilder({ onExit }) {
 
                                         {phrase.type === 'matching_pairs' && (
                                             <div>
-                                                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '10px' }}>Define 4 Matching Pairs</label>
+                                                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '10px' }}>{t('courseBuilder.define4Pairs')}</label>
                                                 <div className="cb-matching-grid">
                                                     {[0, 1, 2, 3].map(idx => {
                                                         const pair = phrase.pairs?.[idx] || { conlang: '', english: '' };
@@ -1170,7 +1172,7 @@ export default function CourseBuilder({ onExit }) {
                                                                         newPairs[idx] = { ...newPairs[idx], conlang: e.target.value };
                                                                         updatePhrase(level.id, phrase.id, 'pairs', newPairs);
                                                                     }}
-                                                                    placeholder="Conlang Word"
+                                                                    placeholder={t('courseBuilder.conlangWord')}
                                                                     className="custom-font-text notranslate"
                                                                     style={{ flex: 1 }}
                                                                 />
@@ -1182,7 +1184,7 @@ export default function CourseBuilder({ onExit }) {
                                                                         newPairs[idx] = { ...newPairs[idx], english: e.target.value };
                                                                         updatePhrase(level.id, phrase.id, 'pairs', newPairs);
                                                                     }}
-                                                                    placeholder="English Meaning"
+                                                                    placeholder={t('courseBuilder.englishMeaning')}
                                                                     className="custom-font-text notranslate"
                                                                     style={{ flex: 1 }}
                                                                 />
@@ -1202,7 +1204,7 @@ export default function CourseBuilder({ onExit }) {
                                                             checked={phrase.checkOrder !== false}
                                                             onChange={(e) => updatePhrase(level.id, phrase.id, 'checkOrder', e.target.checked)}
                                                         />
-                                                        <span>Enforce stroke order</span>
+                                                        <span>{t('courseBuilder.enforceStrokeOrder')}</span>
                                                     </label>
                                                     <label className="cb-toggle">
                                                         <input
@@ -1210,7 +1212,7 @@ export default function CourseBuilder({ onExit }) {
                                                             checked={!!phrase.showGuide}
                                                             onChange={(e) => updatePhrase(level.id, phrase.id, 'showGuide', e.target.checked)}
                                                         />
-                                                        <span>Show guide outline</span>
+                                                        <span>{t('courseBuilder.showGuideOutline')}</span>
                                                     </label>
                                                 </div>
                                                 <p className="cb-hint">
@@ -1223,7 +1225,7 @@ export default function CourseBuilder({ onExit }) {
                                                         const strokeCount = characters.reduce((n, c) => n + (c.strokes?.length || 0), 0);
                                                         if (!phrase.conlang && !phrase.english) return 'Enter the glyph to draw above.';
                                                         if (strokeCount === 0) {
-                                                            return 'No stroke data found for this glyph. Draw it in Font Studio / Orthography first, or the student will just see a notice.';
+                                                             return 'No stroke data found for this glyph. Draw it in Font Studio / Orthography first, or the student will just see a notice.';
                                                         }
                                                         return `${strokeCount} stroke${strokeCount === 1 ? '' : 's'} detected across ${characters.length} character${characters.length === 1 ? '' : 's'}.`;
                                                     })()}
@@ -1245,7 +1247,7 @@ export default function CourseBuilder({ onExit }) {
                                 );
                                 })}
                             <Button variant="default" onClick={() => addPhrase(level.id)} className="cb-add-phrase">
-                                <Plus size={16} /> Add Phrase to Level
+                                <Plus size={16} /> {t('courseBuilder.addPhraseToLevel')}
                             </Button>
                         </div>
                         </div>
@@ -1257,17 +1259,17 @@ export default function CourseBuilder({ onExit }) {
 
             <div className="cb-add-level">
                 <Button variant="imp" onClick={addLevel} style={{ flex: 1, padding: '15px' }}>
-                    <Plus size={20} style={{marginRight: '8px'}} /> Create New Level
+                    <Plus size={20} style={{marginRight: '8px'}} /> {t('courseBuilder.createNewLevel')}
                 </Button>
                 <Button variant="accent" onClick={() => setShowAutoModal(true)} style={{ flex: 1, padding: '15px' }}>
-                    <Wand2 size={20} style={{marginRight: '8px'}} /> Auto-Generate
+                    <Wand2 size={20} style={{marginRight: '8px'}} /> {t('courseBuilder.autoGenerate')}
                 </Button>
-                <Button variant="default" onClick={exportCourse} style={{ padding: '15px' }} title="Export Course">
+                <Button variant="default" onClick={exportCourse} style={{ padding: '15px' }} title={t('courseBuilder.exportCourse')}>
                     <ArrowLeft size={20} style={{ transform: 'rotate(90deg)' }} />
                 </Button>
                 <label style={{ cursor: 'pointer', display: 'flex' }}>
                     <input type="file" accept=".json" onChange={importCourse} style={{ display: 'none' }} />
-                    <Button variant="default" style={{ padding: '15px', pointerEvents: 'none' }} title="Import Course">
+                    <Button variant="default" style={{ padding: '15px', pointerEvents: 'none' }} title={t('courseBuilder.importCourse')}>
                         <ArrowLeft size={20} style={{ transform: 'rotate(-90deg)' }} />
                     </Button>
                 </label>
@@ -1277,28 +1279,28 @@ export default function CourseBuilder({ onExit }) {
                 <div className="cb-modal-overlay">
                     <Card className="cb-auto-modal">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                            <h3 className="sg-title" style={{ margin: 0 }}>Auto-Generate Course</h3>
+                            <h3 className="sg-title" style={{ margin: 0 }}>{t('courseBuilder.autoModal.title')}</h3>
                             <button onClick={() => setShowAutoModal(false)} style={{ background: 'none', border: 'none', color: 'var(--tx)', cursor: 'pointer' }}>
                                 <X size={20} />
                             </button>
                         </div>
                         {lexicon.length < 200 && (
                             <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '10px', borderRadius: '8px', marginBottom: '15px', fontSize: '0.85rem' }}>
-                                <strong>Tip:</strong> We recommend a lexicon of at least 200 words (with various parts of speech) for the best results. You currently have {lexicon.length} words.
+                                {t('courseBuilder.autoModal.tip', { count: lexicon.length })}
                             </div>
                         )}
                         <p style={{ color: 'var(--tx2)', marginBottom: '15px', fontSize: '0.9rem' }}>
-                            Automatically construct levels based on your lexicon. These will be appended to your current course. You can edit them before saving.
+                            {t('courseBuilder.autoModal.desc')}
                         </p>
                         <div style={{ marginBottom: '15px' }}>
-                            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: 'var(--tx)' }}>Generation Source</label>
+                            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: 'var(--tx)' }}>{t('courseBuilder.autoModal.source')}</label>
                             <select value={genMode} onChange={(e) => setGenMode(e.target.value)} style={{ padding: '8px', width: '100%', borderRadius: '6px', background: 'var(--s1)', border: '1px solid var(--bd)', color: 'var(--tx)' }}>
-                                <option value="theme">Preset Themes (Animals, Food, etc.)</option>
-                                <option value="tag">My Custom Semantic Tags</option>
+                                <option value="theme">{t('courseBuilder.autoModal.sourceTheme')}</option>
+                                <option value="tag">{t('courseBuilder.autoModal.sourceTag')}</option>
                             </select>
                         </div>
                         <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: 'var(--tx)' }}>Number of Levels</label>
+                            <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.9rem', color: 'var(--tx)' }}>{t('courseBuilder.autoModal.numLevels')}</label>
                             <Input 
                                 type="number" 
                                 min="1" 
@@ -1308,7 +1310,7 @@ export default function CourseBuilder({ onExit }) {
                             />
                         </div>
                         <Button variant="accent" onClick={handleAutoGenerate} disabled={isGenerating} style={{ width: '100%' }}>
-                            {isGenerating ? 'Generating...' : 'Generate Now'}
+                            {isGenerating ? t('courseBuilder.autoModal.generating') : t('courseBuilder.autoModal.generateNow')}
                         </Button>
                     </Card>
                 </div>
@@ -1318,7 +1320,7 @@ export default function CourseBuilder({ onExit }) {
                 <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'var(--bg)', zIndex: 9999, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ padding: '15px 20px', display: 'flex', justifyContent: 'flex-end', background: 'var(--s1)', borderBottom: '1px solid var(--bd)' }}>
                         <Button variant="default" onClick={() => setPreviewLevel(null)}>
-                            <X size={16} style={{marginRight: '8px'}} /> Exit Preview
+                            <X size={16} style={{marginRight: '8px'}} /> {t('courseBuilder.exitPreview')}
                         </Button>
                     </div>
                     <div style={{ flex: 1, position: 'relative' }}>

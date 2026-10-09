@@ -2,9 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import { Wand2, X, ArrowRight, RefreshCw, Layers, Repeat, Type, Wand } from 'lucide-react';
 import Button from '../../../UI/Buttons/Buttons.jsx';
+import { useTranslation } from '../../../../hooks/useTranslation.jsx';
 import './visualRuleBuilder.css';
 
 export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "", initialMode = 'standard' }) => {
+    const { t } = useTranslation();
     const [mode, setMode] = useState(initialMode);
     
     // Reset mode when modal opens
@@ -102,20 +104,20 @@ export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "",
                 }
             }
         } catch {
-            return 'Invalid Rule';
+            return t('settings.grammar.vrbInvalidRule');
         }
         return testWord;
-    }, [testWord, result, stdType, stdValue, stdInfixPos]);
+    }, [testWord, result, stdType, stdValue, stdInfixPos, t]);
 
     if (!isOpen) return null;
 
     return ReactDOM.createPortal(
         <div className="vrb-overlay" role="presentation" onClick={onClose}>
-            <div className="vrb-modal" role="dialog" aria-modal="true" aria-label="Visual Rule Builder" onClick={e => e.stopPropagation()}>
+            <div className="vrb-modal" role="dialog" aria-modal="true" aria-label={t('settings.grammar.vrbTitle')} onClick={e => e.stopPropagation()}>
                 
                 <div className="vrb-header">
                     <Wand2 size={20} className="text-purple-400" />
-                    <h2>Visual Rule Builder</h2>
+                    <h2>{t('settings.grammar.vrbTitle')}</h2>
                     <button className="ml-auto text-slate-500 hover:text-white" onClick={onClose}>
                         <X size={20} />
                     </button>
@@ -130,28 +132,28 @@ export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "",
                             onClick={() => setMode('standard')}
                         >
                             <Layers size={18} />
-                            <span>Affix / Particle</span>
+                            <span>{t('settings.grammar.vrbAffix')}</span>
                         </button>
                         <button 
                             className={`vrb-mode-btn ${mode === 'mutation' ? 'active' : ''}`}
                             onClick={() => setMode('mutation')}
                         >
                             <RefreshCw size={18} />
-                            <span>Mutation / Stem</span>
+                            <span>{t('settings.grammar.vrbMutation')}</span>
                         </button>
                         <button 
                             className={`vrb-mode-btn ${mode === 'reduplication' ? 'active' : ''}`}
                             onClick={() => setMode('reduplication')}
                         >
                             <Repeat size={18} />
-                            <span>Reduplication</span>
+                            <span>{t('settings.grammar.vrbReduplication')}</span>
                         </button>
                         <button 
                             className={`vrb-mode-btn ${mode === 'transformation' ? 'active' : ''}`}
                             onClick={() => setMode('transformation')}
                         >
                             <Type size={18} />
-                            <span>Transformation</span>
+                            <span>{t('settings.grammar.vrbTransformation')}</span>
                         </button>
                     </div>
 
@@ -162,16 +164,16 @@ export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "",
                             <>
                                 <div className="vrb-form-grid">
                                     <div className="vrb-field-group">
-                                        <label className="vrb-label">Type</label>
+                                        <label className="vrb-label">{t('settings.grammar.vrbType')}</label>
                                         <select className="vrb-select" value={stdType} onChange={e => setStdType(e.target.value)}>
-                                            <option value="prefix">Prefix (Start)</option>
-                                            <option value="suffix">Suffix (End)</option>
-                                            <option value="infix">Infix (Middle)</option>
-                                            <option value="free">Free Word</option>
+                                            <option value="prefix">{t('settings.grammar.vrbPrefix')}</option>
+                                            <option value="suffix">{t('settings.grammar.vrbSuffix')}</option>
+                                            <option value="infix">{t('settings.grammar.vrbInfix')}</option>
+                                            <option value="free">{t('settings.grammar.vrbFree')}</option>
                                         </select>
                                     </div>
                                     <div className="vrb-field-group">
-                                        <label className="vrb-label">Morpheme</label>
+                                        <label className="vrb-label">{t('settings.grammar.vrbMorpheme')}</label>
                                         <input 
                                             className="vrb-input" 
                                             placeholder="e.g. ma, s" 
@@ -184,24 +186,24 @@ export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "",
                                     <div className="vrb-form-grid" style={{ gridTemplateColumns: stdType === 'infix' ? '1fr 1fr' : '0.8fr 1.1fr 1.1fr', marginTop: '0.5rem', gap: '0.5rem' }}>
                                         {stdType === 'infix' ? (
                                             <div className="vrb-field-group">
-                                                <label className="vrb-label">Insertion Point</label>
+                                                <label className="vrb-label">{t('settings.grammar.vrbInsertionPoint')}</label>
                                                 <select className="vrb-select" value={stdInfixPos} onChange={e => setStdInfixPos(e.target.value)}>
-                                                    <option value="@V">After Vowel</option>
-                                                    <option value="@C">After Consonant</option>
+                                                    <option value="@V">{t('settings.grammar.vrbAfterVowel')}</option>
+                                                    <option value="@C">{t('settings.grammar.vrbAfterConsonant')}</option>
                                                 </select>
                                             </div>
                                         ) : (
                                             <>
                                                 <div className="vrb-field-group">
-                                                    <label className="vrb-label">Type (Locked)</label>
+                                                    <label className="vrb-label">{t('settings.grammar.vrbTypeLocked')}</label>
                                                     <div className="vrb-input" style={{ opacity: 0.5, fontSize: '0.75rem', display: 'flex', alignItems: 'center' }}>{stdType}</div>
                                                 </div>
                                                 <div className="vrb-field-group">
-                                                    <label className="vrb-label">Preceded By</label>
+                                                    <label className="vrb-label">{t('settings.grammar.vrbPrecededBy')}</label>
                                                     <input className="vrb-input" placeholder="e.g. a" value={mutPrecededBy} onChange={e => setMutPrecededBy(e.target.value)} />
                                                 </div>
                                                 <div className="vrb-field-group">
-                                                    <label className="vrb-label">Followed By</label>
+                                                    <label className="vrb-label">{t('settings.grammar.vrbFollowedBy')}</label>
                                                     <input className="vrb-input" placeholder="e.g. i" value={mutFollowedBy} onChange={e => setMutFollowedBy(e.target.value)} />
                                                 </div>
                                             </>
@@ -215,29 +217,29 @@ export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "",
                             <>
                                 <div className="vrb-form-grid">
                                     <div className="vrb-field-group">
-                                        <label className="vrb-label">Find</label>
+                                        <label className="vrb-label">{t('settings.grammar.vrbFind')}</label>
                                         <input className="vrb-input" placeholder="e.g. em" value={mutFind} onChange={e => setMutFind(e.target.value)} />
                                     </div>
                                     <div className="vrb-field-group">
-                                        <label className="vrb-label">Replace</label>
+                                        <label className="vrb-label">{t('settings.grammar.vrbReplace')}</label>
                                         <input className="vrb-input" placeholder="e.g. esh" value={mutReplace} onChange={e => setMutReplace(e.target.value)} />
                                     </div>
                                 </div>
                                 <div className="vrb-form-grid" style={{ gridTemplateColumns: '0.8fr 1.1fr 1.1fr', marginTop: '0.5rem', gap: '0.5rem' }}>
                                     <div className="vrb-field-group">
-                                        <label className="vrb-label">At Position</label>
+                                        <label className="vrb-label">{t('settings.grammar.vrbAtPosition')}</label>
                                         <select className="vrb-select" value={mutPos} onChange={e => setMutPos(e.target.value)}>
-                                            <option value="end">End ($)</option>
-                                            <option value="start">Start (^)</option>
-                                            <option value="everywhere">Everywhere</option>
+                                            <option value="end">{t('settings.grammar.vrbPosEnd')}</option>
+                                            <option value="start">{t('settings.grammar.vrbPosStart')}</option>
+                                            <option value="everywhere">{t('settings.grammar.vrbPosEverywhere')}</option>
                                         </select>
                                     </div>
                                     <div className="vrb-field-group">
-                                        <label className="vrb-label">Preceded By</label>
+                                        <label className="vrb-label">{t('settings.grammar.vrbPrecededBy')}</label>
                                         <input className="vrb-input" placeholder="e.g. a" value={mutPrecededBy} onChange={e => setMutPrecededBy(e.target.value)} />
                                     </div>
                                     <div className="vrb-field-group">
-                                        <label className="vrb-label">Followed By</label>
+                                        <label className="vrb-label">{t('settings.grammar.vrbFollowedBy')}</label>
                                         <input className="vrb-input" placeholder="e.g. i" value={mutFollowedBy} onChange={e => setMutFollowedBy(e.target.value)} />
                                     </div>
                                 </div>
@@ -247,14 +249,14 @@ export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "",
                         {mode === 'reduplication' && (
                             <>
                                 <div className="vrb-field-group">
-                                    <label className="vrb-label">Copy From</label>
+                                    <label className="vrb-label">{t('settings.grammar.vrbCopyFrom')}</label>
                                     <select className="vrb-select" value={redSource} onChange={e => setRedSource(e.target.value)}>
-                                        <option value="start">Start of word</option>
-                                        <option value="end">End of word</option>
+                                        <option value="start">{t('settings.grammar.vrbCopyStart')}</option>
+                                        <option value="end">{t('settings.grammar.vrbCopyEnd')}</option>
                                     </select>
                                 </div>
                                 <div className="vrb-field-group">
-                                    <label className="vrb-label">Number of Letters</label>
+                                    <label className="vrb-label">{t('settings.grammar.vrbCharCount')}</label>
                                     <input 
                                         type="number"
                                         className="vrb-input" 
@@ -269,14 +271,14 @@ export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "",
                         {mode === 'transformation' && (
                             <>
                                 <div className="vrb-field-group">
-                                    <label className="vrb-label">Target Sound Group</label>
+                                    <label className="vrb-label">{t('settings.grammar.vrbTarget')}</label>
                                     <select className="vrb-select" value={transTarget} onChange={e => setTransTarget(e.target.value)}>
-                                        <option value="vowels">All Vowels</option>
-                                        <option value="consonants">All Consonants</option>
+                                        <option value="vowels">{t('settings.grammar.vrbVowels')}</option>
+                                        <option value="consonants">{t('settings.grammar.vrbConsonants')}</option>
                                     </select>
                                 </div>
                                 <div className="vrb-field-group">
-                                    <label className="vrb-label">Change Them To</label>
+                                    <label className="vrb-label">{t('settings.grammar.vrbTransformTo')}</label>
                                     <input 
                                         className="vrb-input" 
                                         placeholder="e.g. i, u, k" 
@@ -292,7 +294,7 @@ export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "",
                     {/* PREVIEW SECTION */}
                     <div className="vrb-preview-box">
                         <div className="vrb-preview-title">
-                            <Wand size={12} /> Live Preview Lab
+                            <Wand size={12} /> {t('settings.grammar.vrbLivePreview')}
                         </div>
                         <div className="vrb-preview-grid">
                             <div className="vrb-preview-item">
@@ -301,22 +303,22 @@ export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "",
                                     style={{ background: 'transparent', border: '1px dashed rgba(255,255,255,0.2)' }}
                                     value={testWord}
                                     onChange={e => setTestWord(e.target.value)}
-                                    placeholder="Test Word"
+                                    placeholder={t('settings.grammar.vrbTestWord')}
                                 />
-                                <div className="vrb-preview-label">Root Input</div>
+                                <div className="vrb-preview-label">{t('settings.grammar.vrbRootInput')}</div>
                             </div>
                             <div className="vrb-preview-arrow">
                                 <ArrowRight />
                             </div>
                             <div className="vrb-preview-item">
                                 <div className="vrb-preview-word text-purple-300">{previewResult}</div>
-                                <div className="vrb-preview-label">Inflected Form</div>
+                                <div className="vrb-preview-label">{t('settings.grammar.vrbInflectedForm')}</div>
                             </div>
                         </div>
 
                         <div className="vrb-result-formula">
-                            <div className="vrb-label" style={{ margin: 0 }}>Generated Formula:</div>
-                            <div className="vrb-formula-tag">{result || 'â€”'}</div>
+                            <div className="vrb-label" style={{ margin: 0 }}>{t('settings.grammar.vrbGenFormula')}</div>
+                            <div className="vrb-formula-tag">{result || '—'}</div>
                         </div>
                     </div>
 
@@ -324,10 +326,10 @@ export const VisualRuleBuilder = ({ isOpen, onClose, onApply, currentAffix = "",
 
                 <div className="vrb-footer">
                     <Button variant="edit" onClick={onClose} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        Cancel
+                        {t('common.cancel')}
                     </Button>
                     <Button variant="edit" onClick={() => onApply(result)}>
-                        Apply to Rule
+                        {t('settings.grammar.vrbApplyRule')}
                     </Button>
                 </div>
 

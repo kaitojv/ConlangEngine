@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { renderWordInScript } from '../../../utils/scriptRendering.js';
 import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
@@ -36,6 +37,7 @@ const TRACK_INNER_WIDTH = 520;
 const LABEL_SPACE = 90;
 
 export default function StudyTab() {
+    const { t } = useTranslation();
     // Pull in the lexicon and streak settings from our global state
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
     const addWord = useLexiconStore((state) => state.addWord);
@@ -200,13 +202,13 @@ export default function StudyTab() {
     };
 
     const startTimedMode = () => {
-        if (lexicon.length < 10) return alert("You need at least 10 words in your lexicon to play Timed Mode!");
+        if (lexicon.length < 10) return alert(t('exercisePlayer.timedMinWords'));
         
         const randomWords = [...lexicon].sort(() => 0.5 - Math.random()).slice(0, 50); // 50 words is plenty for 60s
         
         const timedNode = {
             id: 'timed-mode',
-            title: 'Timed Sprint',
+            title: t('exercisePlayer.timedSprint'),
             isTimed: true,
             phrases: randomWords.map((w, i) => {
                 const type = Math.random() > 0.5 ? 'translate_to_english' : 'multiple_choice';
@@ -412,12 +414,12 @@ export default function StudyTab() {
                 <div className="controls-header">
                     <h2 className="flex sg-title mb-0">
                         {studyMode === 'path' ? <MapIcon /> : studyMode === 'course' ? <Zap /> : <BrainCircuit />} 
-                        {studyMode === 'path' ? ' Learning Path' : studyMode === 'flashcard' ? ' Flashcard Drill' : studyMode === 'course' ? ` Course: ${pathLevel?.title}` : ' Mascot Quiz'}
+                        {studyMode === 'path' ? ` ${t('study.tabs.path')}` : studyMode === 'flashcard' ? ` ${t('study.tabs.flashcards')}` : studyMode === 'course' ? ` ${t('study.tabs.course')}: ${pathLevel?.title}` : ` ${t('study.tabs.quiz')}`}
                     </h2>
                     
                     <div style={{display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap'}}>
                         <div className="streak-badge">
-                            <Flame size={18} /> {streak || 0} Day Streak
+                            <Flame size={18} /> {t('study.days', { count: streak || 0 })} {t('study.streak')}
                         </div>
                         <div className="xp-badge" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--s2)', padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--bd)' }}>
                             <span style={{ display: 'flex', alignItems: 'center', color: 'var(--acc)' }}>
@@ -440,18 +442,18 @@ export default function StudyTab() {
                             <>
                                 {lexicon.length >= 200 ? (
                                     <Button variant="imp" onClick={() => setStudyMode('builder')}>
-                                        <div className="btn-content-flex">Edit Course</div>
+                                        <div className="btn-content-flex">{t('study.tabs.builder')}</div>
                                     </Button>
                                 ) : (
                                     <div style={{fontSize: '0.8rem', color: 'var(--tx2)'}}>Unlock course at 200 words</div>
                                 )}
                                 <Button variant="default" onClick={() => setStudyMode('flashcard')}>
-                                    <div className="btn-content-flex"><BrainCircuit size={16}/> Flashcards</div>
+                                    <div className="btn-content-flex"><BrainCircuit size={16}/> {t('study.tabs.flashcards')}</div>
                                 </Button>
                             </>
                         ) : studyMode === 'flashcard' ? (
                             <Button variant="default" onClick={() => { setStudyMode('path'); setDeckStarted(false); }}>
-                                <div className="btn-content-flex"><MapIcon size={16}/> Learning Path</div>
+                                <div className="btn-content-flex"><MapIcon size={16}/> {t('study.tabs.path')}</div>
                             </Button>
                         ) : null}
                     </div>
@@ -463,16 +465,16 @@ export default function StudyTab() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                 <Flame size={24} color="var(--acc)" />
                                 <div>
-                                    <h4 style={{ margin: 0 }}>Daily Challenge</h4>
-                                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--tx2)' }}>Earn 50 bonus XP!</p>
+                                    <h4 style={{ margin: 0 }}>{t('study.dailyChallenge')}</h4>
+                                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--tx2)' }}>{t('exercisePlayer.earnBonusXp')}</p>
                                 </div>
                             </div>
                             {(dailyChallengeDate === new Date().toDateString() && dailyChallengeCompleted) ? (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--save)', fontWeight: 'bold' }}>
-                                    <Check size={16} /> Completed
+                                    <Check size={16} /> {t('exercisePlayer.completed')}
                                 </div>
                             ) : (
-                                <Button variant="imp" onClick={startDailyChallenge}>Start</Button>
+                                <Button variant="imp" onClick={startDailyChallenge}>{t('exercisePlayer.start')}</Button>
                             )}
                         </Card>
                         
@@ -480,11 +482,11 @@ export default function StudyTab() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                 <Zap size={24} color="#f59e0b" />
                                 <div>
-                                    <h4 style={{ margin: 0 }}>Timed Mode</h4>
-                                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--tx2)' }}>60 seconds sprint</p>
+                                    <h4 style={{ margin: 0 }}>{t('exercisePlayer.timedMode')}</h4>
+                                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--tx2)' }}>{t('exercisePlayer.timedSprintDesc')}</p>
                                 </div>
                             </div>
-                            <Button variant="default" onClick={startTimedMode}>Play</Button>
+                            <Button variant="default" onClick={startTimedMode}>{t('exercisePlayer.play')}</Button>
                         </Card>
                     </div>
                 )}
@@ -509,7 +511,7 @@ export default function StudyTab() {
                             </div>
                             <Button variant="imp" onClick={() => startDeck()}>
                                 <div className="btn-content-flex">
-                                    <Play size={18} /> Start Study Session
+                                    <Play size={18} /> {t('study.startSession')}
                                 </div>
                             </Button>
                         </div>

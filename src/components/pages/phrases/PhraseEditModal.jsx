@@ -3,9 +3,11 @@ import Modal from '@/components/UI/Modal/Modal.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import toast from 'react-hot-toast';
 
 export default function PhraseEditModal({ isOpen, onClose, editingPhrase = null }) {
+    const { t } = useTranslation();
     const addPhrase = useLexiconStore(state => state.addPhrase);
     const updatePhrase = useLexiconStore(state => state.updatePhrase);
 
@@ -33,7 +35,7 @@ export default function PhraseEditModal({ isOpen, onClose, editingPhrase = null 
 
     const handleSave = () => {
         if (!phrase.trim() || !idiomaticTranslation.trim()) {
-            toast.error("Phrase and Idiomatic Translation are required.");
+            toast.error(t('phrases.validationError'));
             return;
         }
 
@@ -47,19 +49,19 @@ export default function PhraseEditModal({ isOpen, onClose, editingPhrase = null 
 
         if (editingPhrase) {
             updatePhrase(editingPhrase.id, data);
-            toast.success("Phrase updated!");
+            toast.success(t('phrases.saved'));
         } else {
             addPhrase(data);
-            toast.success("Phrase added!");
+            toast.success(t('phrases.saved'));
         }
         onClose();
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={editingPhrase ? "Edit Phrase" : "Add New Phrase"}>
+        <Modal isOpen={isOpen} onClose={onClose} title={editingPhrase ? t('phrases.editPhrase') : t('phrases.newPhrase')}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'var(--tx)' }}>Phrase (Conlang)</label>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'var(--tx)' }}>{t('phrases.phraseLabel')}</label>
                     <Input 
                         value={phrase} 
                         onChange={(e) => setPhrase(e.target.value)} 
@@ -69,7 +71,7 @@ export default function PhraseEditModal({ isOpen, onClose, editingPhrase = null 
                 </div>
                 
                 <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'var(--tx)' }}>Idiomatic Translation (Meaning)</label>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'var(--tx)' }}>{t('phrases.idiomaticLabel')}</label>
                     <Input 
                         value={idiomaticTranslation} 
                         onChange={(e) => setIdiomaticTranslation(e.target.value)} 
@@ -78,7 +80,7 @@ export default function PhraseEditModal({ isOpen, onClose, editingPhrase = null 
                 </div>
 
                 <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'var(--tx)' }}>Literal Translation (Optional)</label>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'var(--tx)' }}>{t('phrases.literalLabel')}</label>
                     <Input 
                         value={literalTranslation} 
                         onChange={(e) => setLiteralTranslation(e.target.value)} 
@@ -88,13 +90,13 @@ export default function PhraseEditModal({ isOpen, onClose, editingPhrase = null 
 
                 <div className="phrase-modal-grid">
                     <div>
-                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'var(--tx)' }}>Category</label>
+                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'var(--tx)' }}>{t('phrases.categoryLabel')}</label>
                         <select 
                             value={category} 
                             onChange={(e) => setCategory(e.target.value)}
                             style={{ width: '100%', padding: '10px', background: 'var(--s2)', border: '1px solid var(--bd)', borderRadius: 'var(--rad-sm)', color: 'var(--tx)', outline: 'none' }}
                         >
-                            <option value="general">General Phrase</option>
+                            <option value="general">General</option>
                             <option value="greeting">Greeting / Farewell</option>
                             <option value="idiom">Idiom</option>
                             <option value="proverb">Proverb</option>
@@ -103,7 +105,7 @@ export default function PhraseEditModal({ isOpen, onClose, editingPhrase = null 
                     </div>
 
                     <div>
-                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'var(--tx)' }}>Register</label>
+                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'var(--tx)' }}>{t('phrases.registerLabel')}</label>
                         <select 
                             value={register} 
                             onChange={(e) => setRegister(e.target.value)}
@@ -119,8 +121,8 @@ export default function PhraseEditModal({ isOpen, onClose, editingPhrase = null 
                 </div>
 
                 <div className="phrase-modal-actions">
-                    <Button variant="default" onClick={onClose}>Cancel</Button>
-                    <Button variant="imp" onClick={handleSave}>{editingPhrase ? "Save Changes" : "Add Phrase"}</Button>
+                    <Button variant="default" onClick={onClose}>{t('common.cancel')}</Button>
+                    <Button variant="imp" onClick={handleSave}>{t('common.save')}</Button>
                 </div>
             </div>
         </Modal>

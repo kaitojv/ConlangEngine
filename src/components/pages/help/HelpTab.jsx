@@ -1,75 +1,76 @@
 import React, { useState } from 'react';
 import { Info, BookOpen, HelpCircle, Mail, Shield, ChevronRight, Lightbulb, Sparkles, PenTool, BookA, Settings2, Wand2, BrainCircuit, Globe, Lock, Database, Eye, Download, Keyboard, Search, Heart } from 'lucide-react';
 import Button from '../../UI/Buttons/Buttons.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import './helptab.css';
 
 // --- Sub-components for each tab's content ---
 
 // The About section gives a quick intro to the application
-const About = () => (
+const About = ({ t }) => (
     <div className="help-section">
-        <h3 className="help-section-title"><Info className="help-icon" /> About ConlangEngine</h3>
-        <p>Welcome to <strong>ConlangEngine</strong>! This tool is built by conlangers, for conlangers.</p>
-        <p>ConlangEngine provides a unified, blazing-fast, local-first workspace to build, manage, and evolve your constructed languages. Instead of scattering your conlang across spreadsheets and text documents, you can use our built-in Dictionary, Grammar engine, Word Generator, and Text Analyzer all in one place.</p>
-        <p>Your data is stored locally in your browser by default, meaning you can work offline with zero lag. You can also export your work to JSON or PDF at any time, or use our Cloud Sync (LIVE) features to backup and sync your work across devices.</p>
+        <h3 className="help-section-title"><Info className="help-icon" /> {t('help.about.title')}</h3>
+        <p>{t('help.about.welcome')}</p>
+        <p>{t('help.about.desc1')}</p>
+        <p>{t('help.about.desc2')}</p>
         
         <div className="help-features-overview">
-            <h4 className="help-features-title"><Sparkles size={16} className="help-icon" /> Core Features</h4>
+            <h4 className="help-features-title"><Sparkles size={16} className="help-icon" /> {t('help.about.featuresTitle')}</h4>
             <div className="help-features-grid">
-                <div className="help-feature-chip"><Settings2 size={14} /> Phonology & Grammar Engine</div>
-                <div className="help-feature-chip"><BookA size={14} /> Full Dictionary with IPA</div>
-                <div className="help-feature-chip"><Wand2 size={14} /> Phonotactic Word Generator</div>
-                <div className="help-feature-chip"><BrainCircuit size={14} /> Study Flashcards & Quizzes</div>
-                <div className="help-feature-chip"><PenTool size={14} /> Custom Font & Glyph Studio</div>
-                <div className="help-feature-chip"><Globe size={14} /> Interlinear Glosser & Reader</div>
-                <div className="help-feature-chip"><Download size={14} /> PDF & JSON Export</div>
-                <div className="help-feature-chip"><Lock size={14} /> Cloud Sync (LIVE)</div>
+                <div className="help-feature-chip"><Settings2 size={14} /> {t('help.about.features.phonologyGrammar')}</div>
+                <div className="help-feature-chip"><BookA size={14} /> {t('help.about.features.dictionaryIpa')}</div>
+                <div className="help-feature-chip"><Wand2 size={14} /> {t('help.about.features.wordGenerator')}</div>
+                <div className="help-feature-chip"><BrainCircuit size={14} /> {t('help.about.features.studyQuizzes')}</div>
+                <div className="help-feature-chip"><PenTool size={14} /> {t('help.about.features.fontGlyphs')}</div>
+                <div className="help-feature-chip"><Globe size={14} /> {t('help.about.features.glosserReader')}</div>
+                <div className="help-feature-chip"><Download size={14} /> {t('help.about.features.export')}</div>
+                <div className="help-feature-chip"><Lock size={14} /> {t('help.about.features.cloudSync')}</div>
             </div>
         </div>
     </div>
 );
 
 // Step-by-step walkthrough on building a conlang
-const HowToUse = () => (
+const HowToUse = ({ t }) => (
     <div className="help-section">
-        <h3 className="help-section-title"><BookOpen className="help-icon" /> Conlang Development Guide</h3>
-        <p className="help-section-subtitle">Follow this roadmap from zero to a fully functional constructed language.</p>
+        <h3 className="help-section-title"><BookOpen className="help-icon" /> {t('help.guide.title')}</h3>
+        <p className="help-section-subtitle">{t('help.guide.subtitle')}</p>
         
         <div className="help-walkthrough">
             {/* Phase 1 */}
             <div className="walkthrough-phase">
                 <div className="phase-header">
                     <span className="phase-number">
-                        <span>PHASE</span>
+                        <span>{t('help.guide.phase')}</span>
                         <span>1</span>
                     </span>
-                    <h4 className="phase-title">Foundation — Sound System</h4>
+                    <h4 className="phase-title">{t('help.guide.phase1.title')}</h4>
                 </div>
                 <div className="phase-body">
-                    <p>Every language starts with its sounds. Go to <strong>Settings → Phonology</strong> and define:</p>
+                    <p>{t('help.guide.phase1.desc')}</p>
                     <div className="walkthrough-steps">
                         <div className="walkthrough-step">
                             <ChevronRight size={14} className="step-icon" />
                             <div>
-                                <strong>Consonants & Vowels</strong> — What sounds exist in your language? Start small (8-15 consonants, 3-5 vowels) and expand later. Example: <code>p, t, k, m, n, s, l, r</code> and <code>a, e, i, o, u</code>.
+                                <strong>{t('help.guide.phase1.step1Term')}</strong> — {t('help.guide.phase1.step1Text')}
                             </div>
                         </div>
                         <div className="walkthrough-step">
                             <ChevronRight size={14} className="step-icon" />
                             <div>
-                                <strong>Syllable Pattern</strong> — How can sounds combine? <code>CV</code> (like Japanese: ka, ni, su), <code>CVC</code> (like English: cat, dog), or more complex patterns. Comma-separate multiple: <code>CV, CVC, VC</code>.
+                                <strong>{t('help.guide.phase1.step2Term')}</strong> — {t('help.guide.phase1.step2Text')}
                             </div>
                         </div>
                         <div className="walkthrough-step">
                             <ChevronRight size={14} className="step-icon" />
                             <div>
-                                <strong>Writing Direction</strong> — Left-to-right, right-to-left, or vertical? This affects how your conlang text is displayed throughout the app.
+                                <strong>{t('help.guide.phase1.step3Term')}</strong> — {t('help.guide.phase1.step3Text')}
                             </div>
                         </div>
                     </div>
                     <div className="walkthrough-tip">
                         <Lightbulb size={14} />
-                        <span>Tip: Use the <strong>Word Generator</strong> after setting up phonology to quickly test if your sound system produces words you like. If they all sound weird, tweak your consonants/vowels/patterns until it feels right!</span>
+                        <span>{t('help.guide.phase1.tip')}</span>
                     </div>
                 </div>
             </div>
@@ -78,36 +79,36 @@ const HowToUse = () => (
             <div className="walkthrough-phase">
                 <div className="phase-header">
                     <span className="phase-number">
-                        <span>PHASE</span>
+                        <span>{t('help.guide.phase')}</span>
                         <span>2</span>
                     </span>
-                    <h4 className="phase-title">Grammar — Morphology Rules</h4>
+                    <h4 className="phase-title">{t('help.guide.phase2.title')}</h4>
                 </div>
                 <div className="phase-body">
-                    <p>Now give your language structure. Go to <strong>Settings → Grammar</strong> and set up:</p>
+                    <p>{t('help.guide.phase2.desc')}</p>
                     <div className="walkthrough-steps">
                         <div className="walkthrough-step">
                             <ChevronRight size={14} className="step-icon" />
                             <div>
-                                <strong>Syntax Order</strong> — Is your language SVO (like English: "I eat fish"), SOV (like Japanese: "I fish eat"), or VSO (like Arabic: "eat I fish")?
+                                <strong>{t('help.guide.phase2.step1Term')}</strong> — {t('help.guide.phase2.step1Text')}
                             </div>
                         </div>
                         <div className="walkthrough-step">
                             <ChevronRight size={14} className="step-icon" />
                             <div>
-                                <strong>Grammar Rules</strong> — Add affixes for tenses, plurals, cases, etc. Example: add a suffix <code>-ka</code> that applies to nouns for "plural". The engine will automatically conjugate your words.
+                                <strong>{t('help.guide.phase2.step2Term')}</strong> — {t('help.guide.phase2.step2Text')}
                             </div>
                         </div>
                         <div className="walkthrough-step">
                             <ChevronRight size={14} className="step-icon" />
                             <div>
-                                <strong>Verb Marker</strong> — Define an infinitive marker (like English "-to" or Spanish "-ar/-er/-ir"). This helps the engine strip it before applying conjugation affixes.
+                                <strong>{t('help.guide.phase2.step3Term')}</strong> — {t('help.guide.phase2.step3Text')}
                             </div>
                         </div>
                         <div className="walkthrough-step">
                             <ChevronRight size={14} className="step-icon" />
                             <div>
-                                <strong>Person Rules</strong> — Set up pronouns and their verb conjugations (1st person singular, 2nd person plural, etc.) using the Person conjugator table.
+                                <strong>{t('help.guide.phase2.step4Term')}</strong> — {t('help.guide.phase2.step4Text')}
                             </div>
                         </div>
                     </div>
@@ -118,36 +119,36 @@ const HowToUse = () => (
             <div className="walkthrough-phase">
                 <div className="phase-header">
                     <span className="phase-number">
-                        <span>PHASE</span>
+                        <span>{t('help.guide.phase')}</span>
                         <span>3</span>
                     </span>
-                    <h4 className="phase-title">Vocabulary — Building the Lexicon</h4>
+                    <h4 className="phase-title">{t('help.guide.phase3.title')}</h4>
                 </div>
                 <div className="phase-body">
-                    <p>Time to create words! You have two approaches:</p>
+                    <p>{t('help.guide.phase3.desc')}</p>
                     <div className="walkthrough-steps">
                         <div className="walkthrough-step">
                             <ChevronRight size={14} className="step-icon" />
                             <div>
-                                <strong>Word Generator</strong> — Go to the Generator tab, click generate, and the engine creates random words that follow your phonotactic rules. Click "Add to Dictionary" on any word you like.
+                                <strong>{t('help.guide.phase3.step1Term')}</strong> — {t('help.guide.phase3.step1Text')}
                             </div>
                         </div>
                         <div className="walkthrough-step">
                             <ChevronRight size={14} className="step-icon" />
                             <div>
-                                <strong>Manual Creation</strong> — Go to Create Word, type your conlang word, its translation, part of speech, and IPA pronunciation. The engine shows you a live preview of all auto-derivations based on your grammar rules.
+                                <strong>{t('help.guide.phase3.step2Term')}</strong> — {t('help.guide.phase3.step2Text')}
                             </div>
                         </div>
                         <div className="walkthrough-step">
                             <ChevronRight size={14} className="step-icon" />
                             <div>
-                                <strong>Semantic Tags</strong> — Tag your words (nature, emotion, body, etc.) so you can filter and study them by category later.
+                                <strong>{t('help.guide.phase3.step3Term')}</strong> — {t('help.guide.phase3.step3Text')}
                             </div>
                         </div>
                     </div>
                     <div className="walkthrough-tip">
                         <Lightbulb size={14} />
-                        <span>Tip: Start with the Swadesh List — a set of ~200 universal concepts (water, fire, eat, sleep, mother, etc.) that every language needs. The <strong>Study Tab's Learning Path</strong> follows this approach!</span>
+                        <span>{t('help.guide.phase3.tip')}</span>
                     </div>
                 </div>
             </div>
@@ -156,30 +157,30 @@ const HowToUse = () => (
             <div className="walkthrough-phase">
                 <div className="phase-header">
                     <span className="phase-number">
-                        <span>PHASE</span>
+                        <span>{t('help.guide.phase')}</span>
                         <span>4</span>
                     </span>
-                    <h4 className="phase-title">Testing — Read & Analyze</h4>
+                    <h4 className="phase-title">{t('help.guide.phase4.title')}</h4>
                 </div>
                 <div className="phase-body">
-                    <p>Put your language to the test with real text:</p>
+                    <p>{t('help.guide.phase4.desc')}</p>
                     <div className="walkthrough-steps">
                         <div className="walkthrough-step">
                             <ChevronRight size={14} className="step-icon" />
                             <div>
-                                <strong>Reader & Glosser</strong> — Type a sentence in your conlang and the engine breaks it down word by word, identifying roots, affixes, and translations. Hover over words for detailed breakdowns.
+                                <strong>{t('help.guide.phase4.step1Term')}</strong> — {t('help.guide.phase4.step1Text')}
                             </div>
                         </div>
                         <div className="walkthrough-step">
                             <ChevronRight size={14} className="step-icon" />
                             <div>
-                                <strong>Library & Writing</strong> — Create wiki articles about your language's lore, grammar notes, and culture. Use "Corpus Text" mode for interlinear translation of longer passages.
+                                <strong>{t('help.guide.phase4.step2Term')}</strong> — {t('help.guide.phase4.step2Text')}
                             </div>
                         </div>
                         <div className="walkthrough-step">
                             <ChevronRight size={14} className="step-icon" />
                             <div>
-                                <strong>Analyzer</strong> — Paste any conlang word to see how the engine deconstructs it into its morphological components.
+                                <strong>{t('help.guide.phase4.step3Term')}</strong> — {t('help.guide.phase4.step3Text')}
                             </div>
                         </div>
                     </div>
@@ -190,30 +191,30 @@ const HowToUse = () => (
             <div className="walkthrough-phase">
                 <div className="phase-header">
                     <span className="phase-number">
-                        <span>PHASE</span>
+                        <span>{t('help.guide.phase')}</span>
                         <span>5</span>
                     </span>
-                    <h4 className="phase-title">Polish — Share & Export</h4>
+                    <h4 className="phase-title">{t('help.guide.phase5.title')}</h4>
                 </div>
                 <div className="phase-body">
-                    <p>Your language is taking shape! Now make it permanent:</p>
+                    <p>{t('help.guide.phase5.desc')}</p>
                     <div className="walkthrough-steps">
                         <div className="walkthrough-step">
                             <ChevronRight size={14} className="step-icon" />
                             <div>
-                                <strong>Custom Font</strong> — Use the Glyph Studio (Settings → Font) to draw custom characters for your language and compile them into a real .ttf font file!
+                                <strong>{t('help.guide.phase5.step1Term')}</strong> — {t('help.guide.phase5.step1Text')}
                             </div>
                         </div>
                         <div className="walkthrough-step">
                             <ChevronRight size={14} className="step-icon" />
                             <div>
-                                <strong>PDF Export</strong> — Click the PDF button in the header to generate a formatted reference document with your entire language.
+                                <strong>{t('help.guide.phase5.step2Term')}</strong> — {t('help.guide.phase5.step2Text')}
                             </div>
                         </div>
                         <div className="walkthrough-step">
                             <ChevronRight size={14} className="step-icon" />
                             <div>
-                                <strong>Share Link (LIVE)</strong> — Push to cloud and generate a public reader link so anyone can explore your conlang in a beautiful, read-only showcase page.
+                                <strong>{t('help.guide.phase5.step3Term')}</strong> — {t('help.guide.phase5.step3Text')}
                             </div>
                         </div>
                     </div>
@@ -224,330 +225,329 @@ const HowToUse = () => (
 );
 
 // Privacy & Security
-const Privacy = () => (
+const Privacy = ({ t }) => (
     <div className="help-section">
-        <h3 className="help-section-title"><Shield className="help-icon" /> Privacy & Data Security</h3>
-        <p className="help-section-subtitle">Your conlang is <em>your</em> intellectual property. Here's how we protect it.</p>
+        <h3 className="help-section-title"><Shield className="help-icon" /> {t('help.privacy.title')}</h3>
+        <p className="help-section-subtitle">{t('help.privacy.subtitle')}</p>
 
         <div className="privacy-grid">
             <div className="privacy-card">
                 <div className="privacy-card-icon"><Database size={20} /></div>
-                <h4>Local-First Architecture</h4>
-                <p>All your data is stored <strong>locally in your browser</strong> by default. Your dictionary, grammar rules, and wiki pages never leave your device unless you explicitly choose to sync to the cloud. No server, no tracking, no telemetry.</p>
+                <h4>{t('help.privacy.localFirstTitle')}</h4>
+                <p>{t('help.privacy.localFirstText')}</p>
             </div>
 
             <div className="privacy-card">
                 <div className="privacy-card-icon"><Lock size={20} /></div>
-                <h4>Cloud Sync is Optional & Encrypted</h4>
-                <p>Cloud Sync (LIVE) is entirely opt-in. When you push to cloud, your data is stored in a secure <strong>Supabase</strong> database with Row Level Security (RLS) — meaning <strong>only you</strong> can read, modify, or delete your own projects. No other user can access your data.</p>
+                <h4>{t('help.privacy.cloudSyncTitle')}</h4>
+                <p>{t('help.privacy.cloudSyncText')}</p>
             </div>
 
             <div className="privacy-card">
                 <div className="privacy-card-icon"><Eye size={20} /></div>
-                <h4>We Never Read Your Data</h4>
-                <p>ConlangEngine has <strong>zero analytics</strong> on your language content. We don't read, analyze, mine, or sell your words, grammar rules, or wiki articles. Your conlang is not used for AI training or any other purpose. Period.</p>
+                <h4>{t('help.privacy.neverReadTitle')}</h4>
+                <p>{t('help.privacy.neverReadText')}</p>
             </div>
 
             <div className="privacy-card">
                 <div className="privacy-card-icon"><Download size={20} /></div>
-                <h4>Full Data Portability</h4>
-                <p>You can <strong>export your entire project</strong> as a JSON file or PDF at any time. Your data is never locked in. If you want to leave, take everything with you — no questions asked.</p>
+                <h4>{t('help.privacy.portabilityTitle')}</h4>
+                <p>{t('help.privacy.portabilityText')}</p>
             </div>
 
             <div className="privacy-card">
                 <div className="privacy-card-icon"><Globe size={20} /></div>
-                <h4>Share Links Are Opt-In</h4>
-                <p>The public reader page (<code>/view/</code>) is only accessible if <strong>you explicitly generate and share the link</strong>. Your project is identified by a unique ID — nobody can discover it by browsing or guessing. You control who sees your work.</p>
+                <h4>{t('help.privacy.shareLinksTitle')}</h4>
+                <p>{t('help.privacy.shareLinksText')}</p>
             </div>
 
             <div className="privacy-card">
                 <div className="privacy-card-icon"><Shield size={20} /></div>
-                <h4>Open Source & Auditable</h4>
-                <p>ConlangEngine's codebase is <strong>open source</strong> on GitHub. Anyone can inspect exactly what the app does. There are no hidden trackers, no third-party scripts, and no ads. What you see is what you get.</p>
+                <h4>{t('help.privacy.openSourceTitle')}</h4>
+                <p>{t('help.privacy.openSourceText')}</p>
             </div>
         </div>
 
         <div className="privacy-summary">
-            <strong>In short:</strong> We don't collect your data. We don't sell your data. We don't even <em>look</em> at your data. Your conlang belongs to you — we just build the tools.
+            <strong>{t('help.privacy.inShort')}</strong> {t('help.privacy.summaryText')}
         </div>
     </div>
 );
 
 // The FAQ section answers the most common questions users might have
-const FAQ = () => (
+const FAQ = ({ t }) => (
     <div className="help-section">
-        <h3 className="help-section-title"><HelpCircle className="help-icon" /> Frequently Asked Questions</h3>
+        <h3 className="help-section-title"><HelpCircle className="help-icon" /> {t('help.faq.title')}</h3>
         <ul className="help-faq-list">
             <li>
-                <strong>Is my data safe if I close the browser?</strong>
-                <p>Yes! Your language data is automatically saved locally to your browser's storage. However, we highly recommend using the <strong>Save</strong> button in the top right to download a `.json` backup of your project regularly, just in case you clear your browser cache.</p>
+                <strong>{t('help.faq.q1Title')}</strong>
+                <p>{t('help.faq.q1Answer')}</p>
             </li>
             <li>
-                <strong>Can I use ConlangEngine offline?</strong>
-                <p>Absolutely. The core application runs entirely locally on your device. You only need an internet connection to use Cloud Sync (LIVE) features or to log into your profile.</p>
+                <strong>{t('help.faq.q2Title')}</strong>
+                <p>{t('help.faq.q2Answer')}</p>
             </li>
             <li>
-                <strong>What does the PDF button do?</strong>
-                <p>It automatically compiles your entire language—including phonology rules, grammar configurations, and your full dictionary—into a beautifully formatted PDF document that you can share with others!</p>
+                <strong>{t('help.faq.q3Title')}</strong>
+                <p>{t('help.faq.q3Answer')}</p>
             </li>
             <li>
-                <strong>How do the auto-derivations work?</strong>
-                <p>When you create a word, the engine checks your Grammar Settings for rules that apply to that word's part of speech. It then automatically applies your prefixes/suffixes to show you how the word behaves in your language.</p>
+                <strong>{t('help.faq.q4Title')}</strong>
+                <p>{t('help.faq.q4Answer')}</p>
             </li>
             <li>
-                <strong>What's the difference between the Generator and Create Word?</strong>
-                <p>The <strong>Generator</strong> creates random words that follow your phonotactic rules — great for brainstorming. <strong>Create Word</strong> lets you manually define a specific root with its translation, IPA, and tags. You can also send generated words directly to Create Word with one click.</p>
+                <strong>{t('help.faq.q5Title')}</strong>
+                <p>{t('help.faq.q5Answer')}</p>
             </li>
             <li>
-                <strong>What is LIVE / Cloud Sync?</strong>
-                <p>LIVE is an optional premium feature that lets you back up your conlang to the cloud, sync across devices, manage multiple conlang projects, and generate shareable public reader links. Your core tools work fully without it.</p>
+                <strong>{t('help.faq.q6Title')}</strong>
+                <p>{t('help.faq.q6Answer')}</p>
             </li>
             <li>
-                <strong>Can other people see my conlang?</strong>
-                <p>Only if you explicitly generate a Share Link. Your cloud data is protected by Row Level Security — no one can browse, search, or stumble upon your project. Share links use a unique project ID that's practically impossible to guess.</p>
+                <strong>{t('help.faq.q7Title')}</strong>
+                <p>{t('help.faq.q7Answer')}</p>
             </li>
             <li>
-                <strong>What happens if I clear my browser data?</strong>
-                <p>Your locally-stored data will be lost. This is why we strongly recommend either downloading JSON backups regularly or using Cloud Sync. If you've pushed to cloud, you can always pull your project back.</p>
+                <strong>{t('help.faq.q8Title')}</strong>
+                <p>{t('help.faq.q8Answer')}</p>
             </li>
         </ul>
     </div>
 );
 
 // Keyboard Shortcuts section
-const Shortcuts = () => (
+const Shortcuts = ({ t }) => (
     <div className="help-section">
-        <h3 className="help-section-title"><Keyboard className="help-icon" /> Keyboard Shortcuts</h3>
-        <p>Speed up your workflow with these global hotkeys. These work from anywhere in the app (unless you are typing in an input field).</p>
+        <h3 className="help-section-title"><Keyboard className="help-icon" /> {t('help.shortcuts.title')}</h3>
+        <p>{t('help.shortcuts.desc')}</p>
         <div className="shortcuts-grid">
             <div className="shortcut-item">
                 <span className="shortcut-key">Alt + H</span>
-                <span className="shortcut-desc">Go to Home</span>
+                <span className="shortcut-desc">{t('help.shortcuts.home')}</span>
             </div>
             <div className="shortcut-item">
                 <span className="shortcut-key">Alt + D</span>
-                <span className="shortcut-desc">Open Dictionary</span>
+                <span className="shortcut-desc">{t('help.shortcuts.dictionary')}</span>
             </div>
             <div className="shortcut-item">
                 <span className="shortcut-key">Alt + C</span>
-                <span className="shortcut-desc">Create New Word</span>
+                <span className="shortcut-desc">{t('help.shortcuts.createWord')}</span>
             </div>
             <div className="shortcut-item">
                 <span className="shortcut-key">Alt + G</span>
-                <span className="shortcut-desc">Open Generator</span>
+                <span className="shortcut-desc">{t('help.shortcuts.generator')}</span>
             </div>
             <div className="shortcut-item">
                 <span className="shortcut-key">Alt + A</span>
-                <span className="shortcut-desc">Open Text Analyzer</span>
+                <span className="shortcut-desc">{t('help.shortcuts.analyzer')}</span>
             </div>
             <div className="shortcut-item">
                 <span className="shortcut-key">Alt + S</span>
-                <span className="shortcut-desc">Open Settings</span>
+                <span className="shortcut-desc">{t('help.shortcuts.settings')}</span>
             </div>
         </div>
     </div>
 );
 
 // Searching the Lexicon — documents the search modes of the Dictionary search box
-const Searching = () => (
+const Searching = ({ t }) => (
     <div className="help-section help-searching">
-        <h3 className="help-section-title"><Search className="help-icon" /> Searching the Lexicon</h3>
-        <p className="help-section-subtitle">The Dictionary search box has three modes. The first character of your query picks the mode.</p>
+        <h3 className="help-section-title"><Search className="help-icon" /> {t('help.searching.title')}</h3>
+        <p className="help-section-subtitle">{t('help.searching.subtitle')}</p>
 
-        <h4>Standard Search (no prefix)</h4>
-        <p>Type anything to match against your words, translations, definitions, IPA, and tags. Results are ranked: exact matches first, then prefix matches, then partial matches. Search a tag directly with <code>#</code> (e.g. <code>#aquatic</code>).</p>
+        <h4>{t('help.searching.standardTitle')}</h4>
+        <p>{t('help.searching.standardText')}</p>
 
-        <h4>Phoneme Search (start with <code>/</code>)</h4>
-        <p>Searches by <em>sound</em> instead of spelling. It matches against each entry's IPA field, falling back to the romanized word for entries without IPA. Build patterns from these elements:</p>
+        <h4>{t('help.searching.phonemeSearch') || t('help.searching.phonemeTitle')}</h4>
+        <p>{t('help.searching.phonemeDesc')}</p>
         <div className="shortcuts-grid">
             <div className="shortcut-item">
                 <span className="shortcut-key">t, kʰ, t͡ʃ</span>
-                <span className="shortcut-desc">Literal IPA phonemes</span>
+                <span className="shortcut-desc">{t('help.searching.itemIpa')}</span>
             </div>
             <div className="shortcut-item">
                 <span className="shortcut-key">C / V</span>
-                <span className="shortcut-desc">Any consonant / any vowel (uppercase only)</span>
+                <span className="shortcut-desc">{t('help.searching.itemCv')}</span>
             </div>
             <div className="shortcut-item">
                 <span className="shortcut-key">[features]</span>
-                <span className="shortcut-desc">Feature bundle, e.g. [nasal], [+voiced, fricative]</span>
+                <span className="shortcut-desc">{t('help.searching.itemBundle')}</span>
             </div>
             <div className="shortcut-item">
                 <span className="shortcut-key">*</span>
-                <span className="shortcut-desc">Any run of phonemes (including none)</span>
+                <span className="shortcut-desc">{t('help.searching.itemStar')}</span>
             </div>
             <div className="shortcut-item">
                 <span className="shortcut-key">#</span>
-                <span className="shortcut-desc">Word boundary, at pattern start or end</span>
+                <span className="shortcut-desc">{t('help.searching.itemBoundary')}</span>
             </div>
         </div>
-        <p>Patterns match anywhere inside a word unless you anchor them with <code>#</code>. Some examples:</p>
+        <p>{t('help.searching.examplesDesc')}</p>
         <div className="shortcuts-grid">
             <div className="shortcut-item">
                 <span className="shortcut-key">/#st</span>
-                <span className="shortcut-desc">Words starting with /st/</span>
+                <span className="shortcut-desc">{t('help.searching.exStartSt')}</span>
             </div>
             <div className="shortcut-item">
                 <span className="shortcut-key">/n#</span>
-                <span className="shortcut-desc">Words ending in /n/</span>
+                <span className="shortcut-desc">{t('help.searching.exEndN')}</span>
             </div>
             <div className="shortcut-item">
                 <span className="shortcut-key">/VnV</span>
-                <span className="shortcut-desc">Vowel–n–vowel anywhere</span>
+                <span className="shortcut-desc">{t('help.searching.exVnV')}</span>
             </div>
             <div className="shortcut-item">
                 <span className="shortcut-key">/[nasal]V#</span>
-                <span className="shortcut-desc">Nasal + vowel at the end of a word</span>
+                <span className="shortcut-desc">{t('help.searching.exNasalV')}</span>
             </div>
             <div className="shortcut-item">
                 <span className="shortcut-key">/[+voiced, fricative]</span>
-                <span className="shortcut-desc">Contains a voiced fricative (v, z, ʒ, ...)</span>
+                <span className="shortcut-desc">{t('help.searching.exVoicedFric')}</span>
             </div>
             <div className="shortcut-item">
                 <span className="shortcut-key">/#CVCV#</span>
-                <span className="shortcut-desc">Words with exactly CVCV shape</span>
+                <span className="shortcut-desc">{t('help.searching.exExactCvcv')}</span>
             </div>
         </div>
-        <p>Feature bundles accept voicing (<code>voiced</code>, <code>voiceless</code>), place (<code>bilabial</code>, <code>alveolar</code>, <code>velar</code>, <code>glottal</code>, ...), manner (<code>plosive</code>/<code>stop</code>, <code>nasal</code>, <code>fricative</code>, <code>trill</code>, <code>approximant</code>, ...), vowel height (<code>close</code>, <code>mid</code>, <code>open</code>, ...), backness (<code>front</code>, <code>central</code>, <code>back</code>) and rounding (<code>rounded</code>, <code>unrounded</code>). Combine with commas for AND, and negate with <code>-</code>: <code>[-voiced]</code>.</p>
+        <p>{t('help.searching.bundleHelp')}</p>
         <div className="walkthrough-tip">
             <Lightbulb size={14} />
-            <span>Diacritics are optional in queries but strict when given: <code>/k</code> matches both <em>kona</em> and <em>kʰona</em>, while <code>/kʰ</code> only matches the aspirated form. Affricates like <code>t͡ʃ</code> and multigraphs from your Phonology settings (<code>ch</code>, <code>ng</code>, ...) count as a single consonant.</span>
+            <span>{t('help.searching.diacriticsTip')}</span>
         </div>
 
-        <h4>Reverse Dictionary (start with <code>=</code>)</h4>
-        <p>Searches by <em>meaning</em> — use it when you know the concept but forgot your word. Matching is ranked: exact gloss first, then word-form variants (<code>=to run</code> finds an entry glossed "running"), then mentions in definitions, then words sharing a semantic theme (<code>=wolf</code> can surface your word for "fox").</p>
+        <h4>{t('help.searching.reverseTitle')}</h4>
+        <p>{t('help.searching.reverseDesc')}</p>
         <div className="shortcuts-grid">
             <div className="shortcut-item">
                 <span className="shortcut-key">=water</span>
-                <span className="shortcut-desc">Your word glossed "water", then related entries</span>
+                <span className="shortcut-desc">{t('help.searching.exWater')}</span>
             </div>
             <div className="shortcut-item">
                 <span className="shortcut-key">=to run</span>
-                <span className="shortcut-desc">Also finds "running", "runs"</span>
+                <span className="shortcut-desc">{t('help.searching.exToRun')}</span>
             </div>
             <div className="shortcut-item">
                 <span className="shortcut-key">=happy</span>
-                <span className="shortcut-desc">Surfaces words tagged or themed as feelings</span>
+                <span className="shortcut-desc">{t('help.searching.exHappy')}</span>
             </div>
         </div>
         <div className="walkthrough-tip">
             <Lightbulb size={14} />
-            <span>Everything runs offline — phoneme search and the reverse dictionary never call external services. For <code>C</code>/<code>V</code> classes on custom symbols, the engine reads your inventory from <strong>Settings → Phonology</strong>, and your settings win over IPA defaults (declaring <code>y</code> a vowel works as expected).</span>
+            <span>{t('help.searching.offlineTip')}</span>
         </div>
     </div>
 );
 
 // The Contact section tells users how to reach out for support or feedback
-const Contact = () => (
+const Contact = ({ t }) => (
     <div className="help-section">
-        <h3 className="help-section-title"><Mail className="help-icon" /> Contact & Community</h3>
-        <p>If you have any issues, feature requests, or just want to show off your conlang, we'd love to hear from you!</p>
+        <h3 className="help-section-title"><Mail className="help-icon" /> {t('help.contact.title')}</h3>
+        <p>{t('help.contact.desc')}</p>
         <ul className="help-contact-list">
-            <li><strong>Email Support:</strong> <span className="help-email">support@conlangengine.com</span></li>
-            <li><strong>Community Discord:</strong> <a href="https://discord.gg/9b93D3Wtax" target="_blank" rel="noopener noreferrer" className="help-link">Join our Server</a></li>
-            <li><strong>Bug Reports:</strong> <a href="https://github.com/kaitojv/ConlangEngine/" target="_blank" rel="noopener noreferrer" className="help-link">GitHub Repository</a></li>
+            <li><strong>{t('help.contact.emailSupport')}</strong> <span className="help-email">support@conlangengine.com</span></li>
+            <li><strong>{t('help.contact.communityDiscord')}</strong> <a href="https://discord.gg/9b93D3Wtax" target="_blank" rel="noopener noreferrer" className="help-link">{t('help.contact.joinServer')}</a></li>
+            <li><strong>{t('help.contact.bugReports')}</strong> <a href="https://github.com/kaitojv/ConlangEngine/" target="_blank" rel="noopener noreferrer" className="help-link">{t('help.contact.githubRepo')}</a></li>
         </ul>
     </div>
 );
 
 // The Thanks section for acknowledgements
-const Thanks = () => (
+const Thanks = ({ t }) => (
     <div className="help-section">
-        <h3 className="help-section-title"><Heart className="help-icon" /> Special Thanks</h3>
-        <p>I would like to extend a special thanks to the following people and contributors for their amazing support:</p>
+        <h3 className="help-section-title"><Heart className="help-icon" /> {t('help.thanks.title')}</h3>
+        <p>{t('help.thanks.desc')}</p>
         <ul className="help-faq-list">
             <li>
-                <strong>Family & Friends</strong>
-                <p>Thank you to my family, my husband Hugo, my cat Hilda, and my best friend Nath.</p>
+                <strong>{t('help.thanks.familyFriendsTitle')}</strong>
+                <p>{t('help.thanks.familyFriendsDesc')}</p>
             </li>
             <li>
-                <strong>Discord Community</strong>
-                <p>Thank you to the entire Discord community for being a part of this journey.</p>
+                <strong>{t('help.thanks.discordTitle')}</strong>
+                <p>{t('help.thanks.discordDesc')}</p>
             </li>
             <li>
-                <strong>Slapstick Mojo</strong>
-                <p>For your contributions and excellent suggestions for the site.</p>
+                <strong>{t('help.thanks.slapstickTitle')}</strong>
+                <p>{t('help.thanks.slapstickDesc')}</p>
             </li>
             <li>
-                <strong>niruhsa</strong>
-                <p>For all your Pull Requests and brilliant ideas contributed to the app.</p>
+                <strong>{t('help.thanks.niruhsaTitle')}</strong>
+                <p>{t('help.thanks.niruhsaDesc')}</p>
             </li>
         </ul>
     </div>
 );
 
 export default function HelpTab() {
-    // We use this state to remember which tab the user is currently looking at
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState('about');
 
-    // This little helper function decides which component to show based on the active tab
     const renderTabContent = () => {
         switch (activeTab) {
-            case 'about': return <About />;
-            case 'how-to-use': return <HowToUse />;
-            case 'privacy': return <Privacy />;
-            case 'faq': return <FAQ />;
-            case 'searching': return <Searching />;
-            case 'shortcuts': return <Shortcuts />;
-            case 'contact': return <Contact />;
-            case 'thanks': return <Thanks />;
-            default: return <About />;
+            case 'about': return <About t={t} />;
+            case 'how-to-use': return <HowToUse t={t} />;
+            case 'privacy': return <Privacy t={t} />;
+            case 'faq': return <FAQ t={t} />;
+            case 'searching': return <Searching t={t} />;
+            case 'shortcuts': return <Shortcuts t={t} />;
+            case 'contact': return <Contact t={t} />;
+            case 'thanks': return <Thanks t={t} />;
+            default: return <About t={t} />;
         }
     };
 
     return (
         <div className="help-container animate-fade-in">
             <header className="help-header">
-                <h2>Help & Information</h2>
+                <h2>{t('help.title')}</h2>
                 {/* Navigation bar for switching between our help sections */}
                 <nav className="help-nav">
                     <Button 
                         onClick={() => setActiveTab('about')} 
                         className={`help-nav-btn ${activeTab === 'about' ? 'active' : ''}`}
                     >
-                        <Info size={18} /> About
+                        <Info size={18} /> {t('help.nav.about')}
                     </Button>
                     <Button 
                         onClick={() => setActiveTab('how-to-use')} 
                         className={`help-nav-btn ${activeTab === 'how-to-use' ? 'active' : ''}`}
                     >
-                        <BookOpen size={18} /> Build Guide
+                        <BookOpen size={18} /> {t('help.nav.buildGuide')}
                     </Button>
                     <Button 
                         onClick={() => setActiveTab('privacy')} 
                         className={`help-nav-btn ${activeTab === 'privacy' ? 'active' : ''}`}
                     >
-                        <Shield size={18} /> Privacy
+                        <Shield size={18} /> {t('help.nav.privacy')}
                     </Button>
                     <Button 
                         onClick={() => setActiveTab('faq')} 
                         className={`help-nav-btn ${activeTab === 'faq' ? 'active' : ''}`}
                     >
-                        <HelpCircle size={18} /> FAQ
+                        <HelpCircle size={18} /> {t('help.nav.faq')}
                     </Button>
                     <Button 
                         onClick={() => setActiveTab('searching')} 
                         className={`help-nav-btn ${activeTab === 'searching' ? 'active' : ''}`}
                     >
-                        <Search size={18} /> Searching
+                        <Search size={18} /> {t('help.nav.searching')}
                     </Button>
                     <Button 
                         onClick={() => setActiveTab('shortcuts')} 
                         className={`help-nav-btn ${activeTab === 'shortcuts' ? 'active' : ''}`}
                     >
-                        <Keyboard size={18} /> Shortcuts
+                        <Keyboard size={18} /> {t('help.nav.shortcuts')}
                     </Button>
                     <Button 
                         onClick={() => setActiveTab('contact')} 
                         className={`help-nav-btn ${activeTab === 'contact' ? 'active' : ''}`}
                     >
-                        <Mail size={18} /> Contact
+                        <Mail size={18} /> {t('help.nav.contact')}
                     </Button>
                     <Button 
                         onClick={() => setActiveTab('thanks')} 
                         className={`help-nav-btn ${activeTab === 'thanks' ? 'active' : ''}`}
                     >
-                        <Heart size={18} /> Thanks
+                        <Heart size={18} /> {t('help.nav.thanks')}
                     </Button>
                 </nav>
             </header>

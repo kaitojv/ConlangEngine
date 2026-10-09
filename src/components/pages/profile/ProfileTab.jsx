@@ -16,6 +16,7 @@ import { supabase } from '@/utils/supabaseClient.js';
 import toast from 'react-hot-toast';
 import { sanitizeConfig, sanitizeLexicon, decompressPayloadAsync } from '@/utils/schemaValidator.jsx';
 import { useSharing } from '@/hooks/useSharing.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import PayPalButton from '@/components/Payment/PayPalButton.jsx';
 
 
@@ -44,6 +45,7 @@ const BADGES = [
 ];
 
 export default function ProfileTab() {
+    const { t } = useTranslation();
 
     const [cloudProjects, setCloudProjects] = useState([]);
     const [isProjectSelectorOpen, setProjectSelectorOpen] = useState(false);
@@ -515,10 +517,10 @@ export default function ProfileTab() {
             
             setVersionHistoryOpen(false);
             logActivity(`Restored past version: ${version.version_name}`);
-            toast.success("Version restored successfully!", { id: 'restore-toast' });
+            toast.success(t('profile.restoreSuccess'), { id: 'restore-toast' });
         } catch (err) {
             console.error(err);
-            toast.error("Failed to restore version data.", { id: 'restore-toast' });
+            toast.error(t('profile.restoreError'), { id: 'restore-toast' });
         }
     };
 
@@ -529,52 +531,52 @@ export default function ProfileTab() {
                 <div className="account-header">
                     <div>
                         <h2 className="account-title">
-                            <User /> {session ? 'Account Status' : 'Sign In / Register'}
+                            <User /> {session ? t('profile.accountStatus') : t('profile.signInRegister')}
                         </h2>
                         <div className="account-subtitle">
-                            {session ? `Logged in as: ${authorName !== 'Author Name' ? authorName : session.user.email}` : 'Local Workspace (Not Signed In)'}
+                            {session ? `${t('profile.loggedInAs')} ${authorName !== 'Author Name' ? authorName : session.user.email}` : t('profile.localWorkspace')}
                         </div>
                     </div>
                     
                     <div className="account-actions">
                         {session ? (
                             <>
-                                <Button variant="save" className="share-btn" onClick={handleShareLink} title="Copy Public Link" disabled={isSharing}>
+                                <Button variant="save" className="share-btn" onClick={handleShareLink} title={t('profile.copyPublicLink')} disabled={isSharing}>
                                     <div className="btn-content">
                                         <Share2 size={16} className={isSharing ? 'animate-spin' : ''}/> 
-                                        {isSharing ? ' Generating...' : ' Share Link'}
+                                        {isSharing ? ` ${t('profile.generating')}` : ` ${t('profile.shareLink')}`}
                                     </div>
                                 </Button>
                                 {isProActive && (
                                     <>
                                         <Button variant="default" className="push-btn" onClick={handlePushToCloud}>
-                                            <div className="btn-content"><CloudUpload size={16}/> Push to Cloud</div>
+                                            <div className="btn-content"><CloudUpload size={16}/> {t('profile.pushToCloud')}</div>
                                         </Button>
                                         <Button variant="default" className="pull-btn" onClick={handlePullFromCloud}>
-                                            <div className="btn-content"><CloudDownload size={16}/> Pull from Cloud</div>
+                                            <div className="btn-content"><CloudDownload size={16}/> {t('profile.pullFromCloud')}</div>
                                         </Button>
                                         <Button variant="default" onClick={loadVersionHistory}>
-                                            <div className="btn-content"><History size={16}/> Version History</div>
+                                            <div className="btn-content"><History size={16}/> {t('profile.versionHistory')}</div>
                                         </Button>
                                     </>
                                 )}
 
                                 <Button variant="error" className="signout-btn" onClick={handleLogout}>
-                                    <div className="btn-content"><LogOut size={16}/> Sign Out</div>
+                                    <div className="btn-content"><LogOut size={16}/> {t('profile.signOut')}</div>
                                 </Button>
                             </>
                         ) : (
                             <div className="login-form">
                                 {authMode === 'forgot' ? (
                                     <>
-                                        <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email to reset password" className="login-input" />
-                                        <Button variant="imp" onClick={handleResetPassword}>Send Reset Link</Button>
-                                        <Button variant="default" onClick={() => { setAuthMode('login'); setAuthStatus({msg:'', type:''}); }}>Back to Login</Button>
+                                        <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('profile.resetEmailPlaceholder')} className="login-input" />
+                                        <Button variant="imp" onClick={handleResetPassword}>{t('profile.sendResetLink')}</Button>
+                                        <Button variant="default" onClick={() => { setAuthMode('login'); setAuthStatus({msg:'', type:''}); }}>{t('profile.backToLogin')}</Button>
                                     </>
                                 ) : (
                                     <>
-                                        <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="login-input" />
-                                        <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="login-input" />
+                                        <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('profile.email')} className="login-input" />
+                                        <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t('profile.password')} className="login-input" />
                                         <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', marginTop: '-8px', marginBottom: '8px' }}>
                                             <span 
                                                 className="forgot-password-link"
@@ -583,12 +585,12 @@ export default function ProfileTab() {
                                                 onMouseEnter={(e) => e.target.style.color = 'var(--acc)'}
                                                 onMouseLeave={(e) => e.target.style.color = 'var(--tx3)'}
                                             >
-                                                Forgot Password?
+                                                {t('profile.forgotPassword')}
                                             </span>
                                         </div>
-                                        <Button variant="imp" onClick={() => { setAuthMode('login'); handleAuth(); }}>Login</Button>
-                                        <Button variant="default" onClick={() => { setAuthMode('signup'); handleAuth(); }}>Sign Up</Button>
-                                        <div className="login-divider">— OR CONTINUE WITH —</div>
+                                        <Button variant="imp" onClick={() => { setAuthMode('login'); handleAuth(); }}>{t('profile.login')}</Button>
+                                        <Button variant="default" onClick={() => { setAuthMode('signup'); handleAuth(); }}>{t('profile.signUp')}</Button>
+                                        <div className="login-divider">{t('profile.orContinueWith')}</div>
                                         <div className="social-row">
                                             <Button variant="default" className="social-btn" onClick={() => handleOAuth('google')} title="Google"><Globe size={18} /></Button>
                                             <Button variant="default" className="social-btn" onClick={() => handleOAuth('github')} title="GitHub"><GitBranch size={18} /></Button>
@@ -605,21 +607,21 @@ export default function ProfileTab() {
 
             {/* Profile Settings Card — Author Name & Email */}
             <Card className="profile-settings-card">
-                <h3 className="section-title mb-20"><Edit2 /> Profile Settings</h3>
+                <h3 className="section-title mb-20"><Edit2 /> {t('profile.profileSettings')}</h3>
                 <div className="profile-settings-grid">
                     <div>
                         <Input
-                            label="Display Name / Alias"
+                            label={t('profile.displayName')}
                             value={authorName || ''}
                             onChange={(e) => updateConfig({ authorName: e.target.value })}
-                            placeholder="Your author name..."
+                            placeholder={t('profile.displayNamePlaceholder')}
                         />
-                        <p className="profile-settings-hint">This name appears on the homepage greeting and exported PDFs.</p>
+                        <p className="profile-settings-hint">{t('profile.displayNameHint')}</p>
                     </div>
                     {session && isProActive && (
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                <label style={{ fontSize: '0.9rem', color: 'var(--tx)', fontWeight: 'bold' }}><RefreshCw size={14} style={{ marginRight: '6px', position: 'relative', top: '2px' }}/> Auto-Sync to Cloud</label>
+                                <label style={{ fontSize: '0.9rem', color: 'var(--tx)', fontWeight: 'bold' }}><RefreshCw size={14} style={{ marginRight: '6px', position: 'relative', top: '2px' }}/> {t('profile.autoSync')}</label>
                                 <div 
                                     style={{ 
                                         width: '40px', height: '22px', borderRadius: '20px', background: isAutoSyncEnabled ? 'var(--acc)' : 'var(--s3)', 
@@ -634,7 +636,7 @@ export default function ProfileTab() {
                                     }}/>
                                 </div>
                             </div>
-                            <p className="profile-settings-hint">Automatically push your changes to the cloud (and create a version history snapshot) a few seconds after you stop typing.</p>
+                            <p className="profile-settings-hint">{t('profile.autoSyncHint')}</p>
                         </div>
                     )}
                 </div>
@@ -647,16 +649,16 @@ export default function ProfileTab() {
                             <Sparkles size={32} />
                         </div>
                         <div className="free-tier-content">
-                            <h3 className="free-tier-title">Conlang Engine LIVE (Lifetime)</h3>
+                            <h3 className="free-tier-title">{t('profile.liveTitle')}</h3>
                             <p className="free-tier-desc">
-                                Support the project to unlock <b>Cloud Sync</b> and <b>Multi-device backups</b> forever! One-time purchase of <b>$5.00 USD</b>.
+                                {t('profile.liveDesc')}
                             </p>
                             <div className="free-tier-actions">
                                 <div className="paypal-integration-area">
                                     <PayPalButton />
                                 </div>
 
-                                <div className="alt-support-divider">Alternative ways to support:</div>
+                                <div className="alt-support-divider">{t('profile.altSupport')}</div>
                                 <div className="alt-support-row">
                                     <Button variant="default" className="support-btn" onClick={() => window.open('https://patreon.com/kaitosz', '_blank')}>
                                         <div className="btn-content"><Heart size={14}/> Patreon</div>
@@ -671,35 +673,35 @@ export default function ProfileTab() {
                 </Card>
             )}
 
-            <h3 className="section-title mt-10 mb-5"><Activity /> Language Analytics Dashboard</h3>
+            <h3 className="section-title mt-10 mb-5"><Activity /> {t('profile.analyticsTitle')}</h3>
             <div className="glass-dashboard">
                 <div className="analytics-grid" style={{ marginBottom: 0 }}>
-                    <div className="glass-card"><div className="analytics-label">Total Lexicon</div><div className="analytics-value">{analytics.totalWords}</div><div className="analytics-desc">Roots & derivations</div></div>
-                    <div className="glass-card"><div className="analytics-label">Study Streak</div><div className="analytics-value val-blue" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>{configStreak} <Flame size={32} color="var(--acc)" /></div><div className="analytics-desc">Days active</div></div>
-                    <div className="glass-card"><div className="analytics-label">Top Word Class</div><div className="analytics-value val-green capitalize">{analytics.topClass}</div><div className="analytics-desc">Dominant POS</div></div>
-                    <div className="glass-card"><div className="analytics-label">Phonetic Coverage</div><div className="analytics-value val-orange">{analytics.ipaCoverage}%</div><div className="analytics-desc">Words with IPA</div></div>
+                    <div className="glass-card"><div className="analytics-label">{t('profile.totalLexicon')}</div><div className="analytics-value">{analytics.totalWords}</div><div className="analytics-desc">{t('profile.totalLexiconDesc')}</div></div>
+                    <div className="glass-card"><div className="analytics-label">{t('profile.studyStreak')}</div><div className="analytics-value val-blue" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>{configStreak} <Flame size={32} color="var(--acc)" /></div><div className="analytics-desc">{t('profile.streakDesc')}</div></div>
+                    <div className="glass-card"><div className="analytics-label">{t('profile.topWordClass')}</div><div className="analytics-value val-green capitalize">{analytics.topClass}</div><div className="analytics-desc">{t('profile.topWordClassDesc')}</div></div>
+                    <div className="glass-card"><div className="analytics-label">{t('profile.ipaCoverage')}</div><div className="analytics-value val-orange">{analytics.ipaCoverage}%</div><div className="analytics-desc">{t('profile.ipaCoverageDesc')}</div></div>
                 </div>
             </div>
 
-            <h3 className="section-title mt-10 mb-5"><PieChart /> Phonotactics Lab</h3>
+            <h3 className="section-title mt-10 mb-5"><PieChart /> {t('profile.phonotacticsTitle')}</h3>
             <div className="phonotactics-grid">
                 <Card className="card-no-margin">
-                    <h4 className="chart-title">Sound Distribution</h4>
+                    <h4 className="chart-title">{t('profile.soundDist')}</h4>
                     {phonotactics.total > 0 ? (
                         <>
                             <div className="dist-bar-wrapper">
                                 {phonotactics.cRatio > 0 && <div className="dist-bar cons-bar" style={{ width: `${phonotactics.cRatio}%` }}>{phonotactics.cRatio}% C</div>}
                                 {phonotactics.vRatio > 0 && <div className="dist-bar vow-bar" style={{ width: `${phonotactics.vRatio}%` }}>{phonotactics.vRatio}% V</div>}
                             </div>
-                            <div className="chart-subtitle">Consonants vs Vowels</div>
+                            <div className="chart-subtitle">{t('profile.soundDistSubtitle')}</div>
                         </>
                     ) : (
-                        <div className="chart-empty">Awaiting dictionary data...</div>
+                        <div className="chart-empty">{t('profile.awaitingData')}</div>
                     )}
                 </Card>
 
                 <Card className="card-no-margin">
-                    <h4 className="chart-title">Most Used Phonemes</h4>
+                    <h4 className="chart-title">{t('profile.mostUsedPhonemes')}</h4>
                     {phonotactics.total > 0 ? (
                         <div>
                             {phonotactics.topPhonemes.map(([char, count]) => (
@@ -711,17 +713,17 @@ export default function ProfileTab() {
                             ))}
                         </div>
                     ) : (
-                        <div className="chart-empty">Awaiting dictionary data...</div>
+                        <div className="chart-empty">{t('profile.awaitingData')}</div>
                     )}
                 </Card>
             </div>
 
             <div className="profile-dashboard-grid">
                 <Card className="card-no-margin">
-                    <h3 className="section-title mb-20"><Activity /> Recent Activity</h3>
+                    <h3 className="section-title mb-20"><Activity /> {t('profile.recentActivity')}</h3>
                     <div className="activity-timeline">
                         {(!activity || activity.filter(a => !a.text.includes('isProActive')).length === 0) ? (
-                            <div className="activity-empty">No activity yet. Start building!</div>
+                            <div className="activity-empty">{t('profile.noActivity')}</div>
                         ) : (
                             activity.filter(a => !a.text.includes('isProActive')).map((item, idx) => {
                                 const date = new Date(item.time);
@@ -743,12 +745,14 @@ export default function ProfileTab() {
                 </Card>
 
                 <Card className="card-no-margin">
-                    <h3 className="section-title mb-20"><Trophy /> Achievements</h3>
+                    <h3 className="section-title mb-20"><Trophy /> {t('profile.achievements')}</h3>
                     <div className="badges-grid">
                         {BADGES.map(badge => {
                             const isUnlocked = configUnlockedBadges?.includes(badge.id);
+                            const badgeName = t(`profile.badges.${badge.id}.name`) || badge.name;
+                            const badgeDesc = t(`profile.badges.${badge.id}.desc`) || badge.desc;
                             return (
-                                <div key={badge.id} className={`badge-item ${isUnlocked ? 'unlocked' : ''}`} title={`${badge.name}: ${badge.desc}`}>
+                                <div key={badge.id} className={`badge-item ${isUnlocked ? 'unlocked' : ''}`} title={`${badgeName}: ${badgeDesc}`}>
                                     <span className="badge-icon-wrapper"><badge.Icon size={28} /></span>
                                 </div>
                             );
@@ -757,7 +761,7 @@ export default function ProfileTab() {
                 </Card>
             </div>
 
-            <Modal isOpen={isProjectSelectorOpen} onClose={() => setProjectSelectorOpen(false)} title="Select a Cloud Project to Load">
+            <Modal isOpen={isProjectSelectorOpen} onClose={() => setProjectSelectorOpen(false)} title={t('profile.selectProjectTitle')}>
                 <div className="project-selector-list">
                     {cloudProjects.map(p => (
                         <div
@@ -768,8 +772,8 @@ export default function ProfileTab() {
                             onClick={() => handleSelectProject(p)}
                             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelectProject(p); } }}
                         >
-                            <h4>{p.project_data.config?.conlangName || 'Untitled Project'}</h4>
-                            <p>{p.project_data.wordCount !== undefined ? p.project_data.wordCount : (p.project_data.dictionary || []).length} words</p>
+                            <h4>{p.project_data.config?.conlangName || t('profile.untitledProject')}</h4>
+                            <p>{p.project_data.wordCount !== undefined ? p.project_data.wordCount : (p.project_data.dictionary || []).length} {t('profile.words')}</p>
                             <span className="project-selector-id">ID: {p.project_id}</span>
                         </div>
                     ))}
@@ -777,12 +781,12 @@ export default function ProfileTab() {
             </Modal>
             
             {/* Version History Modal */}
-            <Modal isOpen={isVersionHistoryOpen} onClose={() => setVersionHistoryOpen(false)} title="Version History">
+            <Modal isOpen={isVersionHistoryOpen} onClose={() => setVersionHistoryOpen(false)} title={t('profile.versionHistoryTitle')}>
                 <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
                     {loadingVersions ? (
-                        <p style={{ textAlign: 'center', padding: '2rem' }}>Loading versions...</p>
+                        <p style={{ textAlign: 'center', padding: '2rem' }}>{t('profile.loadingVersions')}</p>
                     ) : versions.length === 0 ? (
-                        <p style={{ textAlign: 'center', padding: '2rem' }}>No versions found for this project. Save to cloud to create one!</p>
+                        <p style={{ textAlign: 'center', padding: '2rem' }}>{t('profile.noVersions')}</p>
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {versions.map(v => (
@@ -790,11 +794,11 @@ export default function ProfileTab() {
                                     <div>
                                         <h4 style={{ margin: '0 0 4px 0', color: 'var(--tx)' }}>{v.version_name}</h4>
                                         <div style={{ fontSize: '0.8rem', color: 'var(--tx2)' }}>
-                                            {new Date(v.created_at).toLocaleString()} • {v.project_data?.wordCount !== undefined ? v.project_data.wordCount : (Array.isArray(v.project_data?.dictionary) ? v.project_data.dictionary.length : 0)} words
+                                            {new Date(v.created_at).toLocaleString()} • {v.project_data?.wordCount !== undefined ? v.project_data.wordCount : (Array.isArray(v.project_data?.dictionary) ? v.project_data.dictionary.length : 0)} {t('profile.words')}
                                         </div>
                                     </div>
                                     <Button variant="default" onClick={() => handleRestoreVersion(v)} style={{ padding: '6px 12px' }}>
-                                        <div className="btn-content"><RotateCcw size={14}/> Restore</div>
+                                        <div className="btn-content"><RotateCcw size={14}/> {t('profile.restore')}</div>
                                     </Button>
                                 </div>
                             ))}

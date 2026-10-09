@@ -6,10 +6,12 @@ import { useLexiconStore } from '../../../store/useLexiconStore';
 import { useConfigStore } from '../../../store/useConfigStore';
 import { useProjectStore } from '../../../store/useProjectStore';
 import { Hash, Network, MoveRight } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import toast from 'react-hot-toast';
 import { loadLargeDataFromDB, saveLargeDataToDB } from '../../../store/useConfigStore.jsx';
 
 export default function ProtoRootModal({ isOpen, onClose, oldWord }) {
+    const { t } = useTranslation();
     const config = useConfigStore(state => state);
     const localProjects = useProjectStore(state => state.localProjects);
     const addWord = useLexiconStore(state => state.addWord);
@@ -99,50 +101,50 @@ export default function ProtoRootModal({ isOpen, onClose, oldWord }) {
     const parentProjects = localProjects.filter(p => p.id !== config.projectId);
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Convert to Proto-Root">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('protoRootModal.title')}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <p style={{ color: 'var(--tx2)', lineHeight: '1.5', fontSize: '0.9rem' }}>
-                    This will convert <strong>{oldWord.word}</strong> into a Proto-Root. You can keep it hidden in this language's dictionary, or send it to a Mother Language. The new evolved word will replace it here.
+                    {t('protoRootModal.desc', { word: oldWord.word })}
                 </p>
 
                 <div style={{ display: 'flex', gap: '15px', alignItems: 'center', background: 'var(--s1)', padding: '15px', borderRadius: 'var(--rad)' }}>
                     <div style={{ flex: 1, textAlign: 'center' }}>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>Proto-Root (Old Word)</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>{t('protoRootModal.oldWordLabel')}</div>
                         <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--tx)' }}>{oldWord.word}</div>
                     </div>
                     <MoveRight size={24} color="var(--tx3)" />
                     <div style={{ flex: 1 }}>
                         <Input 
-                            label="Evolved Root (New Word)" 
+                            label={t('protoRootModal.newWordLabel')} 
                             value={newWord} 
                             onChange={(e) => setNewWord(e.target.value)} 
-                            placeholder="e.g. father"
+                            placeholder={t('protoRootModal.placeholder')}
                             autoFocus
                         />
                     </div>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ color: 'var(--tx)', fontWeight: 'bold', fontSize: '0.9rem' }}>Destination for Proto-Root</label>
+                    <label style={{ color: 'var(--tx)', fontWeight: 'bold', fontSize: '0.9rem' }}>{t('protoRootModal.destinationLabel')}</label>
                     <select 
                         className="input-v" 
                         value={destinationId} 
                         onChange={(e) => setDestinationId(e.target.value)}
                         style={{ width: '100%' }}
                     >
-                        <option value="current">Keep in current language (Hidden)</option>
+                        <option value="current">{t('protoRootModal.keepLocal')}</option>
                         {parentProjects.map(p => (
                             <option key={p.id} value={p.id}>
-                                Send to: {p.project_data?.config?.conlangName || 'Untitled Language'}
+                                {t('protoRootModal.sendToMother', { name: p.project_data?.config?.conlangName || 'Mother Language' })}
                             </option>
                         ))}
                     </select>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                    <Button variant="default" onClick={onClose}>Cancel</Button>
+                    <Button variant="default" onClick={onClose}>{t('protoRootModal.cancelBtn')}</Button>
                     <Button variant="imp" onClick={handleSave}>
-                        <div className="btn-content-flex"><Hash size={16} /> Convert</div>
+                        <div className="btn-content-flex"><Hash size={16} /> {t('protoRootModal.convertBtn')}</div>
                     </Button>
                 </div>
             </div>

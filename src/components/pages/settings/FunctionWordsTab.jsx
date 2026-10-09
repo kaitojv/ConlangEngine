@@ -4,6 +4,7 @@ import Infobox from '../../UI/Infobox/Infobox.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { Plus, Trash2, Wand2, Grid, List, Save, Sliders, CheckCircle, Users } from 'lucide-react';
 import './functionWordsTab.css';
 import './personRulesEditor.css';
@@ -137,6 +138,7 @@ const getEnglishPronoun = (person, number, gender, caseType) => {
 };
 
 export default function FunctionWordsTab() {
+    const { t } = useTranslation();
     const storedPersonRules = useConfigStore((state) => state.personRules);
     const updateConfig = useConfigStore((state) => state.updateConfig);
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
@@ -521,18 +523,16 @@ export default function FunctionWordsTab() {
         setLexicon(newLexicon);
         updateStore(newRules);
 
-        setSaveStatus(`Successfully synced to Lexicon! Added ${addedCount} and updated ${updatedCount} pronouns.`);
+        setSaveStatus(t('settings.functionWords.syncSuccess', { added: addedCount, updated: updatedCount }));
         setTimeout(() => setSaveStatus(null), 5000);
     };
 
     return (
         <div className="function-words-tab-container grammar-tab-container">
             <Card>
-                <h2 className="flex sg-title"><Users /> Pronouns & Alignment</h2>
-                <Infobox title="Pronoun & Affix Guide">
-                    Define how each grammatical person (1st, 2nd, 3rd) or noun class is represented.
-                    <br /><br />
-                    • Use the Matrix below to generate and sync massive pronoun tables (Personal, Demonstrative, Relative) directly to your Lexicon.
+                <h2 className="flex sg-title"><Users /> {t('settings.functionWords.title')}</h2>
+                <Infobox title={t('settings.functionWords.guideTitle')}>
+                    {t('settings.functionWords.guideDesc')}
                 </Infobox>
 
                 <div className="person-rules-editor">
@@ -540,18 +540,18 @@ export default function FunctionWordsTab() {
                             {/* Dimension Selection Dashboard */}
                             <div className="dimension-selector-card">
                                 <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '0 0 12px 0', fontSize: '0.8rem', color: 'var(--acc)' }}>
-                                    <Sliders size={14} /> Matrix Configurations
+                                    <Sliders size={14} /> {t('settings.functionWords.matrixConfig')}
                                 </h4>
                                 
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '14px' }}>
                                     {/* Persons */}
                                     <div>
-                                        <span className="dim-group-label">Person Dimensions</span>
+                                        <span className="dim-group-label">{t('settings.functionWords.dimPersons')}</span>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
                                             {Object.keys(dimPersons).map(p => (
                                                 <label key={p} className="dim-checkbox-label">
                                                     <input type="checkbox" checked={dimPersons[p]} onChange={(e) => setDimPersons(prev => ({ ...prev, [p]: e.target.checked }))} />
-                                                    <span>{p} Person</span>
+                                                    <span>{p === '1st' ? t('settings.functionWords.person1') : p === '2nd' ? t('settings.functionWords.person2') : p === '3rd' ? t('settings.functionWords.person3') : t('settings.functionWords.person4')}</span>
                                                 </label>
                                             ))}
                                         </div>
@@ -559,95 +559,95 @@ export default function FunctionWordsTab() {
 
                                     {/* Numbers */}
                                     <div>
-                                        <span className="dim-group-label">Number Dimensions</span>
+                                        <span className="dim-group-label">{t('settings.functionWords.dimNumbers')}</span>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
                                             <label className="dim-checkbox-label">
                                                 <input type="checkbox" checked={dimNumbers.N} onChange={(e) => setDimNumbers(prev => ({ ...prev, N: e.target.checked }))} />
-                                                <span>None (No Number)</span>
+                                                <span>{t('settings.functionWords.numberNone')}</span>
                                             </label>
                                             <label className="dim-checkbox-label">
                                                 <input type="checkbox" checked={dimNumbers.S} onChange={(e) => setDimNumbers(prev => ({ ...prev, S: e.target.checked }))} />
-                                                <span>Singular (S)</span>
+                                                <span>{t('settings.functionWords.numberSingular')}</span>
                                             </label>
                                             <label className="dim-checkbox-label">
                                                 <input type="checkbox" checked={dimNumbers.P} onChange={(e) => setDimNumbers(prev => ({ ...prev, P: e.target.checked }))} />
-                                                <span>Plural (P)</span>
+                                                <span>{t('settings.functionWords.numberPlural')}</span>
                                             </label>
                                             <label className="dim-checkbox-label">
                                                 <input type="checkbox" checked={dimNumbers.C} onChange={(e) => setDimNumbers(prev => ({ ...prev, C: e.target.checked }))} />
-                                                <span>Collective (C)</span>
+                                                <span>{t('settings.functionWords.numberCollective')}</span>
                                             </label>
                                             <label className="dim-checkbox-label">
                                                 <input type="checkbox" checked={dimNumbers.D} onChange={(e) => setDimNumbers(prev => ({ ...prev, D: e.target.checked }))} />
-                                                <span>Dual (D)</span>
+                                                <span>{t('settings.functionWords.numberDual')}</span>
                                             </label>
                                         </div>
                                     </div>
 
                                     {/* Genders / Animacy */}
                                     <div>
-                                        <span className="dim-group-label">Gender / Animacy</span>
+                                        <span className="dim-group-label">{t('settings.functionWords.dimGenders')}</span>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
                                             <label className="dim-checkbox-label">
                                                 <input type="checkbox" checked={dimGenders.General} onChange={(e) => setDimGenders(prev => ({ ...prev, General: e.target.checked, Masc: false, Fem: false, Neut: false, Anim: false, Inan: false }))} />
-                                                <span>General (None)</span>
+                                                <span>{t('settings.functionWords.genderGeneral')}</span>
                                             </label>
                                             <label className="dim-checkbox-label">
                                                 <input type="checkbox" checked={dimGenders.Masc} onChange={(e) => setDimGenders(prev => ({ ...prev, Masc: e.target.checked, General: false }))} />
-                                                <span>Masculine</span>
+                                                <span>{t('settings.functionWords.genderMasc')}</span>
                                             </label>
                                             <label className="dim-checkbox-label">
                                                 <input type="checkbox" checked={dimGenders.Fem} onChange={(e) => setDimGenders(prev => ({ ...prev, Fem: e.target.checked, General: false }))} />
-                                                <span>Feminine</span>
+                                                <span>{t('settings.functionWords.genderFem')}</span>
                                             </label>
                                             <label className="dim-checkbox-label">
                                                 <input type="checkbox" checked={dimGenders.Neut} onChange={(e) => setDimGenders(prev => ({ ...prev, Neut: e.target.checked, General: false }))} />
-                                                <span>Neuter</span>
+                                                <span>{t('settings.functionWords.genderNeut')}</span>
                                             </label>
                                             <label className="dim-checkbox-label">
                                                 <input type="checkbox" checked={dimGenders.Anim} onChange={(e) => setDimGenders(prev => ({ ...prev, Anim: e.target.checked, General: false }))} />
-                                                <span>Animate</span>
+                                                <span>{t('settings.functionWords.genderAnim')}</span>
                                             </label>
                                             <label className="dim-checkbox-label">
                                                 <input type="checkbox" checked={dimGenders.Inan} onChange={(e) => setDimGenders(prev => ({ ...prev, Inan: e.target.checked, General: false }))} />
-                                                <span>Inanimate</span>
+                                                <span>{t('settings.functionWords.genderInan')}</span>
                                             </label>
                                         </div>
                                     </div>
 
                                     {/* Location (for Dem) */}
                                     <div>
-                                        <span className="dim-group-label">Location (Demonstrative)</span>
+                                        <span className="dim-group-label">{t('settings.functionWords.dimLocation')}</span>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
                                             <label className="dim-checkbox-label">
                                                 <input type="checkbox" checked={dimOtherLocation.Near} onChange={(e) => setDimOtherLocation(prev => ({ ...prev, Near: e.target.checked }))} />
-                                                <span>Near (This)</span>
+                                                <span>{t('settings.functionWords.locNear')}</span>
                                             </label>
                                             <label className="dim-checkbox-label">
                                                 <input type="checkbox" checked={dimOtherLocation.Far} onChange={(e) => setDimOtherLocation(prev => ({ ...prev, Far: e.target.checked }))} />
-                                                <span>Far (That)</span>
+                                                <span>{t('settings.functionWords.locFar')}</span>
                                             </label>
                                             <label className="dim-checkbox-label">
                                                 <input type="checkbox" checked={dimOtherLocation.General} onChange={(e) => setDimOtherLocation(prev => ({ ...prev, General: e.target.checked }))} />
-                                                <span>General</span>
+                                                <span>{t('settings.functionWords.locGeneral')}</span>
                                             </label>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <h3 style={{ marginTop: '20px', color: 'var(--acc)' }}>1. Personal Pronouns</h3>
+                            <h3 style={{ marginTop: '20px', color: 'var(--acc)' }}>{t('settings.functionWords.personalPronounsTitle')}</h3>
                             <div className="matrix-table-wrapper" style={{ overflowX: 'auto', maxHeight: '400px', overflowY: 'auto', background: 'var(--card)', padding: '0', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
                                 <table className="matrix-grid-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
                                     <thead>
                                         <tr style={{ borderBottom: '1px solid var(--bd)' }}>
-                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Category</th>
-                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Affix</th>
-                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Subjective</th>
-                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Objective</th>
-                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Poss. Determiner</th>
-                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Poss. Pronoun</th>
-                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Reflexive</th>
+                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>{t('settings.functionWords.colCategory')}</th>
+                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>{t('settings.functionWords.colAffix')}</th>
+                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>{t('settings.functionWords.colSubjective')}</th>
+                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>{t('settings.functionWords.colObjective')}</th>
+                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>{t('settings.functionWords.colPossDet')}</th>
+                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>{t('settings.functionWords.colPossPron')}</th>
+                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>{t('settings.functionWords.colReflexive')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -679,16 +679,16 @@ export default function FunctionWordsTab() {
                                 </table>
                             </div>
 
-                            <h3 style={{ marginTop: '30px', color: 'var(--acc)' }}>2. Demonstrative, Interrogative, Relative & Indefinite</h3>
+                            <h3 style={{ marginTop: '30px', color: 'var(--acc)' }}>{t('settings.functionWords.otherPronounsTitle')}</h3>
                             <div className="matrix-table-wrapper" style={{ overflowX: 'auto', maxHeight: '400px', overflowY: 'auto', background: 'var(--card)', padding: '0', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
                                 <table className="matrix-grid-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
                                     <thead>
                                         <tr style={{ borderBottom: '1px solid var(--bd)' }}>
-                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Category</th>
-                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Demonstrative</th>
-                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Interrogative</th>
-                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Relative</th>
-                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>Indefinite</th>
+                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>{t('settings.functionWords.colCategory')}</th>
+                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>{t('settings.functionWords.colDemonstrative')}</th>
+                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>{t('settings.functionWords.colInterrogative')}</th>
+                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>{t('settings.functionWords.colRelative')}</th>
+                                            <th style={{ padding: '12px', textAlign: 'left', color: 'var(--tx2)', position: 'sticky', top: 0, background: 'var(--s2)', zIndex: 2 }}>{t('settings.functionWords.colIndefinite')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -747,7 +747,7 @@ export default function FunctionWordsTab() {
                                         transition: 'opacity 0.2s'
                                     }}
                                 >
-                                    <Save size={15} /> Save & Sync to Lexicon
+                                    <Save size={15} /> {t('settings.functionWords.syncToLexicon')}
                                 </button>
                             </div>
                         </div>

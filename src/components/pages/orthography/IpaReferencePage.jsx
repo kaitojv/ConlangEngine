@@ -11,6 +11,7 @@ import {
 import { Volume2, VolumeX, Plus, Minus, BookOpen, Wand2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from '../../UI/Buttons/Buttons.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import './ipaReferencePage.css';
 import './anatomyOverlay.css';
 
@@ -50,6 +51,7 @@ function playPhonemeAudio(url, onPlay, onEnd) {
 
 // ─── Detail Popover ───────────────────────────────────────────────────────────
 function PhonemePopover({ phoneme, anchorRect, onClose, isInCons, isInVows, onToggleCons, onToggleVows }) {
+    const { t } = useTranslation();
     const info = IPA_INFO[phoneme];
     const [playing, setPlaying] = useState(false);
     const ref = useRef(null);
@@ -95,22 +97,22 @@ function PhonemePopover({ phoneme, anchorRect, onClose, isInCons, isInVows, onTo
                         </div>
                         <div className="ipa-popover-badges">
                             {info?.place && (
-                                <span className="ipa-popover-badge place">{info.place}</span>
+                                <span className="ipa-popover-badge place">{t(`orthography.ipaRef.columns.${info.place}`, { defaultValue: info.place })}</span>
                             )}
                             {info?.manner && (
-                                <span className="ipa-popover-badge manner">{info.manner}</span>
+                                <span className="ipa-popover-badge manner">{t(`orthography.ipaRef.rows.${info.manner}`, { defaultValue: info.manner })}</span>
                             )}
                             {info?.isVowel && (
-                                <span className="ipa-popover-badge vowel">Vowel</span>
+                                <span className="ipa-popover-badge vowel">{t('orthography.ipaRef.badgeVowel')}</span>
                             )}
                             {!info?.isVowel && info?.voiced !== undefined && (
                                 <span className={`ipa-popover-badge ${info.voiced ? 'voiced' : 'voiceless'}`}>
-                                    {info.voiced ? 'Voiced' : 'Voiceless'}
+                                    {info.voiced ? t('orthography.ipaRef.voiced') : t('orthography.ipaRef.voiceless')}
                                 </span>
                             )}
                             {isActive && (
                                 <span className="ipa-popover-badge vowel" style={{ background:'rgba(124,58,237,0.2)', color:'var(--acc2)', borderColor:'rgba(124,58,237,0.3)' }}>
-                                    In Inventory
+                                    {t('orthography.ipaRef.inInventoryBadge')}
                                 </span>
                             )}
                         </div>
@@ -123,7 +125,7 @@ function PhonemePopover({ phoneme, anchorRect, onClose, isInCons, isInVows, onTo
                         <div className="ipa-popover-description">{info.description}</div>
                     ) : (
                         <div className="ipa-popover-description" style={{ opacity: 0.5, fontStyle: 'italic' }}>
-                            No description available for this phoneme yet.
+                            {t('orthography.ipaRef.noDescAvailable')}
                         </div>
                     )}
                     {info?.example && (
@@ -141,10 +143,10 @@ function PhonemePopover({ phoneme, anchorRect, onClose, isInCons, isInVows, onTo
                         className={`ipa-action-btn play ${playing ? 'playing' : ''}`}
                         onClick={handlePlay}
                         disabled={!info?.audio}
-                        title={info?.audio ? 'Play pronunciation' : 'No audio available'}
+                        title={info?.audio ? t('orthography.ipaRef.playPronunciation') : t('orthography.ipaRef.noAudioAvailable')}
                     >
                         {info?.audio ? <Volume2 size={13} /> : <VolumeX size={13} />}
-                        {playing ? 'Playing…' : 'Play'}
+                        {playing ? t('orthography.ipaRef.playing') : t('orthography.ipaRef.play')}
                     </button>
 
                     {/* Inventory toggles */}
@@ -154,7 +156,7 @@ function PhonemePopover({ phoneme, anchorRect, onClose, isInCons, isInVows, onTo
                             onClick={() => { onToggleCons(phoneme); }}
                         >
                             {isInCons ? <Minus size={12} /> : <Plus size={12} />}
-                            {isInCons ? 'Remove' : 'Consonants'}
+                            {isInCons ? t('orthography.ipaRef.removeBtn') : t('orthography.ipaRef.consonantsBtn')}
                         </button>
                     )}
                     {info?.isVowel && (
@@ -163,7 +165,7 @@ function PhonemePopover({ phoneme, anchorRect, onClose, isInCons, isInVows, onTo
                             onClick={() => { onToggleVows(phoneme); }}
                         >
                             {isInVows ? <Minus size={12} /> : <Plus size={12} />}
-                            {isInVows ? 'Remove' : 'Vowels'}
+                            {isInVows ? t('orthography.ipaRef.removeBtn') : t('orthography.ipaRef.vowelsBtn')}
                         </button>
                     )}
                     {/* Unknown type — offer both */}
@@ -171,11 +173,11 @@ function PhonemePopover({ phoneme, anchorRect, onClose, isInCons, isInVows, onTo
                         <>
                             <button className={`ipa-action-btn ${isInCons ? 'remove' : 'add-cons'}`} onClick={() => onToggleCons(phoneme)}>
                                 {isInCons ? <Minus size={12} /> : <Plus size={12} />}
-                                {isInCons ? 'Rem. Cons.' : '+ Cons.'}
+                                {isInCons ? t('orthography.ipaRef.remConsBtn') : t('orthography.ipaRef.addConsBtn')}
                             </button>
                             <button className={`ipa-action-btn ${isInVows ? 'remove' : 'add-vow'}`} onClick={() => onToggleVows(phoneme)}>
                                 {isInVows ? <Minus size={12} /> : <Plus size={12} />}
-                                {isInVows ? 'Rem. Vow.' : '+ Vow.'}
+                                {isInVows ? t('orthography.ipaRef.remVowBtn') : t('orthography.ipaRef.addVowBtn')}
                             </button>
                         </>
                     )}
@@ -187,6 +189,7 @@ function PhonemePopover({ phoneme, anchorRect, onClose, isInCons, isInVows, onTo
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function IpaReferencePage() {
+    const { t } = useTranslation();
     const consonants   = useConfigStore(s => s.consonants) || '';
     const vowels       = useConfigStore(s => s.vowels)     || '';
     const ipaMappingRules = useConfigStore(s => s.ipaMappingRules) || '';
@@ -269,7 +272,7 @@ export default function IpaReferencePage() {
 
     const handleBulkApplyIpa = () => {
         if (!ipaMappingRules.trim()) {
-            return toast.error("Please define some IPA mapping rules first.");
+            return toast.error(t('orthography.ipaRef.noRulesToast'));
         }
         
         let updateCount = 0;
@@ -292,9 +295,9 @@ export default function IpaReferencePage() {
         });
         
         if (updateCount > 0) {
-            toast.success(`Generated IPA for ${updateCount} words.`);
+            toast.success(t('orthography.ipaRef.generatedToast', { count: updateCount }));
         } else {
-            toast('No words needed IPA generation.', { icon: 'ℹ️' });
+            toast(t('orthography.ipaRef.noWordsNeededToast'), { icon: 'ℹ️' });
         }
     };
 
@@ -304,22 +307,21 @@ export default function IpaReferencePage() {
             {/* ── IPA AUTO-GENERATION ── */}
             <div className="ipa-ref-section" style={{ backgroundColor: 'var(--s1)', borderRadius: '14px', border: '1px solid var(--border)' }}>
                 <div className="ipa-ref-section-header" style={{ borderBottom: '1px solid var(--border)', background: 'var(--s2)', borderRadius: '14px 14px 0 0' }}>
-                    IPA Auto-Generation
+                    {t('orthography.ipaRef.autoGenTitle')}
                 </div>
                 <div className="ipa-ref-section-body" style={{ padding: '1rem' }}>
                     <p style={{ fontSize: '0.9rem', color: 'var(--tx2)', marginBottom: '1rem', lineHeight: '1.4' }}>
-                        Define rules to automatically generate IPA from your orthography (e.g., <span className="custom-font-text" style={{background: 'var(--s2)', padding: '2px 6px', borderRadius: '4px'}}>oo=oʊ, c=k, sh=ʃ</span>). 
-                        The generator will use these rules when you click the magic wand icon in the dictionary editor.
+                        <span dangerouslySetInnerHTML={{ __html: t('orthography.ipaRef.autoGenDesc') }} />
                     </p>
                     
                     <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                         <div style={{ flex: 1 }}>
-                            <label className="form-label" style={{ fontSize: '0.85rem' }}>Mapping Rules (Comma Separated)</label>
+                            <label className="form-label" style={{ fontSize: '0.85rem' }}>{t('orthography.ipaRef.mappingRulesLabel')}</label>
                             <input 
                                 className="fi w-full"
                                 value={ipaMappingRules}
                                 onChange={(e) => updateConfig({ ipaMappingRules: e.target.value })}
-                                placeholder="oo=oʊ, c=k, sh=ʃ"
+                                placeholder={t('orthography.ipaRef.mappingRulesPlaceholder')}
                             />
                         </div>
                         <div style={{ paddingTop: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
@@ -328,7 +330,7 @@ export default function IpaReferencePage() {
                                 onClick={handleBulkApplyIpa}
                                 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', padding: '0.5rem 1rem' }}
                             >
-                                <Wand2 size={16} /> Bulk Apply to Lexicon
+                                <Wand2 size={16} /> {t('orthography.ipaRef.bulkApplyBtn')}
                             </Button>
                             
                             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--tx2)', cursor: 'pointer' }}>
@@ -338,7 +340,7 @@ export default function IpaReferencePage() {
                                     onChange={(e) => setOverwriteIpa(e.target.checked)}
                                     style={{ accentColor: 'var(--acc)' }}
                                 />
-                                Overwrite existing IPA
+                                {t('orthography.ipaRef.overwriteCheckbox')}
                             </label>
                         </div>
                     </div>
@@ -348,9 +350,9 @@ export default function IpaReferencePage() {
             {/* ── PULMONIC CONSONANTS ── */}
             <div className="ipa-ref-section">
                 <div className="ipa-ref-section-header">
-                    Pulmonic Consonants
+                    {t('orthography.ipaRef.pulmonicConsonants')}
                     <span style={{ marginLeft: 'auto', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
-                        left = voiceless · right = voiced
+                        {t('orthography.ipaRef.voicelessVoicedSubtitle')}
                     </span>
                 </div>
                 <div className="ipa-ref-section-body">
@@ -359,14 +361,14 @@ export default function IpaReferencePage() {
                             <tr>
                                 <th className="row-header"></th>
                                 {IPA_COLUMNS.map(col => (
-                                    <th key={col}>{col}</th>
+                                    <th key={col}>{t(`orthography.ipaRef.columns.${col}`, { defaultValue: col })}</th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody>
                             {IPA_PULMONIC.map(row => (
                                 <tr key={row.row}>
-                                    <th className="row-header">{row.row}</th>
+                                    <th className="row-header">{t(`orthography.ipaRef.rows.${row.row}`, { defaultValue: row.row })}</th>
                                     {row.cells.map((cell, j) => (
                                         <td key={j} className={!cell ? 'impossible' : ''}>
                                             {cell ? (
@@ -385,28 +387,28 @@ export default function IpaReferencePage() {
 
                 <div className="ipa-ref-legend">
                     <div className="ipa-ref-legend-item">
-                        <div className="legend-dot active"></div> In your inventory
+                        <div className="legend-dot active"></div> {t('orthography.ipaRef.inInventory')}
                     </div>
                     <div className="ipa-ref-legend-item">
-                        <div className="legend-dot voiceless"></div> Voiceless
+                        <div className="legend-dot voiceless"></div> {t('orthography.ipaRef.voiceless')}
                     </div>
                     <div className="ipa-ref-legend-item">
-                        <div className="legend-dot voiced"></div> Voiced
+                        <div className="legend-dot voiced"></div> {t('orthography.ipaRef.voiced')}
                     </div>
                     <div className="ipa-ref-legend-item">
-                        <div className="legend-dot impossible"></div> Impossible articulation
+                        <div className="legend-dot impossible"></div> {t('orthography.ipaRef.impossibleArticulation')}
                     </div>
                 </div>
             </div>
             
             {/* ── ANATOMY DIAGRAM ── */}
             <div className="ipa-ref-section">
-                <div className="ipa-ref-section-header">Places of Articulation Anatomy</div>
+                <div className="ipa-ref-section-header">{t('orthography.ipaRef.anatomyTitle')}</div>
                 <div className="ipa-ref-section-body" style={{ display: 'flex', justifyContent: 'center', background: '#ffffff', borderRadius: '0 0 14px 14px', padding: '1rem' }}>
                     <div className="ipa-anatomy-container">
                         <img 
                             src="https://commons.wikimedia.org/wiki/Special:FilePath/Places_of_articulation.svg" 
-                            alt="Sagittal section of the vocal tract showing places of articulation" 
+                            alt={t('orthography.ipaRef.anatomyAlt')} 
                             style={{ maxWidth: '100%', height: 'auto', maxHeight: '400px', filter: 'hue-rotate(240deg)' }}
                         />
                         {Object.entries(ANATOMY_SPOTS).map(([place, pos]) => {
@@ -416,7 +418,7 @@ export default function IpaReferencePage() {
                                     key={place}
                                     className={`anatomy-dot ${isSelected ? 'active' : ''}`}
                                     style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-                                    title={place}
+                                    title={t(`orthography.ipaRef.columns.${place}`, { defaultValue: place })}
                                 />
                             );
                         })}
@@ -426,12 +428,12 @@ export default function IpaReferencePage() {
 
             {/* ── VOWELS ── */}
             <div className="ipa-ref-section">
-                <div className="ipa-ref-section-header">Vowels (IPA Trapezoid)</div>
+                <div className="ipa-ref-section-header">{t('orthography.ipaRef.vowelsTitle')}</div>
                 <div className="ipa-vowel-section">
                     <div className="ipa-vowel-title-row">
-                        <span>Front</span>
-                        <span>Central</span>
-                        <span>Back</span>
+                        <span>{t('orthography.ipaRef.front')}</span>
+                        <span>{t('orthography.ipaRef.central')}</span>
+                        <span>{t('orthography.ipaRef.back')}</span>
                     </div>
                     <div className="ipa-vowel-trapezoid-wrap">
                         {/* SVG grid lines */}
@@ -472,7 +474,7 @@ export default function IpaReferencePage() {
                                         className="ipa-vowel-row-label"
                                         style={{ top: `${pos.top}%`, left: `${pos.frontLeft}%` }}
                                     >
-                                        {row.label}
+                                        {t(`orthography.ipaRef.vowelRows.${row.label}`, { defaultValue: row.label })}
                                     </span>
 
                                     {/* Front pair */}
@@ -550,19 +552,19 @@ export default function IpaReferencePage() {
                 </div>
                 <div className="ipa-ref-legend" style={{ marginTop: '0.5rem' }}>
                     <div className="ipa-ref-legend-item">
-                        <div className="legend-dot active"></div> In your inventory
+                        <div className="legend-dot active"></div> {t('orthography.ipaRef.inInventory')}
                     </div>
-                    <span style={{ opacity: 0.6 }}>Left = unrounded · Right (darker) = rounded</span>
+                    <span style={{ opacity: 0.6 }}>{t('orthography.ipaRef.unroundedRoundedSubtitle')}</span>
                 </div>
             </div>
 
             {/* ── NON-PULMONIC ── */}
             <div className="ipa-ref-section">
-                <div className="ipa-ref-section-header">Non-Pulmonic & Co-articulated</div>
+                <div className="ipa-ref-section-header">{t('orthography.ipaRef.nonPulmonicTitle')}</div>
                 <div className="ipa-ref-grid">
                     {IPA_NON_PULMONIC.map(group => (
                         <div key={group.title} className="ipa-ref-group">
-                            <div className="ipa-ref-group-title">{group.title}</div>
+                            <div className="ipa-ref-group-title">{t(`orthography.ipaRef.groups.${group.title}`, { defaultValue: group.title })}</div>
                             <div className="ipa-ref-sounds">
                                 {group.sounds.map(ph => (
                                     <button
@@ -576,7 +578,7 @@ export default function IpaReferencePage() {
                         </div>
                     ))}
                     <div className="ipa-ref-group">
-                        <div className="ipa-ref-group-title">Co-articulated & Other</div>
+                        <div className="ipa-ref-group-title">{t('orthography.ipaRef.coArticulatedTitle')}</div>
                         <div className="ipa-ref-sounds">
                             {IPA_OTHER_CONSONANTS.map(ph => (
                                 <button
@@ -593,11 +595,11 @@ export default function IpaReferencePage() {
 
             {/* ── SUPRASEGMENTALS & DIACRITICS ── */}
             <div className="ipa-ref-section">
-                <div className="ipa-ref-section-header">Suprasegmentals & Diacritics</div>
+                <div className="ipa-ref-section-header">{t('orthography.ipaRef.suprasegmentalsTitle')}</div>
                 <div className="ipa-ref-grid">
                     {IPA_SUPRASEGMENTALS.map(group => (
                         <div key={group.title} className="ipa-ref-group">
-                            <div className="ipa-ref-group-title">{group.title}</div>
+                            <div className="ipa-ref-group-title">{t(`orthography.ipaRef.groups.${group.title}`, { defaultValue: group.title })}</div>
                             <div className="ipa-ref-sounds">
                                 {group.sounds.map(ph => (
                                     <button
@@ -611,14 +613,14 @@ export default function IpaReferencePage() {
                     ))}
                     {IPA_DIACRITICS.map(group => (
                         <div key={group.title} className="ipa-ref-group">
-                            <div className="ipa-ref-group-title">{group.title}</div>
+                            <div className="ipa-ref-group-title">{t(`orthography.ipaRef.groups.${group.title}`, { defaultValue: group.title })}</div>
                             <div className="ipa-ref-sounds">
                                 {group.sounds.map(ph => (
                                     <button
                                         key={ph}
                                         className="ipa-ref-ph"
                                         onClick={e => handlePhonemeClick(`◌${ph}`, e)}
-                                        title={`${group.title} diacritic`}
+                                        title={t('orthography.ipaRef.diacriticTooltip', { title: t(`orthography.ipaRef.groups.${group.title}`, { defaultValue: group.title }) })}
                                     >◌{ph}</button>
                                 ))}
                             </div>

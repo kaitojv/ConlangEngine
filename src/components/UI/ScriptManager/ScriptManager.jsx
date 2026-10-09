@@ -2,24 +2,26 @@
 import React, { useState } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { SCRIPT_TYPES, getDefaultScriptId } from '../../../utils/scriptResolver.js';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { Plus, Trash2, Edit2, Check, X, Copy, AlertTriangle, GripVertical, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './scriptManager.css';
 
-const TYPE_LABELS = {
-    alphabetic: 'Alphabetic',
-    syllabic: 'Syllabic',
-    logographic: 'Logographic',
-    featural_block: 'Featural Block',
-};
-
 export default function ScriptManager() {
+    const { t } = useTranslation();
     const scriptSystems = useConfigStore(state => state.scriptSystems) || [];
     const scriptRules = useConfigStore(state => state.scriptRules) || {};
     const addScriptSystem = useConfigStore(state => state.addScriptSystem);
     const removeScriptSystem = useConfigStore(state => state.removeScriptSystem);
     const updateScriptSystem = useConfigStore(state => state.updateScriptSystem);
     const setDefaultScriptSystem = useConfigStore(state => state.setDefaultScriptSystem);
+
+    const TYPE_LABELS = {
+        alphabetic: t('orthography.scriptManager.types.alphabetic', 'Alphabetic'),
+        syllabic: t('orthography.scriptManager.types.syllabic', 'Syllabic'),
+        logographic: t('orthography.scriptManager.types.logographic', 'Logographic'),
+        featural_block: t('orthography.scriptManager.types.featural_block', 'Featural Block'),
+    };
 
     const [editingId, setEditingId] = useState(null);
     const [editName, setEditName] = useState('');
@@ -37,7 +39,7 @@ export default function ScriptManager() {
             name: `Script ${count}`,
             type: 'alphabetic',
         });
-        toast.success('Script added');
+        toast.success(t('orthography.scriptManager.scriptAdded', 'Script added'));
     };
 
     const handleDuplicate = (script) => {
@@ -48,7 +50,7 @@ export default function ScriptManager() {
             name: `${script.name} ${count}`,
             isDefault: false,
         });
-        toast.success('Script duplicated');
+        toast.success(t('orthography.scriptManager.scriptDuplicated', 'Script duplicated'));
     };
 
     const handleStartRename = (script) => {
@@ -250,10 +252,10 @@ export default function ScriptManager() {
                         <button
                             className={`script-default-btn ${isDefault ? 'script-default-btn-active' : ''}`}
                             onClick={() => !isDefault && handleSetDefault(script.id)}
-                            title={isDefault ? 'This is the default script' : 'Set as default script'}
+                            title={isDefault ? t('orthography.scriptManager.defaultTooltip', 'This is the default script') : t('orthography.scriptManager.setDefaultTooltip', 'Set as default script')}
                         >
                             <Star size={13} />
-                            {isDefault ? 'Default' : 'Set as default'}
+                            {isDefault ? t('orthography.scriptManager.isDefault', 'Default') : t('orthography.scriptManager.setDefault', 'Set as default')}
                         </button>
                     </div>
                 </div>
@@ -264,20 +266,20 @@ export default function ScriptManager() {
     return (
         <div className="script-manager">
             <div className="script-manager-header">
-                <h3 className="sg-title">Script Systems</h3>
+                <h3 className="sg-title">{t('orthography.scriptManager.title', 'Script Systems')}</h3>
                 <button className="btn-add" onClick={handleAdd} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Plus size={14} /> Add Script
+                    <Plus size={14} /> {t('orthography.scriptManager.addScript', 'Add Script')}
                 </button>
             </div>
 
             <p className="script-manager-desc">
-                Define multiple writing systems for your conlang. Each script can be alphabetic, syllabic, logographic, or featural block.
+                {t('orthography.scriptManager.desc', 'Define multiple writing systems for your conlang. Each script can be alphabetic, syllabic, logographic, or featural block.')}
             </p>
 
             {/* Default script slot */}
             {defaultScript && (
                 <div className="script-default-section">
-                    <label className="script-section-label">Default Script</label>
+                    <label className="script-section-label">{t('orthography.scriptManager.defaultScript', 'Default Script')}</label>
                     <div
                         className="script-default-slot"
                         onDragOver={handleDragOverDefault}
@@ -288,7 +290,7 @@ export default function ScriptManager() {
                             {renderCard(defaultScript, true)}
                         </div>
                         <div className={`script-drop-separator ${dragOverDefault ? 'script-drop-separator-visible' : ''}`}>
-                            <span className="script-drop-separator-label">Drop to make default</span>
+                            <span className="script-drop-separator-label">{t('orthography.scriptManager.dropToMakeDefault', 'Drop to make default')}</span>
                         </div>
                     </div>
                 </div>
@@ -297,7 +299,7 @@ export default function ScriptManager() {
             {/* Other scripts */}
             {otherScripts.length > 0 && (
                 <div className="script-other-section">
-                    <label className="script-section-label">Other Scripts</label>
+                    <label className="script-section-label">{t('orthography.scriptManager.otherScripts', 'Other Scripts')}</label>
                     <div className="script-list">
                         {/* Ghost preview: current default slides here when dragging over default slot */}
                         {dragOverDefault && draggingId && defaultScript && (

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import Card from '@/components/UI/Card/Card.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
@@ -8,6 +9,7 @@ import { Hash, Calculator, ArrowRight, Lightbulb, RefreshCw, CalendarDays } from
 import './numeralTab.css';
 
 export default function NumeralTab() {
+    const { t } = useTranslation();
     const updateConfig = useConfigStore(s => s.updateConfig);
     const numeralBase = useConfigStore(s => s.numeralBase) || 10;
     const calendarSystem = useConfigStore(s => s.calendarSystem) || {
@@ -148,13 +150,13 @@ export default function NumeralTab() {
         <div className="numeral-tab">
             {/* Base Selector */}
             <Card>
-                <h2 className="flex sg-title"><Hash /> Numeral System</h2>
-                <Infobox title="Numeral System Guide">
-                    Many conlangs use non-decimal bases. Mayan used Base-20 (vigesimal), Babylonian used Base-60, and many cultures use Base-12 (duodecimal). Choose your conlang's number base here.
+                <h2 className="flex sg-title"><Hash /> {t('settings.numerals.title')}</h2>
+                <Infobox title={t('settings.numerals.guideTitle')}>
+                    {t('settings.numerals.baseGuideDesc')}
                 </Infobox>
 
                 <div className="numeral-base-selector">
-                    <label className="form-label">Number Base</label>
+                    <label className="form-label">{t('settings.numerals.numberBase')}</label>
                     <div className="base-options">
                         {[2, 5, 6, 8, 10, 12, 16, 20].map(base => (
                             <button
@@ -168,7 +170,7 @@ export default function NumeralTab() {
                         ))}
                     </div>
                     <div className="base-custom">
-                        <label className="form-label">Or enter a custom base (2–36):</label>
+                        <label className="form-label">{t('settings.numerals.customBaseLabel')}</label>
                         <input
                             type="number"
                             min="2"
@@ -199,10 +201,10 @@ export default function NumeralTab() {
 
             {/* Converter */}
             <Card>
-                <h2 className="flex sg-title"><ArrowRight /> Base-10 → Base-{numeralBase} Converter</h2>
+                <h2 className="flex sg-title"><ArrowRight /> {t('settings.numerals.converterTitle', { base: numeralBase })}</h2>
                 <div className="converter-row">
                     <div className="converter-input">
-                        <label className="form-label">Decimal Number</label>
+                        <label className="form-label">{t('settings.numerals.decimalNumber')}</label>
                         <input
                             type="number"
                             min="0"
@@ -229,7 +231,7 @@ export default function NumeralTab() {
 
             {/* Calculator */}
             <Card>
-                <h2 className="flex sg-title"><Calculator /> Base-{numeralBase} Calculator</h2>
+                <h2 className="flex sg-title"><Calculator /> {t('settings.numerals.calculatorTitle', { base: numeralBase })}</h2>
                 <p className="numeral-calc-desc">
                     Perform math directly in your conlang's number system.
                 </p>
@@ -290,15 +292,15 @@ export default function NumeralTab() {
 
             {/* Calendar & Date System */}
             <Card>
-                <h2 className="flex sg-title"><CalendarDays /> Calendar & Date System</h2>
-                <Infobox title="Date Translator">
-                    Translate real-world Gregorian dates into your conlang. Days and years are automatically converted into your <strong>Base-{numeralBase}</strong> number system.
+                <h2 className="flex sg-title"><CalendarDays /> {t('settings.numerals.calendarTitle')}</h2>
+                <Infobox title={t('settings.numerals.dateTranslatorTitle')}>
+                    <span dangerouslySetInnerHTML={{ __html: t('settings.numerals.dateTranslatorDesc', { base: numeralBase }) }} />
                 </Infobox>
 
                 <div className="calendar-config-grid">
                     <div className="cal-section">
-                        <h3>Days of the Week</h3>
-                        <p className="cal-desc">Start from Monday.</p>
+                        <h3>{t('settings.numerals.daysOfWeek')}</h3>
+                        <p className="cal-desc">{t('settings.numerals.startFromMonday')}</p>
                         <div className="cal-inputs">
                             {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((dayName, idx) => (
                                 <div key={`day-${idx}`} className="cal-input-row">
@@ -306,7 +308,7 @@ export default function NumeralTab() {
                                     <input 
                                         type="text" 
                                         className="fi custom-font-text notranslate" 
-                                        placeholder={`Conlang word`}
+                                        placeholder={t('settings.numerals.conlangWordPlaceholder')}
                                         value={calendarSystem.daysOfWeek[idx] || ''}
                                         onChange={(e) => {
                                             const newDays = [...calendarSystem.daysOfWeek];
@@ -320,8 +322,8 @@ export default function NumeralTab() {
                     </div>
 
                     <div className="cal-section">
-                        <h3>Months</h3>
-                        <p className="cal-desc">January to December.</p>
+                        <h3>{t('settings.numerals.months')}</h3>
+                        <p className="cal-desc">{t('settings.numerals.janToDec')}</p>
                         <div className="cal-inputs months-grid">
                             {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((monthName, idx) => (
                                 <div key={`month-${idx}`} className="cal-input-row">
@@ -329,7 +331,7 @@ export default function NumeralTab() {
                                     <input 
                                         type="text" 
                                         className="fi custom-font-text notranslate" 
-                                        placeholder={`Conlang word`}
+                                        placeholder={t('settings.numerals.conlangWordPlaceholder')}
                                         value={calendarSystem.months[idx] || ''}
                                         onChange={(e) => {
                                             const newMonths = [...calendarSystem.months];
@@ -346,7 +348,7 @@ export default function NumeralTab() {
                 <div className="cal-format-section">
                     <div className="cal-format-inputs">
                         <div className="cal-input-group">
-                            <label className="form-label">Date Format</label>
+                            <label className="form-label">{t('settings.numerals.dateFormat')}</label>
                             <select 
                                 className="fi"
                                 value={calendarSystem.dateFormat}
@@ -361,7 +363,7 @@ export default function NumeralTab() {
                             </select>
                         </div>
                         <div className="cal-input-group">
-                            <label className="form-label">Epoch Offset (Years)</label>
+                            <label className="form-label">{t('settings.numerals.epochOffset')}</label>
                             <input 
                                 type="number" 
                                 className="fi"
@@ -369,14 +371,14 @@ export default function NumeralTab() {
                                 onChange={(e) => updateConfig({ calendarSystem: { ...calendarSystem, yearOffset: parseInt(e.target.value) || 0 }})}
                                 placeholder="e.g. -1000 or 500"
                             />
-                            <p className="cal-sub-label">Add/subtract years from Gregorian date.</p>
+                            <p className="cal-sub-label">{t('settings.numerals.addSubtractYears')}</p>
                         </div>
                     </div>
                 </div>
 
                 <div className="cal-preview-section">
                     <div className="cal-preview-header">
-                        <h3>Live Date Translator</h3>
+                        <h3>{t('settings.numerals.dateTranslatorTitle')}</h3>
                         <input 
                             type="date" 
                             className="fi date-picker"

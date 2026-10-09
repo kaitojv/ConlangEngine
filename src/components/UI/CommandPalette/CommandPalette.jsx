@@ -12,18 +12,6 @@ import { DARK_THEMES, LIGHT_THEMES } from '@/utils/themePresets.js';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
 import './commandPalette.css';
 
-// Pre-defined app routes for navigation search
-const APP_ROUTES = [
-    { id: 'nav-home', title: 'Home', type: 'route', path: '/', icon: 'Command' },
-    { id: 'nav-lexicon', title: 'Lexicon', type: 'route', path: '/lexicon', icon: 'Book' },
-    { id: 'nav-create', title: 'Create Word', type: 'route', path: '/create', icon: 'Type' },
-    { id: 'nav-settings', title: 'Settings', type: 'route', path: '/settings', icon: 'Settings' },
-    { id: 'nav-conlangs', title: 'Conlangs', type: 'route', path: '/conlangs', icon: 'Languages' },
-    { id: 'nav-generator', title: 'Word Generator', type: 'route', path: '/generator', icon: 'Sparkles' },
-    { id: 'nav-wiki', title: 'Wiki / Library', type: 'route', path: '/wiki', icon: 'Library' },
-    { id: 'nav-rootmap', title: 'Root Map', type: 'route', path: '/rootmap', icon: 'Map' },
-];
-
 export default function CommandPalette() {
     const { t } = useTranslation();
     const [isOpen, setIsOpen] = useState(false);
@@ -39,6 +27,17 @@ export default function CommandPalette() {
     const theme = useConfigStore(state => state.theme);
     const updateConfig = useConfigStore(state => state.updateConfig);
     const localProjects = useProjectStore(state => state.localProjects) || [];
+
+    const appRoutes = useMemo(() => [
+        { id: 'nav-home', title: t('header.home'), type: 'route', path: '/', icon: 'Command' },
+        { id: 'nav-lexicon', title: t('header.lexicon'), type: 'route', path: '/lexicon', icon: 'Book' },
+        { id: 'nav-create', title: t('nav.createWord'), type: 'route', path: '/create', icon: 'Type' },
+        { id: 'nav-settings', title: t('nav.settings'), type: 'route', path: '/settings', icon: 'Settings' },
+        { id: 'nav-conlangs', title: t('nav.conlangs'), type: 'route', path: '/conlangs', icon: 'Languages' },
+        { id: 'nav-generator', title: t('nav.generator'), type: 'route', path: '/generator', icon: 'Sparkles' },
+        { id: 'nav-wiki', title: t('nav.wiki'), type: 'route', path: '/wiki', icon: 'Library' },
+        { id: 'nav-rootmap', title: t('nav.rootmap'), type: 'route', path: '/rootmap', icon: 'Map' },
+    ], [t]);
 
     const openPalette = () => {
         setQuery('');
@@ -99,7 +98,7 @@ export default function CommandPalette() {
         if (!query.trim()) {
             // Default view when empty
             return [
-                ...APP_ROUTES.slice(0, 4),
+                ...appRoutes.slice(0, 4),
                 ...QUICK_ACTIONS
             ];
         }
@@ -108,7 +107,7 @@ export default function CommandPalette() {
         let matches = [];
 
         // 1. Search Routes
-        APP_ROUTES.forEach(route => {
+        appRoutes.forEach(route => {
             if (route.title.toLowerCase().includes(lowerQuery)) {
                 matches.push(route);
             }
@@ -129,7 +128,7 @@ export default function CommandPalette() {
                     id: `wiki-${id}`,
                     title: title,
                     type: 'wiki',
-                    subtitle: 'Wiki Document',
+                    subtitle: t('commandPalette.wikiDocSubtitle'),
                     path: '/wiki',
                     icon: 'FileText'
                 });

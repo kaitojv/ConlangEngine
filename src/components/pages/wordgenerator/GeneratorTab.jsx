@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { useShallow } from 'zustand/react/shallow';
 import { useNavigate } from 'react-router';
 import Card from '@/components/UI/Card/Card.jsx';
@@ -19,6 +20,7 @@ import './generatorTab.css';
 
 
 export default function GeneratorTab() {
+    const { t } = useTranslation();
     const { transliterate } = useTransliterator();
     const { generatedWord, generatedIpa, generatedClass, generateWord } = useWordGenerator();
     const [selectedLengths, setSelectedLengths] = useState([2, 3]);
@@ -152,13 +154,13 @@ export default function GeneratorTab() {
         <div className="generator-container">
             <Card>
                 <h2 className='flex sg-title generator-header-title'>
-                    <Dna /> Word Generator
+                    <Dna /> {t('generator.title')}
                 </h2>
-                <p className="generator-description">Configure the parameters below to generate a new phonotactically valid word based on your conlang's rules.</p>
+                <p className="generator-description">{t('generator.desc')}</p>
                 
                 <div className="generator-input-row">
                     <div className="generator-input-group">
-                        <label className="generator-label">Syllable Length(s) (Select multiple)</label>
+                        <label className="generator-label">{t('generator.syllableLengths')}</label>
                         <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                             {[1, 2, 3, 4, 5, 6, 7].map(len => (
                                 <button
@@ -192,21 +194,21 @@ export default function GeneratorTab() {
                         </div>
                     </div>
                     <div className="generator-input-group">
-                        <label className="generator-label">Word Class</label>
+                        <label className="generator-label">{t('generator.wordClass')}</label>
                         <select 
                             className="generator-input"
                             value={targetClass} onChange={(e) => setTargetClass(e.target.value)}
                         >
-                            <option value="random">Random</option>
-                            <option value="noun">Noun</option>
-                            <option value="verb">Verb</option>
-                            <option value="adjective">Adjective</option>
-                            <option value="adverb">Adverb</option>
-                            <option value="pronoun">Pronoun</option>
+                            <option value="random">{t('generator.random')}</option>
+                            <option value="noun">{t('generator.noun')}</option>
+                            <option value="verb">{t('generator.verb')}</option>
+                            <option value="adjective">{t('generator.adjective')}</option>
+                            <option value="adverb">{t('generator.adverb')}</option>
+                            <option value="pronoun">{t('generator.pronoun')}</option>
                         </select>
                     </div>
                 </div>
-                <Button onClick={handleGenerate}><div className="generator-btn-content"><Wand2 size={18} /> Generate Word</div></Button>
+                <Button onClick={handleGenerate}><div className="generator-btn-content"><Wand2 size={18} /> {t('generator.generateBtn')}</div></Button>
 
                 {/* ── Class Marker Config ── */}
                 <div className="marker-config-section">
@@ -215,7 +217,7 @@ export default function GeneratorTab() {
                         onClick={() => setShowMarkerConfig(v => !v)}
                     >
                         <Settings2 size={15} />
-                        Class Markers
+                        {t('generator.classMarkers')}
                         <span className="marker-config-arrow">{showMarkerConfig ? '▲' : '▼'}</span>
                     </button>
 
@@ -223,11 +225,10 @@ export default function GeneratorTab() {
                         <div className="marker-config-panel">
                             <div className="marker-config-header">
                                 <p className="marker-config-desc">
-                                    Set a suffix/prefix that the generator appends per word class. 
-                                    Use the import button to auto-fill from your Grammar Tab rules.
+                                    {t('generator.classMarkersDesc')}
                                 </p>
                                 <Button variant="edit" onClick={handleImportFromGrammar}>
-                                    <Download size={14} /> Import from Grammar
+                                    <Download size={14} /> {t('generator.importFromGrammar')}
                                 </Button>
                             </div>
                             <div className="marker-config-grid">
@@ -255,17 +256,17 @@ export default function GeneratorTab() {
                         onClick={() => setShowWeightConfig(v => !v)}
                     >
                         <SlidersHorizontal size={15} />
-                        Pattern Weights
+                        {t('generator.patternWeights')}
                         <span className="marker-config-arrow">{showWeightConfig ? '▲' : '▼'}</span>
                     </button>
 
                     {showWeightConfig && (
                         <div className="marker-config-panel">
                             <p className="marker-config-desc">
-                                Assign probability weights to each syllable pattern. Higher weight = more likely to be picked. Default is 1 for all patterns.
+                                {t('generator.patternWeightsDesc')}
                             </p>
                             {parsedPatterns.length === 0 ? (
-                                <p className="weight-empty">No syllable patterns defined. Set them in Settings → Phonology.</p>
+                                <p className="weight-empty">{t('generator.noPatterns')}</p>
                             ) : (
                                 <div className="weight-grid">
                                     {parsedPatterns.map(pattern => {
@@ -297,13 +298,13 @@ export default function GeneratorTab() {
 
                 <div className="fill-mode-prompt" style={{ display: 'flex', gap: '10px', marginTop: '20px', flexWrap: 'wrap' }}>
                     <Button variant="edit" onClick={() => setIsFillMode(true)}>
-                        <BookCopy size={18} /> Fill Mode
+                        <BookCopy size={18} /> {t('generator.fillMode')}
                     </Button>
                     <Button variant="imp" onClick={() => setIsBatchMode(true)}>
-                        <Wand2 size={18} /> Batch Generator
+                        <Wand2 size={18} /> {t('generator.batchGen')}
                     </Button>
                     <Button variant="save" onClick={() => setIsListFillMode(true)}>
-                        <ListChecks size={18} /> Vocab Checklist
+                        <ListChecks size={18} /> {t('generator.vocabChecklist')}
                     </Button>
                 </div>
             </Card>
@@ -311,20 +312,20 @@ export default function GeneratorTab() {
 
             {generatedWord && (
                 <Card>
-                    <h2 className='flex sg-title' style={{ marginBottom: 0 }}>Laboratory Result</h2>
+                    <h2 className='flex sg-title' style={{ marginBottom: 0 }}>{t('generator.labResult')}</h2>
                     <div className="generator-result-section">
                         <h1 className="custom-font-text notranslate generator-result-word">{transliterate(generatedWord)}</h1>
                         <p className="generator-result-meta"><span className="notranslate generator-ipa">/{generatedIpa}/</span> <span className="generator-separator">|</span> <span className="generator-class-badge">{generatedClass}</span></p>
                     </div>
                     {derivations.length > 0 && (
                         <div className="derivation-preview-section">
-                            <h3 className="derivation-preview-title">Derivation Preview</h3>
+                            <h3 className="derivation-preview-title">{t('generator.derivationPreview')}</h3>
                             <div className="derivation-grid">
                                 {derivations.map((d, i) => (<div key={i} className="derivation-item"><span className="derivation-rule-name">{d.name}</span><span className="custom-font-text notranslate derivation-result-word">{transliterate(d.result || '') || '---'}</span></div>))}
                             </div>
                         </div>
                     )}
-                    <div className="generator-actions"><Button variant="imp" onClick={handleSendToCreateWord}><div className="generator-btn-content"><Send size={18} /> Send to Create Word</div></Button></div>
+                    <div className="generator-actions"><Button variant="imp" onClick={handleSendToCreateWord}><div className="generator-btn-content"><Send size={18} /> {t('generator.sendToCreate')}</div></Button></div>
                 </Card>
             )}
         </div>
@@ -332,6 +333,7 @@ export default function GeneratorTab() {
 }
 
 function FillMode({ onExit }) {
+    const { t } = useTranslation();
     const [currentIndex, setCurrentIndex] = useState(0);
     const [conlangWord, setConlangWord] = useState('');
     
@@ -436,13 +438,13 @@ function FillMode({ onExit }) {
             <div className="fill-mode-container">
                 <Card>
                     <div className="fill-mode-header">
-                        <h2 className='flex sg-title'><BookCopy /> Fill Mode</h2>
-                        <Button variant="cancel" onClick={onExit}>Exit Fill Mode</Button>
+                        <h2 className='flex sg-title'><BookCopy /> {t('generator.fillMode')}</h2>
+                        <Button variant="cancel" onClick={onExit}>{t('generator.exitFillMode')}</Button>
                     </div>
                     <div className="explore-empty">
                         <Check size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
-                        <h3>All done!</h3>
-                        <p>You have translated all available common words into your lexicon.</p>
+                        <h3>{t('generator.allDone')}</h3>
+                        <p>{t('generator.allDoneDesc')}</p>
                     </div>
                 </Card>
             </div>
@@ -453,19 +455,19 @@ function FillMode({ onExit }) {
         <div className="fill-mode-container">
             <Card>
                 <div className="fill-mode-header">
-                    <h2 className='flex sg-title'><BookCopy /> Fill Mode</h2>
-                    <Button variant="cancel" onClick={onExit}>Exit Fill Mode</Button>
+                    <h2 className='flex sg-title'><BookCopy /> {t('generator.fillMode')}</h2>
+                    <Button variant="cancel" onClick={onExit}>{t('generator.exitFillMode')}</Button>
                 </div>
-                <p>Translate the common English word into your conlang. The word will be validated and added to your lexicon.</p>
+                <p>{t('generator.fillModeDesc')}</p>
                 
                 <div className="fill-challenge">
                     <div className="challenge-word-container">
-                        <p className="challenge-label">Translate:</p>
+                        <p className="challenge-label">{t('generator.translateLabel')}</p>
                         <h1 className="challenge-word">{currentChallenge.word}</h1>
                         <p className="challenge-class">({currentChallenge.class})</p>
                     </div>
                     <Input
-                        label="Your Conlang's Word"
+                        label={t('generator.yourConlangWord')}
                         value={conlangWord}
                         onChange={(e) => setConlangWord(e.target.value)}
                         placeholder="e.g., makin"
@@ -475,8 +477,8 @@ function FillMode({ onExit }) {
                 </div>
 
                 <div className="fill-actions">
-                    <Button variant="default" onClick={handleSkip}><SkipForward size={18} /> Skip</Button>
-                    <Button variant="save" onClick={handleSaveAndNext}><Check size={18} /> Save and Next</Button>
+                    <Button variant="default" onClick={handleSkip}><SkipForward size={18} /> {t('generator.skip')}</Button>
+                    <Button variant="save" onClick={handleSaveAndNext}><Check size={18} /> {t('generator.saveAndNext')}</Button>
                 </div>
             </Card>
         </div>
@@ -484,6 +486,7 @@ function FillMode({ onExit }) {
 }
 
 function BatchMode({ onExit }) {
+    const { t } = useTranslation();
     const { transliterate } = useTransliterator();
     const { generateWord } = useWordGenerator();
     const addWord = useLexiconStore((state) => state.addWord);
@@ -583,14 +586,14 @@ function BatchMode({ onExit }) {
         <div className="fill-mode-container">
             <Card>
                 <div className="fill-mode-header">
-                    <h2 className='flex sg-title'><Wand2 /> Batch Auto-Generator</h2>
-                    <Button variant="cancel" onClick={onExit}>Exit Batch Mode</Button>
+                    <h2 className='flex sg-title'><Wand2 /> {t('generator.batchGen')}</h2>
+                    <Button variant="cancel" onClick={onExit}>{t('generator.exitBatchMode')}</Button>
                 </div>
-                <p>Generate a bulk list of phonotactically valid words. Select the ones you like, give them a translation, and save them directly to your Lexicon.</p>
+                <p>{t('generator.batchDesc')}</p>
                 
                 <div className="generator-input-row" style={{ marginTop: '20px' }}>
                     <div className="generator-input-group">
-                        <label className="generator-label">Words to Generate (Max 3000)</label>
+                        <label className="generator-label">{t('generator.wordsToGen')}</label>
                         <input 
                             type="number" min="5" max="3000"
                             className="generator-input"
@@ -598,7 +601,7 @@ function BatchMode({ onExit }) {
                         />
                     </div>
                     <div className="generator-input-group">
-                        <label className="generator-label">Syllable Length(s)</label>
+                        <label className="generator-label">{t('generator.syllableLengths')}</label>
                         <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                             {[1, 2, 3, 4, 5, 6, 7].map(len => (
                                 <button
@@ -634,13 +637,13 @@ function BatchMode({ onExit }) {
                 </div>
                 
                 <Button variant="imp" onClick={handleGenerateBatch} style={{ marginBottom: '20px' }}>
-                    Generate {batchSize} Words
+                    {t('generator.generateCount', { count: batchSize })}
                 </Button>
 
                 {generatedBatch.length > 0 && (
                     <div className="batch-results">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
-                            <h3 style={{ margin: 0, color: 'var(--tx2)' }}>Results ({generatedBatch.length})</h3>
+                            <h3 style={{ margin: 0, color: 'var(--tx2)' }}>{t('generator.resultsCount', { count: generatedBatch.length })}</h3>
                             
                             {totalPages > 1 && (
                                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -649,17 +652,17 @@ function BatchMode({ onExit }) {
                                         onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                         disabled={currentPage === 1}
                                     >
-                                        Prev
+                                        {t('generator.prevPage')}
                                     </Button>
                                     <span style={{ color: 'var(--tx2)', fontSize: '0.9rem' }}>
-                                        Page {currentPage} of {totalPages}
+                                        {t('generator.pageOf', { current: currentPage, total: totalPages })}
                                     </span>
                                     <Button 
                                         variant="default" 
                                         onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                         disabled={currentPage === totalPages}
                                     >
-                                        Next
+                                        {t('generator.nextPage')}
                                     </Button>
                                 </div>
                             )}
@@ -669,7 +672,7 @@ function BatchMode({ onExit }) {
                                 onClick={handleSaveSelected}
                                 disabled={selectedWords.size === 0}
                             >
-                                Save Selected ({selectedWords.size})
+                                {t('generator.saveSelected', { count: selectedWords.size })}
                             </Button>
                         </div>
                         
@@ -705,7 +708,7 @@ function BatchMode({ onExit }) {
                                     </div>
                                     <input 
                                         type="text" 
-                                        placeholder="Enter translation..." 
+                                        placeholder={t('generator.enterTransPlaceholder')} 
                                         className="generator-input"
                                         value={translations[item.id] || ''}
                                         onChange={(e) => updateTranslation(item.id, e.target.value)}

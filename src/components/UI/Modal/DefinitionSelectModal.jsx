@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import Modal from './Modal.jsx';
 import Button from '../Buttons/Buttons.jsx';
 import { BookOpen, Check, Loader2, Sparkles, Filter, Info } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import './definitionSelectModal.css';
 
 export default function DefinitionSelectModal({
@@ -13,6 +14,7 @@ export default function DefinitionSelectModal({
     isLoading = false,
     onSelectDefinition
 }) {
+    const { t } = useTranslation();
     const [selectedIdState, setSelectedIdState] = useState(null);
     const [customTextState, setCustomTextState] = useState(null);
     const [activePosFilter, setActivePosFilter] = useState('all');
@@ -75,7 +77,7 @@ export default function DefinitionSelectModal({
             title={
                 <div className="def-modal-title">
                     <BookOpen size={20} className="def-modal-title-icon" />
-                    <span>Choose Definition for &quot;<strong className="def-target-word">{translation}</strong>&quot;</span>
+                    <span>{t('definitionSelect.title', { word: translation })}</span>
                 </div>
             }
             className="modal-wide def-select-modal"
@@ -84,19 +86,19 @@ export default function DefinitionSelectModal({
                 {isLoading ? (
                     <div className="def-modal-loading">
                         <Loader2 className="spinner" size={32} />
-                        <p>Searching definitions for &quot;{translation}&quot;...</p>
+                        <p>{t('definitionSelect.searching', { word: translation })}</p>
                     </div>
                 ) : definitions.length === 0 ? (
                     <div className="def-modal-empty">
                         <Info size={36} className="def-modal-empty-icon" />
-                        <h4>No definition senses found</h4>
-                        <p>We couldn&apos;t automatically retrieve definitions for &quot;{translation}&quot;. You can manually type a custom definition below.</p>
+                        <h4>{t('definitionSelect.noSensesTitle')}</h4>
+                        <p>{t('definitionSelect.noSensesDesc', { word: translation })}</p>
                     </div>
                 ) : (
                     <>
                         <div className="def-modal-header-desc">
                             <p>
-                                Multiple definitions were found. Select the sense that best matches your word, or tweak the definition text before applying.
+                                {t('definitionSelect.headerDesc')}
                             </p>
 
                             {posList.length > 1 && (
@@ -174,27 +176,27 @@ export default function DefinitionSelectModal({
 
                 <div className="def-custom-editor-section">
                     <label className="form-label def-editor-label">
-                        Definition Text Preview & Customization
+                        {t('definitionSelect.customLabel')}
                     </label>
                     <textarea
                         className="input-v def-custom-textarea"
                         rows={3}
                         value={customText}
                         onChange={(e) => setCustomTextState(e.target.value)}
-                        placeholder="Selected definition text will appear here. You can edit it before applying..."
+                        placeholder={t('definitionSelect.customPlaceholder')}
                     />
                 </div>
 
                 <div className="def-modal-footer">
                     <Button variant="sec" onClick={handleClose}>
-                        Cancel
+                        {t('definitionSelect.cancelBtn')}
                     </Button>
                     <Button
                         variant="save"
                         onClick={handleApply}
                         disabled={!customText.trim() || isLoading}
                     >
-                        <Check size={16} /> Apply Selected Definition
+                        <Check size={16} /> {t('definitionSelect.applyBtn')}
                     </Button>
                 </div>
             </div>

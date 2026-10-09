@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { useShallow } from 'zustand/react/shallow';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
@@ -13,6 +14,7 @@ import { Search, AlertTriangle, Languages, CheckCircle2, FlaskConical, Volume2, 
 import './analyzerTab.css';
 
 export default function AnalyzerTab() {
+    const { t } = useTranslation();
     const [inputText, setInputText] = useState('');
     const [analyzedWords, setAnalyzedWords] = useState([]);
     const [translation, setTranslation] = useState('');
@@ -480,16 +482,16 @@ export default function AnalyzerTab() {
     return (
         <div className="analyzer-container">
             <Card>
-                <h2 className='flex sg-title analyzer-header-title'><FlaskConical /> Syntax & Morphology Analyzer</h2>
-                <p className="analyzer-description">Enter a sentence in your conlang. The engine will recursively strip affixes and identify the roots to analyze your syntax order.</p>
+                <h2 className='flex sg-title analyzer-header-title'><FlaskConical /> {t('analyzer.title')}</h2>
+                <p className="analyzer-description">{t('analyzer.desc')}</p>
 
-                <Input label="Sentence to Analyze" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="Type your conlang phrase here..." className="custom-font-text notranslate" />
+                <Input label={t('analyzer.inputLabel')} value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder={t('analyzer.inputPlaceholder')} className="custom-font-text notranslate" />
                 <Button onClick={handleAnalyze} variant='edit' className="execute-analysis-btn">
-                    <div className="analyzer-btn-content"><Search size={18} /> Execute Analysis</div>
+                    <div className="analyzer-btn-content"><Search size={18} /> {t('analyzer.executeBtn')}</div>
                 </Button>
             </Card>
 
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Analysis Results">
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={t('analyzer.modalTitle')}>
                 {analyzedWords.length > 0 && (
                     <div className="analyzer-modal-content">
                         {syntaxStatus && (
@@ -497,13 +499,13 @@ export default function AnalyzerTab() {
                                 {(syntaxStatus.isValid && syntaxStatus.adjPlacementValid) ? (
                                     <>
                                         <CheckCircle2 size={16} className="status-icon"/>
-                                        <b>Valid Syntax!</b> Sentence matches <b>{syntaxStatus.targetOrder}</b> order.
+                                        <b>{t('analyzer.validSyntax')}</b> {t('analyzer.matchesOrder', { order: syntaxStatus.targetOrder })}
                                     </>
                                 ) : (
                                     <>
                                         <AlertTriangle size={16} className="status-icon"/>
-                                        <b>Warning:</b> 
-                                        {!syntaxStatus.isValid && <span> Detected <b>{syntaxStatus.cleanedPattern || 'no pattern'}</b> instead of <b>{syntaxStatus.targetOrder}</b>. </span>}
+                                        <b>{t('analyzer.warning')}</b> 
+                                        {!syntaxStatus.isValid && <span> {t('analyzer.detectedInstead', { detected: syntaxStatus.cleanedPattern || 'no pattern', target: syntaxStatus.targetOrder })} </span>}
                                         {!syntaxStatus.adjPlacementValid && <span> {syntaxStatus.adjErrorMsg} </span>}
                                     </>
                                 )}
@@ -525,12 +527,12 @@ export default function AnalyzerTab() {
                                         {!parse ? (
                                             <>
                                                 <div className="notranslate custom-font-text unknown-root-text">{wData.original}</div>
-                                                <div className="unknown-root-label"><HelpCircle size={14} style={{display: 'inline', marginBottom: '-2px', marginRight: '4px'}} />Unknown Root</div>
+                                                <div className="unknown-root-label"><HelpCircle size={14} style={{display: 'inline', marginBottom: '-2px', marginRight: '4px'}} />{t('analyzer.unknownRoot')}</div>
                                             </>
                                         ) : (
                                             <>
-                                                {isAmbig && <div className="warning-badge ambig"><AlertTriangle size={14} style={{display: 'inline', marginBottom: '-2px', marginRight: '4px'}} />Ambiguous Parse</div>}
-                                                {isSylError && <div className="warning-badge err"><XCircle size={14} style={{display: 'inline', marginBottom: '-2px', marginRight: '4px'}} />Invalid Syllables</div>}
+                                                {isAmbig && <div className="warning-badge ambig"><AlertTriangle size={14} style={{display: 'inline', marginBottom: '-2px', marginRight: '4px'}} />{t('analyzer.ambiguousParse')}</div>}
+                                                {isSylError && <div className="warning-badge err"><XCircle size={14} style={{display: 'inline', marginBottom: '-2px', marginRight: '4px'}} />{t('analyzer.invalidSyllables')}</div>}
 
                                                 {isAmbig && (
                                                     <select className="analyzer-select" value={wData.selectedIdx} onChange={(e) => handleParsingChange(i, e.target.value)}>
@@ -541,10 +543,10 @@ export default function AnalyzerTab() {
                                                 )}
 
                                                 <select className="analyzer-select mt-4" value={wData.manualRole || ''} onChange={(e) => handleRoleChange(i, e.target.value)}>
-                                                    <option value="">- Auto Role -</option>
-                                                    <option value="S">S (Subject)</option>
-                                                    <option value="V">V (Verb)</option>
-                                                    <option value="O">O (Object)</option>
+                                                    <option value="">{t('analyzer.autoRole')}</option>
+                                                    <option value="S">{t('analyzer.subjectRole')}</option>
+                                                    <option value="V">{t('analyzer.verbRole')}</option>
+                                                    <option value="O">{t('analyzer.objectRole')}</option>
                                                 </select>
 
                                                 <div className="notranslate custom-font-text word-original">{transliterate(wData.original)}</div>
@@ -563,17 +565,17 @@ export default function AnalyzerTab() {
                     </div>
 
                     <div className="translation-section">
-                        <Button variant="imp" onClick={handleTranslate}><div className="analyzer-btn-content"><Languages size={18} /> Generate Approximate Translation</div></Button>
+                        <Button variant="imp" onClick={handleTranslate}><div className="analyzer-btn-content"><Languages size={18} /> {t('analyzer.generateTrans')}</div></Button>
                             {translation && (
                                 <div className="translation-result-box" style={{ position: 'relative' }}>
-                                    <div className="translation-label">Approximate Translation (SVO)</div>
+                                    <div className="translation-label">{t('analyzer.approxTransLabel', { order: syntaxStatus?.targetOrder || 'SVO' })}</div>
                                     <div className="translation-text">{translation}.</div>
                                     <Button
                                         variant="ipa"
                                         onClick={() => handleListen(translation)}
                                         style={{ position: 'absolute', top: '10px', right: '10px' }}
                                     >
-                                        <Volume2 size={14} /> Listen
+                                        <Volume2 size={14} /> {t('analyzer.listen')}
                                     </Button>
                                 </div>
                             )}

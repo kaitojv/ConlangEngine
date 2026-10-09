@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Button from '../Buttons/Buttons.jsx';
 import { AlertTriangle, Download, ShieldCheck } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 
 /**
  * Confirmation gate for the irreversible "Lighten all glyphs" rewrite.
@@ -27,6 +28,7 @@ export default function GlyphLightenBackupModal({
     backupInfo,
     downloadError,
 }) {
+    const { t } = useTranslation();
     const [acknowledged, setAcknowledged] = useState(false);
 
     if (!isOpen || !preview) return null;
@@ -39,34 +41,32 @@ export default function GlyphLightenBackupModal({
             <div className="gt-backup-modal" role="dialog" aria-modal="true" aria-labelledby="gt-backup-title">
                 <div className="gt-backup-warning">
                     <AlertTriangle size={20} />
-                    <h3 id="gt-backup-title">This cannot be undone</h3>
+                    <h3 id="gt-backup-title">{t('settings.graphism.backupModalTitle')}</h3>
                 </div>
 
                 <p className="gt-backup-lead">
-                    Lightening rewrites the point data of every glyph in this project and there is no
-                    undo. Export a backup first so you can restore the original glyphs if the result
-                    does not look right to you.
+                    {t('settings.graphism.backupModalLead')}
                 </p>
 
                 <dl className="gt-backup-stats">
                     <div>
-                        <dt>Glyphs</dt>
+                        <dt>{t('settings.graphism.statGlyphs')}</dt>
                         <dd>{preview.glyphCount}</dd>
                     </div>
                     <div>
-                        <dt>Points</dt>
+                        <dt>{t('settings.graphism.statPoints')}</dt>
                         <dd>
                             {preview.beforePoints.toLocaleString()} &rarr; {preview.afterPoints.toLocaleString()}
                         </dd>
                     </div>
                     <div>
-                        <dt>Glyph data</dt>
+                        <dt>{t('settings.graphism.statGlyphData')}</dt>
                         <dd>
                             {toMb(preview.beforeBytes)} MB &rarr; {toMb(preview.afterBytes)} MB
                         </dd>
                     </div>
                     <div>
-                        <dt>Saved</dt>
+                        <dt>{t('settings.graphism.statSaved')}</dt>
                         <dd>
                             {toMb(preview.beforeBytes - preview.afterBytes)} MB (
                             {Math.round(preview.byteReduction * 100)}%)
@@ -75,8 +75,7 @@ export default function GlyphLightenBackupModal({
                 </dl>
 
                 <p className="gt-backup-fidelity">
-                    Each glyph keeps its outline within {tolerance}px. Points that sit further than that
-                    from the simplified line are kept, so corners and fine detail survive.
+                    {t('settings.graphism.backupFidelityText', { tolerance })}
                 </p>
 
                 <div className="gt-backup-download">
@@ -84,19 +83,18 @@ export default function GlyphLightenBackupModal({
                         <div className="gt-backup-done">
                             <ShieldCheck size={18} />
                             <div>
-                                <strong>Backup download started</strong>
+                                <strong>{t('settings.graphism.backupDownloadStarted')}</strong>
                                 <span>
-                                    {backupInfo.filename} ({(backupInfo.bytes / 1024 / 1024).toFixed(2)} MB).
-                                    Check your downloads folder before continuing.
+                                    {t('settings.graphism.backupCheckFolder', { filename: backupInfo.filename, size: (backupInfo.bytes / 1024 / 1024).toFixed(2) })}
                                 </span>
                             </div>
                             <Button variant="default" className="btn-sm" onClick={onDownloadBackup}>
-                                <Download size={14} /> Download again
+                                <Download size={14} /> {t('settings.graphism.downloadAgain')}
                             </Button>
                         </div>
                     ) : (
                         <Button variant="imp" onClick={onDownloadBackup} style={{ width: '100%' }}>
-                            <Download size={16} /> Download backup ({toMb(preview.beforeBytes + preview.afterBytes)} MB)
+                            <Download size={16} /> {t('settings.graphism.downloadBackupBtn', { size: toMb(preview.beforeBytes + preview.afterBytes) })}
                         </Button>
                     )}
                     {downloadError && (
@@ -109,16 +107,16 @@ export default function GlyphLightenBackupModal({
                 <label className="gt-backup-ack">
                     <input type="checkbox" checked={acknowledged} onChange={(e) => setAcknowledged(e.target.checked)} />
                     <span>
-                        I have downloaded the backup and confirmed the file is saved.
+                        {t('settings.graphism.backupAckCheckbox')}
                     </span>
                 </label>
 
                 <div className="gt-backup-actions">
                     <Button variant="default" onClick={onCancel}>
-                        Cancel
+                        {t('settings.graphism.backupCancelBtn')}
                     </Button>
                     <Button variant="imp" onClick={onConfirm} disabled={!canConfirm}>
-                        Lighten all glyphs
+                        {t('settings.graphism.lightenTitle')}
                     </Button>
                 </div>
             </div>

@@ -14,9 +14,11 @@ import { sanitizeConfig, sanitizeLexicon } from '@/utils/schemaValidator.jsx';
 import { getConlangIcon } from '@/utils/iconMap.jsx';
 import applySoundChanges from '@/utils/applysoundchanges.jsx';
 import LanguageCompareModal from './LanguageCompareModal.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import './conlangsTab.css';
 
 export default function ConlangsTab() {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     
     // Project management actions
@@ -454,7 +456,7 @@ export default function ConlangsTab() {
                     
                     <div className="upload-wrapper" style={{ position: 'relative' }}>
                         <button className="upload-btn" onClick={() => setPinSelectModalOpen(true)} style={{ padding: '6px 12px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '5px', background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}>
-                            <MapPin size={14} /> Place Conlang
+                            <MapPin size={14} /> {t('conlangs.placeConlang')}
                         </button>
                     </div>
 
@@ -463,14 +465,14 @@ export default function ConlangsTab() {
                     <div className="upload-wrapper" style={{ position: 'relative' }}>
                         <input type="file" accept="image/png, image/jpeg, image/svg+xml" id="conlangs-map-upload" style={{ display: 'none' }} onChange={handleMapUpload} />
                         <label htmlFor="conlangs-map-upload" style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--s3)', color: 'var(--tx)', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.9rem' }}>
-                            <Upload size={14} /> Change Base Map
+                            <Upload size={14} /> {t('conlangs.changeBaseMap')}
                         </label>
                     </div>
                 </div>
 
                 {targetingMode && (
                     <div style={{ position: 'absolute', top: 15, right: 15, zIndex: 100, display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--acc)', color: 'white', padding: '10px 20px', borderRadius: 'var(--rad)', boxShadow: 'var(--shadow)', fontWeight: 'bold' }}>
-                        <Crosshair size={18} /> Click anywhere on the map to place the conlang!
+                        <Crosshair size={18} /> {t('conlangs.clickMapToPlace')}
                         <button onClick={(e) => { e.stopPropagation(); setTargetingMode(null); }} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', marginLeft: '10px' }}><X size={16} /></button>
                     </div>
                 )}
@@ -530,14 +532,14 @@ export default function ConlangsTab() {
                                             cursor: 'default', transformOrigin: 'bottom center'
                                         }} onClick={(e) => e.stopPropagation()}>
                                             <h4 style={{ margin: 0, color: 'var(--tx)', fontSize: '1rem' }}>{project.project_data?.config?.conlangName || "Untitled"}</h4>
-                                            <p style={{ fontSize: '0.8rem', color: 'var(--tx2)', margin: '5px 0 12px 0' }}>{project.project_data?.dictionary?.length || 0} lexicon entries</p>
+                                            <p style={{ fontSize: '0.8rem', color: 'var(--tx2)', margin: '5px 0 12px 0' }}>{t('conlangs.lexiconEntries', { count: project.project_data?.dictionary?.length || 0 })}</p>
                                             
                                             <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
                                                 <Button variant="imp" onClick={() => handleOpenProject(project.id)} style={{ width: '100%', padding: '6px' }}>
-                                                    <div className="btn-content-flex"><Languages size={14}/> Open Workspace</div>
+                                                    <div className="btn-content-flex"><Languages size={14}/> {t('conlangs.openWorkspace')}</div>
                                                 </Button>
                                                 <Button variant="default" onClick={() => handleRemovePin(project)} style={{ width: '100%', padding: '6px' }}>
-                                                    <div className="btn-content-flex"><Trash2 size={14}/> Remove Pin</div>
+                                                    <div className="btn-content-flex"><Trash2 size={14}/> {t('conlangs.removePin')}</div>
                                                 </Button>
                                             </div>
                                         </div>
@@ -564,22 +566,22 @@ export default function ConlangsTab() {
                 <div key={project.id} className={`tree-node-wrapper ${project.project_data?.config?.isDialect ? 'is-dialect' : 'is-daughter'}`}>
                     <div className={`project-card tree-card ${isCurrent ? 'active-workspace' : ''} ${children.length > 0 ? 'has-children' : ''}`} onClick={() => handleOpenProject(project.id)}>
                         <div className="project-card-actions">
-                            <button className="project-action-btn" onClick={(e) => handleOpenCompareModal(e, project)} title="Compare with Relatives">
+                            <button className="project-action-btn" onClick={(e) => handleOpenCompareModal(e, project)} title={t('conlangs.compareRelatives')}>
                                 <GitCompare size={16} />
                             </button>
-                            <button className="project-action-btn" onClick={(e) => handleOpenParentModal(e, project)} title="Set Mother Language">
+                            <button className="project-action-btn" onClick={(e) => handleOpenParentModal(e, project)} title={t('conlangs.setMother')}>
                                 <ArrowUpFromLine size={16} />
                             </button>
-                            <button className="project-action-btn" onClick={(e) => handleOpenDialectModal(e, project)} title="Create Dialect">
+                            <button className="project-action-btn" onClick={(e) => handleOpenDialectModal(e, project)} title={t('conlangs.createDialect')}>
                                 <Network size={16} />
                             </button>
-                            <button className="project-action-btn" onClick={(e) => handleOpenDeriveModal(e, project)} title="Derive Daughter Language">
+                            <button className="project-action-btn" onClick={(e) => handleOpenDeriveModal(e, project)} title={t('conlangs.deriveDaughter')}>
                                 <GitMerge size={16} />
                             </button>
-                            <button className="project-action-btn" onClick={(e) => handleDuplicateProject(e, project)} title="Duplicate Project">
+                            <button className="project-action-btn" onClick={(e) => handleDuplicateProject(e, project)} title={t('conlangs.duplicateProject')}>
                                 <Copy size={14} />
                             </button>
-                            <button className="project-delete-btn" onClick={(e) => handleDeleteProject(e, project.id)} title="Delete Project">
+                            <button className="project-delete-btn" onClick={(e) => handleDeleteProject(e, project.id)} title={t('conlangs.deleteProject')}>
                                 <Trash2 size={14} />
                             </button>
                         </div>
@@ -589,17 +591,17 @@ export default function ConlangsTab() {
                             {project.project_data?.config?.conlangName || "Untitled"}
                         </div>
                         <div className="project-meta" style={{ fontSize: '0.8rem' }}>
-                            {project.project_data?.dictionary?.length || 0} words
+                            {t('conlangs.lexiconEntries', { count: project.project_data?.dictionary?.length || 0 })}
                         </div>
                         <div style={{ display: 'flex', gap: '5px', marginTop: '5px', flexWrap: 'wrap' }}>
                             {isCurrent && (
                                 <div className="active-badge" style={{ fontSize: '0.7rem', padding: '2px 6px' }}>
-                                    <CheckCircle2 size={12} /> Active
+                                    <CheckCircle2 size={12} /> {t('conlangs.active')}
                                 </div>
                             )}
                             {project.project_data?.config?.isDialect && (
                                 <div className="dialect-badge" style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'var(--acc)', color: 'white', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <Network size={12} /> Dialect
+                                    <Network size={12} /> {t('conlangs.dialect')}
                                 </div>
                             )}
                         </div>
@@ -629,19 +631,19 @@ export default function ConlangsTab() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                         <h2 className="flex sg-title workspace-title">
-                            <Languages /> My Workspaces
+                            <Languages /> {t('conlangs.title')}
                         </h2>
-                        <p className="workspace-desc">Manage your local conlang projects here. Switching projects automatically saves your current progress.</p>
+                        <p className="workspace-desc">{t('conlangs.desc')}</p>
                     </div>
                     
                     <div className="view-mode-toggles" style={{ display: 'flex', gap: '5px', background: 'var(--s2)', padding: '5px', borderRadius: 'var(--rad)' }}>
-                        <button className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')} title="Grid View">
+                        <button className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')} title={t('conlangs.gridView')}>
                             <LayoutGrid size={18} />
                         </button>
-                        <button className={`view-toggle-btn ${viewMode === 'tree' ? 'active' : ''}`} onClick={() => setViewMode('tree')} title="Family Tree View">
+                        <button className={`view-toggle-btn ${viewMode === 'tree' ? 'active' : ''}`} onClick={() => setViewMode('tree')} title={t('conlangs.treeView')}>
                             <Network size={18} />
                         </button>
-                        <button className={`view-toggle-btn ${viewMode === 'map' ? 'active' : ''}`} onClick={() => setViewMode('map')} title="World Map View">
+                        <button className={`view-toggle-btn ${viewMode === 'map' ? 'active' : ''}`} onClick={() => setViewMode('map')} title={t('conlangs.mapView')}>
                             <MapIcon size={18} />
                         </button>
                     </div>
@@ -657,7 +659,7 @@ export default function ConlangsTab() {
                             transition={{ duration: 0.3 }}
                         >
                             <Plus size={32} className="create-new-icon" />
-                            <h3 className="create-new-text">Create New Conlang</h3>
+                            <h3 className="create-new-text">{t('conlangs.createNew')}</h3>
                         </motion.div>
 
                         {localProjects.map((project, idx) => {
@@ -673,25 +675,25 @@ export default function ConlangsTab() {
                                     transition={{ duration: 0.3, delay: Math.min((idx + 1) * 0.05, 0.5) }}
                                 >
                                     <div className="project-card-actions">
-                                        <button className="project-action-btn" onClick={(e) => { e.stopPropagation(); setTargetingMode(project.id); setViewMode('map'); }} title="Place on Map">
+                                        <button className="project-action-btn" onClick={(e) => { e.stopPropagation(); setTargetingMode(project.id); setViewMode('map'); }} title={t('conlangs.placeOnMap')}>
                                             <MapPin size={16} />
                                         </button>
-                                        <button className="project-action-btn" onClick={(e) => handleOpenCompareModal(e, project)} title="Compare with Relatives">
+                                        <button className="project-action-btn" onClick={(e) => handleOpenCompareModal(e, project)} title={t('conlangs.compareRelatives')}>
                                             <GitCompare size={16} />
                                         </button>
-                                        <button className="project-action-btn" onClick={(e) => handleOpenParentModal(e, project)} title="Set Mother Language">
+                                        <button className="project-action-btn" onClick={(e) => handleOpenParentModal(e, project)} title={t('conlangs.setMother')}>
                                             <ArrowUpFromLine size={16} />
                                         </button>
-                                        <button className="project-action-btn" onClick={(e) => handleOpenDialectModal(e, project)} title="Create Dialect">
+                                        <button className="project-action-btn" onClick={(e) => handleOpenDialectModal(e, project)} title={t('conlangs.createDialect')}>
                                             <Network size={16} />
                                         </button>
-                                        <button className="project-action-btn" onClick={(e) => handleOpenDeriveModal(e, project)} title="Derive Daughter Language">
+                                        <button className="project-action-btn" onClick={(e) => handleOpenDeriveModal(e, project)} title={t('conlangs.deriveDaughter')}>
                                             <GitMerge size={16} />
                                         </button>
-                                        <button className="project-action-btn" onClick={(e) => handleDuplicateProject(e, project)} title="Duplicate Project">
+                                        <button className="project-action-btn" onClick={(e) => handleDuplicateProject(e, project)} title={t('conlangs.duplicateProject')}>
                                             <Copy size={16} />
                                         </button>
-                                        <button className="project-delete-btn" onClick={(e) => handleDeleteProject(e, project.id)} title="Delete Project">
+                                        <button className="project-delete-btn" onClick={(e) => handleDeleteProject(e, project.id)} title={t('conlangs.deleteProject')}>
                                             <Trash2 size={16} />
                                         </button>
                                     </div>
@@ -702,22 +704,22 @@ export default function ConlangsTab() {
                                     </div>
                                     
                                     <div className="project-meta">
-                                        {project.project_data?.dictionary?.length || 0} lexicon entries
+                                        {t('conlangs.lexiconEntries', { count: project.project_data?.dictionary?.length || 0 })}
                                     </div>
                                     
                                     <div className="project-date">
-                                        Last sync: <span className="date-highlight">{new Date(project.updated_at).toLocaleDateString()}</span>
+                                        {t('conlangs.lastSync', { date: new Date(project.updated_at).toLocaleDateString() })}
                                     </div>
                                     
                                     <div style={{ display: 'flex', gap: '5px', marginTop: '10px', flexWrap: 'wrap' }}>
                                         {isCurrent && (
                                             <div className="active-badge">
-                                                <CheckCircle2 size={14} /> Active
+                                                <CheckCircle2 size={14} /> {t('conlangs.active')}
                                             </div>
                                         )}
                                         {project.project_data?.config?.isDialect && (
                                             <div className="dialect-badge" style={{ fontSize: '0.8rem', padding: '4px 8px', background: 'var(--acc)', color: 'white', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px', width: 'fit-content' }}>
-                                                <Network size={14} /> Dialect
+                                                <Network size={14} /> {t('conlangs.dialect')}
                                             </div>
                                         )}
                                     </div>
@@ -740,20 +742,20 @@ export default function ConlangsTab() {
                 )}
             </Card>
 
-            <Modal isOpen={deriveModalOpen} onClose={() => setDeriveModalOpen(false)} title="Derive Daughter Language">
+            <Modal isOpen={deriveModalOpen} onClose={() => setDeriveModalOpen(false)} title={t('conlangs.deriveDaughterTitle')}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <p style={{ color: 'var(--tx2)', lineHeight: '1.5' }}>
-                        This will create a brand new workspace by cloning <strong>{deriveParent?.project_data?.config?.conlangName || 'this language'}</strong>'s lexicon and applying historical sound changes to every word.
+                        {t('conlangs.deriveDaughterDesc', { name: deriveParent?.project_data?.config?.conlangName || 'this language' })}
                     </p>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ color: 'var(--tx)', fontWeight: 'bold' }}>Daughter Language Name</label>
-                        <Input value={daughterName} onChange={(e) => setDaughterName(e.target.value)} placeholder="e.g. Vulgar Latin" />
+                        <label style={{ color: 'var(--tx)', fontWeight: 'bold' }}>{t('conlangs.daughterNameLabel')}</label>
+                        <Input value={daughterName} onChange={(e) => setDaughterName(e.target.value)} placeholder={t('conlangs.daughterNamePlaceholder')} />
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ color: 'var(--tx)', fontWeight: 'bold' }}>Historical Sound Changes (Regex)</label>
-                        <p style={{ color: 'var(--tx3)', fontSize: '0.85rem' }}>One rule per line. Format: <code>pattern =&gt; replacement</code></p>
+                        <label style={{ color: 'var(--tx)', fontWeight: 'bold' }}>{t('conlangs.soundChangesLabel')}</label>
+                        <p style={{ color: 'var(--tx3)', fontSize: '0.85rem' }}>{t('conlangs.soundChangesHelp', { format: 'pattern => replacement' })}</p>
                         <textarea 
                             style={{ 
                                 width: '100%', height: '150px', background: 'var(--s1)', 
@@ -767,34 +769,34 @@ export default function ConlangsTab() {
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                        <Button variant="default" onClick={() => setDeriveModalOpen(false)}>Cancel</Button>
+                        <Button variant="default" onClick={() => setDeriveModalOpen(false)}>{t('common.cancel')}</Button>
                         <Button variant="imp" onClick={handleDeriveLanguage}>
-                            <div className="btn-content-flex"><GitMerge size={16} /> Breed Daughter Language</div>
+                            <div className="btn-content-flex"><GitMerge size={16} /> {t('conlangs.breedDaughterBtn')}</div>
                         </Button>
                     </div>
                 </div>
             </Modal>
 
-            <Modal isOpen={dialectModalOpen} onClose={() => setDialectModalOpen(false)} title="Create Dialect">
+            <Modal isOpen={dialectModalOpen} onClose={() => setDialectModalOpen(false)} title={t('conlangs.createDialectTitle')}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <p style={{ color: 'var(--tx2)', lineHeight: '1.5' }}>
-                        This creates a dialect workspace based on <strong>{dialectParent?.project_data?.config?.conlangName || 'this language'}</strong>. Dialects appear directly under the parent language on the tree.
+                        {t('conlangs.createDialectDesc', { name: dialectParent?.project_data?.config?.conlangName || 'this language' })}
                     </p>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ color: 'var(--tx)', fontWeight: 'bold' }}>Dialect Name</label>
-                        <Input value={dialectName} onChange={(e) => setDialectName(e.target.value)} placeholder="e.g. Northern Dialect" />
+                        <label style={{ color: 'var(--tx)', fontWeight: 'bold' }}>{t('conlangs.dialectNameLabel')}</label>
+                        <Input value={dialectName} onChange={(e) => setDialectName(e.target.value)} placeholder={t('conlangs.dialectNamePlaceholder')} />
                     </div>
 
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--tx)' }}>
                         <input type="checkbox" checked={importDialectWords} onChange={(e) => setImportDialectWords(e.target.checked)} />
-                        Import all words from the mother language
+                        {t('conlangs.importDialectWords')}
                     </label>
 
                     {importDialectWords && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <label style={{ color: 'var(--tx)', fontWeight: 'bold' }}>Sound Changes (Optional)</label>
-                            <p style={{ color: 'var(--tx3)', fontSize: '0.85rem' }}>Apply rules during import. Format: <code>pattern =&gt; replacement</code></p>
+                            <label style={{ color: 'var(--tx)', fontWeight: 'bold' }}>{t('conlangs.dialectSoundChangesLabel')}</label>
+                            <p style={{ color: 'var(--tx3)', fontSize: '0.85rem' }}>{t('conlangs.dialectSoundChangesHelp', { format: 'pattern => replacement' })}</p>
                             <textarea 
                                 style={{ 
                                     width: '100%', height: '100px', background: 'var(--s1)', 
@@ -809,22 +811,22 @@ export default function ConlangsTab() {
                     )}
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                        <Button variant="default" onClick={() => setDialectModalOpen(false)}>Cancel</Button>
+                        <Button variant="default" onClick={() => setDialectModalOpen(false)}>{t('common.cancel')}</Button>
                         <Button variant="imp" onClick={handleCreateDialect}>
-                            <div className="btn-content-flex"><Network size={16} /> Create Dialect</div>
+                            <div className="btn-content-flex"><Network size={16} /> {t('conlangs.createDialectBtn')}</div>
                         </Button>
                     </div>
                 </div>
             </Modal>
 
-            <Modal isOpen={parentModalOpen} onClose={() => setParentModalOpen(false)} title="Set Mother Language">
+            <Modal isOpen={parentModalOpen} onClose={() => setParentModalOpen(false)} title={t('conlangs.setMotherTitle')}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <p style={{ color: 'var(--tx2)', lineHeight: '1.5' }}>
-                        Select an existing workspace to act as the parent (Mother Language) for <strong>{parentTargetProject?.project_data?.config?.conlangName || 'this language'}</strong>. This will link them in the Family Tree view.
+                        {t('conlangs.setMotherDesc', { name: parentTargetProject?.project_data?.config?.conlangName || 'this language' })}
                     </p>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <label style={{ color: 'var(--tx)', fontWeight: 'bold' }}>Mother Language</label>
+                        <label style={{ color: 'var(--tx)', fontWeight: 'bold' }}>{t('conlangs.motherLanguageLabel')}</label>
                         <select 
                             style={{ 
                                 width: '100%', padding: '10px', background: 'var(--s1)', 
@@ -834,7 +836,7 @@ export default function ConlangsTab() {
                             value={selectedParentId}
                             onChange={(e) => setSelectedParentId(e.target.value)}
                         >
-                            <option value="">None (Independent Language)</option>
+                            <option value="">{t('conlangs.noParentOption')}</option>
                             {localProjects
                                 .filter(p => p.id !== parentTargetProject?.id)
                                 .map(p => (
@@ -846,17 +848,17 @@ export default function ConlangsTab() {
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-                        <Button variant="default" onClick={() => setParentModalOpen(false)}>Cancel</Button>
+                        <Button variant="default" onClick={() => setParentModalOpen(false)}>{t('common.cancel')}</Button>
                         <Button variant="imp" onClick={handleSetParent}>
-                            <div className="btn-content-flex"><ArrowUpFromLine size={16} /> Set Parent</div>
+                            <div className="btn-content-flex"><ArrowUpFromLine size={16} /> {t('conlangs.setParentBtn')}</div>
                         </Button>
                     </div>
                 </div>
             </Modal>
 
-            <Modal isOpen={pinSelectModalOpen} onClose={() => setPinSelectModalOpen(false)} title="Select Conlang to Place">
+            <Modal isOpen={pinSelectModalOpen} onClose={() => setPinSelectModalOpen(false)} title={t('conlangs.selectPinTitle')}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '60vh', overflowY: 'auto' }}>
-                    <p style={{ color: 'var(--tx2)' }}>Select a conlang below to place a pin for it on the world map.</p>
+                    <p style={{ color: 'var(--tx2)' }}>{t('conlangs.selectPinDesc')}</p>
                     {localProjects.map(project => {
                         const hasPin = project.project_data?.config?.worldMap?.x !== null && project.project_data?.config?.worldMap?.x !== undefined;
                         return (
@@ -874,14 +876,14 @@ export default function ConlangsTab() {
                                 className="hover:border-[var(--acc)] transition-colors"
                             >
                                 <span style={{ fontWeight: 'bold', color: 'var(--tx)' }}>{project.project_data?.config?.conlangName || "Untitled"}</span>
-                                {hasPin && <span style={{ fontSize: '0.8rem', color: 'var(--ok)', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle2 size={12}/> Placed</span>}
+                                {hasPin && <span style={{ fontSize: '0.8rem', color: 'var(--ok)', display: 'flex', alignItems: 'center', gap: '4px' }}><CheckCircle2 size={12}/> {t('conlangs.pinPlaced')}</span>}
                             </div>
                         )
                     })}
                 </div>
             </Modal>
 
-            <Modal isOpen={compareModalOpen} onClose={() => setCompareModalOpen(false)} title="Compare Relatives">
+            <Modal isOpen={compareModalOpen} onClose={() => setCompareModalOpen(false)} title={t('conlangs.compareRelatives')}>
                 {compareProject && (
                     <LanguageCompareModal baseProject={compareProject} localProjects={localProjects} />
                 )}

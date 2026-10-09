@@ -4,9 +4,11 @@ import Button from '../../UI/Buttons/Buttons.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import Modal from '../../UI/Modal/Modal.jsx';
 import { AlertCircle, UploadCloud } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import './csvImportModal.css';
 
 export function CsvImportModal({ isOpen, onClose }) {
+    const { t } = useTranslation();
     const addWord = useLexiconStore((state) => state.addWord);
     const lexicon = useLexiconStore((state) => state.lexicon) || [];
     
@@ -108,26 +110,26 @@ export function CsvImportModal({ isOpen, onClose }) {
                 wordClass: entry.wordClass
             });
         });
-        alert(`Successfully imported ${toImport.length} words!`);
+        alert(t('csvImport.successAlert', { count: toImport.length }));
         onClose();
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Import CSV Lexicon">
+        <Modal isOpen={isOpen} onClose={onClose} title={t('csvImport.title')}>
             <div className="csv-modal-wrapper">
-                <Infobox title="CSV Formatting Rules">
-                    <p style={{ marginBottom: '10px', marginTop: 0 }}>Your <code>.csv</code> file should <b>not</b> contain a header row. Each line represents one word, and the data must be separated by commas in this exact column order:</p>
+                <Infobox title={t('csvImport.rulesTitle')}>
+                    <p style={{ marginBottom: '10px', marginTop: 0 }}>{t('csvImport.rulesDesc')}</p>
                     <div style={{ background: 'var(--bg)', padding: '12px', borderRadius: '6px', fontFamily: 'monospace', fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '10px', border: '1px solid var(--bd)' }}>
-                        <div style={{ opacity: 0.6, marginBottom: '6px', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Column 1, Column 2, Column 3, Column 4, Column 5, Column 6</div>
+                        <div style={{ opacity: 0.6, marginBottom: '6px', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' }}>{t('csvImport.columnHeaders')}</div>
                         <span style={{ color: 'var(--acc2)' }}>kato</span>, <span style={{ color: 'var(--tx)' }}>cat</span>, <span style={{ color: 'var(--tx3)' }}>/ka.to/</span>, <span style={{ color: 'var(--tx)' }}>A small feline</span>, <span style={{ color: 'var(--ok)' }}>animal pet</span>, <span style={{ color: 'var(--tx)' }}>Noun</span><br/>
                         <span style={{ color: 'var(--acc2)' }}>runi</span>, <span style={{ color: 'var(--tx)' }}>run</span>, <span style={{ color: 'var(--tx3)' }}>/ru.ni/</span>, <span style={{ color: 'var(--tx)' }}>To move quickly</span>, <span style={{ color: 'var(--ok)' }}>action</span>, <span style={{ color: 'var(--tx)' }}>Verb</span>
                     </div>
-                    <p style={{ margin: 0, fontSize: '0.85rem' }}><i>Tip: If a column is missing (like no IPA or Tags), simply leave it blank between commas (e.g., <code>kato,cat,,,animal,Noun</code>).</i></p>
+                    <p style={{ margin: 0, fontSize: '0.85rem' }}><i>{t('csvImport.rulesTip')}</i></p>
                 </Infobox>
                 
                 {!hasUploaded ? (
                     <div className="csv-upload-prompt" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '20px' }}>
-                        <p style={{ color: 'var(--tx2)', textAlign: 'center' }}>Upload a valid .csv file to review the words before importing them into your lexicon.</p>
+                        <p style={{ color: 'var(--tx2)', textAlign: 'center' }}>{t('csvImport.uploadPrompt')}</p>
                         <input 
                             type="file" 
                             accept=".csv" 
@@ -136,14 +138,14 @@ export function CsvImportModal({ isOpen, onClose }) {
                             style={{ display: 'none' }}
                         />
                         <Button variant="save" onClick={() => fileInputRef.current.click()}>
-                            <UploadCloud size={20} /> Select CSV File
+                            <UploadCloud size={20} /> {t('csvImport.selectFileBtn')}
                         </Button>
                     </div>
                 ) : (
                     <>
                         <div className="csv-actions">
-                            <Button variant="default" onClick={() => handleSelectAll(true)}>Select All</Button>
-                            <Button variant="default" onClick={() => handleSelectAll(false)}>Deselect All</Button>
+                            <Button variant="default" onClick={() => handleSelectAll(true)}>{t('csvImport.selectAll')}</Button>
+                            <Button variant="default" onClick={() => handleSelectAll(false)}>{t('csvImport.deselectAll')}</Button>
                         </div>
 
                         <div className="csv-list">
@@ -157,16 +159,16 @@ export function CsvImportModal({ isOpen, onClose }) {
                                     <div className="csv-item-info">
                                         <span className="csv-word">{entry.word}</span>
                                         <span className="csv-translation">{entry.translation}</span>
-                                        {entry.isDuplicate && <span className="csv-badge"><AlertCircle size={12} /> Exists</span>}
+                                        {entry.isDuplicate && <span className="csv-badge"><AlertCircle size={12} /> {t('csvImport.existsBadge')}</span>}
                                     </div>
                                 </label>
                             ))}
-                            {parsedEntries.length === 0 && <p style={{ color: 'var(--tx2)', padding: '20px', textAlign: 'center' }}>No valid words found in the CSV file.</p>}
+                            {parsedEntries.length === 0 && <p style={{ color: 'var(--tx2)', padding: '20px', textAlign: 'center' }}>{t('csvImport.noWordsFound')}</p>}
                         </div>
 
                         <div className="csv-footer">
-                            <Button variant="save" onClick={handleImport}>Import Selected</Button>
-                            <Button variant="default" onClick={onClose}>Cancel</Button>
+                            <Button variant="save" onClick={handleImport}>{t('csvImport.importSelectedBtn')}</Button>
+                            <Button variant="default" onClick={onClose}>{t('csvImport.cancelBtn')}</Button>
                         </div>
                     </>
                 )}

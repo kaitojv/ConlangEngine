@@ -5,6 +5,7 @@ import { Volume2 } from 'lucide-react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useShallow } from 'zustand/react/shallow';
 import { playAzureTTS } from '../../../utils/azureTTS.js';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import toast from 'react-hot-toast';
 
 export default function StrokeOrderModal({
@@ -16,6 +17,7 @@ export default function StrokeOrderModal({
     scriptType,
     translation
 }) {
+    const { t } = useTranslation();
     const { azureTtsUseIpa, azureTtsVoice } = useConfigStore(useShallow(state => ({
         azureTtsUseIpa: state.azureTtsUseIpa,
         azureTtsVoice: state.azureTtsVoice
@@ -61,7 +63,7 @@ export default function StrokeOrderModal({
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={handleClose} title={`Stroke Order: ${displayTitle}`}>
+        <Modal isOpen={isOpen} onClose={handleClose} title={t('strokeOrder.title', { title: displayTitle })}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', minWidth: 0 }}>
                 {/* Header Summary */}
                 <div style={{ 

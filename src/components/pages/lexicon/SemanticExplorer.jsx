@@ -3,39 +3,15 @@ import { Search, ChevronRight, Share2, Info, Plus, ArrowRight, HelpCircle, Compa
 import { fetchSynsets, fetchHyponymOptions, fetchHypernymOptions, fetchSynonymOptions, fetchHolonymOptions, fetchMeronymOptions, fetchTopicOptions, fetchWordFamily, fetchFullDictionary, fetchAntonymOptions, fetchRhymeOptions, fetchModifierOptions, fetchFollowerOptions } from '../../../utils/semanticUtils';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import Modal from '../../UI/Modal/Modal.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import Card from '../../UI/Card/Card.jsx';
 import toast from 'react-hot-toast';
 import './semanticExplorer.css';
 
-const TABS = [
-    { id: 'definitions', label: 'Definitions', Icon: Compass, desc: "Explore multi-sense dictionary data for any concept." },
-    { id: 'taxonomy', label: 'Taxonomy', Icon: Layers, desc: "Traverse the hierarchy of meaning from general to specific." },
-    { id: 'word-family', label: 'Word Family', Icon: GitBranch, desc: "Discover related concepts and sister terms in the semantic web." },
-    { id: 'compare', label: 'Compare', Icon: Repeat, desc: "Analyze and differentiate between two distinct semantic spaces." }
-];
-
-const QUICK_GUIDE = [
-    { 
-        title: "The Dictionary", 
-        text: "Search any English word to view its definitions grouped by part of speech. Click 'Map this Sense' to adopt that precise meaning into your Conlang." 
-    },
-    { 
-        title: "Taxonomy (Scientific vs Creative)", 
-        text: "Visualize semantic relationships! Toggle to 'Scientific' for structural hierarchies (Hypernyms, Meronyms) or switch to 'Creative' for poetic inspiration (Rhymes, Antonyms, Modifiers)." 
-    },
-    { 
-        title: "Morphological Word Family", 
-        text: "Explore how words are compounded in English. This radial web shows words physically derived from your root (e.g., 'water' -> 'waterfall', 'underwater')." 
-    },
-    { 
-        title: "Interactive Canvas", 
-        text: "Click and drag anywhere on the visualizer backgrounds to pan around the semantic trees. Use your scroll wheel or the zoom controls to explore dense data." 
-    }
-];
-
 export default function SemanticExplorer() {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState('definitions');
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
@@ -43,6 +19,32 @@ export default function SemanticExplorer() {
     const [wordFamily, setWordFamily] = useState([]);
     const [compareTerm, setCompareTerm] = useState('');
     const [compareResults, setCompareResults] = useState(null);
+
+    const TABS = [
+        { id: 'definitions', label: t('semantic.tabs.definitions'), Icon: Compass, desc: t('semantic.tabs.definitionsDesc') },
+        { id: 'taxonomy', label: t('semantic.tabs.taxonomy'), Icon: Layers, desc: t('semantic.tabs.taxonomyDesc') },
+        { id: 'word-family', label: t('semantic.tabs.wordFamily'), Icon: GitBranch, desc: t('semantic.tabs.wordFamilyDesc') },
+        { id: 'compare', label: t('semantic.tabs.compare'), Icon: Repeat, desc: t('semantic.tabs.compareDesc') }
+    ];
+
+    const QUICK_GUIDE = [
+        { 
+            title: t('semantic.guide.dictTitle'), 
+            text: t('semantic.guide.dictText') 
+        },
+        { 
+            title: t('semantic.guide.taxTitle'), 
+            text: t('semantic.guide.taxText') 
+        },
+        { 
+            title: t('semantic.guide.familyTitle'), 
+            text: t('semantic.guide.familyText') 
+        },
+        { 
+            title: t('semantic.guide.canvasTitle'), 
+            text: t('semantic.guide.canvasText') 
+        }
+    ];
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [fullDictionary, setFullDictionary] = useState(null);
     const [showGuide, setShowGuide] = useState(false);
@@ -245,10 +247,10 @@ export default function SemanticExplorer() {
                     optionsB
                 });
             } else {
-                toast.error("Concepts not found.");
+                toast.error(t('semantic.compare.notFound'));
             }
         } catch (error) {
-            toast.error("Compare failed.");
+            toast.error(t('semantic.compare.failed'));
         } finally {
             setLoading(false);
         }
@@ -256,7 +258,7 @@ export default function SemanticExplorer() {
 
     const saveMapping = () => {
         if (!selectedSynset || !editingMapping.word) {
-            toast.error("Please enter a conlang word first!");
+            toast.error(t('semantic.modal.needWord'));
             return;
         }
         
@@ -274,7 +276,7 @@ export default function SemanticExplorer() {
             personCategory: ''
         });
 
-        toast.success(`'${editingMapping.word}' added to Lexicon!`);
+        toast.success(t('semantic.modal.added', { word: editingMapping.word }));
         setIsModalOpen(false);
     };
 
@@ -285,17 +287,17 @@ export default function SemanticExplorer() {
                     <div className="header-content">
                         <h2 className="flex sg-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <Compass style={{ color: 'var(--acc)' }} />
-                            Semantic Explorer
+                            {t('semantic.title')}
                         </h2>
                         <p className="subtitle">
-                            Map the boundaries of meaning for your constructed language.
+                            {t('semantic.subtitle')}
                         </p>
                     </div>
 
                     <div className="header-actions">
                         <Button variant="toggle" onClick={() => setShowGuide(!showGuide)}>
                             <HelpCircle size={18} />
-                            {showGuide ? "Hide Guide" : "Quick Guide"}
+                            {showGuide ? t('semantic.hideGuide') : t('semantic.quickGuide')}
                         </Button>
                     </div>
 
@@ -318,13 +320,13 @@ export default function SemanticExplorer() {
                         <Search className="sem-search-icon" size={22} />
                         <input 
                             type="text" 
-                            placeholder="Enter a concept (e.g. 'water', 'justice', 'run')..." 
+                            placeholder={t('semantic.searchPlaceholder')} 
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                         />
                         <Button variant="save" onClick={handleSearch} disabled={loading} className="search-submit">
-                            {loading ? 'Searching...' : `Explore`} <ArrowRight size={20} />
+                            {loading ? t('semantic.searching') : t('semantic.explore')} <ArrowRight size={20} />
                         </Button>
                     </div>
                 </div>
@@ -335,7 +337,7 @@ export default function SemanticExplorer() {
                     <button 
                         onClick={() => setShowGuide(false)} 
                         style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--tx2)' }}
-                        title="Close Guide"
+                        title={t('semantic.closeGuide')}
                     >
                         <X size={20} />
                     </button>
@@ -355,8 +357,8 @@ export default function SemanticExplorer() {
                                 <div className="empty-icon-wrap">
                                     <Compass size={60} strokeWidth={1} />
                                 </div>
-                                <h3>Ready to Explore?</h3>
-                                <p>Search for a concept above to begin mapping your semantic space.</p>
+                                <h3>{t('semantic.empty.title')}</h3>
+                                <p>{t('semantic.empty.desc')}</p>
                             </div>
                         )}
 
@@ -364,17 +366,17 @@ export default function SemanticExplorer() {
                             let currentY = 150;
                             const availableBranches = taxonomyMode === 'scientific' 
                                 ? [
-                                    { key: 'holonyms', label: 'PART OF (Holonyms)', color: '#f59e0b' },
-                                    { key: 'hypernyms', label: 'BROADER (Hypernyms)', color: '#a78bfa' },
-                                    { key: 'synonyms', label: 'SIMILAR (Synonyms)', color: 'var(--s4)' },
-                                    { key: 'hyponyms', label: 'SPECIFIC (Hyponyms)', color: 'var(--ok)' },
-                                    { key: 'meronyms', label: 'HAS PARTS (Meronyms)', color: '#0ea5e9' },
+                                    { key: 'holonyms', label: t('semantic.branches.holonyms'), color: '#f59e0b' },
+                                    { key: 'hypernyms', label: t('semantic.branches.hypernyms'), color: '#a78bfa' },
+                                    { key: 'synonyms', label: t('semantic.branches.synonyms'), color: 'var(--s4)' },
+                                    { key: 'hyponyms', label: t('semantic.branches.hyponyms'), color: 'var(--ok)' },
+                                    { key: 'meronyms', label: t('semantic.branches.meronyms'), color: '#0ea5e9' },
                                 ]
                                 : [
-                                    { key: 'antonyms', label: 'OPPOSITES (Antonyms)', color: '#ef4444' },
-                                    { key: 'rhymes', label: 'RHYMES (Sounds)', color: '#ec4899' },
-                                    { key: 'modifiers', label: 'MODIFIERS (Adjectives)', color: '#10b981' },
-                                    { key: 'followers', label: 'FOLLOWERS (Context)', color: '#6366f1' },
+                                    { key: 'antonyms', label: t('semantic.branches.antonyms'), color: '#ef4444' },
+                                    { key: 'rhymes', label: t('semantic.branches.rhymes'), color: '#ec4899' },
+                                    { key: 'modifiers', label: t('semantic.branches.modifiers'), color: '#10b981' },
+                                    { key: 'followers', label: t('semantic.branches.followers'), color: '#6366f1' },
                                 ];
 
                             const rightBranches = availableBranches.filter(b => taxonomyData[b.key] && taxonomyData[b.key].length > 0);
@@ -402,27 +404,27 @@ export default function SemanticExplorer() {
                                             onClick={() => setTaxonomyMode('scientific')}
                                             style={{ padding: '0.5rem 1rem', borderRadius: '0.25rem', border: 'none', background: taxonomyMode === 'scientific' ? 'var(--acc)' : 'transparent', color: taxonomyMode === 'scientific' ? 'var(--bg)' : 'var(--tx2)', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
                                         >
-                                            Scientific
+                                            {t('semantic.modes.scientific')}
                                         </button>
                                         <button 
                                             onClick={() => setTaxonomyMode('creative')}
                                             style={{ padding: '0.5rem 1rem', borderRadius: '0.25rem', border: 'none', background: taxonomyMode === 'creative' ? 'var(--acc)' : 'transparent', color: taxonomyMode === 'creative' ? 'var(--bg)' : 'var(--tx2)', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
                                         >
-                                            Creative
+                                            {t('semantic.modes.creative')}
                                         </button>
                                     </div>
                                     <div style={{ position: 'absolute', bottom: '1rem', right: '1rem', zIndex: 10, display: 'flex', gap: '0.5rem' }}>
                                         <button 
                                             onClick={() => setTransform(prev => ({...prev, scale: Math.min(prev.scale * 1.2, 4)}))}
                                             style={{ background: 'var(--s2)', border: '1px solid var(--bd)', color: 'var(--tx2)', padding: '0.5rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', width: '36px' }}
-                                            title="Zoom In"
+                                            title={t('semantic.zoom.in')}
                                         >
                                             +
                                         </button>
                                         <button 
                                             onClick={() => setTransform(prev => ({...prev, scale: Math.max(prev.scale / 1.2, 0.3)}))}
                                             style={{ background: 'var(--s2)', border: '1px solid var(--bd)', color: 'var(--tx2)', padding: '0.5rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', width: '36px' }}
-                                            title="Zoom Out"
+                                            title={t('semantic.zoom.out')}
                                         >
                                             -
                                         </button>
@@ -430,7 +432,7 @@ export default function SemanticExplorer() {
                                             onClick={() => setTransform({ x: 0, y: 0, scale: 1 })}
                                             style={{ background: 'var(--s2)', border: '1px solid var(--bd)', color: 'var(--tx2)', padding: '0.5rem 1rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
                                         >
-                                            Reset View
+                                            {t('semantic.zoom.reset')}
                                         </button>
                                     </div>
                                     <svg 
@@ -463,7 +465,7 @@ export default function SemanticExplorer() {
                                             {/* Domain Topics (Left) */}
                                             {topics.length > 0 && (
                                                 <g>
-                                                    <text x="140" y={topicsStartY - 20} fontSize="14" fontWeight="800" fill="var(--tx2)" letterSpacing="1px" textAnchor="middle">CONTEXT (Topics)</text>
+                                                    <text x="140" y={topicsStartY - 20} fontSize="14" fontWeight="800" fill="var(--tx2)" letterSpacing="1px" textAnchor="middle">{t('semantic.branches.context')}</text>
                                                     {topics.map((node, i) => {
                                                         const y = topicsStartY + i * 45 + 22.5;
                                                         return (
@@ -517,7 +519,7 @@ export default function SemanticExplorer() {
                                 <div className="dictionary-card">
                                     <div className="dict-sense-badge">
                                         <span className="sense-count">{fullDictionary.totalSenses}</span>
-                                        <span className="sense-label">Senses</span>
+                                        <span className="sense-label">{t('semantic.dict.senses')}</span>
                                     </div>
                                     
                                     <header className="dict-header">
@@ -530,14 +532,14 @@ export default function SemanticExplorer() {
                                             <div key={gIdx} className="dict-pos-group">
                                                 <div className="dict-pos-header">
                                                     <span className="pos-label">{group.pos.toUpperCase()}</span>
-                                                    <span className="sense-index">Sense {gIdx + 1}</span>
+                                                    <span className="sense-index">{t('semantic.dict.senseIndex', { index: gIdx + 1 })}</span>
                                                 </div>
                                                 <div className="dict-definitions">
                                                     <button className="map-sense-btn" onClick={() => {
                                                         setSelectedSynset({ id: `group-${fullDictionary.lemma}-${gIdx}`, lemma: fullDictionary.lemma, definition: group.definitions[0], pos: group.pos });
                                                         setIsModalOpen(true);
                                                     }}>
-                                                        <Plus size={14} /> Map this Sense
+                                                        <Plus size={14} /> {t('semantic.dict.mapSense')}
                                                     </button>
                                                     {group.definitions.slice(0, 3).map((def, dIdx) => {
                                                         const cleaned = cleanText(def);
@@ -546,7 +548,7 @@ export default function SemanticExplorer() {
                                                             <p key={dIdx} className="dict-def-text" onClick={() => {
                                                                 setSelectedSynset({ id: `def-${fullDictionary.lemma}-${gIdx}-${dIdx}`, lemma: fullDictionary.lemma, definition: def, pos: group.pos });
                                                                 setIsModalOpen(true);
-                                                            }}>
+                                                             }}>
                                                                 {cleaned}
                                                             </p>
                                                         );
@@ -565,14 +567,14 @@ export default function SemanticExplorer() {
                                     <button 
                                         onClick={() => setTransform(prev => ({...prev, scale: Math.min(prev.scale * 1.2, 4)}))}
                                         style={{ background: 'var(--s2)', border: '1px solid var(--bd)', color: 'var(--tx2)', padding: '0.5rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', width: '36px' }}
-                                        title="Zoom In"
+                                        title={t('semantic.zoom.in')}
                                     >
                                         +
                                     </button>
                                     <button 
                                         onClick={() => setTransform(prev => ({...prev, scale: Math.max(prev.scale / 1.2, 0.3)}))}
                                         style={{ background: 'var(--s2)', border: '1px solid var(--bd)', color: 'var(--tx2)', padding: '0.5rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', width: '36px' }}
-                                        title="Zoom Out"
+                                        title={t('semantic.zoom.out')}
                                     >
                                         -
                                     </button>
@@ -580,7 +582,7 @@ export default function SemanticExplorer() {
                                         onClick={() => setTransform({ x: 0, y: 0, scale: 1 })}
                                         style={{ background: 'var(--s2)', border: '1px solid var(--bd)', color: 'var(--tx2)', padding: '0.5rem 1rem', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: 'bold', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
                                     >
-                                        Reset View
+                                        {t('semantic.zoom.reset')}
                                     </button>
                                 </div>
                                 <svg 
@@ -658,9 +660,9 @@ export default function SemanticExplorer() {
                             <div className="compare-view">
                                 <div className="compare-inputs-row">
                                     <div className="comp-input-group">
-                                        <label>Concept A</label>
+                                        <label>{t('semantic.compare.conceptA')}</label>
                                         <input 
-                                            placeholder="First concept..." 
+                                            placeholder={t('semantic.compare.placeholderA')} 
                                             value={searchTerm} 
                                             onChange={(e) => setSearchTerm(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && handleCompare()}
@@ -679,9 +681,9 @@ export default function SemanticExplorer() {
                                     </div>
                                     <div className="comp-vs-orb">VS</div>
                                     <div className="comp-input-group">
-                                        <label>Concept B</label>
+                                        <label>{t('semantic.compare.conceptB')}</label>
                                         <input 
-                                            placeholder="Second concept..." 
+                                            placeholder={t('semantic.compare.placeholderB')} 
                                             value={compareTerm} 
                                             onChange={(e) => setCompareTerm(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && handleCompare()}
@@ -700,7 +702,7 @@ export default function SemanticExplorer() {
                                     </div>
                                 </div>
                                 <button className="comp-trigger" onClick={handleCompare} disabled={loading}>
-                                    {loading ? "Analyzing..." : "Perform Semantic Analysis"}
+                                    {loading ? t('semantic.compare.analyzing') : t('semantic.compare.analyze')}
                                 </button>
                                 {compareResults && (
                                     <div className="compare-cards-container">
@@ -725,10 +727,10 @@ export default function SemanticExplorer() {
                     <Modal 
                         isOpen={isModalOpen} 
                         onClose={() => setIsModalOpen(false)} 
-                        title="Concept Mapping"
+                        title={t('semantic.modal.title')}
                     >
                         <div className="modal-body">
-                            <p className="modal-subtitle">Bridge the gap between languages</p>
+                            <p className="modal-subtitle">{t('semantic.modal.subtitle')}</p>
                             <div className="concept-preview">
                                 <div className="preview-pos">{selectedSynset.pos}</div>
                                 <h4>{cleanText(selectedSynset.lemma).toUpperCase()}</h4>
@@ -738,26 +740,26 @@ export default function SemanticExplorer() {
                             </div>
                             <div className="mapping-form">
                                 <div className="form-group">
-                                    <label>Conlang Word</label>
+                                    <label>{t('semantic.modal.conlangWord')}</label>
                                     <input 
-                                        className="mapping-input custom-font-text" 
-                                        placeholder="Enter your word..."
+                                        className="mapping-input custom-font-text notranslate" 
+                                        placeholder={t('semantic.modal.conlangPlaceholder')}
                                         value={editingMapping.word} 
                                         autoFocus 
                                         onChange={(e) => setEditingMapping({...editingMapping, word: e.target.value})} 
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label>IPA (Optional)</label>
+                                    <label>{t('semantic.modal.ipa')}</label>
                                     <input 
-                                        className="mapping-input" 
+                                        className="mapping-input notranslate" 
                                         placeholder="/ipa/"
                                         value={editingMapping.ipa} 
                                         onChange={(e) => setEditingMapping({...editingMapping, ipa: e.target.value})} 
                                     />
                                 </div>
                                 <Button variant="save" className="w-full" onClick={saveMapping}>
-                                    Save to Lexicon <ArrowRight size={18} />
+                                    {t('semantic.modal.save')} <ArrowRight size={18} />
                                 </Button>
                             </div>
                         </div>

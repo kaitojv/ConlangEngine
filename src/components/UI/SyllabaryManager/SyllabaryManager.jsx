@@ -9,11 +9,12 @@ import Modal from "../Modal/Modal.jsx";
 import FontStudioModal from "../Fontstudio/FontStudio.jsx";
 import Infobox from "../Infobox/Infobox.jsx";
 import { SCRIPT_MAPS, composeHangulSyllable } from "../../../utils/transliteration.js";
+import { useTranslation } from "@/hooks/useTranslation.jsx";
 import toast from 'react-hot-toast';
 
 
 export default function SyllabaryManager({ scriptId } = {}) {
-  
+  const { t } = useTranslation();
   const [viewMode, setViewMode] = useState('grid');
 
   const [newSylKey, setNewSylKey] = useState('');
@@ -332,7 +333,7 @@ export default function SyllabaryManager({ scriptId } = {}) {
         <Modal 
             isOpen={!!drawingForSyl} 
             onClose={() => setDrawingForSyl(null)} 
-            title="Draw Custom Symbol"
+            title={t('settings.graphism.drawCustomSymbol')}
         >
             <FontStudioModal 
                 targetLabel={drawingForSyl}

@@ -5,6 +5,7 @@ import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import IpaChart from '../../UI/IpaChart/Ipachart.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 
 import Button from '../../UI/Buttons/Buttons.jsx';
 import applySoundChanges from '../../../utils/applysoundchanges.jsx';
@@ -18,6 +19,7 @@ import { playTTS } from '../../../utils/azureTTS.js';
 import './phonologyTab.css';
 
 export default function PhonologyTab() {
+    const { t } = useTranslation();
     // Grab all our phonology and orthography settings from the global store
     const consonants = useConfigStore((state) => state.consonants) || '';
     const vowels = useConfigStore((state) => state.vowels) || '';
@@ -140,9 +142,9 @@ export default function PhonologyTab() {
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
     const HARMONY_MODES = [
-        { value: 'complete', label: 'Complete — All words must conform to vowel harmony' },
-        { value: 'flexible', label: 'Flexible — Override allowed per word class or tag' },
-        { value: 'optional', label: 'Optional — Suggestions displayed, no enforcement' },
+        { value: 'complete', label: t('settings.phonology.harmonyModeComplete') },
+        { value: 'flexible', label: t('settings.phonology.harmonyModeFlexible') },
+        { value: 'optional', label: t('settings.phonology.harmonyModeOptional') },
     ];
 
     const [harmonySetsInput, setHarmonySetsInput] = useState('');
@@ -165,7 +167,7 @@ export default function PhonologyTab() {
     }, [vowelHarmonySets]);
 
     const getHarmonySetsDisplay = () => {
-        if (normalizedHarmonySets.length === 0) return 'No sets defined yet.';
+        if (normalizedHarmonySets.length === 0) return t('settings.phonology.noSetsDefined');
         return normalizedHarmonySets.map((set) => `${set.name}: [${set.vowels.join(', ')}]`).join(' | ');
     };
 
@@ -338,24 +340,24 @@ export default function PhonologyTab() {
         <div className="phonology-tab-container">
 
             <Card>
-                <h2 className="flex sg-title"><AudioLines /> Sounds & Orthography</h2>
+                <h2 className="flex sg-title"><AudioLines /> {t('settings.phonology.soundsTitle')}</h2>
 
-                <Infobox title="Phonology & Orthography Guide">
+                <Infobox title={t('settings.phonology.guideTitle')}>
                     • <b>Basic Sounds:</b> Type your IPA phonemes separated by commas (e.g., <code>p, t, k, m, ṇ</code>).<br />
                     • <b>Custom Orthography (=):</b> If a sound is written differently in your romanization or native script, map it using the format <code>IPA=Text</code>. <br />
                     <i>Example:</i> If the sound /ʃ/ is written as '<b>თ</b>' and a trill /r/ as '<b>რ</b>', you should type: <code>ʃ=თ, r=რ</code>. This exact mapping is what allows the <b>Interactive Reader</b> and the <b>TTS Audio</b> to correctly pronounce your custom letters!
                 </Infobox>
 
                 <Input
-                    label="Consonants"
-                    placeholder="e.g., p, t, k, m, n..."
+                    label={t('settings.phonology.consonantsLabel')}
+                    placeholder={t('settings.phonology.consonantsPlaceholder')}
                     value={consonants}
                     onChange={(e) => updateConfig({ consonants: e.target.value })}
                 />
 
                 <Input
-                    label="Vowels"
-                    placeholder="e.g., a, e, i, o, u..."
+                    label={t('settings.phonology.vowelsLabel')}
+                    placeholder={t('settings.phonology.vowelsPlaceholder')}
                     value={vowels}
                     onChange={(e) => updateConfig({ vowels: e.target.value })}
                 />
@@ -370,16 +372,16 @@ export default function PhonologyTab() {
                 <div className="sg-input-group phonology-split-group">
                     <div className="phonology-flex-1">
                         <Input
-                            label="Other Phonemes (Tones, Clicks, Particles)"
-                            placeholder="e.g., ˥, ˦, ʘ, particle..."
+                            label={t('settings.phonology.otherPhonemesLabel')}
+                            placeholder={t('settings.phonology.otherPhonemesPlaceholder')}
                             value={otherPhonemes}
                             onChange={(e) => updateConfig({ otherPhonemes: e.target.value })}
                         />
                     </div>
                     <div className="phonology-fixed-width">
                         <Input
-                            label="Mapping Char"
-                            placeholder="e.g., X"
+                            label={t('settings.phonology.mappingCharLabel')}
+                            placeholder={t('settings.phonology.mappingCharPlaceholder')}
                             value={otherPhonemeMapping}
                             onChange={(e) => updateConfig({ otherPhonemeMapping: e.target.value })}
                         />
@@ -387,15 +389,15 @@ export default function PhonologyTab() {
                 </div>
 
                 <Input
-                    label="Custom Alphabet Sort Order (Optional)"
-                    placeholder="e.g., a, á, b, c, ch, d... (Comma separated)"
+                    label={t('settings.phonology.customAlphabetLabel')}
+                    placeholder={t('settings.phonology.customAlphabetPlaceholder')}
                     value={useConfigStore((state) => state.customAlphabet) || ''}
                     onChange={(e) => updateConfig({ customAlphabet: e.target.value })}
                 />
 
                 <Input
-                    label="Syllable Pattern"
-                    placeholder="e.g., CV, CVC, VCV..."
+                    label={t('settings.phonology.syllablePatternLabel')}
+                    placeholder={t('settings.phonology.syllablePatternPlaceholder')}
                     value={syllablePattern}
                     onChange={(e) => updateConfig({ syllablePattern: e.target.value })}
                     disabled={skipSyllableValidation}
@@ -408,28 +410,23 @@ export default function PhonologyTab() {
                             checked={skipSyllableValidation}
                             onChange={(e) => updateConfig({ skipSyllableValidation: e.target.checked })}
                         />
-                        Skip Syllable Pattern Validation
+                        {t('settings.phonology.skipSyllableValidation')}
                     </label>
                 )}
 
                 {(phonologyTypes === 'syllabic' || phonologyTypes === 'featural_block') && (
                     <div className="settings-section-wrapper">
-                        <label className="form-label settings-label-block">Syllabification Algorithm (for ambiguous words)</label>
-                        <Infobox title="How Syllabification Works">
-                            <b>Ambiguous words:</b><br />
-                            If your Syllabary contains blocks for <code>cra</code>, <code>s</code>, <code>cr</code>, and <code>as</code>, and you type the word <code>cras</code>:<br /><br />
-                            • <b>Left-to-Right:</b> Scans from the beginning. Finds <code>cra</code> (longest match), then <code>s</code>. Result = <code>cra</code> + <code>s</code>.<br />
-                            • <b>Right-to-Left:</b> Scans from the end. Finds <code>as</code> (longest match), then <code>cr</code>. Result = <code>cr</code> + <code>as</code>.<br /><br />
-                            <b>Explicit Boundaries:</b><br />
-                            If you want to force a split that goes against the algorithm, use a period <code>.</code> in your lexicon entry. For example, typing <code>cr.as</code> guarantees it will be split as <code>cr</code> and <code>as</code>.
+                        <label className="form-label settings-label-block">{t('settings.phonology.syllabificationAlgorithmLabel')}</label>
+                        <Infobox title={t('settings.phonology.howSyllabificationWorks')}>
+                            <span dangerouslySetInnerHTML={{ __html: t('settings.phonology.syllabGuideAmbiguous') }} />
                         </Infobox>
                         <select
                             className="settings-select-full"
                             value={syllabificationAlgorithm}
                             onChange={(e) => updateConfig({ syllabificationAlgorithm: e.target.value })}
                         >
-                            <option value="ltr">Left-to-Right Greedy</option>
-                            <option value="rtl">Right-to-Left Greedy</option>
+                            <option value="ltr">{t('settings.phonology.syllabificationLtr')}</option>
+                            <option value="rtl">{t('settings.phonology.syllabificationRtl')}</option>
                         </select>
                     </div>
                 )}
@@ -437,19 +434,19 @@ export default function PhonologyTab() {
 
             {/* ─── VOWEL HARMONY SECTION ─── */}
             <Card>
-                <h2 className="flex sg-title"><Music /> Vowel Harmony</h2>
+                <h2 className="flex sg-title"><Music /> {t('settings.phonology.harmonyTitle')}</h2>
 
-                <Infobox title="Vowel Harmony">
-                    Define which vowels group together into harmony sets. The engine validates words based on the selected mode:
+                <Infobox title={t('settings.phonology.harmonyTitle')}>
+                    {t('settings.phonology.harmonyGuideDesc')}
                     <br /><br />
-                    <b>Complete</b> — Every word must use vowels from a single set only.<br />
-                    <b>Flexible</b> — Words should conform, but can be overridden for specific word classes or tags.<br />
-                    <b>Optional</b> — Harmony status is shown inline; suggestions are made but never enforced.
+                    <b>{t('settings.phonology.harmonyModeComplete').split('—')[0].trim()}</b> — {t('settings.phonology.harmonyModeComplete').split('—')[1]?.trim() || ''}<br />
+                    <b>{t('settings.phonology.harmonyModeFlexible').split('—')[0].trim()}</b> — {t('settings.phonology.harmonyModeFlexible').split('—')[1]?.trim() || ''}<br />
+                    <b>{t('settings.phonology.harmonyModeOptional').split('—')[0].trim()}</b> — {t('settings.phonology.harmonyModeOptional').split('—')[1]?.trim() || ''}
                 </Infobox>
 
                 <div className="settings-section-wrapper">
                     <div className="harmony-mode-row">
-                        <label className="form-label">Harmony Mode</label>
+                        <label className="form-label">{t('settings.phonology.harmonyModeLabel')}</label>
                         <select
                             className="harmony-mode-select"
                             value={vowelHarmonyMode}
@@ -461,15 +458,15 @@ export default function PhonologyTab() {
                 </div>
 
                 <div className="settings-section-wrapper">
-                    <label className="form-label">Vowel Sets</label>
+                    <label className="form-label">{t('settings.phonology.vowelSetsLabel')}</label>
                     <p className="harmony-section-desc">
-                        Name each set, enter its vowels, then add it. Repeat for each set.
+                        {t('settings.phonology.vowelSetsDesc')}
                     </p>
                     <div className="harmony-add-row">
                         <div className="harmony-name-col">
                             <Input
                                 label=""
-                                placeholder="e.g., High"
+                                placeholder={t('settings.phonology.setNamePlaceholder')}
                                 value={harmonySetNameInput}
                                 onChange={(e) => setHarmonySetNameInput(e.target.value)}
                             />
@@ -477,12 +474,12 @@ export default function PhonologyTab() {
                         <div className="harmony-vowels-col">
                             <Input
                                 label=""
-                                placeholder="e.g., a, o, u"
+                                placeholder={t('settings.phonology.vowelsPlaceholder')}
                                 value={harmonySetsInput}
                                 onChange={(e) => setHarmonySetsInput(e.target.value)}
                             />
                         </div>
-                        <Button className="harmony-add-btn" onClick={handleAddHarmonySet} variant="primary">Add Set</Button>
+                        <Button className="harmony-add-btn" onClick={handleAddHarmonySet} variant="primary">{t('settings.phonology.addSetBtn')}</Button>
                     </div>
                     {normalizedHarmonySets.length > 0 ? (
                         <ul className="harmony-sets-list">
@@ -507,7 +504,7 @@ export default function PhonologyTab() {
                                                 <span className="harmony-set-name">
                                                     {set.name}{set.neutral && set.name.toLowerCase() !== 'neutral' ? '' : ''}:
                                                 </span>
-                                                {set.neutral && <span className="harmony-set-neutral-badge">neutral</span>}
+                                                {set.neutral && <span className="harmony-set-neutral-badge">{t('settings.phonology.neutralBadge')}</span>}
                                                 <span className="harmony-set-vowels">[ {set.vowels.join(' | ')} ]</span>
                                             </>
                                         )}
@@ -519,12 +516,12 @@ export default function PhonologyTab() {
                                                 checked={!!set.neutral}
                                                 onChange={() => handleToggleNeutral(i)}
                                             />
-                                            Neutral
+                                            {t('settings.phonology.neutralCheckbox')}
                                         </label>
                                         {editingSetIndex !== i && (
-                                            <button className="harmony-icon-btn" onClick={() => handleStartEdit(i)} title="Rename"><SquarePen size={14} /></button>
+                                            <button className="harmony-icon-btn" onClick={() => handleStartEdit(i)} title={t('settings.phonology.renameTooltip')}><SquarePen size={14} /></button>
                                         )}
-                                        <button className="harmony-icon-btn danger" onClick={() => handleRemoveHarmonySet(i)} title="Remove"><Trash2 size={14} /></button>
+                                        <button className="harmony-icon-btn danger" onClick={() => handleRemoveHarmonySet(i)} title={t('settings.phonology.removeTooltip')}><Trash2 size={14} /></button>
                                     </div>
                                 </li>
                             ))}
@@ -537,22 +534,22 @@ export default function PhonologyTab() {
                 {vowelHarmonyMode === 'flexible' && (
                     <div className="settings-section-wrapper">
                         <p className="harmony-section-desc">
-                            Select which word classes or tags are exempt from vowel harmony enforcement.
+                            {t('settings.phonology.exemptDesc')}
                         </p>
                         <MultiSelectDropdown
-                            label="Override by Word Class"
+                            label={t('settings.phonology.overrideWordClass')}
                             options={allAvailableWordClasses}
                             selected={vowelHarmonyOverrideWordClasses}
                             onToggle={handleToggleOverrideWordClass}
-                            placeholder="Select exempt word classes..."
+                            placeholder={t('settings.phonology.selectExemptClasses')}
                         />
                         <MultiSelectDropdown
-                            label="Override by Semantic Tag"
+                            label={t('settings.phonology.overrideSemanticTag')}
                             options={allAvailableTags}
                             selected={vowelHarmonyOverrideTags}
                             onToggle={handleToggleOverrideTag}
-                            placeholder="Select exempt tags..."
-                            emptyMessage="No tags in your lexicon yet."
+                            placeholder={t('settings.phonology.selectExemptTags')}
+                            emptyMessage={t('settings.phonology.noTagsYet')}
                         />
                     </div>
                 )}
@@ -563,29 +560,29 @@ export default function PhonologyTab() {
             <ProsodyRulesCard />
 
             <Card>
-                <h2 className="flex sg-title"><Headphones /> Text-to-Speech & IPA Engine</h2>
-                <Infobox title="Configurable IPA Speech Synthesis">
-                    Conlang Engine can vocalize your language and exact <b>IPA</b> phonetics using multiple speech engines. Select your preferred engine below—including 100% open-source and offline options.
+                <h2 className="flex sg-title"><Headphones /> {t('settings.phonology.ttsTitle')}</h2>
+                <Infobox title={t('settings.phonology.ttsGuideTitle')}>
+                    <span dangerouslySetInnerHTML={{ __html: t('settings.phonology.ttsGuideDesc') }} />
                 </Infobox>
 
                 {/* 1. Engine Selector */}
                 <div className="settings-section-wrapper" style={{ marginTop: '15px' }}>
-                    <label className="form-label settings-label-block">Speech Engine Provider</label>
+                    <label className="form-label settings-label-block">{t('settings.phonology.speechEngineProvider')}</label>
                     <select
                         className="settings-select-full"
                         value={ttsEngine}
                         onChange={(e) => updateConfig({ ttsEngine: e.target.value })}
                     >
-                        <optgroup label="Instant / Zero-Install (Choose & Play)">
-                            <option value="browser">Browser Speech Synthesizer (Built-in, zero setup)</option>
-                            <option value="formant">Acoustic Formant Synthesizer (Pure Open-Source IPA, zero setup, 100% offline)</option>
-                            <option value="human">IPA Phoneme Audio Bank (Authentic human recordings from IPA phoneticians)</option>
+                        <optgroup label={t('settings.phonology.ttsGroupInstant')}>
+                            <option value="browser">{t('settings.phonology.ttsBrowser')}</option>
+                            <option value="formant">{t('settings.phonology.ttsFormant')}</option>
+                            <option value="human">{t('settings.phonology.ttsHuman')}</option>
                         </optgroup>
-                        <optgroup label="Self-Hosted & Cloud (Requires Server or API Key)">
-                            <option value="kokoro">Kokoro-TTS (Open-Source Neural 82M - Local Docker or Remote)</option>
-                            <option value="opentts">OpenTTS / eSpeak-NG (Self-Hosted Docker Server)</option>
-                            <option value="custom">Custom Audio API (Piper / LocalAI / OpenAI-compatible)</option>
-                            <option value="azure">Microsoft Azure Speech (Neural SSML IPA)</option>
+                        <optgroup label={t('settings.phonology.ttsGroupSelfHosted')}>
+                            <option value="kokoro">{t('settings.phonology.ttsKokoro')}</option>
+                            <option value="opentts">{t('settings.phonology.ttsOpenTts')}</option>
+                            <option value="custom">{t('settings.phonology.ttsCustom')}</option>
+                            <option value="azure">{t('settings.phonology.ttsAzure')}</option>
                         </optgroup>
                     </select>
                 </div>
@@ -593,11 +590,11 @@ export default function PhonologyTab() {
                 {/* 2. Provider-Specific Configurations */}
                 {ttsEngine === 'browser' && (
                     <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <Infobox title="Browser Speech Synthesizer (Zero-Install / Ready to Play)">
-                            Built directly into your browser and device. No installation, downloads, or configuration required. Converts conlang IPA symbols into natural speech using your device's speech engine.
+                        <Infobox title={t('settings.phonology.ttsBrowserTitle')}>
+                            {t('settings.phonology.ttsBrowserDesc')}
                         </Infobox>
                         <div className="settings-section-wrapper">
-                            <label className="form-label settings-label-block">Base Language Accent</label>
+                            <label className="form-label settings-label-block">{t('settings.phonology.ttsAccentLabel')}</label>
                             <select
                                 className="settings-select-full"
                                 value={azureTtsVoice}
@@ -616,12 +613,11 @@ export default function PhonologyTab() {
 
                 {ttsEngine === 'formant' && (
                     <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <Infobox title="Acoustic Formant Synthesis (Zero-Install / 100% Offline IPA)">
-                            Pure open-source acoustic synthesis running entirely in your browser via the Web Audio API. 
-                            Synthesizes pure vowels, nasal murmurs, and fricative resonant filters directly from exact IPA charts with zero downloads, zero servers, and zero setup.
+                        <Infobox title={t('settings.phonology.ttsFormantTitle')}>
+                            {t('settings.phonology.ttsFormantDesc')}
                         </Infobox>
                         <div className="settings-section-wrapper">
-                            <label className="form-label settings-label-block">Voice Pitch (Fundamental Frequency: {formantF0} Hz)</label>
+                            <label className="form-label settings-label-block">{t('settings.phonology.ttsPitchLabel', { f0: formantF0 })}</label>
                             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                                 <input
                                     type="range"
@@ -633,7 +629,7 @@ export default function PhonologyTab() {
                                     style={{ flex: 1 }}
                                 />
                                 <span style={{ minWidth: '70px', textAlign: 'right', fontSize: '0.85rem', color: 'var(--tx2)' }}>
-                                    {formantF0 < 120 ? 'Deep' : formantF0 < 180 ? 'Mid' : 'High'} ({formantF0}Hz)
+                                    {formantF0 < 120 ? t('settings.phonology.ttsDeep') : formantF0 < 180 ? t('settings.phonology.ttsMid') : t('settings.phonology.ttsHigh')} ({formantF0}Hz)
                                 </span>
                             </div>
                         </div>
@@ -642,8 +638,8 @@ export default function PhonologyTab() {
 
                 {ttsEngine === 'human' && (
                     <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <Infobox title="IPA Phoneme Audio Bank (Zero-Install / Authentic Human Voices)">
-                            Streams authentic audio recordings of real phoneticians from the International Phonetic Association (hosted on Wikimedia Commons). Plays the exact acoustic realizations for every standard IPA vowel, consonant, and tone.
+                        <Infobox title={t('settings.phonology.ttsAudioBankTitle')}>
+                            {t('settings.phonology.ttsAudioBankDesc')}
                         </Infobox>
                         <p style={{ fontSize: '0.88rem', color: 'var(--tx2)', margin: '4px 0 0' }}>
                             Zero installation required. Each IPA phoneme is vocalized using genuine human phonetician recordings.
@@ -653,9 +649,8 @@ export default function PhonologyTab() {
 
                 {ttsEngine === 'kokoro' && (
                     <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <Infobox title="Kokoro-TTS (Open-Source 82M Neural Model)">
-                            Kokoro is a lightweight, high-fidelity open-source neural TTS model featuring direct IPA phoneme input.
-                            Run it locally with Docker: <code>docker run -p 8880:8880 ghcr.io/remsky/kokoro-fastapi-cpu:latest</code>
+                        <Infobox title={t('settings.phonology.ttsKokoroTitle')}>
+                            {t('settings.phonology.ttsKokoroDesc')}
                         </Infobox>
                         <div className="settings-section-wrapper">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
@@ -704,7 +699,7 @@ export default function PhonologyTab() {
                             </select>
                         </div>
                         <div className="settings-section-wrapper">
-                            <label className="form-label settings-label-block">Voice Speed ({kokoroSpeed}x)</label>
+                            <label className="form-label settings-label-block">{t('settings.phonology.ttsSpeedLabel', { speed: kokoroSpeed })}</label>
                             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                                 <input
                                     type="range"
@@ -738,9 +733,8 @@ export default function PhonologyTab() {
 
                 {ttsEngine === 'opentts' && (
                     <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <Infobox title="Self-Hosted OpenTTS / eSpeak-NG">
-                            Connects to an open-source <a href="https://github.com/synesthesiam/opentts" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>OpenTTS</a> or eSpeak-NG server. 
-                            Run it locally with Docker: <code>docker run -it -p 5500:5500 synesthesiam/opentts</code>
+                        <Infobox title={t('settings.phonology.ttsEspeakTitle')}>
+                            {t('settings.phonology.ttsEspeakDesc')}
                         </Infobox>
                         <div className="settings-section-wrapper">
                             <label className="form-label settings-label-block">OpenTTS Server URL</label>
@@ -765,8 +759,8 @@ export default function PhonologyTab() {
 
                 {ttsEngine === 'custom' && (
                     <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <Infobox title="Custom Audio API Endpoint">
-                            Connect to any OpenAI-compatible audio speech endpoint, Piper HTTP server, or local Kokoro-TTS instance.
+                        <Infobox title={t('settings.phonology.ttsCustomApiTitle')}>
+                            {t('settings.phonology.ttsCustomApiDesc')}
                         </Infobox>
                         <div className="settings-section-wrapper">
                             <label className="form-label settings-label-block">Endpoint URL</label>
@@ -837,15 +831,15 @@ export default function PhonologyTab() {
                 <div style={{ marginTop: '20px', padding: '14px', borderRadius: '8px', background: 'var(--bg2)', border: '1px solid var(--border)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                         <strong style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Volume2 size={16} /> Test IPA Pronunciation
+                            <Volume2 size={16} /> {t('settings.phonology.ttsTestTitle')}
                         </strong>
                         <span style={{ fontSize: '0.75rem', color: 'var(--tx3)' }}>
-                            Active Engine: <strong style={{ color: 'var(--accent)' }}>{ttsEngine}</strong>
+                            {t('settings.phonology.ttsActiveEngine')} <strong style={{ color: 'var(--accent)' }}>{ttsEngine}</strong>
                         </span>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', alignItems: 'flex-end' }}>
                         <div>
-                            <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '4px', display: 'block' }}>Sample Word</label>
+                            <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '4px', display: 'block' }}>{t('settings.phonology.ttsSampleWord')}</label>
                             <Input
                                 type="text"
                                 value={testWord}
@@ -854,7 +848,7 @@ export default function PhonologyTab() {
                             />
                         </div>
                         <div>
-                            <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '4px', display: 'block' }}>Sample IPA</label>
+                            <label className="form-label" style={{ fontSize: '0.75rem', marginBottom: '4px', display: 'block' }}>{t('settings.phonology.ttsSampleIpa')}</label>
                             <Input
                                 type="text"
                                 value={testIpa}
@@ -869,42 +863,42 @@ export default function PhonologyTab() {
                             style={{ height: '38px', padding: '0 16px', display: 'flex', alignItems: 'center', gap: '6px' }}
                             title="Hear pronunciation"
                         >
-                            <Play size={15} /> {isTestingTts ? 'Playing…' : 'Test'}
+                            <Play size={15} /> {isTestingTts ? t('settings.phonology.ttsPlayingBtn') : t('settings.phonology.ttsTestBtn')}
                         </Button>
                     </div>
                 </div>
             </Card>
 
             <Card>
-                <h2 className="flex sg-title"><Hourglass /> Historical Sound Changer</h2>
+                <h2 className="flex sg-title"><Hourglass /> {t('settings.phonology.soundChangerTitle')}</h2>
                 <div className="flex items-center justify-between" style={{ marginBottom: '0.5rem' }}>
                     <p className="settings-description" style={{ margin: 0 }}>
-                        Evolve your language natively. Write rules line by line:
+                        {t('settings.phonology.soundChangerDesc')}
                     </p>
                     <Button
                         variant="edit"
                         onClick={() => setIsBuilderOpen(true)}
                         style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem', gap: '0.4rem' }}
                     >
-                        <Wand2 size={14} /> Rule Builder
+                        <Wand2 size={14} /> {t('settings.phonology.ruleBuilderBtn')}
                     </Button>
                 </div>
 
-                <Infobox title="View Rule Formatting Guide">
-                    <b>Basic Replacement:</b><br />
-                    <span>p =&gt; b</span> (Turns all 'p's into 'b's)<br />
-                    <span>ch =&gt; თ</span> (Replaces specific digraphs with characters)<br /><br />
+                <Infobox title={t('settings.phonology.viewGuideTitle')}>
+                    <b>{t('settings.phonology.guideBasicReplacement')}</b><br />
+                    <span>p =&gt; b</span> ({t('settings.phonology.guideTurnsPtoB')})<br />
+                    <span>ch =&gt; თ</span> ({t('settings.phonology.guideReplacesDigraphs')})<br /><br />
 
-                    <b>Environmental (Contextual):</b><br />
-                    <span>k(?=[ie]) =&gt; tS</span> ('k' becomes 'tS' ONLY before 'i' or 'e')<br />
-                    <span>(?&lt;=[aeiou])s =&gt; z</span> ('s' becomes 'z' ONLY after a vowel)<br /><br />
+                    <b>{t('settings.phonology.guideContextual')}</b><br />
+                    <span>k(?=[ie]) =&gt; tS</span> ({t('settings.phonology.guideKtoTS')})<br />
+                    <span>(?&lt;=[aeiou])s =&gt; z</span> ({t('settings.phonology.guideStoZ')})<br /><br />
 
-                    <b>Positional Changes:</b><br />
-                    <span>^a =&gt; e</span> (Changes 'a' to 'e' ONLY at the START of a word)<br />
-                    <span>m$ =&gt; n</span> (Changes 'm' to 'n' ONLY at the END of a word)<br /><br />
+                    <b>{t('settings.phonology.guidePositional')}</b><br />
+                    <span>^a =&gt; e</span> ({t('settings.phonology.guideStartWord')})<br />
+                    <span>m$ =&gt; n</span> ({t('settings.phonology.guideEndWord')})<br /><br />
 
-                    <b>Advanced (Reduplication):</b><br />
-                    <span>^(.{2})(.*) =&gt; $1$1$2</span> (Duplicates the first two letters)
+                    <b>{t('settings.phonology.guideAdvancedRedup')}</b><br />
+                    <span>^(.{2})(.*) =&gt; $1$1$2</span> ({t('settings.phonology.guideDuplicatesLetters')})
                 </Infobox>
 
                 <textarea
@@ -931,25 +925,25 @@ export default function PhonologyTab() {
                 {/* Apply to Lexicon — opens the review modal */}
                 <div className="pt-button-row">
                     <Button variant="edit" onClick={handlePrepareApplyToLexicon}>
-                        <BookCheck size={16} /> Apply to Lexicon
+                        <BookCheck size={16} /> {t('settings.phonology.applyToLexiconBtn')}
                     </Button>
                 </div>
 
                 <div className="preview-container">
-                    <label className="preview-label">Test your rules</label>
+                    <label className="preview-label">{t('settings.phonology.testRulesLabel')}</label>
 
                     <div className="preview-input-group">
                         <input
                             type="text"
                             className="preview-input"
-                            placeholder="Type words to test (e.g., makin, pata)"
+                            placeholder={t('settings.phonology.testWordsPlaceholder')}
                             value={testWords}
                             onChange={(e) => setTestWords(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handlePreview()}
                         />
 
                         <Button variant="edit" onClick={handlePreview}>
-                            <Eye size={18} /> Preview
+                            <Eye size={18} /> {t('settings.phonology.previewBtn')}
                         </Button>
                     </div>
 
@@ -972,18 +966,18 @@ export default function PhonologyTab() {
                     setIsReviewModalOpen(false);
                     setPendingChanges(null);
                 }}
-                title="Review Sound Changes"
+                title={t('settings.phonology.reviewModalTitle')}
             >
                 <div className="historical-review-modal">
                     <p className="historical-review-desc">
-                        Warning: These changes will rewrite the phoneme spelling of the selected words. This cannot be undone.
+                        {t('settings.phonology.reviewModalDesc')}
                     </p>
 
                     {pendingChanges && (
                         <>
                             <div className="historical-review-actions">
-                                <Button variant="edit" onClick={() => setAllPendingChanges(true)}>Select All</Button>
-                                <Button variant="edit" onClick={() => setAllPendingChanges(false)}>Deselect All</Button>
+                                <Button variant="edit" onClick={() => setAllPendingChanges(true)}>{t('settings.phonology.selectAll')}</Button>
+                                <Button variant="edit" onClick={() => setAllPendingChanges(false)}>{t('settings.phonology.deselectAll')}</Button>
                             </div>
 
                             <div className="historical-review-list">
@@ -1005,7 +999,7 @@ export default function PhonologyTab() {
                                                 {change.wordClass && <span className="historical-meta-pos">{change.wordClass}</span>}
                                                 {change.tags && change.tags.length > 0 && (
                                                     <span className="historical-meta-tags">
-                                                        {change.tags.map(t => `#${t}`).join(', ')}
+                                                        {change.tags.map(tTag => `#${tTag}`).join(', ')}
                                                     </span>
                                                 )}
                                             </div>
@@ -1016,13 +1010,13 @@ export default function PhonologyTab() {
 
                             <div className="historical-review-footer">
                                 <Button variant="error" onClick={handleConfirmSelectedChanges}>
-                                    Apply {pendingChanges.filter(c => c.selected).length} Selected Changes
+                                    {t('settings.phonology.applySelectedCount', { count: pendingChanges.filter(c => c.selected).length })}
                                 </Button>
                                 <Button variant="edit" onClick={() => {
                                     setIsReviewModalOpen(false);
                                     setPendingChanges(null);
                                 }}>
-                                    Cancel
+                                    {t('common.cancel')}
                                 </Button>
                             </div>
                         </>

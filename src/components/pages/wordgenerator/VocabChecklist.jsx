@@ -12,6 +12,7 @@ import {
     getWords
 } from '@/data/vocabDatabase.js';
 import { buildLexiconIndex, checkWordInLexicon, getCategoryProgress } from '@/utils/lexiconMatcher.js';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import toast from 'react-hot-toast';
 import {
     Wand2, Send, Check, Dice5, Globe, Star, List, BookOpen,
@@ -29,6 +30,7 @@ const CATEGORY_ICONS = {
 };
 
 export default function VocabChecklist({ onExit }) {
+    const { t } = useTranslation();
     const { generateWord } = useWordGenerator();
     const addWord = useLexiconStore((state) => state.addWord);
     const checkDuplicate = useLexiconStore((state) => state.checkDuplicate);
@@ -241,9 +243,9 @@ export default function VocabChecklist({ onExit }) {
         setWordEdits(newEdits);
         setSelectedEnglishWords(newSelected);
         if (count > 0) {
-            toast.success(`Generated ${count} words!`);
+            toast.success(t('vocabChecklist.generatedCount', { count }));
         } else {
-            toast('No empty rows on this page to generate.');
+            toast(t('vocabChecklist.noEmptyRows'));
         }
     };
 
@@ -259,10 +261,10 @@ export default function VocabChecklist({ onExit }) {
             if (options && options.length > 0) {
                 setDefModalOptions(options);
             } else {
-                toast('No definition found for this word.');
+                toast(t('vocabChecklist.noDefFound'));
             }
         } catch {
-            toast.error('Failed to fetch definition options.');
+            toast.error(t('vocabChecklist.failedDef'));
         } finally {
             setIsFetchingRowDef(false);
         }
@@ -287,7 +289,7 @@ export default function VocabChecklist({ onExit }) {
         });
 
         if (toSave.length === 0) {
-            toast.error('No selected words have a conlang translation.');
+            toast.error(t('vocabChecklist.noWordsWithTrans'));
             return;
         }
 
@@ -315,7 +317,7 @@ export default function VocabChecklist({ onExit }) {
 
         setIsSaving(false);
         if (addedCount > 0) {
-            toast.success(`Saved ${addedCount} words to your lexicon!`);
+            toast.success(t('vocabChecklist.savedCount', { count: addedCount }));
             setSelectedEnglishWords(prev => {
                 const next = new Set(prev);
                 toSave.forEach(s => next.delete(s.englishWord));
@@ -323,7 +325,7 @@ export default function VocabChecklist({ onExit }) {
             });
         }
         if (dupCount > 0) {
-            toast.error(`${dupCount} words were skipped because they already exist in the lexicon.`);
+            toast.error(t('vocabChecklist.skippedDuplicates', { count: dupCount }));
         }
     };
 
@@ -357,14 +359,14 @@ export default function VocabChecklist({ onExit }) {
                 <div className="vc-header">
                     <div className="vc-header-left">
                         <h2 className="vc-title">
-                            <BookOpen size={20} /> Vocab Checklist
+                            <BookOpen size={20} /> {t('vocabChecklist.title')}
                         </h2>
                         <p className="vc-subtitle">
-                            Curated conlang vocabulary database organized by semantic domains and frequency lists.
+                            {t('vocabChecklist.subtitle')}
                         </p>
                     </div>
                     <Button variant="outline" onClick={onExit}>
-                        <ArrowLeft size={16} /> Back to Generator
+                        <ArrowLeft size={16} /> {t('vocabChecklist.backToGenerator')}
                     </Button>
                 </div>
 
@@ -373,22 +375,22 @@ export default function VocabChecklist({ onExit }) {
                     <div className="vc-progress-stats">
                         <div className="vc-stat">
                             <span className="vc-stat-value accent">{totalStats.created}</span>
-                            <span className="vc-stat-label">In Lexicon</span>
+                            <span className="vc-stat-label">{t('vocabChecklist.inLexicon')}</span>
                         </div>
                         <div className="vc-stat-divider" />
                         <div className="vc-stat">
                             <span className="vc-stat-value">{totalStats.uncreated}</span>
-                            <span className="vc-stat-label">Uncreated</span>
+                            <span className="vc-stat-label">{t('vocabChecklist.uncreated')}</span>
                         </div>
                         <div className="vc-stat-divider" />
                         <div className="vc-stat">
                             <span className="vc-stat-value">{totalStats.total}</span>
-                            <span className="vc-stat-label">Total Concepts</span>
+                            <span className="vc-stat-label">{t('vocabChecklist.totalConcepts')}</span>
                         </div>
                         <div className="vc-stat-divider" />
                         <div className="vc-stat">
                             <span className="vc-stat-value accent">{totalStats.pct}%</span>
-                            <span className="vc-stat-label">Coverage</span>
+                            <span className="vc-stat-label">{t('vocabChecklist.coverage')}</span>
                         </div>
                     </div>
                     <div className="vc-progress-bar">
@@ -411,10 +413,10 @@ export default function VocabChecklist({ onExit }) {
                                 type="button"
                                 className={`vc-cat-chip ${isActive ? 'active' : ''} ${isPhraseBuilder ? 'phrase-builder-chip' : ''}`}
                                 onClick={() => setSelectedList(list.id)}
-                                title={list.desc}
+                                title={t(`vocabChecklist.lists.${list.id}`, list.desc)}
                             >
                                 <IconComp size={14} className="vc-cat-chip-icon" />
-                                <span>{list.label}</span>
+                                <span>{t(`vocabChecklist.lists.${list.id}`, list.label)}</span>
                                 <span className="vc-cat-badge">{badgeCount}</span>
                             </button>
                         );
@@ -425,7 +427,7 @@ export default function VocabChecklist({ onExit }) {
                 <div className="vc-filter-row">
                     {/* Collapsed Semantic Theme Dropdown */}
                     <div className="vc-filter-group vc-theme-filter-group" ref={themeDropdownRef}>
-                        <span className="vc-filter-label">Semantic Theme</span>
+                        <span className="vc-filter-label">{t('vocabChecklist.semanticTheme')}</span>
                         <div className="vc-theme-dropdown-wrapper">
                             <button
                                 type="button"
@@ -436,7 +438,7 @@ export default function VocabChecklist({ onExit }) {
                             >
                                 <div className="vc-theme-btn-text">
                                     <SelectedThemeIcon size={14} className="vc-theme-icon" />
-                                    <span>{selectedThemeObj.label}</span>
+                                    <span>{t(`vocabChecklist.themes.${selectedThemeObj.id}`, selectedThemeObj.label)}</span>
                                 </div>
                                 <div className="vc-theme-btn-end">
                                     <span className="vc-cat-badge">{activeThemeBadge}</span>
@@ -451,7 +453,7 @@ export default function VocabChecklist({ onExit }) {
                                         e.stopPropagation();
                                         setSelectedTheme('all');
                                     }}
-                                    title="Reset to All Themes"
+                                    title={t('vocabChecklist.resetThemes')}
                                 >
                                     <X size={12} />
                                 </button>
@@ -478,7 +480,7 @@ export default function VocabChecklist({ onExit }) {
                                             >
                                                 <div className="vc-theme-menu-item-left">
                                                     <IconComp size={14} className="vc-theme-item-icon" />
-                                                    <span>{theme.label}</span>
+                                                    <span>{t(`vocabChecklist.themes.${theme.id}`, theme.label)}</span>
                                                 </div>
                                                 <span className="vc-cat-badge">{badgeCount}</span>
                                             </button>
@@ -490,12 +492,12 @@ export default function VocabChecklist({ onExit }) {
                     </div>
 
                     <div className="vc-filter-group" style={{ flex: 2 }}>
-                        <span className="vc-filter-label">Search Vocabulary</span>
+                        <span className="vc-filter-label">{t('vocabChecklist.searchVocab')}</span>
                         <div style={{ position: 'relative' }}>
                             <input
                                 type="text"
                                 className="vc-filter-input"
-                                placeholder="Search word, category, or POS..."
+                                placeholder={t('vocabChecklist.searchPlaceholder')}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 style={{ paddingLeft: '28px' }}
@@ -505,27 +507,27 @@ export default function VocabChecklist({ onExit }) {
                     </div>
 
                     <div className="vc-filter-group">
-                        <span className="vc-filter-label">Part of Speech</span>
+                        <span className="vc-filter-label">{t('vocabChecklist.partOfSpeech')}</span>
                         <select
                             className="vc-filter-input"
                             value={posFilter}
                             onChange={(e) => setPosFilter(e.target.value)}
                         >
-                            <option value="all">All Classes</option>
-                            <option value="noun">Noun</option>
-                            <option value="verb">Verb</option>
-                            <option value="adjective">Adjective</option>
-                            <option value="adverb">Adverb</option>
-                            <option value="pronoun">Pronoun</option>
-                            <option value="conjunction">Conjunction</option>
-                            <option value="preposition">Preposition</option>
-                            <option value="numeral">Numeral</option>
-                            <option value="particle">Particle</option>
+                            <option value="all">{t('vocabChecklist.allClasses')}</option>
+                            <option value="noun">{t('generator.noun')}</option>
+                            <option value="verb">{t('generator.verb')}</option>
+                            <option value="adjective">{t('generator.adjective')}</option>
+                            <option value="adverb">{t('generator.adverb')}</option>
+                            <option value="pronoun">{t('generator.pronoun')}</option>
+                            <option value="conjunction">{t('vocabChecklist.pos.conjunction', 'Conjunction')}</option>
+                            <option value="preposition">{t('vocabChecklist.pos.preposition', 'Preposition')}</option>
+                            <option value="numeral">{t('vocabChecklist.pos.numeral', 'Numeral')}</option>
+                            <option value="particle">{t('vocabChecklist.pos.particle', 'Particle')}</option>
                         </select>
                     </div>
 
                     <div className="vc-filter-group" style={{ minWidth: '150px' }}>
-                        <span className="vc-filter-label">Syllables (Min - Max)</span>
+                        <span className="vc-filter-label">{t('vocabChecklist.syllables')}</span>
                         <div className="vc-syl-range">
                             <input
                                 type="number"
@@ -535,7 +537,7 @@ export default function VocabChecklist({ onExit }) {
                                 value={minSyllables}
                                 onChange={(e) => setMinSyllables(Math.max(1, parseInt(e.target.value) || 1))}
                             />
-                            <span className="vc-syl-sep">to</span>
+                            <span className="vc-syl-sep">{t('vocabChecklist.to')}</span>
                             <input
                                 type="number"
                                 min="1"
@@ -556,7 +558,7 @@ export default function VocabChecklist({ onExit }) {
                             checked={onlyUncreated}
                             onChange={(e) => setOnlyUncreated(e.target.checked)}
                         />
-                        <span>Only Uncreated Words</span>
+                        <span>{t('vocabChecklist.onlyUncreated')}</span>
                     </label>
                 </div>
 
@@ -568,7 +570,7 @@ export default function VocabChecklist({ onExit }) {
                             onClick={handleGenerateAllEmpty}
                             disabled={visibleUncreated.length === 0}
                         >
-                            <Sparkles size={16} /> Generate for All Empty
+                            <Sparkles size={16} /> {t('vocabChecklist.genAllEmpty')}
                         </Button>
 
                         <Button
@@ -576,11 +578,11 @@ export default function VocabChecklist({ onExit }) {
                             onClick={handleSelectAllVisible}
                             disabled={visibleUncreated.length === 0}
                         >
-                            {allVisibleSelected ? 'Deselect All' : 'Select All Visible'}
+                            {allVisibleSelected ? t('vocabChecklist.deselectAll') : t('vocabChecklist.selectAll')}
                         </Button>
 
                         <span className="vc-count-label">
-                            Selected: <strong>{selectedEnglishWords.size}</strong>
+                            {t('vocabChecklist.selectedCount', { count: selectedEnglishWords.size })}
                         </span>
                     </div>
 
@@ -590,7 +592,7 @@ export default function VocabChecklist({ onExit }) {
                             onClick={handleSaveSelected}
                             disabled={selectedEnglishWords.size === 0 || isSaving}
                         >
-                            <Check size={16} /> Save Selected ({selectedEnglishWords.size})
+                            <Check size={16} /> {t('vocabChecklist.saveSelected', { count: selectedEnglishWords.size })}
                         </Button>
                     </div>
                 </div>
@@ -598,11 +600,11 @@ export default function VocabChecklist({ onExit }) {
                 {/* ── Rows List ── */}
                 {filteredWords.length === 0 ? (
                     <div className="vc-empty">
-                        <p className="vc-empty-title">No words match the selected filters.</p>
+                        <p className="vc-empty-title">{t('vocabChecklist.noMatch')}</p>
                         <p className="vc-empty-desc">
                             {onlyUncreated
-                                ? 'All words in this category are already present in your lexicon! Toggle "Only Uncreated Words" to view them.'
-                                : 'Try changing your search query or selected category.'}
+                                ? t('vocabChecklist.allPresent')
+                                : t('vocabChecklist.tryFilter')}
                         </p>
                     </div>
                 ) : (
@@ -631,7 +633,9 @@ export default function VocabChecklist({ onExit }) {
                                     <div className="vc-row-english">
                                         <span className="vc-english-word">{item.word}</span>
                                         <div className="vc-row-meta">
-                                            <span className="vc-pos-badge">{edit.wordClass || item.class}</span>
+                                            <span className="vc-pos-badge">
+                                                {t(`vocabChecklist.pos.${(edit.wordClass || item.class).toLowerCase()}`, edit.wordClass || item.class)}
+                                            </span>
                                             {item.lists && item.lists.map(listId => (
                                                 <span key={listId} className="vc-list-badge">
                                                     {listId.replace('swadesh-', 'S-').replace('leipzig-jakarta', 'LJ')}
@@ -644,13 +648,13 @@ export default function VocabChecklist({ onExit }) {
                                             {isCreated ? (
                                                 <>
                                                     <Check size={12} />
-                                                    <span>In Lexicon:</span>
+                                                    <span>{t('vocabChecklist.inLexicon')}:</span>
                                                     <span className="vc-status-word notranslate">
                                                         "{lexiconEntry?.word}"
                                                     </span>
                                                 </>
                                             ) : (
-                                                <span>Not in Lexicon</span>
+                                                <span>{t('vocabChecklist.notInLexicon')}</span>
                                             )}
                                         </div>
                                     </div>
@@ -661,7 +665,7 @@ export default function VocabChecklist({ onExit }) {
                                             <input
                                                 type="text"
                                                 className={`vc-conlang-input custom-font-text notranslate ${edit.conlangWord ? 'has-value' : ''}`}
-                                                placeholder={isCreated ? `Existing: ${lexiconEntry?.word}` : 'Conlang word...'}
+                                                placeholder={isCreated ? t('vocabChecklist.existingPlaceholder', { word: lexiconEntry?.word }) : t('vocabChecklist.conlangPlaceholder')}
                                                 value={edit.conlangWord}
                                                 disabled={isCreated}
                                                 onChange={(e) => {
@@ -678,19 +682,21 @@ export default function VocabChecklist({ onExit }) {
                                                 disabled={isCreated}
                                                 onChange={(e) => updateRowEdit(item.word, 'wordClass', e.target.value)}
                                             >
-                                                <option value="noun">Noun</option>
-                                                <option value="verb">Verb</option>
-                                                <option value="adjective">Adjective</option>
-                                                <option value="adverb">Adverb</option>
-                                                <option value="pronoun">Pronoun</option>
-                                                <option value="numeral">Numeral</option>
-                                                <option value="particle">Particle</option>
+                                                <option value="noun">{t('generator.noun')}</option>
+                                                <option value="verb">{t('generator.verb')}</option>
+                                                <option value="adjective">{t('generator.adjective')}</option>
+                                                <option value="adverb">{t('generator.adverb')}</option>
+                                                <option value="pronoun">{t('generator.pronoun')}</option>
+                                                <option value="conjunction">{t('vocabChecklist.pos.conjunction', 'Conjunction')}</option>
+                                                <option value="preposition">{t('vocabChecklist.pos.preposition', 'Preposition')}</option>
+                                                <option value="numeral">{t('vocabChecklist.pos.numeral', 'Numeral')}</option>
+                                                <option value="particle">{t('vocabChecklist.pos.particle', 'Particle')}</option>
                                             </select>
 
                                             <button
                                                 type="button"
                                                 className="vc-icon-btn"
-                                                title="Roll random valid word"
+                                                title={t('vocabChecklist.rollRandom')}
                                                 disabled={isCreated}
                                                 onClick={() => handleRollRow(item.word, edit.wordClass || item.class)}
                                             >
@@ -700,7 +706,7 @@ export default function VocabChecklist({ onExit }) {
                                             <button
                                                 type="button"
                                                 className="vc-icon-btn"
-                                                title="Send to Create Word"
+                                                title={t('vocabChecklist.sendToCreate')}
                                                 onClick={() => handleSendRowToCreate(item.word, edit.wordClass || item.class, edit.conlangWord)}
                                             >
                                                 <Send size={14} />
@@ -711,7 +717,7 @@ export default function VocabChecklist({ onExit }) {
                                             <input
                                                 type="text"
                                                 className="vc-meta-input"
-                                                placeholder="Tags (comma separated)..."
+                                                placeholder={t('vocabChecklist.tagsPlaceholder')}
                                                 value={edit.tags}
                                                 disabled={isCreated}
                                                 onChange={(e) => updateRowEdit(item.word, 'tags', e.target.value)}
@@ -720,7 +726,7 @@ export default function VocabChecklist({ onExit }) {
                                                 <input
                                                     type="text"
                                                     className="vc-meta-input"
-                                                    placeholder="Description..."
+                                                    placeholder={t('vocabChecklist.descPlaceholder')}
                                                     value={edit.description}
                                                     disabled={isCreated}
                                                     onChange={(e) => updateRowEdit(item.word, 'description', e.target.value)}
@@ -728,7 +734,7 @@ export default function VocabChecklist({ onExit }) {
                                                 <button
                                                     type="button"
                                                     className="vc-icon-btn"
-                                                    title="Auto-fill definition options"
+                                                    title={t('vocabChecklist.autoFillDef')}
                                                     disabled={isCreated || (isFetchingRowDef && activeDefWord === item.word)}
                                                     onClick={() => handleFetchRowDef(item.word, edit.wordClass || item.class)}
                                                 >
@@ -747,7 +753,11 @@ export default function VocabChecklist({ onExit }) {
                 {totalPages > 1 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--bd)' }}>
                         <span className="vc-count-label">
-                            Showing {page * PAGE_SIZE + 1} - {Math.min((page + 1) * PAGE_SIZE, filteredWords.length)} of {filteredWords.length} words
+                            {t('vocabChecklist.showingWords', {
+                                start: page * PAGE_SIZE + 1,
+                                end: Math.min((page + 1) * PAGE_SIZE, filteredWords.length),
+                                total: filteredWords.length
+                            })}
                         </span>
                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                             <Button
@@ -755,17 +765,17 @@ export default function VocabChecklist({ onExit }) {
                                 disabled={page === 0}
                                 onClick={() => setPage(p => Math.max(0, p - 1))}
                             >
-                                <ChevronLeft size={16} /> Prev
+                                <ChevronLeft size={16} /> {t('vocabChecklist.prev')}
                             </Button>
                             <span style={{ fontSize: '0.82rem', color: 'var(--tx2)', padding: '0 8px' }}>
-                                Page {page + 1} of {totalPages}
+                                {t('vocabChecklist.pageOf', { current: page + 1, total: totalPages })}
                             </span>
                             <Button
                                 variant="secondary"
                                 disabled={page >= totalPages - 1}
                                 onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                             >
-                                Next <ChevronRight size={16} />
+                                {t('vocabChecklist.next')} <ChevronRight size={16} />
                             </Button>
                         </div>
                     </div>
@@ -783,7 +793,7 @@ export default function VocabChecklist({ onExit }) {
                 onSelectDefinition={(selectedDef) => {
                     if (activeDefWord) {
                         updateRowEdit(activeDefWord, 'description', selectedDef);
-                        toast.success('Definition updated!');
+                        toast.success(t('vocabChecklist.defUpdated'));
                     }
                 }}
             />

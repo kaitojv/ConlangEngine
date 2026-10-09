@@ -6,6 +6,7 @@ import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { stripAffix, getPersonRules } from '../../../utils/morphologyEngine.jsx';
 import { Trash2, Save, X, Info, Palette, Link2, ArrowRight, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import './alignertab.css';
 
 const PRESET_COLORS = [
@@ -14,6 +15,7 @@ const PRESET_COLORS = [
 ];
 
 export default function AlignerTab() {
+    const { t } = useTranslation();
     const sentenceMaps = useConfigStore(state => state.sentenceMaps) || [];
     const grammarRules = useConfigStore(state => state.grammarRules) || [];
     const updateConfig = useConfigStore(state => state.updateConfig);
@@ -64,12 +66,12 @@ export default function AlignerTab() {
             const cleanAffix = r.affix?.toLowerCase().replace(/^-|-|'/g, '').trim();
             return cleanFree === safeSurface || (cleanAffix && cleanAffix === safeSurface);
         });
-        if (personMatch) return { root: { word: personMatch.freeForm || personMatch.affix, wordClass: 'Person/Class Marker', translation: personMatch.name || 'Pronoun/Affix' }, rules: [] };
-        let allRules = [...grammarRules, ...personRules.filter(p => p.affix).map(p => ({ ...p, name: p.name || 'Person' }))];
+        if (personMatch) return { root: { word: personMatch.freeForm || personMatch.affix, wordClass: t('aligner.tooltip.personClassMarker'), translation: personMatch.name || t('aligner.tooltip.pronounAffix') }, rules: [] };
+        let allRules = [...grammarRules, ...personRules.filter(p => p.affix).map(p => ({ ...p, name: p.name || t('aligner.tooltip.person') }))];
         for (const rule of allRules) {
             if (!rule.affix) continue;
             const cleanRuleAffix = rule.affix.toLowerCase().replace(/^-|-|'/g, '').trim();
-            if (cleanRuleAffix === safeSurface) return { root: { word: rule.affix, wordClass: 'Grammar Marker', translation: rule.name || 'Affix' }, rules: [] };
+            if (cleanRuleAffix === safeSurface) return { root: { word: rule.affix, wordClass: t('aligner.tooltip.grammarMarker'), translation: rule.name || t('aligner.tooltip.affix') }, rules: [] };
             const stripped = stripAffix(safeSurface, rule.affix);
             if (stripped) {
                 const subParsing = analyzeWord(stripped, depth + 1);
@@ -91,8 +93,8 @@ export default function AlignerTab() {
         ) : (
             <div className="aligner-tooltip">
                 <div className="tooltip-word">{word}</div>
-                <div className="tooltip-class">Project Term</div>
-                <div className="tooltip-trans">No mapping or lexicon entry found.</div>
+                <div className="tooltip-class">{t('aligner.tooltip.projectTerm')}</div>
+                <div className="tooltip-trans">{t('aligner.tooltip.noMappingFound')}</div>
             </div>
         );
         setTooltip({ visible: true, content, x: e.clientX, y: e.clientY - 15 });
@@ -113,7 +115,7 @@ export default function AlignerTab() {
     const handleSave = () => {
         if (!sourceText || !targetText) return;
         updateConfig({ sentenceMaps: [{ id: Date.now(), sourceText, targetText, links, createdAt: new Date().toISOString() }, ...sentenceMaps] });
-        setSourceText(''); setTargetText(''); setLinks([]); toast.success("Saved mapping!");
+        setSourceText(''); setTargetText(''); setLinks([]); toast.success(t('aligner.savedToast'));
     };
 
     const getLinkColors = (index, isSource) => links.filter(l => (isSource ? l.sIdx : l.tIdx) === index).map(l => l.color);
@@ -123,9 +125,9 @@ export default function AlignerTab() {
             {/* Modal first for z-index safety */}
             {viewingMap && (
                 <div className="aligner-modal-overlay" role="presentation" onClick={() => setViewingMap(null)}>
-                    <div className="aligner-modal" role="dialog" aria-modal="true" aria-label="Sentence Mapping View" onClick={e => e.stopPropagation()}>
+                    <div className="aligner-modal" role="dialog" aria-modal="true" aria-label={t('aligner.viewModalAria')} onClick={e => e.stopPropagation()}>
                         <button className="close-modal-btn" onClick={() => setViewingMap(null)}><X size={24} /></button>
-                        <div className="modal-header"><h3>Sentence Mapping View</h3></div>
+                        <div className="modal-header"><h3>{t('aligner.viewModalTitle')}</h3></div>
                         <div className="modal-content">
                             <div className="aligner-workspace-scroll">
                                 <div className="aligner-workspace static" ref={modalWorkspaceRef}>
@@ -152,18 +154,18 @@ export default function AlignerTab() {
 
             <Card>
                 <div className="aligner-header">
-                    <h2><Link2 size={42} /> Sentence Mapper</h2>
-                    <p>Map conlang morphology to translations and visualize complex grammar flows.</p>
+                    <h2><Link2 size={42} /> {t('aligner.title')}</h2>
+                    <p>{t('aligner.subtitle')}</p>
                 </div>
                 <div className="aligner-editor">
                     <div className="input-group">
-                        <label><Info size={14} /> Source Sentence</label>
-                        <textarea value={sourceText} onChange={(e) => setSourceText(e.target.value)} placeholder="e.g. soir'ma" className="custom-font-text" />
+                        <label><Info size={14} /> {t('aligner.sourceSentence')}</label>
+                        <textarea value={sourceText} onChange={(e) => setSourceText(e.target.value)} placeholder={t('aligner.sourcePlaceholder')} className="custom-font-text" />
                     </div>
                     <div className="editor-divider"><ArrowRight size={32} /></div>
                     <div className="input-group">
-                        <label><Palette size={14} /> Target Sentence</label>
-                        <textarea value={targetText} onChange={(e) => setTargetText(e.target.value)} placeholder="e.g. I see" />
+                        <label><Palette size={14} /> {t('aligner.targetSentence')}</label>
+                        <textarea value={targetText} onChange={(e) => setTargetText(e.target.value)} placeholder={t('aligner.targetPlaceholder')} />
                     </div>
                 </div>
 
@@ -206,8 +208,8 @@ export default function AlignerTab() {
                             </div>
                         </div>
                         <div className="workspace-footer">
-                            <Button variant="default" onClick={() => { setLinks([]); setSourceText(''); setTargetText('') }}>Clear All</Button>
-                            <Button onClick={handleSave}><Save size={18} /> Save Mapping</Button>
+                            <Button variant="default" onClick={() => { setLinks([]); setSourceText(''); setTargetText('') }}>{t('aligner.clearAll')}</Button>
+                            <Button onClick={handleSave}><Save size={18} /> {t('aligner.saveMapping')}</Button>
                         </div>
                     </div>
                 )}
@@ -215,7 +217,7 @@ export default function AlignerTab() {
 
             <details className="saved-maps-details">
                 <summary className="saved-maps-summary">
-                    <span>Saved Mappings</span>
+                    <span>{t('aligner.savedMappings')}</span>
                     <ChevronDown size={20} className="drop-arrow" />
                 </summary>
                 <div className="maps-container">
@@ -238,7 +240,7 @@ export default function AlignerTab() {
                                 <ArrowRight size={16} />
                                 <span className="target-preview">{map.targetText}</span>
                             </div>
-                            <button className="delete-map-icon-btn" onClick={(e) => { e.stopPropagation(); updateConfig({ sentenceMaps: sentenceMaps.filter(m => m.id !== map.id) }); toast.success("Deleted!"); }}>
+                            <button className="delete-map-icon-btn" onClick={(e) => { e.stopPropagation(); updateConfig({ sentenceMaps: sentenceMaps.filter(m => m.id !== map.id) }); toast.success(t('aligner.deletedToast')); }}>
                                 <Trash2 size={18} />
                             </button>
                         </div>
