@@ -61,12 +61,14 @@
 
 .hdr-right { 
     display: flex; 
-    gap: 8px; 
+    gap: 4px; 
     align-items: center;
     background: var(--s4); 
-    padding: 4px 8px; 
+    padding: 4px 6px; 
     border-radius: 10px; 
     border: 1px solid var(--bd);
+    flex-wrap: nowrap;
+    flex-shrink: 0;
 } 
 
 .profile-header-button {
@@ -99,10 +101,19 @@
     font-weight: 500;
     cursor: pointer; 
     transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
-    display: flex;
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     margin: 0 !important; /* Reset any Button.jsx margins */
+    white-space: nowrap;
+    flex-shrink: 0;
+    line-height: 1.2;
+}
+
+.hdr-btn span {
+    white-space: nowrap;
+    line-height: 1.2;
 }
 
 .hdr-btn:hover {
@@ -119,6 +130,7 @@
     width: 16px;
     height: 16px;
     stroke-width: 1.8px;
+    flex-shrink: 0;
 }
 
 /* Export Menu Dropdown */

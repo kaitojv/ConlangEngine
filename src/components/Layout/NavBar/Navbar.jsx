@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
     Home, Languages, Settings, PlusCircle, Book, 
     Sparkles, Activity, Map, BookOpen, Library, Layers,
-    Lock, HelpCircle, Sun, Moon, Link2, Compass, MessageSquare, GraduationCap, FlaskConical,
-    Globe, Check
+    Lock, HelpCircle, Sun, Moon, Link2, Compass, MessageSquare, GraduationCap, FlaskConical
 } from 'lucide-react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
@@ -65,31 +64,13 @@ const NAV_GROUPS = [
 ];
 
 export default function NavBar({ isMenuOpen, closeMenu }) {
-    const { t, currentLang, setLanguage, languages } = useTranslation();
+    const { t } = useTranslation();
     const isProActive = useConfigStore(state => state.isProActive);
     const theme = useConfigStore(state => state.theme);
     const customLabels = useConfigStore(state => state.customLabels) || {};
     const updateConfig = useConfigStore(state => state.updateConfig);
     const [session, setSession] = useState(null);
-    const [isLangOpen, setIsLangOpen] = useState(false);
-    const langMenuRef = useRef(null);
 
-    const currentLangObj = languages.find(l => l.code === currentLang) || languages[0];
-
-    useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (langMenuRef.current && !langMenuRef.current.contains(e.target)) {
-                setIsLangOpen(false);
-            }
-        };
-        if (isLangOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-        }
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [isLangOpen]);
-    
     // Keep track of the user's active session to determine if they get access to LIVE features
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -135,39 +116,6 @@ export default function NavBar({ isMenuOpen, closeMenu }) {
                         {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
                         <span>{theme === 'dark' ? (t('nav.light') || 'Light') : (t('nav.dark') || 'Dark')}</span>
                     </button>
-
-                    <div className="sidebar-lang-wrapper" ref={langMenuRef}>
-                        <button 
-                            className={`sidebar-header-btn lang-toggle-nav ${isLangOpen ? 'open' : ''}`}
-                            onClick={() => setIsLangOpen(prev => !prev)}
-                            title={t('nav.language') || 'Language'}
-                            aria-expanded={isLangOpen}
-                        >
-                            <Globe size={17} />
-                            <span>{currentLangObj?.flag} {currentLang.toUpperCase()}</span>
-                        </button>
-
-                        {isLangOpen && (
-                            <div className="sidebar-lang-dropdown">
-                                {languages.map((lang) => (
-                                    <button 
-                                        key={lang.code}
-                                        className={`sidebar-lang-opt ${currentLang === lang.code ? 'active' : ''}`}
-                                        onClick={() => {
-                                            setLanguage(lang.code);
-                                            setIsLangOpen(false);
-                                        }}
-                                    >
-                                        <span className="sidebar-lang-opt-left">
-                                            <span className="lang-flag">{lang.flag}</span>
-                                            <span className="lang-name">{lang.nativeName}</span>
-                                        </span>
-                                        {currentLang === lang.code && <Check size={14} />}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
                 </header>
 
                 <div className="navbar">
