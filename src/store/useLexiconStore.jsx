@@ -2,6 +2,12 @@ import { create } from 'zustand';
 import { persist, subscribeWithSelector } from 'zustand/middleware';
 import { share } from 'shared-zustand';
 import { calculateSM2 } from '../utils/sm2.js';
+import { getDeviceId } from '../utils/deviceIdentity.js';
+
+// Sync metadata stamped on every *content* edit. Used by the 3-way merge
+// engine (src/utils/syncMerge.js) to resolve "edited on both devices" cases.
+// SRS/study progress deliberately does NOT stamp this.
+const editStamp = () => ({ updatedAt: Date.now(), updatedBy: getDeviceId() });
 
 export const useLexiconStore = create(
     subscribeWithSelector(
@@ -40,15 +46,19 @@ export const useLexiconStore = create(
                         etymology: newWordData.etymology || null,
                         isProtoRoot: newWordData.isProtoRoot || false,
                         isPrimary: Boolean(newWordData.isPrimary),
+                        ...editStamp(),
                     };
                     return { lexicon: [...(state.lexicon || []), newEntry] };
                 }),
 
-                updateWord: (id, updatedFields) => set((state) => ({
-                    lexicon: (state.lexicon || []).map(word =>
-                        word.id === id ? { ...word, ...updatedFields } : word
-                    )
-                })),
+                updateWord: (id, updatedFields) => set((state) => {
+                    const stamp = editStamp();
+                    return {
+                        lexicon: (state.lexicon || []).map(word =>
+                            word.id === id ? { ...word, ...updatedFields, ...stamp } : word
+                        )
+                    };
+                }),
 
                 updateWordSRS: (id, grade) => set((state) => ({
                     lexicon: (state.lexicon || []).map(word => {
@@ -76,15 +86,19 @@ export const useLexiconStore = create(
                         tags: newPhraseData.tags || [],
                         componentWords: newPhraseData.componentWords || [], // Array of word IDs
                         createdAt: Date.now(),
+                        ...editStamp(),
                     };
                     return { phrases: [...(state.phrases || []), newPhrase] };
                 }),
 
-                updatePhrase: (id, updatedFields) => set((state) => ({
-                    phrases: (state.phrases || []).map(p =>
-                        p.id === id ? { ...p, ...updatedFields } : p
-                    )
-                })),
+                updatePhrase: (id, updatedFields) => set((state) => {
+                    const stamp = editStamp();
+                    return {
+                        phrases: (state.phrases || []).map(p =>
+                            p.id === id ? { ...p, ...updatedFields, ...stamp } : p
+                        )
+                    };
+                }),
 
                 deletePhrase: (id) => set((state) => ({
                     phrases: (state.phrases || []).filter(p => p.id !== id)
@@ -92,32 +106,44 @@ export const useLexiconStore = create(
 
                 // ── Script Actions ─────────────────────────────────────────
 
-                setWordScriptOverride: (id, scriptIdOrNull) => set((state) => ({
-                    lexicon: (state.lexicon || []).map(word =>
-                        word.id === id ? { ...word, scriptOverride: scriptIdOrNull } : word
-                    )
-                })),
+                setWordScriptOverride: (id, scriptIdOrNull) => set((state) => {
+                    const stamp = editStamp();
+                    return {
+                        lexicon: (state.lexicon || []).map(word =>
+                            word.id === id ? { ...word, scriptOverride: scriptIdOrNull, ...stamp } : word
+                        )
+                    };
+                }),
 
-                setWordScriptForm: (id, scriptId, form) => set((state) => ({
-                    lexicon: (state.lexicon || []).map(word =>
-                        word.id === id ? { ...word, scriptForms: { ...(word.scriptForms || {}), [scriptId]: form } } : word
-                    )
-                })),
+                setWordScriptForm: (id, scriptId, form) => set((state) => {
+                    const stamp = editStamp();
+                    return {
+                        lexicon: (state.lexicon || []).map(word =>
+                            word.id === id ? { ...word, scriptForms: { ...(word.scriptForms || {}), [scriptId]: form }, ...stamp } : word
+                        )
+                    };
+                }),
 
-                clearWordScriptForm: (id, scriptId) => set((state) => ({
-                    lexicon: (state.lexicon || []).map(word => {
-                        if (word.id !== id) return word;
-                        const forms = { ...(word.scriptForms || {}) };
-                        delete forms[scriptId];
-                        return { ...word, scriptForms: forms };
-                    })
-                })),
+                clearWordScriptForm: (id, scriptId) => set((state) => {
+                    const stamp = editStamp();
+                    return {
+                        lexicon: (state.lexicon || []).map(word => {
+                            if (word.id !== id) return word;
+                            const forms = { ...(word.scriptForms || {}) };
+                            delete forms[scriptId];
+                            return { ...word, scriptForms: forms, ...stamp };
+                        })
+                    };
+                }),
 
-                setWordScriptRole: (id, role) => set((state) => ({
-                    lexicon: (state.lexicon || []).map(word =>
-                        word.id === id ? { ...word, scriptRole: role } : word
-                    )
-                })),
+                setWordScriptRole: (id, role) => set((state) => {
+                    const stamp = editStamp();
+                    return {
+                        lexicon: (state.lexicon || []).map(word =>
+                            word.id === id ? { ...word, scriptRole: role, ...stamp } : word
+                        )
+                    };
+                }),
 
                 checkDuplicate: (word, translation) => {
                     const state = get();

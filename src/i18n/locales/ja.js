@@ -5,6 +5,7 @@ import courseBuilder from './courseBuilder/ja.js';
 import exercisePlayer from './exercisePlayer/ja.js';
 import wiki from './wiki/ja.js';
 import aligner from './aligner/ja.js';
+import sync from './sync/ja.js';
 
 export default {
   howToStart,
@@ -14,6 +15,7 @@ export default {
   exercisePlayer,
   wiki,
   aligner,
+  sync,
   "nav": {
     "workspace": "ワークスペース",
     "lexiconGroup": "語彙",

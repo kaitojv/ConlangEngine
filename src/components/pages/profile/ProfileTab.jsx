@@ -14,7 +14,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ALLOWED_REDIRECTS } from '@/utils/navigationConstants.js';
 import { supabase } from '@/utils/supabaseClient.js';
 import toast from 'react-hot-toast';
-import { sanitizeConfig, sanitizeLexicon, decompressPayloadAsync } from '@/utils/schemaValidator.jsx';
+import { sanitizeConfig, sanitizeLexicon, sanitizePhrases, decompressPayloadAsync } from '@/utils/schemaValidator.jsx';
+import { saveSyncBase } from '@/utils/syncBaseStore.js';
 import { useSharing } from '@/hooks/useSharing.jsx';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
 import PayPalButton from '@/components/Payment/PayPalButton.jsx';
@@ -300,6 +301,7 @@ export default function ProfileTab() {
             const projectData = await decompressPayloadAsync(project.project_data);
             const safeConfig = sanitizeConfig(projectData.config || {});
             const safeLexicon = sanitizeLexicon(projectData.dictionary || []);
+            const safePhrases = sanitizePhrases(projectData.phrases || []);
             
             // Save to local project archive so it persists in the Workspaces tab
             const saveProjectToArchive = useProjectStore.getState().saveProjectToArchive;
@@ -309,6 +311,7 @@ export default function ProfileTab() {
             );
 
             setLexicon(safeLexicon);
+            useLexiconStore.getState().setPhrases(safePhrases);
             setFullConfig({
                 ...safeConfig, 
                 projectId: project.project_id,
@@ -318,6 +321,14 @@ export default function ProfileTab() {
             if (projectData.wiki) {
                 updateConfig({ wikiPages: projectData.wiki });
             }
+
+            await saveSyncBase(project.project_id, {
+                lexicon: safeLexicon,
+                phrases: safePhrases,
+                config: safeConfig,
+                wiki: projectData.wiki || {}
+            });
+
             setProjectSelectorOpen(false);
             const projectName = safeConfig.conlangName || 'Untitled Project';
             setSyncStatus(`✅ Loaded project: ${projectName}`);
@@ -627,7 +638,17 @@ export default function ProfileTab() {
                                         width: '40px', height: '22px', borderRadius: '20px', background: isAutoSyncEnabled ? 'var(--acc)' : 'var(--s3)', 
                                         position: 'relative', cursor: 'pointer', transition: 'background 0.3s ease' 
                                     }}
-                                    onClick={() => updateConfig({ isAutoSyncEnabled: !isAutoSyncEnabled })}
+                                    onClick={async () => {
+                                        const nextVal = !isAutoSyncEnabled;
+                                        updateConfig({ isAutoSyncEnabled: nextVal });
+                                        if (session?.user?.id) {
+                                            try {
+                                                await supabase.from('profiles').update({ live_auto_sync: nextVal }).eq('id', session.user.id);
+                                            } catch (e) {
+                                                console.warn("Could not sync live_auto_sync to profile:", e);
+                                            }
+                                        }
+                                    }}
                                 >
                                     <div style={{
                                         width: '18px', height: '18px', background: '#fff', borderRadius: '50%',

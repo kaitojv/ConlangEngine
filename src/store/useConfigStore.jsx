@@ -75,6 +75,7 @@ export const INITIAL_CONFIG = {
     isAutoSyncEnabled: false,
     lastCloudSync: null,
     syncConflictStatus: 'resolved',
+    devicesOnlineCount: 1,
     lastStudyDate: null,
     customFont: null,
     appUiFont: "'Outfit', sans-serif",

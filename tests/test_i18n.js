@@ -122,6 +122,18 @@ assert.equal(t('aligner.tooltip.projectTerm', 'pt'), 'Termo do Projeto');
 assert.equal(t('aligner.tooltip.noMappingFound', 'pt'), 'Nenhum mapeamento ou entrada no léxico encontrado.');
 console.log('✓ Aligner (Sentence Mapper) translations verified across all 7 languages');
 
+// 3i. Sync & Merge Review translations across all languages
+assert.equal(t('sync.title', 'en'), 'Sync & Merge Review');
+assert.equal(t('sync.title', 'pt'), 'Sincronização e Revisão de Fusão');
+assert.equal(t('sync.title', 'es'), 'Sincronización y Revisión de Fusión');
+assert.equal(t('sync.title', 'fr'), 'Synchronisation et Révision de Fusion');
+assert.equal(t('sync.title', 'ru'), 'Синхронизация и слияние версий');
+assert.equal(t('sync.title', 'zh'), '多设备同步与合并审核');
+assert.equal(t('sync.title', 'ja'), 'デバイス間同期とマージ確認');
+assert.equal(t('sync.mergeAll', 'pt'), 'Mesclar Tudo (Recomendado)');
+assert.equal(t('sync.status.synced', 'en'), 'Synced');
+console.log('✓ Sync & Merge Review translations verified across all 7 languages');
+
 // 4. String interpolation verification
 const interpolatedEn = t('commandPalette.createWord', 'en', { word: 'test' });
 assert.equal(interpolatedEn, 'Create Word: "test"');

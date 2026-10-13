@@ -39,6 +39,7 @@ export default function Header({ openMenu, onBackupNow }) {
     
     const [_session, setSession] = useState(null);
     const [isLive, setIsLive] = useState(false);
+    const devicesOnlineCount = useConfigStore(state => state.devicesOnlineCount);
     const [exportType, setExportType] = useState(null); // 'pdf', 'docx', 'obsidian', 'sheets'
     const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
     const [isAnkiModalOpen, setIsAnkiModalOpen] = useState(false);
@@ -55,7 +56,7 @@ export default function Header({ openMenu, onBackupNow }) {
             try {
                 const { data } = await supabase
                     .from('profiles')
-                    .select('is_pro, live_until')
+                    .select('is_pro, live_until, live_auto_sync')
                     .eq('id', currentSession.user.id)
                     .maybeSingle();
 
@@ -67,6 +68,9 @@ export default function Header({ openMenu, onBackupNow }) {
                     } else if (data.live_until) {
                         const safeDateStr = data.live_until.replace(' ', 'T');
                         activeLive = new Date(safeDateStr) > new Date();
+                    }
+                    if (data.live_auto_sync !== undefined && data.live_auto_sync !== null) {
+                        useConfigStore.setState({ isAutoSyncEnabled: Boolean(data.live_auto_sync) });
                     }
                 }
                 
@@ -241,8 +245,11 @@ export default function Header({ openMenu, onBackupNow }) {
                     <div className="hdr-brand">
                         <h1 className="app-dinamic-title">{customLabels.appTitle || "ConlangEngine"}</h1>
                         {isLive ? (
-                            <span className="hdr-badge badge-live">
-                                <Cloud size={14} /> {t('header.statusLive')}
+                            <span
+                                className="hdr-badge badge-live"
+                                title={devicesOnlineCount > 1 ? t('sync.status.devicesOnline', { count: devicesOnlineCount }) : undefined}
+                            >
+                                <Cloud size={14} /> {t('header.statusLive')} {devicesOnlineCount > 1 ? `(${devicesOnlineCount})` : ''}
                             </span>
                         ) : (
                             <span className="hdr-badge">{t('header.statusLocal')}</span>

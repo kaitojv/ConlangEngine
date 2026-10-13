@@ -5,6 +5,7 @@ import courseBuilder from './courseBuilder/zh.js';
 import exercisePlayer from './exercisePlayer/zh.js';
 import wiki from './wiki/zh.js';
 import aligner from './aligner/zh.js';
+import sync from './sync/zh.js';
 
 export default {
   howToStart,
@@ -14,6 +15,7 @@ export default {
   exercisePlayer,
   wiki,
   aligner,
+  sync,
   "nav": {
     "workspace": "工作区",
     "lexiconGroup": "词库",

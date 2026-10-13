@@ -5,6 +5,7 @@ import courseBuilder from './courseBuilder/es.js';
 import exercisePlayer from './exercisePlayer/es.js';
 import wiki from './wiki/es.js';
 import aligner from './aligner/es.js';
+import sync from './sync/es.js';
 
 export default {
   howToStart,
@@ -14,6 +15,7 @@ export default {
   exercisePlayer,
   wiki,
   aligner,
+  sync,
   "nav": {
     "workspace": "Espacio de Trabajo",
     "lexiconGroup": "Léxico",

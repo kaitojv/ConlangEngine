@@ -1,145 +1,464 @@
-import React, { useEffect, useState } from 'react';
+// src/components/pages/home/SyncConflictManager.jsx
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
-import { useSharing } from '@/hooks/useSharing.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
 import Modal from '@/components/UI/Modal/Modal.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
-import { sanitizeConfig, sanitizeLexicon, decompressPayloadAsync } from '@/utils/schemaValidator.jsx';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
 import toast from 'react-hot-toast';
-import { CloudDownload, HardDriveUpload, AlertTriangle } from 'lucide-react';
+import {
+    AlertTriangle,
+    GitMerge,
+    CloudDownload,
+    HardDriveUpload,
+    PlusCircle,
+    Copy,
+    Check
+} from 'lucide-react';
+import {
+    pullRemoteProject,
+    performProjectMerge,
+    applyMergedStateLocally,
+    pushProjectState
+} from '@/utils/syncEngine.js';
+import { MERGE_MODES, SIMILARITY } from '@/utils/syncMerge.js';
+import './syncConflictManager.css';
 
 export default function SyncConflictManager() {
     const { t } = useTranslation();
     const {
-        projectId, lastCloudSync, syncConflictStatus,
-        updateConfig, setFullConfig,
+        projectId, lastCloudSync, isAutoSyncEnabled,
+        updateConfig
     } = useConfigStore(useShallow(state => ({
         projectId: state.projectId,
         lastCloudSync: state.lastCloudSync,
-        syncConflictStatus: state.syncConflictStatus,
-        updateConfig: state.updateConfig,
-        setFullConfig: state.setFullConfig,
+        isAutoSyncEnabled: state.isAutoSyncEnabled,
+        updateConfig: state.updateConfig
     })));
-    const setLexicon = useLexiconStore((state) => state.setLexicon);
+
     const [session, setSession] = useState(null);
-    const { handlePushToCloud } = useSharing(session);
+    const [remotePackage, setRemotePackage] = useState(null);
+    const [decisions, setDecisions] = useState({});
+    const [isApplying, setIsApplying] = useState(false);
+    const [isReviewOpen, setIsReviewOpen] = useState(false);
 
-    // Track cloud payload so we don't have to fetch it twice
-    const [cloudPayload, setCloudPayload] = useState(null);
-
+    // Track active session
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
-        });
-
+        supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
         });
-
         return () => subscription.unsubscribe();
     }, []);
 
-    const checkForConflicts = async () => {
-        if (!session || !projectId || !lastCloudSync || projectId.startsWith('local_')) return;
+    // Check remote cloud state for updates
+    const checkForUpdates = useCallback(async () => {
+        if (!session || !projectId || projectId.startsWith('local_')) return;
 
         try {
-            // Fetch the latest snapshot from the cloud
-            const { data, error } = await supabase
-                .from('conlang_snapshots')
-                .select('created_at, project_data')
-                .eq('project_id', projectId)
-                .maybeSingle();
+            const remote = await pullRemoteProject(projectId);
+            if (!remote) return;
 
-            if (error || !data) return;
+            const localTime = lastCloudSync ? new Date(lastCloudSync).getTime() : 0;
+            // Buffer to prevent false positives from immediate self-pushes
+            if (remote.remoteTimestamp > localTime + 3500) {
+                const localConfig = useConfigStore.getState();
+                const localLexicon = useLexiconStore.getState().lexicon || [];
+                const localPhrases = useLexiconStore.getState().phrases || [];
+                const localWiki = localConfig.wikiPages || {};
 
-            const projectData = await decompressPayloadAsync(data.project_data);
-            const cloudTimestamp = projectData?.last_updated ? new Date(projectData.last_updated).getTime() : new Date(data.created_at).getTime();
-            const localTimestamp = new Date(lastCloudSync).getTime();
+                const localState = {
+                    config: localConfig,
+                    lexicon: localLexicon,
+                    phrases: localPhrases,
+                    wiki: localWiki
+                };
 
-            // Give a 5-second buffer to account for minor clock desyncs during the actual push
-            if (cloudTimestamp > localTimestamp + 5000) {
-                setCloudPayload(projectData);
+                const initialMerge = await performProjectMerge({
+                    projectId,
+                    localState,
+                    remoteState: remote.remoteState,
+                    mode: isAutoSyncEnabled ? MERGE_MODES.AUTO : MERGE_MODES.REVIEW,
+                    decisions: {}
+                });
+
+                setRemotePackage(remote);
+
+                // If Live Auto Sync is enabled and there are no conflicting simultaneous edits,
+                // apply cleanly without interrupting user
+                if (isAutoSyncEnabled && initialMerge.conflicts.length === 0 && initialMerge.similar.length === 0) {
+                    await applyMergedStateLocally(projectId, initialMerge.merged);
+                    if (initialMerge.remoteChanged) {
+                        await pushProjectState(session, projectId, initialMerge.merged, { skipVersions: true });
+                    }
+                    toast.success(t('sync.status.autoMergedToast'));
+                    setRemotePackage(null);
+                    return;
+                }
+
+                // If review is needed or conflicts exist, prompt user
                 updateConfig({ syncConflictStatus: 'conflict' });
+                setIsReviewOpen(true);
             }
         } catch (err) {
-            console.warn('Could not check for sync conflicts:', err);
+            console.warn("Could not check for cloud updates:", err);
         }
-    };
+    }, [session, projectId, lastCloudSync, isAutoSyncEnabled, updateConfig, t]);
 
-    // Check on mount and when window regains focus
+    // Check on mount and window focus
     useEffect(() => {
-        checkForConflicts();
-
-        const handleFocus = () => checkForConflicts();
+        checkForUpdates();
+        const handleFocus = () => checkForUpdates();
         window.addEventListener('focus', handleFocus);
-
         return () => window.removeEventListener('focus', handleFocus);
-    }, [session, projectId, lastCloudSync]);
+    }, [checkForUpdates]);
 
+    // Compute live merge based on current decisions
+    const currentMerge = useMemo(() => {
+        if (!remotePackage) return null;
+        const localConfig = useConfigStore.getState();
+        const localLexicon = useLexiconStore.getState().lexicon || [];
+        const localPhrases = useLexiconStore.getState().phrases || [];
+        const localWiki = localConfig.wikiPages || {};
 
-    const handlePullCloud = () => {
-        if (!cloudPayload) return;
+        const localState = {
+            config: localConfig,
+            lexicon: localLexicon,
+            phrases: localPhrases,
+            wiki: localWiki
+        };
 
-        const safeConfig = sanitizeConfig(cloudPayload.config || {});
-        const safeLexicon = sanitizeLexicon(cloudPayload.dictionary || []);
-        
-        setLexicon(safeLexicon);
-        setFullConfig({ ...safeConfig, projectId: projectId });
-        
-        if (cloudPayload.wiki) {
-            updateConfig({ wikiPages: cloudPayload.wiki });
-        }
-        
-        updateConfig({ 
-            syncConflictStatus: 'resolved',
-            lastCloudSync: new Date().toISOString() // Update local timestamp to match cloud
+        // Synchronous 3-way merge evaluation
+        return performProjectMerge({
+            projectId,
+            localState,
+            remoteState: remotePackage.remoteState,
+            mode: MERGE_MODES.REVIEW,
+            decisions
         });
-        
-        setCloudPayload(null);
-        toast.success("Pulled changes from another device!");
-    };
+    }, [remotePackage, projectId, decisions]);
 
-    const handleKeepLocal = async () => {
-        // Pushing to cloud will naturally update `lastCloudSync`
-        const success = await handlePushToCloud(true, `Conflict Resolution: Overwrite`);
-        if (success) {
+    const handleApplyMerged = async () => {
+        if (!remotePackage || !currentMerge) return;
+        setIsApplying(true);
+        try {
+            const resolved = await currentMerge;
+            // 1. Save checkpoint version
+            const versionName = `Before Merge — ${new Date().toLocaleString()}`;
+            // 2. Apply locally
+            await applyMergedStateLocally(projectId, resolved.merged);
+            // 3. Push to cloud
+            await pushProjectState(session, projectId, resolved.merged, { versionName });
+
+            toast.success(t('sync.status.autoMergedToast'));
+            setIsReviewOpen(false);
+            setRemotePackage(null);
+            setDecisions({});
             updateConfig({ syncConflictStatus: 'resolved' });
-            setCloudPayload(null);
-            toast.success("Kept local changes and overwrote cloud.");
-        } else {
-            toast.error("Failed to push local changes to cloud.");
+        } catch (err) {
+            console.error("Failed to apply merge:", err);
+            toast.error(err.message || "Failed to merge");
+        } finally {
+            setIsApplying(false);
         }
     };
+
+    const handlePullCloudOnly = async () => {
+        if (!remotePackage) return;
+        setIsApplying(true);
+        try {
+            await applyMergedStateLocally(projectId, remotePackage.remoteState);
+            toast.success(t('sync.status.pulledToast'));
+            setIsReviewOpen(false);
+            setRemotePackage(null);
+            updateConfig({ syncConflictStatus: 'resolved' });
+        } catch (err) {
+            toast.error(err.message || "Failed to pull cloud version");
+        } finally {
+            setIsApplying(false);
+        }
+    };
+
+    const handleKeepLocalOnly = async () => {
+        setIsApplying(true);
+        try {
+            const localConfig = useConfigStore.getState();
+            const localLexicon = useLexiconStore.getState().lexicon || [];
+            const localPhrases = useLexiconStore.getState().phrases || [];
+            const localWiki = localConfig.wikiPages || {};
+
+            const localState = {
+                config: localConfig,
+                lexicon: localLexicon,
+                phrases: localPhrases,
+                wiki: localWiki
+            };
+
+            const versionName = `Overwrite Cloud — ${new Date().toLocaleString()}`;
+            await pushProjectState(session, projectId, localState, { versionName });
+
+            toast.success(t('sync.status.pushedToast'));
+            setIsReviewOpen(false);
+            setRemotePackage(null);
+            updateConfig({ syncConflictStatus: 'resolved' });
+        } catch (err) {
+            toast.error(err.message || "Failed to keep local version");
+        } finally {
+            setIsApplying(false);
+        }
+    };
+
+    const setItemDecision = (key, choice) => {
+        setDecisions(prev => ({
+            ...prev,
+            [key]: choice
+        }));
+    };
+
+    if (!isReviewOpen || !remotePackage) return null;
+
+    const report = currentMerge?.report || {};
+    const similarList = currentMerge?.similar || [];
+    const conflictList = currentMerge?.conflicts || [];
 
     return (
-        <Modal 
-            isOpen={syncConflictStatus === 'conflict'} 
+        <Modal
+            isOpen={isReviewOpen}
             onClose={() => {
+                setIsReviewOpen(false);
                 updateConfig({ syncConflictStatus: 'ignored' });
-                setCloudPayload(null);
-            }} 
-            title={<><AlertTriangle color="var(--err)" style={{ position: 'relative', top: '2px', marginRight: '5px' }}/> {t('syncConflict.title')}</>}
+            }}
+            title={
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <AlertTriangle size={18} color="var(--acc)" />
+                    {t('sync.title')}
+                </span>
+            }
         >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '10px 0' }}>
-                <p style={{ margin: 0, color: 'var(--tx)' }}>
-                    {t('syncConflict.desc')}
-                </p>
-                
-                <p style={{ margin: 0, color: 'var(--tx2)', fontSize: '0.9rem' }}>
-                    {t('syncConflict.question')}
-                </p>
+            <div className="sync-review-modal">
+                {/* Summary Card */}
+                <div className="sync-summary-card">
+                    <div className="sync-summary-header">
+                        <GitMerge size={18} color="var(--acc)" />
+                        <h3>{t('sync.summaryTitle')}</h3>
+                    </div>
+                    <p className="sync-summary-desc">{t('sync.summaryDesc')}</p>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
-                    <Button variant="imp" onClick={handlePullCloud} style={{ width: '100%', justifyContent: 'flex-start' }}>
-                        <div className="btn-content"><CloudDownload /> {t('syncConflict.pullCloud')}</div>
-                    </Button>
-                    <Button variant="default" onClick={handleKeepLocal} style={{ width: '100%', justifyContent: 'flex-start' }}>
-                        <div className="btn-content"><HardDriveUpload /> {t('syncConflict.keepLocal')}</div>
-                    </Button>
+                    <div className="sync-badges-grid">
+                        <div className="sync-badge-item">
+                            <PlusCircle size={14} color="var(--acc)" />
+                            {t('sync.addedRemote', { count: report.lexicon?.addedRemote || 0 })}
+                        </div>
+                        <div className="sync-badge-item">
+                            <PlusCircle size={14} color="var(--tx)" />
+                            {t('sync.addedLocal', { count: report.lexicon?.addedLocal || 0 })}
+                        </div>
+                        {similarList.length > 0 && (
+                            <div className="sync-badge-item highlight">
+                                <Copy size={14} />
+                                {t('sync.similarFound', { count: similarList.length })}
+                            </div>
+                        )}
+                        {conflictList.length > 0 && (
+                            <div className="sync-badge-item highlight">
+                                <AlertTriangle size={14} />
+                                {t('sync.conflictsFound', { count: conflictList.length })}
+                            </div>
+                        )}
+                    </div>
                 </div>
+
+                {/* Primary Actions */}
+                <div className="sync-main-actions">
+                    <Button
+                        variant="imp"
+                        onClick={handleApplyMerged}
+                        disabled={isApplying}
+                        className="sync-action-btn-primary"
+                    >
+                        <div className="btn-content">
+                            <GitMerge size={16} />
+                            {t('sync.mergeAll')}
+                        </div>
+                    </Button>
+
+                    <div className="sync-action-subrow">
+                        <Button
+                            variant="default"
+                            onClick={handlePullCloudOnly}
+                            disabled={isApplying}
+                        >
+                            <div className="btn-content">
+                                <CloudDownload size={15} />
+                                {t('sync.useCloud')}
+                            </div>
+                        </Button>
+                        <Button
+                            variant="default"
+                            onClick={handleKeepLocalOnly}
+                            disabled={isApplying}
+                        >
+                            <div className="btn-content">
+                                <HardDriveUpload size={15} />
+                                {t('sync.useLocal')}
+                            </div>
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Similar / Repeated Words Section */}
+                {similarList.length > 0 && (
+                    <div>
+                        <div className="sync-section-title">
+                            <span>{t('sync.similarTitle')}</span>
+                            <span>{similarList.length}</span>
+                        </div>
+                        <div className="sync-items-list">
+                            {similarList.map(item => {
+                                const activeChoice = decisions[item.key] || item.resolution || 'combine';
+                                const badgeClass = item.level === SIMILARITY.IDENTICAL
+                                    ? 'identical'
+                                    : item.level === SIMILARITY.SAME_MEANING
+                                    ? 'same-meaning'
+                                    : 'same-word';
+
+                                const badgeText = item.level === SIMILARITY.IDENTICAL
+                                    ? t('sync.identicalBadge')
+                                    : item.level === SIMILARITY.SAME_MEANING
+                                    ? t('sync.sameMeaningBadge')
+                                    : t('sync.sameWordBadge');
+
+                                return (
+                                    <div key={item.key} className="sync-item-card">
+                                        <div className="sync-item-header">
+                                            <div className="sync-item-word">
+                                                <span>{item.localEntry?.word || item.remoteEntry?.word}</span>
+                                                <span className={`sync-level-tag ${badgeClass}`}>
+                                                    {badgeText}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="sync-diff-columns">
+                                            <div className="sync-diff-col">
+                                                <span className="sync-diff-label">{t('sync.localDevice')}</span>
+                                                <span className="sync-diff-val">
+                                                    {item.localEntry?.translation}
+                                                    {item.localEntry?.definition ? ` — ${item.localEntry.definition}` : ''}
+                                                </span>
+                                            </div>
+                                            <div className="sync-diff-col">
+                                                <span className="sync-diff-label">{t('sync.remoteDevice')}</span>
+                                                <span className="sync-diff-val">
+                                                    {item.remoteEntry?.translation}
+                                                    {item.remoteEntry?.definition ? ` — ${item.remoteEntry.definition}` : ''}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="sync-item-options">
+                                            <button
+                                                type="button"
+                                                className={`sync-choice-chip ${activeChoice === 'combine' ? 'active' : ''}`}
+                                                onClick={() => setItemDecision(item.key, 'combine')}
+                                            >
+                                                {activeChoice === 'combine' && <Check size={12} style={{ marginRight: '4px' }} />}
+                                                {t('sync.combineAuto')}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={`sync-choice-chip ${activeChoice === 'keepBoth' ? 'active' : ''}`}
+                                                onClick={() => setItemDecision(item.key, 'keepBoth')}
+                                            >
+                                                {activeChoice === 'keepBoth' && <Check size={12} style={{ marginRight: '4px' }} />}
+                                                {t('sync.keepBoth')}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={`sync-choice-chip ${activeChoice === 'keepLocal' ? 'active' : ''}`}
+                                                onClick={() => setItemDecision(item.key, 'keepLocal')}
+                                            >
+                                                {activeChoice === 'keepLocal' && <Check size={12} style={{ marginRight: '4px' }} />}
+                                                {t('sync.keepLocalOnly')}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={`sync-choice-chip ${activeChoice === 'keepRemote' ? 'active' : ''}`}
+                                                onClick={() => setItemDecision(item.key, 'keepRemote')}
+                                            >
+                                                {activeChoice === 'keepRemote' && <Check size={12} style={{ marginRight: '4px' }} />}
+                                                {t('sync.keepRemoteOnly')}
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* Simultaneous Conflict Edits */}
+                {conflictList.length > 0 && (
+                    <div>
+                        <div className="sync-section-title">
+                            <span>{t('sync.conflictsTitle')}</span>
+                            <span>{conflictList.length}</span>
+                        </div>
+                        <div className="sync-items-list">
+                            {conflictList.map(conflict => {
+                                const activeChoice = decisions[conflict.key] || conflict.resolution || conflict.autoResolution;
+
+                                return (
+                                    <div key={conflict.key} className="sync-item-card">
+                                        <div className="sync-item-header">
+                                            <span style={{ fontWeight: 600 }}>{conflict.field || conflict.key}</span>
+                                        </div>
+
+                                        <div className="sync-diff-columns">
+                                            <div className="sync-diff-col">
+                                                <span className="sync-diff-label">{t('sync.localDevice')}</span>
+                                                <span className="sync-diff-val">
+                                                    {typeof conflict.localValue === 'object'
+                                                        ? JSON.stringify(conflict.localValue)
+                                                        : String(conflict.localValue ?? '')}
+                                                </span>
+                                            </div>
+                                            <div className="sync-diff-col">
+                                                <span className="sync-diff-label">{t('sync.remoteDevice')}</span>
+                                                <span className="sync-diff-val">
+                                                    {typeof conflict.remoteValue === 'object'
+                                                        ? JSON.stringify(conflict.remoteValue)
+                                                        : String(conflict.remoteValue ?? '')}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="sync-item-options">
+                                            <button
+                                                type="button"
+                                                className={`sync-choice-chip ${activeChoice === 'local' ? 'active' : ''}`}
+                                                onClick={() => setItemDecision(conflict.key, 'local')}
+                                            >
+                                                {activeChoice === 'local' && <Check size={12} style={{ marginRight: '4px' }} />}
+                                                {t('sync.localDevice')}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={`sync-choice-chip ${activeChoice === 'remote' ? 'active' : ''}`}
+                                                onClick={() => setItemDecision(conflict.key, 'remote')}
+                                            >
+                                                {activeChoice === 'remote' && <Check size={12} style={{ marginRight: '4px' }} />}
+                                                {t('sync.remoteDevice')}
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
         </Modal>
     );

@@ -38,7 +38,7 @@ const VALID_CONFIG_KEYS = new Set([
     'particleDatabase', 'compositeParticles', 'allowRecursiveComposites',
     'usesParticles',
     // UI state
-    'isDialect', 'hasCompletedOnboarding', 'floatingBackground', 'appLanguage',
+    'isDialect', 'hasCompletedOnboarding', 'floatingBackground', 'appLanguage', 'devicesOnlineCount',
     // Study / Course gamification
     'studyXP', 'courseLevelScores', 'dailyChallengeDate', 'dailyChallengeCompleted',
     'studySoundEffects', 'courseProgress'
@@ -125,6 +125,41 @@ export function sanitizeLexicon(rawLexicon) {
         scriptOverride: entry.scriptOverride || null,
         scriptForms: (entry.scriptForms && typeof entry.scriptForms === 'object') ? entry.scriptForms : {},
         scriptRole: typeof entry.scriptRole === 'string' ? entry.scriptRole : '',
+        // Etymology / root fields (previously dropped on cloud pull).
+        // etymology = parent word ID (number) or 'project:<id>:word:<id>' string.
+        etymology: (typeof entry.etymology === 'string' || typeof entry.etymology === 'number') ? entry.etymology : null,
+        isProtoRoot: Boolean(entry.isProtoRoot),
+        isPrimary: Boolean(entry.isPrimary),
+        // Custom pronunciation recording (data URL only)
+        ...(typeof entry.customAudioBase64 === 'string' && entry.customAudioBase64.startsWith('data:audio/')
+            ? { customAudioBase64: entry.customAudioBase64 } : {}),
+        // Sync metadata (used by src/utils/syncMerge.js)
+        ...(typeof entry.updatedAt === 'number' ? { updatedAt: entry.updatedAt } : {}),
+        ...(typeof entry.updatedBy === 'string' ? { updatedBy: entry.updatedBy } : {}),
+    }));
+}
+
+/**
+ * Validates and sanitizes a phrases array from imported data.
+ */
+export function sanitizePhrases(rawPhrases) {
+    if (!Array.isArray(rawPhrases)) return [];
+    return rawPhrases.filter(entry => {
+        if (!entry || typeof entry !== 'object') return false;
+        if (typeof entry.phrase !== 'string') return false;
+        return true;
+    }).map(entry => ({
+        id: entry.id || Date.now() + Math.random(),
+        phrase: entry.phrase,
+        literalTranslation: typeof entry.literalTranslation === 'string' ? entry.literalTranslation : '',
+        idiomaticTranslation: typeof entry.idiomaticTranslation === 'string' ? entry.idiomaticTranslation : '',
+        register: typeof entry.register === 'string' ? entry.register : 'casual',
+        category: typeof entry.category === 'string' ? entry.category : 'general',
+        tags: Array.isArray(entry.tags) ? entry.tags.filter(t => typeof t === 'string') : [],
+        componentWords: Array.isArray(entry.componentWords) ? entry.componentWords : [],
+        createdAt: typeof entry.createdAt === 'number' ? entry.createdAt : Date.now(),
+        ...(typeof entry.updatedAt === 'number' ? { updatedAt: entry.updatedAt } : {}),
+        ...(typeof entry.updatedBy === 'string' ? { updatedBy: entry.updatedBy } : {}),
     }));
 }
 
@@ -138,6 +173,7 @@ export function sanitizeBackup(data) {
     return {
         config: data.config ? sanitizeConfig(data.config) : null,
         lexicon: data.lexicon ? sanitizeLexicon(data.lexicon) : null,
+        phrases: data.phrases ? sanitizePhrases(data.phrases) : null,
         project: data.project && typeof data.project === 'object' ? data.project : null
     };
 }
@@ -164,7 +200,8 @@ export function decompressPayload(payload) {
             return {
                 ...payload,
                 dictionary: decompressed.dictionary,
-                wiki: decompressed.wiki
+                wiki: decompressed.wiki,
+                phrases: decompressed.phrases || payload.phrases || []
             };
         } catch (e) {
             console.error("Failed to decompress partial cloud payload:", e);
@@ -211,7 +248,8 @@ export async function decompressPayloadAsync(payload) {
             return {
                 ...payload,
                 dictionary: decompressed.dictionary,
-                wiki: decompressed.wiki
+                wiki: decompressed.wiki,
+                phrases: decompressed.phrases || payload.phrases || []
             };
         } catch (e) {
             console.error("Failed to decompress gzip cloud payload:", e);

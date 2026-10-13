@@ -1,14 +1,23 @@
+// src/hooks/useAutoSync.jsx
 import { useEffect, useRef, useCallback } from 'react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
-import { sanitizeConfig } from '@/utils/schemaValidator.jsx';
-import LZString from 'lz-string';
+import { getDeviceId } from '@/utils/deviceIdentity.js';
+import {
+    pullRemoteProject,
+    performProjectMerge,
+    applyMergedStateLocally,
+    pushProjectState
+} from '@/utils/syncEngine.js';
+import { MERGE_MODES } from '@/utils/syncMerge.js';
+
+const LAST_VERSION_SAVE_KEY = 'ce_last_version_save_ts';
+const VERSION_CHECKPOINT_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 
 /**
- * useAutoSync — pushes config + lexicon to Supabase whenever either store
- * changes, debounced at 5 s. Runs entirely outside of React render state
- * (reads stores imperatively) so there are no stale-closure issues.
+ * useAutoSync — handles debounced cloud synchronization, Supabase Realtime
+ * cross-device sync pings, presence tracking, and profile setting propagation.
  */
 export function useAutoSync() {
     const lastSyncStateRef = useRef(null);
@@ -16,208 +25,110 @@ export function useAutoSync() {
     const isFirstRun = useRef(true);
     const isSyncing = useRef(false);
 
-    // Build a stable "push to cloud" function that always reads fresh state.
+    // Compute a clean fingerprint of local data to detect changes
+    const computeFingerprint = useCallback(() => {
+        const config = useConfigStore.getState();
+        const lexicon = useLexiconStore.getState().lexicon || [];
+        const phrases = useLexiconStore.getState().phrases || [];
+
+        const volatileKeys = new Set([
+            'lastCloudSync', 'syncConflictStatus', 'activeTab', 'isThemeModalOpen',
+            'showSettings', 'isSidebarOpen', 'isRehydrating', 'activity',
+            'customFontBase64', 'customFont', 'syllabaryMap', 'customGlyphs', 'scriptDataById',
+            'featuralComponents', 'alphabetGlyphs', 'devicesOnlineCount'
+        ]);
+        const cleanConfig = Object.fromEntries(
+            Object.entries(config).filter(([k]) => !volatileKeys.has(k))
+        );
+
+        return JSON.stringify({
+            config: cleanConfig,
+            lexiconLength: lexicon.length,
+            phrasesLength: phrases.length,
+            lexicon,
+            phrases
+        });
+    }, []);
+
+    // Push local state or perform pre-push 3-way merge if remote advanced
     const pushToCloud = useCallback(async () => {
-        // --- Guard: no double-flights ---
         if (isSyncing.current) return false;
         isSyncing.current = true;
 
         try {
-            // Always read the freshest session
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return false;
 
             const config = useConfigStore.getState();
-            const lexicon = useLexiconStore.getState().lexicon || [];
-
             let currentProjectId = config.projectId;
-            if (!currentProjectId) {
+            if (!currentProjectId || currentProjectId.startsWith('local_')) {
                 currentProjectId = 'proj_' + crypto.randomUUID();
                 config.updateConfig({ projectId: currentProjectId });
             }
 
-            const configData = sanitizeConfig(useConfigStore.getState(), true);
-
-            // Strip exceptionally massive base64 font (> 2MB) from cloud payload
-            if (typeof configData.customFontBase64 === 'string' && configData.customFontBase64.length > 2000000) {
-                delete configData.customFontBase64;
-                delete configData.customFont;
-            }
-
-            const payload = {
-                dictionary: lexicon,
-                config: configData,
-                wiki: config.wikiPages || {},
-                wordCount: lexicon.length,
-                last_updated: new Date().toISOString()
+            const localState = {
+                config,
+                lexicon: useLexiconStore.getState().lexicon || [],
+                phrases: useLexiconStore.getState().phrases || [],
+                wiki: config.wikiPages || {}
             };
 
-            // Compress large payloads
-            const payloadSizeStr = JSON.stringify(payload);
-            let finalPayload = payload;
+            // Check if remote changed since our last cloud sync
+            const remote = await pullRemoteProject(currentProjectId);
+            const localTime = config.lastCloudSync ? new Date(config.lastCloudSync).getTime() : 0;
 
-            if (payloadSizeStr.length > 1000000) {
-                try {
-                    const stream = new Blob([JSON.stringify({
-                        dictionary: lexicon,
-                        wiki: config.wikiPages || {}
-                    })]).stream();
-                    const compressedStream = stream.pipeThrough(new CompressionStream('gzip'));
-                    const compressedResponse = new Response(compressedStream);
-                    const compressedArrayBuffer = await compressedResponse.arrayBuffer();
-
-                    const bytes = new Uint8Array(compressedArrayBuffer);
-                    let binary = '';
-                    const chunkSize = 32768;
-                    for (let i = 0; i < bytes.length; i += chunkSize) {
-                        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-                    }
-                    const compressedString = btoa(binary);
-
-                    let cleanConfigForCloud = { ...configData };
-                    delete cleanConfigForCloud.wikiPages;
-                    delete cleanConfigForCloud.wiki;
-
-                    finalPayload = {
-                        gzip_compressed_payload: compressedString,
-                        config: cleanConfigForCloud,
-                        wordCount: lexicon.length,
-                        last_updated: payload.last_updated
-                    };
-                } catch (e) {
-                    console.warn("Failed to compress payload using gzip, trying LZString fallback:", e);
-                    try {
-                        const compressedString = LZString.compressToBase64(JSON.stringify({
-                            dictionary: lexicon,
-                            wiki: config.wikiPages || {}
-                        }));
-                        let cleanConfigForCloud = { ...configData };
-                        delete cleanConfigForCloud.wikiPages;
-                        delete cleanConfigForCloud.wiki;
-
-                        finalPayload = {
-                            compressed_payload: compressedString,
-                            config: cleanConfigForCloud,
-                            wordCount: lexicon.length,
-                            last_updated: payload.last_updated
-                        };
-                    } catch (lzErr) {
-                        console.warn("LZString compression also failed:", lzErr);
-                    }
-                }
-            }
-
-            if (configData.scriptDataById) {
-                Object.values(configData.scriptDataById).forEach(script => {
-                    if (typeof script.customFontBase64 === 'string' && script.customFontBase64.length > 2000000) {
-                        delete script.customFontBase64;
-                        delete script.customFont;
-                    }
+            if (remote && remote.remoteTimestamp > localTime + 3500) {
+                // Remote has newer changes! Merge first so we don't erase them
+                const mergeRes = await performProjectMerge({
+                    projectId: currentProjectId,
+                    localState,
+                    remoteState: remote.remoteState,
+                    mode: config.isAutoSyncEnabled ? MERGE_MODES.AUTO : MERGE_MODES.REVIEW,
+                    decisions: {}
                 });
-            }
 
-            const finalPayloadSize = JSON.stringify(finalPayload).length;
-            const isMassivePayload = finalPayloadSize > 3000000;
-
-            if (finalPayloadSize > 20000000) {
-                console.warn("Project too large for auto-sync.");
-                return false;
-            }
-
-            // Verify project ownership
-            if (session.user?.id && currentProjectId) {
-                const { data: existingSnapshot } = await supabase
-                    .from('conlang_snapshots')
-                    .select('user_id')
-                    .eq('project_id', currentProjectId)
-                    .maybeSingle();
-
-                if (existingSnapshot && existingSnapshot.user_id && existingSnapshot.user_id !== session.user.id) {
-                    currentProjectId = 'proj_' + crypto.randomUUID();
-                    useConfigStore.getState().updateConfig({ projectId: currentProjectId });
+                if (mergeRes.conflicts.length > 0) {
+                    // Conflicting simultaneous edits: pause auto-push and prompt review
+                    config.updateConfig({ syncConflictStatus: 'conflict' });
+                    return false;
                 }
+
+                // Clean merge: apply combined state locally and push back to cloud
+                await applyMergedStateLocally(currentProjectId, mergeRes.merged);
+                localState.lexicon = mergeRes.merged.lexicon;
+                localState.phrases = mergeRes.merged.phrases;
+                localState.config = mergeRes.merged.config;
+                localState.wiki = mergeRes.merged.wiki;
             }
 
-            // Push to snapshots
-            const { error } = await supabase.from('conlang_snapshots').upsert({
-                user_id: session.user?.id || null,
-                project_id: currentProjectId,
-                project_data: finalPayload
-            }, { onConflict: 'project_id' });
-
-            if (error) throw error;
-
-            // Push to version history
-            if (session.user?.id) {
-                const autoVersionName = `Auto Save - ${new Date().toLocaleString()}`;
-                const { error: versionError } = await supabase.from('conlang_versions').insert({
-                    user_id: session.user.id,
-                    project_id: currentProjectId,
-                    version_name: autoVersionName,
-                    project_data: finalPayload
-                });
-                if (versionError) console.warn("Failed to save version history:", versionError);
-
-                // Cleanup old versions
-                try {
-                    const keepCount = isMassivePayload ? 3 : 10;
-                    const { data: oldVersions } = await supabase
-                        .from('conlang_versions')
-                        .select('id')
-                        .eq('project_id', currentProjectId)
-                        .order('created_at', { ascending: false })
-                        .range(keepCount, 100);
-
-                    if (oldVersions && oldVersions.length > 0) {
-                        const idsToDelete = oldVersions.map(v => v.id);
-                        await supabase.from('conlang_versions').delete().in('id', idsToDelete);
-                    }
-                } catch (cleanupErr) {
-                    console.warn("Failed to cleanup old versions:", cleanupErr);
+            // Determine if we should record a version history checkpoint (at most every 30 mins)
+            let shouldSaveVersion = false;
+            try {
+                const lastSave = parseInt(localStorage.getItem(LAST_VERSION_SAVE_KEY) || '0', 10);
+                if (Date.now() - lastSave > VERSION_CHECKPOINT_INTERVAL_MS) {
+                    shouldSaveVersion = true;
+                    localStorage.setItem(LAST_VERSION_SAVE_KEY, String(Date.now()));
                 }
+            } catch {
+                // Ignore storage error
             }
 
-            // Push to conlangs table for cross-device sync
-            if (session.user?.id) {
-                const { error: conlangError } = await supabase.from('conlangs').upsert({
-                    user_id: session.user.id,
-                    project_id: currentProjectId,
-                    project_data: finalPayload
-                }, { onConflict: 'project_id' });
+            const versionName = shouldSaveVersion ? `Auto Save — ${new Date().toLocaleString()}` : null;
+            const res = await pushProjectState(session, currentProjectId, localState, {
+                versionName,
+                skipVersions: !shouldSaveVersion
+            });
 
-                if (conlangError) throw conlangError;
-            }
-
-            useConfigStore.getState().updateConfig({ lastCloudSync: new Date().toISOString() });
-            return true;
+            return res.success;
         } catch (err) {
-            console.error("Auto-sync failed:", err.message || err);
+            console.error("Auto-sync push failed:", err.message || err);
             return false;
         } finally {
             isSyncing.current = false;
         }
     }, []);
 
-    // Compute a clean state fingerprint for change detection
-    const computeFingerprint = useCallback(() => {
-        const config = useConfigStore.getState();
-        const lexicon = useLexiconStore.getState().lexicon || [];
-
-        // Strip volatile UI-only and IndexedDB bloat fields from comparison
-        const volatileKeys = new Set([
-            'lastCloudSync', 'syncConflictStatus', 'activeTab', 'isThemeModalOpen',
-            'showSettings', 'isSidebarOpen', 'isRehydrating', 'activity',
-            'customFontBase64', 'customFont', 'syllabaryMap', 'customGlyphs', 'scriptDataById',
-            'featuralComponents', 'alphabetGlyphs'
-        ]);
-        const cleanConfig = Object.fromEntries(
-            Object.entries(config).filter(([k]) => !volatileKeys.has(k))
-        );
-
-        return JSON.stringify({ config: cleanConfig, lexiconLength: lexicon.length, lexicon });
-    }, []);
-
-    // The debounced sync trigger
+    // Debounced trigger
     const triggerAutoSync = useCallback(() => {
         const config = useConfigStore.getState();
 
@@ -236,31 +147,25 @@ export function useAutoSync() {
             clearTimeout(timeoutRef.current);
         }
 
-        // Debounce for 5 seconds
-        timeoutRef.current = setTimeout(async () => {
-            // Read fresh state at sync time, not at trigger time
-            const currentFingerprint = computeFingerprint();
+        // Live mode uses fast 1.5s debounce; standard auto-sync uses 5s
+        const debounceMs = config.isProActive ? 1500 : 5000;
 
+        timeoutRef.current = setTimeout(async () => {
+            const currentFingerprint = computeFingerprint();
             if (currentFingerprint !== lastSyncStateRef.current) {
                 const success = await pushToCloud();
                 if (success) {
                     lastSyncStateRef.current = currentFingerprint;
                 }
             }
-        }, 5000);
+        }, debounceMs);
     }, [computeFingerprint, pushToCloud]);
 
-    // Subscribe to both stores using vanilla subscribe (single-argument form)
+    // 1. Subscribe to local store mutations
     useEffect(() => {
-        // useConfigStore does NOT use subscribeWithSelector, so we use the
-        // single-argument subscribe(listener) form. The listener is called on
-        // every state change.
         const unsubscribeConfig = useConfigStore.subscribe(() => {
             triggerAutoSync();
         });
-
-        // useLexiconStore DOES use subscribeWithSelector, but for consistency
-        // and simplicity we also use the single-argument form here.
         const unsubscribeLexicon = useLexiconStore.subscribe(() => {
             triggerAutoSync();
         });
@@ -271,4 +176,106 @@ export function useAutoSync() {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
         };
     }, [triggerAutoSync]);
+
+    // 2. Realtime listener: cross-device live updates and presence
+    useEffect(() => {
+        let channel = null;
+        let profileChannel = null;
+
+        const setupRealtime = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+
+            const config = useConfigStore.getState();
+            const projectId = config.projectId;
+            if (!projectId || projectId.startsWith('local_')) return;
+
+            const myDeviceId = getDeviceId();
+
+            // Project Realtime channel (changes & presence)
+            channel = supabase.channel(`live_project_${projectId}`, {
+                config: {
+                    presence: { key: myDeviceId }
+                }
+            });
+
+            channel
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'conlang_snapshots',
+                    filter: `project_id=eq.${projectId}`
+                }, async () => {
+                    // Remote update occurred
+                    if (isSyncing.current) return;
+                    const curConfig = useConfigStore.getState();
+                    if (!curConfig.isAutoSyncEnabled) return;
+
+                    try {
+                        const remote = await pullRemoteProject(projectId);
+                        if (!remote) return;
+
+                        const localTime = curConfig.lastCloudSync ? new Date(curConfig.lastCloudSync).getTime() : 0;
+                        if (remote.remoteTimestamp > localTime + 2000) {
+                            const localState = {
+                                config: curConfig,
+                                lexicon: useLexiconStore.getState().lexicon || [],
+                                phrases: useLexiconStore.getState().phrases || [],
+                                wiki: curConfig.wikiPages || {}
+                            };
+
+                            const mergeRes = await performProjectMerge({
+                                projectId,
+                                localState,
+                                remoteState: remote.remoteState,
+                                mode: curConfig.isAutoSyncEnabled ? MERGE_MODES.AUTO : MERGE_MODES.REVIEW,
+                                decisions: {}
+                            });
+
+                            if (mergeRes.conflicts.length === 0) {
+                                await applyMergedStateLocally(projectId, mergeRes.merged);
+                            } else {
+                                curConfig.updateConfig({ syncConflictStatus: 'conflict' });
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("Realtime sync handler error:", e);
+                    }
+                })
+                .on('presence', { event: 'sync' }, () => {
+                    const state = channel.presenceState();
+                    const activeCount = Object.keys(state).length || 1;
+                    useConfigStore.setState({ devicesOnlineCount: activeCount });
+                })
+                .subscribe(async (status) => {
+                    if (status === 'SUBSCRIBED') {
+                        await channel.track({
+                            onlineAt: new Date().toISOString(),
+                            deviceId: myDeviceId
+                        });
+                    }
+                });
+
+            // Account-level profiles Realtime channel (propagates live_auto_sync toggle across devices)
+            profileChannel = supabase.channel(`live_profile_${session.user.id}`)
+                .on('postgres_changes', {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'profiles',
+                    filter: `id=eq.${session.user.id}`
+                }, (payload) => {
+                    if (payload.new && payload.new.live_auto_sync !== undefined && payload.new.live_auto_sync !== null) {
+                        useConfigStore.setState({ isAutoSyncEnabled: Boolean(payload.new.live_auto_sync) });
+                    }
+                })
+                .subscribe();
+        };
+
+        setupRealtime();
+
+        return () => {
+            if (channel) supabase.removeChannel(channel);
+            if (profileChannel) supabase.removeChannel(profileChannel);
+        };
+    }, [pushToCloud]);
 }

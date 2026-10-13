@@ -1,0 +1,209 @@
+/* src/components/pages/home/syncConflictManager.css */
+/* Strict adherence to No-Slop UI: Clean Linear/GitHub style, solid surfaces, 1px borders */
+
+.sync-review-modal {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    color: var(--tx);
+    font-size: 0.9rem;
+    max-height: 75vh;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.sync-summary-card {
+    background-color: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sync-summary-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sync-summary-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--tx);
+}
+
+.sync-summary-desc {
+    margin: 0;
+    color: var(--tx2);
+    line-height: 1.45;
+    font-size: 0.85rem;
+}
+
+.sync-badges-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.sync-badge-item {
+    background-color: var(--s3);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--tx);
+}
+
+.sync-badge-item.highlight {
+    border-color: var(--acc);
+    color: var(--acc);
+}
+
+.sync-main-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sync-action-btn-primary {
+    width: 100%;
+}
+
+.sync-action-subrow {
+    display: flex;
+    gap: 8px;
+}
+
+.sync-action-subrow button {
+    flex: 1;
+}
+
+.sync-section-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--tx2);
+    margin: 10px 0 6px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sync-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sync-item-card {
+    background-color: var(--s1);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color 140ms ease-out;
+}
+
+.sync-item-card:hover {
+    border-color: var(--bd2, var(--bd));
+}
+
+.sync-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.85rem;
+}
+
+.sync-item-word {
+    font-weight: 600;
+    color: var(--tx);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sync-level-tag {
+    font-size: 0.72rem;
+    padding: 2px 6px;
+    border-radius: var(--rad-sm);
+    background-color: var(--s3);
+    border: 1px solid var(--bd);
+    color: var(--tx2);
+    font-weight: 500;
+}
+
+.sync-level-tag.identical {
+    border-color: var(--acc);
+    color: var(--acc);
+}
+
+.sync-diff-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    background-color: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    padding: 8px 10px;
+    font-size: 0.8rem;
+}
+
+.sync-diff-col {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.sync-diff-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--tx2);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.sync-diff-val {
+    color: var(--tx);
+    word-break: break-word;
+}
+
+.sync-item-options {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.sync-choice-chip {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm);
+    background-color: var(--s2);
+    color: var(--tx2);
+    cursor: pointer;
+    transition: background-color 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out;
+}
+
+.sync-choice-chip:hover {
+    background-color: var(--s3);
+    color: var(--tx);
+}
+
+.sync-choice-chip.active {
+    background-color: var(--acc);
+    color: var(--acc-tx, #fff);
+    border-color: var(--acc);
+    font-weight: 600;
+}

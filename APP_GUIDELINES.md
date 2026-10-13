@@ -50,3 +50,11 @@ Never use hardcoded colors. Always use the following CSS variables which are dyn
 - **Verify Persistence**: Always check if a new feature needs to be saved in the config store.
 - **Routing**: Ensure new pages are registered in `App.jsx`.
 - **Activity Logging**: Use `logActivity` in `useConfigStore` for major user actions.
+
+## 6. Multilanguage (i18n) — MANDATORY
+The app supports 7 languages: `en`, `pt`, `es`, `fr`, `ru`, `zh`, `ja` (see `src/i18n/index.js`).
+- **No hardcoded user-facing text**: JSX labels, toasts, modal titles, placeholders, `aria-label`/`title`, and errors must use `t('namespace.key')` from `useTranslation()`.
+- **Every new key goes into ALL 7 locale files in the same change**, with real translations (no English placeholders). Never rely on the English fallback.
+- Keep key nesting and `{placeholder}` names identical across locales.
+- Large features get their own sub-folder in `src/i18n/locales/<feature>/` (like `profile/`, `wiki/`), imported into each main `{lang}.js`.
+- Full rule specification: See `.agents/rules/i18n-translations.md`.
