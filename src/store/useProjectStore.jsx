@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage, subscribeWithSelector } from "zustand/middleware";
 import { share } from "shared-zustand";
+import { useLexiconStore } from "./useLexiconStore.jsx";
 
 // Raw storage adapter that catches quota-exceeded errors instead of crashing.
 // This is passed to createJSONStorage() which handles JSON serialization.
@@ -63,7 +64,7 @@ export const useProjectStore = create(
         setGlobalWorldMap: (mapObj) => set({ globalWorldMap: mapObj }),
 
         // Backs up the active workspace data into the archive box
-        saveProjectToArchive: (config, lexicon) =>
+        saveProjectToArchive: (config, lexicon, phrases = null) =>
           set((state) => {
             const projectId = config.projectId;
             if (!projectId) return state;
@@ -81,7 +82,9 @@ export const useProjectStore = create(
               appLanguage: undefined
             }));
             const safeLexicon = JSON.parse(JSON.stringify(lexicon));
-            const projectData = { config: safeConfig, dictionary: safeLexicon };
+            const rawPhrases = phrases !== null ? phrases : (useLexiconStore.getState().phrases || []);
+            const safePhrases = JSON.parse(JSON.stringify(rawPhrases));
+            const projectData = { config: safeConfig, dictionary: safeLexicon, phrases: safePhrases };
             const existingIdx = state.localProjects.findIndex(
               (p) => p.id === projectId,
             );

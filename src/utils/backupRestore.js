@@ -22,6 +22,7 @@ export function restoreBackupPayload(payload, { lastBackupTime, lastBackupVersio
 
     if (data.config) useConfigStore.getState().setFullConfig(data.config);
     if (data.lexicon) useLexiconStore.getState().setLexicon(data.lexicon);
+    if (data.phrases) useLexiconStore.getState().setPhrases(data.phrases);
     if (payload?.project?.localProjects) {
         useProjectStore.setState({ localProjects: payload.project.localProjects });
     }

@@ -10,7 +10,7 @@ import Modal from '@/components/UI/Modal/Modal.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import { Languages, Plus, Trash2, CheckCircle2, Lock, Copy, GitMerge, Network, LayoutGrid, Map as MapIcon, Upload, MapPin, ZoomIn, ZoomOut, Crosshair, X, ArrowUpFromLine, GitCompare } from 'lucide-react';
 import { supabase } from '@/utils/supabaseClient.js';
-import { sanitizeConfig, sanitizeLexicon } from '@/utils/schemaValidator.jsx';
+import { sanitizeConfig, sanitizeLexicon, sanitizePhrases } from '@/utils/schemaValidator.jsx';
 import { getConlangIcon } from '@/utils/iconMap.jsx';
 import applySoundChanges from '@/utils/applysoundchanges.jsx';
 import LanguageCompareModal from './LanguageCompareModal.jsx';
@@ -173,8 +173,10 @@ export default function ConlangsTab() {
         // SEC-5: Sanitize local project data before loading
         const safeLexicon = sanitizeLexicon(project.project_data.dictionary);
         const safeConfig = sanitizeConfig(project.project_data.config || {});
+        const safePhrases = sanitizePhrases(project.project_data.phrases || []);
         
         setLexicon(safeLexicon);
+        useLexiconStore.getState().setPhrases(safePhrases);
         setFullConfig({ ...safeConfig, projectId: project.id });
         
         navigate('/');

@@ -59,6 +59,7 @@ export default function ProfileTab() {
     // Grab the lexicon, but safely wrap it just in case local storage got corrupted
     const rawLexicon = useLexiconStore((state) => state.lexicon);
     const setLexicon = useLexiconStore((state) => state.setLexicon);
+    const setPhrases = useLexiconStore((state) => state.setPhrases);
     const lexicon = Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []);
 
     // Bundle up all the authentication and sync states
@@ -307,7 +308,8 @@ export default function ProfileTab() {
             const saveProjectToArchive = useProjectStore.getState().saveProjectToArchive;
             saveProjectToArchive(
                 { ...safeConfig, projectId: project.project_id },
-                safeLexicon
+                safeLexicon,
+                safePhrases
             );
 
             setLexicon(safeLexicon);
@@ -427,9 +429,11 @@ export default function ProfileTab() {
                 if (projectData && !projectData.deleted) {
                     const safeConfig = sanitizeConfig(projectData.config || {});
                     const safeLexicon = sanitizeLexicon(projectData.dictionary || []);
+                    const safePhrases = sanitizePhrases(projectData.phrases || []);
                     saveProjectToArchive(
                         { ...safeConfig, projectId: project.project_id },
-                        safeLexicon
+                        safeLexicon,
+                        safePhrases
                     );
                 }
             }
@@ -518,8 +522,10 @@ export default function ProfileTab() {
             const projectData = await decompressPayloadAsync(data.project_data);
             const safeConfig = sanitizeConfig(projectData.config || {});
             const safeLexicon = sanitizeLexicon(projectData.dictionary || []);
+            const safePhrases = sanitizePhrases(projectData.phrases || []);
             
             setLexicon(safeLexicon);
+            setPhrases(safePhrases);
             setFullConfig({ ...safeConfig, projectId: projectId });
             
             if (projectData.wiki) {

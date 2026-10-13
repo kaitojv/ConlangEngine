@@ -263,6 +263,8 @@ export default function SystemTab() {
 
                     setFullConfig(importedConfig);
                     setLexicon(importedLexicon);
+                    const importedPhrases = projectData.phrases || oldData.phrases || (oldData.lexicon && oldData.lexicon.phrases) || [];
+                    useLexiconStore.getState().setPhrases(importedPhrases);
 
                     // Restore ALL archived projects so multi-project exports are fully preserved
                     const projectStore = useProjectStore.getState();
@@ -270,7 +272,8 @@ export default function SystemTab() {
                         if (proj.id && proj.project_data) {
                             projectStore.saveProjectToArchive(
                                 proj.project_data.config,
-                                proj.project_data.dictionary || []
+                                proj.project_data.dictionary || [],
+                                proj.project_data.phrases || []
                             );
                         }
                     });

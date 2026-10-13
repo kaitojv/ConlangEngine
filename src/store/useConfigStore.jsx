@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { normalizeScriptType, normalizeScriptName, repairScriptSystems, normalizeRuleKey } from '../utils/scriptResolver.js';
+import { normalizeScriptType, normalizeScriptName, repairScriptSystems, normalizeRuleKey, getDefaultScriptId } from '../utils/scriptResolver.js';
 
 export function getInitialLanguage() {
     if (typeof localStorage !== 'undefined') {
@@ -546,20 +546,24 @@ export const useConfigStore = create(
                 // When loading configs that have been deduplicated (e.g. from cloud/backup),
                 // root bloat fields might be missing. We need to restore them from the default script
                 // so the app has them immediately in memory.
-                const scriptRules = newConfig.scriptRules || INITIAL_CONFIG.scriptRules;
-                const defaultScriptId = scriptRules?.defaultScriptId || 'default';
-                const defaultScriptData = newConfig.scriptDataById?.[defaultScriptId] || {};
+                const defaultScriptId = getDefaultScriptId(newConfig);
+                const defaultScriptData = newConfig.scriptDataById?.[defaultScriptId] 
+                    || (newConfig.scriptDataById && Object.values(newConfig.scriptDataById)[0]) 
+                    || {};
                 
-                if (!newConfig.customGlyphs && defaultScriptData.customGlyphs) {
+                const hasKeys = (obj) => obj && typeof obj === 'object' && Object.keys(obj).length > 0;
+
+                // 1. Populate root bloat fields from defaultScriptData if root fields are empty
+                if (!hasKeys(newConfig.customGlyphs) && hasKeys(defaultScriptData.customGlyphs)) {
                     newConfig.customGlyphs = defaultScriptData.customGlyphs;
                 }
-                if (!newConfig.alphabetGlyphs && defaultScriptData.alphabetGlyphs) {
+                if (!hasKeys(newConfig.alphabetGlyphs) && hasKeys(defaultScriptData.alphabetGlyphs)) {
                     newConfig.alphabetGlyphs = defaultScriptData.alphabetGlyphs;
                 }
-                if (!newConfig.syllabaryMap && defaultScriptData.syllabaryMap) {
+                if (!hasKeys(newConfig.syllabaryMap) && hasKeys(defaultScriptData.syllabaryMap)) {
                     newConfig.syllabaryMap = defaultScriptData.syllabaryMap;
                 }
-                if (!newConfig.featuralComponents && defaultScriptData.featuralComponents) {
+                if (!hasKeys(newConfig.featuralComponents) && hasKeys(defaultScriptData.featuralComponents)) {
                     newConfig.featuralComponents = defaultScriptData.featuralComponents;
                 }
                 if (!newConfig.customFont && defaultScriptData.customFont) {
@@ -567,6 +571,45 @@ export const useConfigStore = create(
                 }
                 if (!newConfig.customFontBase64 && defaultScriptData.customFontBase64) {
                     newConfig.customFontBase64 = defaultScriptData.customFontBase64;
+                }
+
+                // 2. Populate scriptDataById default script from root if scriptDataById is missing or empty
+                if (!newConfig.scriptDataById) {
+                    newConfig.scriptDataById = {};
+                }
+                if (!newConfig.scriptDataById[defaultScriptId]) {
+                    newConfig.scriptDataById[defaultScriptId] = {};
+                }
+                const targetScriptData = newConfig.scriptDataById[defaultScriptId];
+                if (!hasKeys(targetScriptData.customGlyphs) && hasKeys(newConfig.customGlyphs)) {
+                    targetScriptData.customGlyphs = newConfig.customGlyphs;
+                }
+                if (!hasKeys(targetScriptData.alphabetGlyphs) && hasKeys(newConfig.alphabetGlyphs)) {
+                    targetScriptData.alphabetGlyphs = newConfig.alphabetGlyphs;
+                }
+                if (!hasKeys(targetScriptData.syllabaryMap) && hasKeys(newConfig.syllabaryMap)) {
+                    targetScriptData.syllabaryMap = newConfig.syllabaryMap;
+                }
+                if (!hasKeys(targetScriptData.featuralComponents) && hasKeys(newConfig.featuralComponents)) {
+                    targetScriptData.featuralComponents = newConfig.featuralComponents;
+                }
+                if (!targetScriptData.customFont && newConfig.customFont) {
+                    targetScriptData.customFont = newConfig.customFont;
+                }
+                if (!targetScriptData.customFontBase64 && newConfig.customFontBase64) {
+                    targetScriptData.customFontBase64 = newConfig.customFontBase64;
+                }
+
+                // 3. Safety net: ensure puaCounter is always higher than any existing glyph code
+                const allGlyphCodes = [
+                    ...Object.keys(newConfig.customGlyphs || {}),
+                    ...Object.values(newConfig.scriptDataById || {}).flatMap(s => Object.keys(s?.customGlyphs || {}))
+                ].map(Number).filter(n => !isNaN(n));
+                if (allGlyphCodes.length > 0) {
+                    const maxCode = Math.max(...allGlyphCodes);
+                    if (!newConfig.puaCounter || newConfig.puaCounter <= maxCode) {
+                        newConfig.puaCounter = maxCode + 1;
+                    }
                 }
 
                 const projectId = newConfig.projectId || useConfigStore.getState().projectId;

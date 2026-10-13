@@ -129,6 +129,9 @@ export default function Header({ openMenu, onBackupNow }) {
                 if (data.lexicon) {
                     useLexiconStore.getState().setLexicon(data.lexicon);
                 }
+                if (data.phrases) {
+                    useLexiconStore.getState().setPhrases(data.phrases);
+                }
                 
                 if (loadAll && data.project && Array.isArray(data.project.localProjects)) {
                     const projectStore = useProjectStore.getState();
@@ -137,7 +140,8 @@ export default function Header({ openMenu, onBackupNow }) {
                         if (proj.id && proj.project_data) {
                             projectStore.saveProjectToArchive(
                                 proj.project_data.config,
-                                proj.project_data.dictionary || []
+                                proj.project_data.dictionary || [],
+                                proj.project_data.phrases || []
                             );
                             importedCount++;
                         }

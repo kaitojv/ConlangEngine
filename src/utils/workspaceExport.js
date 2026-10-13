@@ -17,12 +17,14 @@ import { sanitizeConfig } from './schemaValidator.jsx';
  */
 export function buildWorkspaceSnapshot({ exportAll = true } = {}) {
     const config = sanitizeConfig(useConfigStore.getState(), true);
-    const lexicon = useLexiconStore.getState();
+    const lexiconState = useLexiconStore.getState();
+    const lexicon = lexiconState.lexicon || [];
+    const phrases = lexiconState.phrases || [];
 
     const project = { ...useProjectStore.getState() };
     if (!exportAll) project.localProjects = [];
 
-    return { config, project, lexicon };
+    return { config, project, lexicon, phrases };
 }
 
 /**

@@ -41,8 +41,27 @@ export function useAutoSync() {
             Object.entries(config).filter(([k]) => !volatileKeys.has(k))
         );
 
+        // Lightweight summaries so glyph additions/updates trigger auto-sync
+        // without stringifying multi-megabyte base64 fonts.
+        const scriptDataSummary = Object.entries(config.scriptDataById || {}).map(([sId, sData]) => ({
+            id: sId,
+            glyphsCount: Object.keys(sData?.customGlyphs || {}).length,
+            syllablesCount: Object.keys(sData?.syllabaryMap || {}).length,
+            alphabetCount: Object.keys(sData?.alphabetGlyphs || {}).length,
+            hasFont: Boolean(sData?.customFontBase64),
+        }));
+
+        const rootGlyphsSummary = {
+            glyphsCount: Object.keys(config.customGlyphs || {}).length,
+            syllablesCount: Object.keys(config.syllabaryMap || {}).length,
+            alphabetCount: Object.keys(config.alphabetGlyphs || {}).length,
+            hasFont: Boolean(config.customFontBase64),
+        };
+
         return JSON.stringify({
             config: cleanConfig,
+            scriptDataSummary,
+            rootGlyphsSummary,
             lexiconLength: lexicon.length,
             phrasesLength: phrases.length,
             lexicon,

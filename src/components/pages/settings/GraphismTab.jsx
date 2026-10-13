@@ -54,6 +54,7 @@ export default function TypographyStudio() {
     const simplifyAllGlyphs = useConfigStore(state => state.simplifyAllGlyphs);
     const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
     const syllabaryMap = useConfigStore(state => state.syllabaryMap) || {};
+    const lexicon = useLexiconStore(state => state.lexicon) || [];
 
     // Track which script is being edited. Default to the project's default script.
     const [editingScriptId, setEditingScriptId] = useState(defaultScriptId);
@@ -351,44 +352,68 @@ export default function TypographyStudio() {
 
     const unusedGlyphKeys = useMemo(() => {
         const storeState = useConfigStore.getState();
-        const activeGlyphs = { ...(storeState.customGlyphs || {}), ...(storeState.scriptDataById?.[editingScriptId]?.customGlyphs || {}) };
+        const activeGlyphs = { 
+            ...(storeState.customGlyphs || {}), 
+            ...(storeState.scriptDataById?.[editingScriptId]?.customGlyphs || {}) 
+        };
         const usedCodes = new Set();
 
+        const addStringToUsed = (str) => {
+            if (!str || typeof str !== 'string') return;
+            usedCodes.add(str.toLowerCase());
+            for (const ch of str) {
+                const cp = ch.codePointAt(0);
+                if (cp) {
+                    usedCodes.add(String(cp));
+                    usedCodes.add(Number(cp));
+                }
+            }
+        };
+
         const checkMap = (mapObj) => {
-            if (!mapObj) return;
+            if (!mapObj || typeof mapObj !== 'object') return;
             Object.values(mapObj).forEach(val => {
                 if (typeof val === 'string' && val.length > 0) {
-                    const cp = val.codePointAt(0);
-                    if (cp) {
-                        usedCodes.add(String(cp));
-                        usedCodes.add(Number(cp));
-                    }
+                    addStringToUsed(val);
                 }
             });
         };
 
+        // 1. Check orthography & syllabary mappings
         checkMap(storeState.alphabetGlyphs);
         checkMap(storeState.syllabaryMap);
+        checkMap(storeState.numberSystem?.digitGlyphs);
+        
+        // 2. Check featural components (base characters drawn in block manager)
+        if (storeState.featuralComponents) {
+            Object.keys(storeState.featuralComponents).forEach(k => {
+                addStringToUsed(k);
+            });
+        }
+
+        // 3. Check all multi-script scoped data
         Object.values(storeState.scriptDataById || {}).forEach(sData => {
             checkMap(sData?.alphabetGlyphs);
             checkMap(sData?.syllabaryMap);
-        });
-
-        const lexicon = useLexiconStore.getState().lexicon || [];
-        lexicon.forEach(entry => {
-            if (entry.word) {
-                usedCodes.add(entry.word.toLowerCase());
-            }
-            if (entry.ideogram) {
-                usedCodes.add(entry.ideogram);
-            }
-            if (entry.scriptForms) {
-                Object.values(entry.scriptForms).forEach(formStr => {
-                    if (formStr) usedCodes.add(formStr);
+            if (sData?.featuralComponents) {
+                Object.keys(sData.featuralComponents).forEach(k => {
+                    addStringToUsed(k);
                 });
             }
         });
 
+        // 4. Check lexicon entries (words, ideograms, and per-script written forms)
+        lexicon.forEach(entry => {
+            if (entry.word) addStringToUsed(entry.word);
+            if (entry.ideogram) addStringToUsed(entry.ideogram);
+            if (entry.scriptForms && typeof entry.scriptForms === 'object') {
+                Object.values(entry.scriptForms).forEach(formStr => {
+                    if (formStr) addStringToUsed(formStr);
+                });
+            }
+        });
+
+        // 5. Filter activeGlyphs to find true orphans
         const unused = [];
         Object.keys(activeGlyphs).forEach(key => {
             const num = Number(key);
@@ -402,7 +427,7 @@ export default function TypographyStudio() {
         });
 
         return unused;
-    }, [customGlyphs, scriptDataById, editingScriptId, alphabetGlyphs, syllabaryMap]);
+    }, [customGlyphs, scriptDataById, editingScriptId, alphabetGlyphs, syllabaryMap, lexicon]);
 
     const handleCleanUnusedGlyphs = async (keysToRemove) => {
         if (!keysToRemove || keysToRemove.length === 0) return;

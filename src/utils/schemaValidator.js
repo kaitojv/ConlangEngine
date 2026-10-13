@@ -1,0 +1,265 @@
+// src/utils/schemaValidator.js
+// SEC-4: Schema validator for imported JSON backups and cloud data.
+// Only allows known keys to be merged into stores,
+// preventing injection of arbitrary keys or XSS payloads.
+import LZString from 'lz-string';
+
+// Static allowlist of valid config keys (mirrors INITIAL_CONFIG in useConfigStore).
+// Kept as a flat set to avoid importing the store and bloating the bundle.
+export const VALID_CONFIG_KEYS = new Set([
+    'projectId', 'conlangName', 'authorName', 'description',
+    'phonologyTypes', 'alphabeticScript', 'featuralComponents', 'blockSettings',
+    'syntaxOrder', 'adjectivePlacement', 'adjectiveAgreement', 'writingDirection', 'consonants', 'vowels',
+    'syllablePattern', 'historicalRules', 'syllabaryMap',
+    'grammarRules', 'verbMarker', 'cliticsRules', 'personRules',
+    'wikiPages', 'streak', 'unlockedBadges', 'activity',
+    'isProActive', 'lastStudyDate', 'customFont', 'theme',
+    'colors', 'customGlyphs', 'puaCounter', 'customFontBase64', 'numeralBase', 'sentenceMaps',
+    'generatorMarkers', 'customCourse',
+    'customWordClasses', 'customTags',
+    'otherPhonemes', 'otherPhonemeMapping', 'skipSyllableValidation', 'customAlphabet',
+    'syllabificationAlgorithm', 'blockTemplates',
+    'alphabetNames', 'numberSystem',
+    'numberMatrix', 'numberDerivedRules', 'timeSystemVocab', 'alphabetGlyphs',
+    'semanticMappings', 'wordAssistConfig', 'autoReturnToLexicon',
+    'syllablePatternWeights', 'suppressDuplicateWarnings',
+    'enableToneAndStress', 'functionWords', 'calendarSystem', 'measurementSystem',
+    'stressRules', 'toneRules', 'isPublic', 'conlangIcon', 'parentId',
+    'pronounMatrixData', 'pronounMatrixSettings',
+    'vowelHarmonyMode', 'vowelHarmonySets', 'vowelHarmonyOverrideWordClasses', 'vowelHarmonyOverrideTags',
+    'backupSettings',
+    'evolutionEpochs', 'worldMap', 'customLabels', 'ipaMappingRules', 'typographySettings',
+    'ttsEngine', 'ttsVoice', 'ttsSpeed', 'ttsPitch', 'formantF0', 'openTtsUrl', 'openTtsVoice', 'customTtsUrl', 'customTtsKey', 'customTtsVoice',
+    'kokoroUrl', 'kokoroVoice', 'kokoroSpeed', 'kokoroSendIpa', 'kokoroEndpointType',
+    'azureTtsUseIpa', 'azureTtsVoice', 'azureTtsKey', 'azureTtsRegion',
+    // Multi-script fields
+    'scriptSystems', 'scriptRules', 'activeScriptSystemId', 'configVersion', 'scriptDataById',
+    // Particle fields
+    'morphologyMode', 'morphSlots', 'fusionRules', 'boundaryRules',
+    'particleDatabase', 'compositeParticles', 'allowRecursiveComposites',
+    'usesParticles',
+    // UI state
+    'isDialect', 'hasCompletedOnboarding', 'floatingBackground', 'appLanguage', 'devicesOnlineCount', 'appUiFont', 'isAutoSyncEnabled',
+    // Study / Course gamification
+    'studyXP', 'courseLevelScores', 'dailyChallengeDate', 'dailyChallengeCompleted',
+    'studySoundEffects', 'courseProgress'
+]);
+
+/**
+ * Strips unknown keys from a config object, keeping only those
+ * present in INITIAL_CONFIG. Also does basic type sanitization.
+ */
+export function sanitizeConfig(rawConfig, isSave = false) {
+    if (!rawConfig || typeof rawConfig !== 'object') return {};
+
+    const clean = {};
+    for (const key of Object.keys(rawConfig)) {
+        // Only allow keys that exist in our schema
+        if (!VALID_CONFIG_KEYS.has(key)) continue;
+
+        // Skip functions entirely (they shouldn't be in serialized data)
+        if (typeof rawConfig[key] === 'function') continue;
+
+        clean[key] = rawConfig[key];
+    }
+
+    // Default hasCompletedOnboarding to true for older projects that lack this key
+    if (clean.hasCompletedOnboarding === undefined) {
+        clean.hasCompletedOnboarding = true;
+    }
+
+    // Deduplicate legacy root bloat fields to prevent doubled JSON file size
+    // when scriptDataById is present (as of PR 7). rehydrateBloat handles
+    // reconstructing these into the root during startup.
+    if (isSave && clean.scriptDataById && Object.keys(clean.scriptDataById).length > 0) {
+        delete clean.customGlyphs;
+        delete clean.alphabetGlyphs;
+        delete clean.syllabaryMap;
+        delete clean.featuralComponents;
+        delete clean.customFont;
+        delete clean.customFontBase64;
+    }
+
+    return clean;
+}
+
+/**
+ * Validates and sanitizes a lexicon array from imported data.
+ * Each entry must have at minimum a word and translation string.
+ */
+export function sanitizeLexicon(rawLexicon) {
+    if (!Array.isArray(rawLexicon)) {
+        // Handle the case where the lexicon store was serialized as { lexicon: [...] }
+        if (rawLexicon && Array.isArray(rawLexicon.lexicon)) {
+            return sanitizeLexicon(rawLexicon.lexicon);
+        }
+        return [];
+    }
+
+    return rawLexicon.filter(entry => {
+        // Must be an object with at least word and translation
+        if (!entry || typeof entry !== 'object') return false;
+        if (typeof entry.word !== 'string') return false;
+        if (typeof entry.translation !== 'string') return false;
+        return true;
+    }).map(entry => ({
+        id: entry.id || Date.now() + Math.random(),
+        word: entry.word,
+        ipa: typeof entry.ipa === 'string' ? entry.ipa : '',
+        wordClass: typeof entry.wordClass === 'string' ? entry.wordClass : '',
+        translation: entry.translation,
+        definition: typeof entry.definition === 'string' ? entry.definition : '',
+        tags: Array.isArray(entry.tags) ? entry.tags.filter(t => typeof t === 'string') : [],
+        tagSource: typeof entry.tagSource === 'string' ? entry.tagSource : 'manual',
+        ideogram: typeof entry.ideogram === 'string' ? entry.ideogram : '',
+        personCategory: typeof entry.personCategory === 'string' ? entry.personCategory : '',
+        parentRootId: entry.parentRootId !== undefined ? entry.parentRootId : null,
+        derivationRuleId: entry.derivationRuleId !== undefined ? entry.derivationRuleId : null,
+        inflectionOverrides: (entry.inflectionOverrides && typeof entry.inflectionOverrides === 'object')
+            ? entry.inflectionOverrides : {},
+        tone: typeof entry.tone === 'string' ? entry.tone : '',
+        stress: typeof entry.stress === 'string' ? entry.stress : '',
+        relatedWords: Array.isArray(entry.relatedWords) ? entry.relatedWords : [],
+        srs: (entry.srs && typeof entry.srs === 'object') ? entry.srs : null,
+        createdAt: typeof entry.createdAt === 'number' ? entry.createdAt : Date.now(),
+        // Multi-script fields
+        scriptOverride: entry.scriptOverride || null,
+        scriptForms: (entry.scriptForms && typeof entry.scriptForms === 'object') ? entry.scriptForms : {},
+        scriptRole: typeof entry.scriptRole === 'string' ? entry.scriptRole : '',
+        // Etymology / root fields (previously dropped on cloud pull).
+        // etymology = parent word ID (number) or 'project:<id>:word:<id>' string.
+        etymology: (typeof entry.etymology === 'string' || typeof entry.etymology === 'number') ? entry.etymology : null,
+        isProtoRoot: Boolean(entry.isProtoRoot),
+        isPrimary: Boolean(entry.isPrimary),
+        // Custom pronunciation recording (data URL only)
+        ...(typeof entry.customAudioBase64 === 'string' && entry.customAudioBase64.startsWith('data:audio/')
+            ? { customAudioBase64: entry.customAudioBase64 } : {}),
+        // Sync metadata (used by src/utils/syncMerge.js)
+        ...(typeof entry.updatedAt === 'number' ? { updatedAt: entry.updatedAt } : {}),
+        ...(typeof entry.updatedBy === 'string' ? { updatedBy: entry.updatedBy } : {}),
+    }));
+}
+
+/**
+ * Validates and sanitizes a phrases array from imported data.
+ */
+export function sanitizePhrases(rawPhrases) {
+    if (!Array.isArray(rawPhrases)) return [];
+    return rawPhrases.filter(entry => {
+        if (!entry || typeof entry !== 'object') return false;
+        if (typeof entry.phrase !== 'string') return false;
+        return true;
+    }).map(entry => ({
+        id: entry.id || Date.now() + Math.random(),
+        phrase: entry.phrase,
+        literalTranslation: typeof entry.literalTranslation === 'string' ? entry.literalTranslation : '',
+        idiomaticTranslation: typeof entry.idiomaticTranslation === 'string' ? entry.idiomaticTranslation : '',
+        register: typeof entry.register === 'string' ? entry.register : 'casual',
+        category: typeof entry.category === 'string' ? entry.category : 'general',
+        tags: Array.isArray(entry.tags) ? entry.tags.filter(t => typeof t === 'string') : [],
+        componentWords: Array.isArray(entry.componentWords) ? entry.componentWords : [],
+        createdAt: typeof entry.createdAt === 'number' ? entry.createdAt : Date.now(),
+        ...(typeof entry.updatedAt === 'number' ? { updatedAt: entry.updatedAt } : {}),
+        ...(typeof entry.updatedBy === 'string' ? { updatedBy: entry.updatedBy } : {}),
+    }));
+}
+
+/** Validates the full backup structure used by Save/Load in the Header.
+ Returns a sanitized copy of the data with only valid fields. */
+export function sanitizeBackup(data) {
+    if (!data || typeof data !== 'object') {
+        throw new Error('Invalid backup file: not a valid JSON object.');
+    }
+
+    const rawPhrases = data.phrases || data.lexicon?.phrases || null;
+
+    return {
+        config: data.config ? sanitizeConfig(data.config) : null,
+        lexicon: data.lexicon ? sanitizeLexicon(data.lexicon) : null,
+        phrases: rawPhrases ? sanitizePhrases(rawPhrases) : null,
+        project: data.project && typeof data.project === 'object' ? data.project : null
+    };
+}
+
+/** 
+ * Automatically decompresses cloud payloads if they were zipped by the client 
+ * to bypass Supabase size limits. Returns the raw payload if uncompressed.
+ * @deprecated Use decompressPayloadAsync instead for new features, as GZIP decompression requires async.
+ */
+export function decompressPayload(payload) {
+    if (!payload) return payload;
+
+    if (payload.gzip_compressed_payload) {
+        console.warn("Synchronous decompressPayload cannot decompress GZIP payloads! Please use decompressPayloadAsync.");
+        // We can't synchronously decompress it. The UI must be updated to use decompressPayloadAsync.
+        return payload;
+    }
+
+    // Handle new partial compression (dictionary & wiki compressed, config left intact for querying)
+    if (payload.compressed_payload && typeof payload.compressed_payload === 'string') {
+        try {
+            const decompressedString = LZString.decompressFromBase64(payload.compressed_payload);
+            const decompressed = JSON.parse(decompressedString);
+            return {
+                ...payload,
+                dictionary: decompressed.dictionary,
+                wiki: decompressed.wiki,
+                phrases: decompressed.phrases || payload.phrases || []
+            };
+        } catch (e) {
+            console.error("Failed to decompress partial cloud payload:", e);
+            return null;
+        }
+    }
+
+    // Handle full compression (legacy if any were pushed before the change)
+    if (payload.compressed && typeof payload.compressed === 'string') {
+        try {
+            const decompressedString = LZString.decompressFromBase64(payload.compressed);
+            return JSON.parse(decompressedString);
+        } catch (e) {
+            console.error("Failed to decompress full cloud payload:", e);
+            return null;
+        }
+    }
+    
+    return payload;
+}
+
+/** 
+ * Asynchronously decompresses cloud payloads. Supports GZIP and LZString.
+ * Must be used for any data that might have been compressed with GZIP.
+ */
+export async function decompressPayloadAsync(payload) {
+    if (!payload) return payload;
+
+    // Handle GZIP compression
+    if (payload.gzip_compressed_payload && typeof payload.gzip_compressed_payload === 'string') {
+        try {
+            const binaryString = atob(payload.gzip_compressed_payload);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            const stream = new Blob([bytes]).stream();
+            const decompressedStream = stream.pipeThrough(new DecompressionStream('gzip'));
+            const decompressedResponse = new Response(decompressedStream);
+            const decompressedText = await decompressedResponse.text();
+            const decompressed = JSON.parse(decompressedText);
+            
+            return {
+                ...payload,
+                dictionary: decompressed.dictionary,
+                wiki: decompressed.wiki,
+                phrases: decompressed.phrases || payload.phrases || []
+            };
+        } catch (e) {
+            console.error("Failed to decompress gzip cloud payload:", e);
+            return null;
+        }
+    }
+
+    // Fallback to the synchronous LZString decompression if not GZIP
+    return decompressPayload(payload);
+}
