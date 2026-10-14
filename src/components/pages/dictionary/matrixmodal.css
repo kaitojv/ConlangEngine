@@ -6,11 +6,31 @@
     margin-bottom: 1.5rem;
     padding: 1rem;
     background-color: var(--s4);
-    border-radius: 0.5rem;
+    border-radius: var(--rad-sm, 8px);
     border: 1px solid var(--bd2);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.matrix-edit-fields-wrapper {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    width: 100%;
+    margin-top: 6px;
+}
+
+.matrix-edit-input-root {
+    flex: 2;
+    min-width: 130px;
+}
+
+.matrix-edit-input-ipa {
+    flex: 1;
+    min-width: 110px;
 }
 
 .matrix-base-label {
@@ -46,7 +66,11 @@
 
 .matrix-table-container {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     width: 100%;
+    border-radius: var(--rad-sm, 8px);
+    border: 1px solid var(--bd);
+    background: var(--s4);
 }
 
 .matrix-derivation-title {
@@ -102,6 +126,23 @@
     padding: 12px;
     font-weight: bold;
     color: var(--acc);
+    position: sticky;
+    left: 0;
+    background: var(--s4);
+    z-index: 2;
+    box-shadow: 2px 0 6px rgba(0, 0, 0, 0.25);
+}
+
+.matrix-th:first-child {
+    position: sticky;
+    left: 0;
+    background: var(--s4);
+    z-index: 3;
+    box-shadow: 2px 0 6px rgba(0, 0, 0, 0.25);
+}
+
+.matrix-tr:hover .matrix-td-person {
+    background: var(--bg);
 }
 
 .matrix-td-person.base {
@@ -152,6 +193,8 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 12px;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .matrix-toolbar-text {
@@ -160,12 +203,14 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    flex: 1 1 200px;
 }
 
 .matrix-toolbar-actions {
     display: flex;
-    gap: 12px;
+    gap: 8px;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 /* Toggles */
@@ -188,6 +233,7 @@
     font-size: 0.75rem;
     font-weight: bold;
     transition: all 0.2s;
+    touch-action: manipulation;
 }
 
 .matrix-toggle-btn.active {
@@ -209,11 +255,78 @@
     font-weight: bold;
     cursor: pointer;
     transition: all 0.2s;
+    touch-action: manipulation;
+    white-space: nowrap;
 }
 
 .matrix-edit-btn.active {
     background-color: var(--acc);
     color: #fff;
+}
+
+/* Derivation Quick Save Row */
+.matrix-quick-save-row {
+    background: var(--s2);
+    border: 1px solid var(--acc);
+    border-radius: var(--rad-sm, 8px);
+    padding: 12px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+.matrix-quick-save-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.matrix-quick-save-title {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--tx);
+    font-weight: 600;
+}
+
+.matrix-quick-save-word {
+    color: var(--acc2);
+    font-weight: 700;
+}
+
+.matrix-quick-save-cancel {
+    background: transparent;
+    border: none;
+    color: var(--tx2);
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.matrix-quick-save-cancel:hover {
+    color: var(--err);
+    background: var(--s3);
+}
+
+.matrix-quick-save-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.matrix-quick-save-trans-wrap {
+    flex: 2;
+    min-width: 140px;
+}
+
+.matrix-quick-save-class-wrap {
+    flex: 1;
+    min-width: 110px;
 }
 
 /* Inline Matrix Form Elements */
@@ -275,10 +388,17 @@
     transition: opacity 0.2s, background 0.2s, color 0.2s;
     font-weight: bold;
     font-size: 1.1rem;
+    touch-action: manipulation;
 }
 
 .matrix-td:hover .matrix-quick-save-btn {
     opacity: 1;
+}
+
+@media (hover: none) or (max-width: 768px) {
+    .matrix-quick-save-btn {
+        opacity: 1 !important;
+    }
 }
 
 .matrix-quick-save-btn:hover {
@@ -304,4 +424,59 @@
     justify-content: center;
     border-radius: 50%;
     border: 1px solid var(--acc);
+}
+
+/* Matrix Responsiveness */
+@media (max-width: 640px) {
+    .matrix-header-box {
+        padding: 0.85rem;
+        margin-bottom: 1rem;
+    }
+    .matrix-base-word {
+        font-size: 1.35rem;
+    }
+    .matrix-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    .matrix-toolbar-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+        gap: 6px;
+    }
+    .matrix-toggle-group {
+        grid-column: 1 / -1;
+        display: flex;
+        width: 100%;
+    }
+    .matrix-toggle-btn {
+        flex: 1;
+        text-align: center;
+        padding: 7px 10px;
+    }
+    .matrix-edit-btn {
+        justify-content: center;
+        padding: 8px 10px;
+        font-size: 0.8rem;
+        width: 100%;
+    }
+    .matrix-table {
+        min-width: 460px;
+    }
+    .matrix-th,
+    .matrix-td,
+    .matrix-td-person {
+        padding: 8px 10px;
+    }
+    .matrix-quick-save-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .matrix-quick-save-trans-wrap,
+    .matrix-quick-save-class-wrap,
+    .matrix-quick-save-form .btn-save {
+        width: 100%;
+    }
 }

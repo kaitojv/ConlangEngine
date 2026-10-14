@@ -150,10 +150,6 @@
     display: none;
 }
 
-.export-menu-wrapper:hover::after {
-    display: block;
-}
-
 .export-dropdown {
     position: absolute;
     top: calc(100% + 4px);
@@ -163,6 +159,7 @@
     border-radius: var(--rad-sm, 6px);
     padding: 4px;
     width: 185px;
+    max-width: calc(100vw - 16px);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22), 0 1px 3px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
@@ -175,11 +172,25 @@
     z-index: 1000;
 }
 
-.export-menu-wrapper:hover .export-dropdown {
+/* Opened via click/tap state */
+.export-menu-wrapper.is-open .export-dropdown {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
     pointer-events: auto;
+}
+
+/* Hover for desktop pointer devices only */
+@media (hover: hover) and (pointer: fine) {
+    .export-menu-wrapper:hover::after {
+        display: block;
+    }
+    .export-menu-wrapper:hover .export-dropdown {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
 }
 
 .export-opt {
@@ -197,6 +208,7 @@
     gap: 8px;
     transition: background-color 0.12s ease, color 0.12s ease;
     width: 100%;
+    touch-action: manipulation;
 }
 
 .export-opt:hover:not(.disabled) {
@@ -297,7 +309,17 @@
 }
 
 .hidden-file-input {
-    display: none;
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 /* Header Search Button */
@@ -371,10 +393,12 @@
 @media (max-width: 768px) {
     .hdr {
         padding: 8px 12px;
+        overflow: visible;
     }
     .hdr-flex {
         flex-wrap: wrap;
         gap: 10px;
+        overflow: visible;
     }
     .hdr-left {
         width: 100%;
@@ -383,6 +407,7 @@
     .hdr-actions {
         width: 100%;
         justify-content: space-between;
+        overflow: visible;
     }
     .app-dinamic-title {
         font-size: 1.4rem;
@@ -392,7 +417,27 @@
         border: none;
         padding: 0;
         gap: 2px;
-        overflow-x: auto;
+        overflow: visible;
+        display: flex;
+        align-items: center;
+        flex-wrap: nowrap;
+    }
+    .hdr-btn {
+        padding: 8px;
+        min-width: 32px;
+        height: 32px;
+    }
+    .export-menu-wrapper.menu-align-left .export-dropdown {
+        left: 0;
+        right: auto;
+    }
+    .export-menu-wrapper.menu-align-right .export-dropdown {
+        right: 0;
+        left: auto;
+    }
+    .export-opt {
+        padding: 9px 12px;
+        font-size: 0.85rem;
     }
     .hdr-search-btn {
         width: auto;
@@ -417,5 +462,11 @@
     .hdr-badge {
         padding: 4px 8px;
         font-size: 0.65rem;
+    }
+    .export-dropdown {
+        width: 175px;
+    }
+    .export-dropdown.lang-dropdown {
+        width: 140px;
     }
 }

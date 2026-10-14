@@ -43,6 +43,40 @@ export default function Header({ openMenu, onBackupNow }) {
     const [exportType, setExportType] = useState(null); // 'pdf', 'docx', 'obsidian', 'sheets'
     const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
     const [isAnkiModalOpen, setIsAnkiModalOpen] = useState(false);
+    const [activeDropdown, setActiveDropdown] = useState(null); // 'export' | 'save' | 'load' | 'lang' | null
+
+    // Close open header dropdowns on outside tap/click or Escape
+    useEffect(() => {
+        if (!activeDropdown) return;
+
+        const handlePointerDown = (e) => {
+            if (!e.target.closest('.export-menu-wrapper')) {
+                setActiveDropdown(null);
+            }
+        };
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setActiveDropdown(null);
+            }
+        };
+
+        document.addEventListener('pointerdown', handlePointerDown);
+        document.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.removeEventListener('pointerdown', handlePointerDown);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [activeDropdown]);
+
+    const toggleDropdown = (name) => {
+        setActiveDropdown(prev => prev === name ? null : name);
+    };
+
+    const closeDropdown = () => {
+        setActiveDropdown(null);
+    };
 
     // Listen for auth changes and figure out if the user has an active Pro subscription
     useEffect(() => {
@@ -278,79 +312,89 @@ export default function Header({ openMenu, onBackupNow }) {
                         <Button className="hdr-btn" onClick={() => navigate('/lexicon')}>
                             <Book /> <span>{t('header.lexicon')}</span>
                         </Button>
-                        <div className="export-menu-wrapper">
-                            <Button className="hdr-btn export-trigger">
+                        <div className={`export-menu-wrapper menu-align-left ${activeDropdown === 'export' ? 'is-open' : ''}`}>
+                            <Button 
+                                className="hdr-btn export-trigger"
+                                onClick={() => toggleDropdown('export')}
+                                aria-expanded={activeDropdown === 'export'}
+                                aria-haspopup="true"
+                                title={t('header.export')}
+                            >
                                 <Download /> <span>{t('header.export')}</span>
                             </Button>
                             <div className="export-dropdown">
-                                <button className="export-opt" onClick={() => setExportType('pdf')}>
+                                <button className="export-opt" onClick={() => { closeDropdown(); setExportType('pdf'); }}>
                                     <Printer size={14} /> {t('header.exportPdf')}
                                 </button>
-                                <button className="export-opt" onClick={() => setExportType('obsidian')}>
+                                <button className="export-opt" onClick={() => { closeDropdown(); setExportType('obsidian'); }}>
                                     <FileText size={14} /> {t('header.exportObsidian')}
                                 </button>
-                                <button className="export-opt" onClick={() => setExportType('docx')}>
+                                <button className="export-opt" onClick={() => { closeDropdown(); setExportType('docx'); }}>
                                     <FileEdit size={14} /> {t('header.exportWord')}
                                 </button>
-                                <button className="export-opt" onClick={() => setExportType('sheets')}>
+                                <button className="export-opt" onClick={() => { closeDropdown(); setExportType('sheets'); }}>
                                     <Table size={14} /> {t('header.exportSheets')}
                                 </button>
-                                <button className="export-opt" onClick={() => setIsAnkiModalOpen(true)}>
+                                <button className="export-opt" onClick={() => { closeDropdown(); setIsAnkiModalOpen(true); }}>
                                     <Layers size={14} /> {t('header.exportAnki')}
                                 </button>
-                                <button className="export-opt" onClick={() => setExportType('minecraft')}>
+                                <button className="export-opt" onClick={() => { closeDropdown(); setExportType('minecraft'); }}>
                                     <Gamepad size={14} /> {t('header.exportMinecraft')}
                                 </button>
-                                <button className="export-opt" onClick={() => setExportType('terraria')}>
+                                <button className="export-opt" onClick={() => { closeDropdown(); setExportType('terraria'); }}>
                                     <Swords size={14} /> {t('header.exportTerraria')}
                                 </button>
                             </div>
                         </div>
-                        <div className="export-menu-wrapper">
-                            <Button className="hdr-btn export-trigger">
+                        <div className={`export-menu-wrapper menu-align-left ${activeDropdown === 'save' ? 'is-open' : ''}`}>
+                            <Button 
+                                className="hdr-btn export-trigger"
+                                onClick={() => toggleDropdown('save')}
+                                aria-expanded={activeDropdown === 'save'}
+                                aria-haspopup="true"
+                                title={t('header.save')}
+                            >
                                 <Save /> <span>{t('header.save')}</span>
                             </Button>
                             <div className="export-dropdown">
-                                <button className="export-opt" onClick={() => handleSave(false)}>
+                                <button className="export-opt" onClick={() => { closeDropdown(); handleSave(false); }}>
                                     <Save size={14} /> {t('header.currentWorkspace')}
                                 </button>
-                                <button className="export-opt" onClick={() => handleSave(true)}>
+                                <button className="export-opt" onClick={() => { closeDropdown(); handleSave(true); }}>
                                     <Database size={14} /> {t('header.allWorkspaces')}
                                 </button>
                             </div>
                         </div>
-                        <div className="export-menu-wrapper">
-                            <Button className="hdr-btn export-trigger">
+                        <div className={`export-menu-wrapper menu-align-right ${activeDropdown === 'load' ? 'is-open' : ''}`}>
+                            <Button 
+                                className="hdr-btn export-trigger"
+                                onClick={() => toggleDropdown('load')}
+                                aria-expanded={activeDropdown === 'load'}
+                                aria-haspopup="true"
+                                title={t('header.load')}
+                            >
                                 <FolderUp /> <span>{t('header.load')}</span>
                             </Button>
                             <div className="export-dropdown">
-                                <input 
-                                    type="file" 
-                                    accept=".json" 
-                                    ref={fileInputSingleRef} 
-                                    onChange={(e) => handleLoad(e, false)} 
-                                    className="hidden-file-input"
-                                />
-                                <input 
-                                    type="file" 
-                                    accept=".json" 
-                                    ref={fileInputRef} 
-                                    onChange={(e) => handleLoad(e, true)} 
-                                    className="hidden-file-input"
-                                />
-                                <button className="export-opt" onClick={() => fileInputSingleRef.current.click()}>
+                                <button className="export-opt" onClick={() => { closeDropdown(); fileInputSingleRef.current?.click(); }}>
                                     <FolderUp size={14} /> {t('header.currentWorkspace')}
                                 </button>
-                                <button className="export-opt" onClick={() => fileInputRef.current.click()}>
+                                <button className="export-opt" onClick={() => { closeDropdown(); fileInputRef.current?.click(); }}>
                                     <Database size={14} /> {t('header.allWorkspaces')}
                                 </button>
-                                <button className="export-opt" onClick={() => setIsCsvModalOpen(true)}>
+                                <button className="export-opt" onClick={() => { closeDropdown(); setIsCsvModalOpen(true); }}>
                                     <Table size={14} /> {t('header.importCsv')}
                                 </button>
                             </div>
                         </div>
-                        <div className="export-menu-wrapper lang-menu-wrapper">
-                            <Button className="hdr-btn lang-trigger" title={t('settings.language')}>
+                        <div className={`export-menu-wrapper lang-menu-wrapper menu-align-right ${activeDropdown === 'lang' ? 'is-open' : ''}`}>
+                            <Button 
+                                className="hdr-btn lang-trigger" 
+                                onClick={() => toggleDropdown('lang')}
+                                aria-expanded={activeDropdown === 'lang'}
+                                aria-haspopup="true"
+                                title={t('settings.language')}
+                            >
                                 <span className="hdr-lang-flag">{currentLangObj?.flag}</span>
                                 <span>{currentLang.toUpperCase()}</span>
                             </Button>
@@ -359,7 +403,7 @@ export default function Header({ openMenu, onBackupNow }) {
                                     <button 
                                         key={lang.code} 
                                         className={`export-opt lang-opt ${currentLang === lang.code ? 'active' : ''}`}
-                                        onClick={() => setLanguage(lang.code)}
+                                        onClick={() => { closeDropdown(); setLanguage(lang.code); }}
                                     >
                                         <span className="hdr-lang-opt-flag">{lang.flag}</span>
                                         <span className="hdr-lang-opt-name">{lang.nativeName}</span>
@@ -375,6 +419,27 @@ export default function Header({ openMenu, onBackupNow }) {
                 </div>
             </div>
         </header>
+
+        <input 
+            type="file" 
+            accept=".json,application/json,text/plain" 
+            ref={fileInputSingleRef} 
+            onClick={(e) => { e.target.value = null; }}
+            onChange={(e) => handleLoad(e, false)} 
+            className="hidden-file-input"
+            tabIndex={-1}
+            aria-hidden="true"
+        />
+        <input 
+            type="file" 
+            accept=".json,application/json,text/plain" 
+            ref={fileInputRef} 
+            onClick={(e) => { e.target.value = null; }}
+            onChange={(e) => handleLoad(e, true)} 
+            className="hidden-file-input"
+            tabIndex={-1}
+            aria-hidden="true"
+        />
 
         <ExportModal 
             isOpen={!!exportType} 

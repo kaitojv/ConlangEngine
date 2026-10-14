@@ -507,7 +507,7 @@ export default function SystemTab() {
                 <p>{t('settings.system.legacyDesc')}</p>
                 <div className='font-btns'>
                     <label className='fontUp-btn'>
-                        <input className='file-input-hidden' type="file" accept=".json" onClick={(e) => { e.target.value = null }} onChange={handleLegacyImport} ref={legacyInputRef} />
+                        <input className='file-input-hidden' type="file" accept=".json,application/json,text/plain" onClick={(e) => { e.target.value = null }} onChange={handleLegacyImport} ref={legacyInputRef} />
                         <h4>{t('settings.system.legacyBtn')}</h4>
                     </label>
                 </div>

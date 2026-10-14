@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
@@ -16,12 +16,14 @@ export function CsvImportModal({ isOpen, onClose }) {
     const [hasUploaded, setHasUploaded] = useState(false);
     const fileInputRef = useRef(null);
     
-    useEffect(() => {
+    const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+    if (prevIsOpen !== isOpen) {
+        setPrevIsOpen(isOpen);
         if (!isOpen) {
             setParsedEntries([]);
             setHasUploaded(false);
         }
-    }, [isOpen]);
+    }
 
     const handleFileUpload = (event) => {
         const file = event.target.files[0];
@@ -132,12 +134,15 @@ export function CsvImportModal({ isOpen, onClose }) {
                         <p style={{ color: 'var(--tx2)', textAlign: 'center' }}>{t('csvImport.uploadPrompt')}</p>
                         <input 
                             type="file" 
-                            accept=".csv" 
+                            accept=".csv,text/csv,text/plain" 
                             ref={fileInputRef} 
+                            onClick={(e) => { e.target.value = null; }}
                             onChange={handleFileUpload} 
-                            style={{ display: 'none' }}
+                            className="hidden-file-input"
+                            tabIndex={-1}
+                            aria-hidden="true"
                         />
-                        <Button variant="save" onClick={() => fileInputRef.current.click()}>
+                        <Button variant="save" onClick={() => fileInputRef.current?.click()}>
                             <UploadCloud size={20} /> {t('csvImport.selectFileBtn')}
                         </Button>
                     </div>

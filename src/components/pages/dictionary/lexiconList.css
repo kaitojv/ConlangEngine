@@ -567,6 +567,7 @@
 
 .btn-icon-only {
     padding: 8px;
+    touch-action: manipulation;
 }
 
 .entry-senses {
@@ -601,6 +602,7 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    min-width: 0;
 }
 
 .sense-actions {
@@ -620,6 +622,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    touch-action: manipulation;
 }
 
 .sense-btn:hover {
@@ -764,33 +767,137 @@
 @media (max-width: 768px) {
     .list-header {
         flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
+        align-items: stretch;
+        gap: 0.85rem;
     }
     .list-header-actions {
         width: 100%;
+        display: flex;
         flex-wrap: wrap;
+        align-items: center;
         justify-content: space-between;
+        gap: 10px;
     }
 }
 
 @media (max-width: 640px) {
-    .alpha-filter-bar {
-        padding: 0.85rem 14px 1.25rem 14px;
-        margin: 0 -14px -18px -14px;
+    /* Word Cards Grid / Matrix mode */
+    .lexicon-cards.layout-grid {
+        grid-template-columns: 1fr;
+        gap: 0.85rem;
     }
-    .filter-select {
+    .lexicon-cards.layout-grid .lexicon-entry {
+        padding: 1rem;
+    }
+    .lexicon-cards.layout-grid .entry-header {
+        align-items: flex-start;
+        text-align: left;
+    }
+    .lexicon-cards.layout-grid .entry-words {
+        justify-content: flex-start;
+    }
+    .lexicon-cards.layout-grid .entry-actions-top {
+        justify-content: flex-start;
+        margin-top: 0.65rem;
+    }
+
+    /* Word Card List Entries */
+    .lexicon-entry {
+        padding: 1rem;
+    }
+    .entry-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+    .entry-words {
         width: 100%;
+    }
+    .entry-actions-top {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        width: 100%;
+        justify-content: flex-start;
+        padding-top: 8px;
+        border-top: 1px dashed var(--bd);
+    }
+    .btn-icon-only {
+        padding: 8px 10px;
+        min-width: 36px;
+        min-height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Senses & Sense Action Buttons */
+    .lexicon-sense-row {
+        flex-direction: column;
+        gap: 8px;
+        padding: 0.85rem 0;
+    }
+    .sense-content {
+        width: 100%;
+    }
+    .sense-actions {
+        justify-content: flex-end;
+        width: 100%;
+        padding-top: 8px;
+        border-top: 1px dashed var(--bd);
+        gap: 8px;
+    }
+    .sense-btn {
+        padding: 8px 14px;
+        min-width: 38px;
+        min-height: 36px;
+    }
+
+    /* Filters, Search & Toolbar */
+    .toolbar-filters {
+        gap: 0.75rem;
     }
     .search-box {
         min-width: 0;
         width: 100%;
     }
-    .lexicon-entry {
-        padding: 1rem;
+    .filter-select {
+        width: 100%;
     }
-    .entry-header {
-        flex-wrap: wrap;
+    .bound-toggle {
+        padding: 4px 0;
+        font-size: 0.85rem;
+    }
+
+    /* Alpha Filter Bar */
+    .alpha-filter-bar {
+        padding: 0.75rem 12px 1rem 12px;
+        margin: 0 -14px -18px -14px;
+    }
+    .alpha-filter-buttons {
+        gap: 0.3rem;
+    }
+    .alpha-btn {
+        min-width: 1.85rem;
+        min-height: 1.85rem;
+        padding: 0.25rem 0.45rem;
+        font-size: 0.8rem;
+    }
+
+    /* List Header & Buttons */
+    .list-header {
+        margin: 1.25rem 0 0.75rem 0;
+        padding: 0;
+    }
+    .list-header-actions {
+        gap: 8px;
+    }
+    .list-total {
+        padding: 0.35rem 0.75rem;
+        font-size: 0.7rem;
+    }
+    .layout-toggle-btn {
+        padding: 8px 12px;
     }
 }
 
