@@ -19,6 +19,7 @@ import { saveSyncBase } from '@/utils/syncBaseStore.js';
 import { useSharing } from '@/hooks/useSharing.jsx';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
 import PayPalButton from '@/components/Payment/PayPalButton.jsx';
+import { broadcastAutoSyncToggle } from '@/utils/realtimeSync.js';
 
 
 const BADGES = [
@@ -650,6 +651,20 @@ export default function ProfileTab() {
                                         if (session?.user?.id) {
                                             try {
                                                 await supabase.from('profiles').update({ live_auto_sync: nextVal }).eq('id', session.user.id);
+                                                if (nextVal) {
+                                                    // Immediately push latest state so cloud is guaranteed fresh
+                                                    await handlePushToCloud(false);
+                                                }
+                                                await broadcastAutoSyncToggle({
+                                                    userId: session.user.id,
+                                                    enabled: nextVal,
+                                                    activeProjectId: projectId
+                                                });
+                                                if (nextVal) {
+                                                    toast.success(t('sync.status.autoLiveOn') || "Live Auto-Sync Active across devices");
+                                                } else {
+                                                    toast.success(t('sync.status.autoLiveOff') || "Auto-Sync Paused");
+                                                }
                                             } catch (e) {
                                                 console.warn("Could not sync live_auto_sync to profile:", e);
                                             }

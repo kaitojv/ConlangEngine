@@ -1,7 +1,8 @@
 // src/hooks/useAutoSync.jsx
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
+import { useProjectStore } from '@/store/useProjectStore.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
 import { getDeviceId } from '@/utils/deviceIdentity.js';
 import {
@@ -11,19 +12,30 @@ import {
     pushProjectState
 } from '@/utils/syncEngine.js';
 import { MERGE_MODES } from '@/utils/syncMerge.js';
+import {
+    getAccountChannel,
+    fetchLatestCloudProject,
+    broadcastProjectUpdate
+} from '@/utils/realtimeSync.js';
 
 const LAST_VERSION_SAVE_KEY = 'ce_last_version_save_ts';
 const VERSION_CHECKPOINT_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 
 /**
- * useAutoSync — handles debounced cloud synchronization, Supabase Realtime
- * cross-device sync pings, presence tracking, and profile setting propagation.
+ * useAutoSync — handles real-time cross-device synchronization between PC, Mobile, and Tablet.
+ * Features:
+ *  - Debounced auto-push for local changes.
+ *  - Supabase Realtime WebSockets broadcast for instant (<100ms) peer-to-peer updates.
+ *  - Account-level broadcast channel so mobile automatically switches to active cloud conlangs.
+ *  - Background sleep / tab-switch wakeup (visibilitychange & focus).
+ *  - Periodic liveness heartbeat fallback.
  */
 export function useAutoSync() {
     const lastSyncStateRef = useRef(null);
     const timeoutRef = useRef(null);
     const isFirstRun = useRef(true);
     const isSyncing = useRef(false);
+    const [activeSession, setActiveSession] = useState(null);
 
     // Compute a clean fingerprint of local data to detect changes
     const computeFingerprint = useCallback(() => {
@@ -41,8 +53,6 @@ export function useAutoSync() {
             Object.entries(config).filter(([k]) => !volatileKeys.has(k))
         );
 
-        // Lightweight summaries so glyph additions/updates trigger auto-sync
-        // without stringifying multi-megabyte base64 fonts.
         const scriptDataSummary = Object.entries(config.scriptDataById || {}).map(([sId, sData]) => ({
             id: sId,
             glyphsCount: Object.keys(sData?.customGlyphs || {}).length,
@@ -107,12 +117,10 @@ export function useAutoSync() {
                 });
 
                 if (mergeRes.conflicts.length > 0) {
-                    // Conflicting simultaneous edits: pause auto-push and prompt review
                     config.updateConfig({ syncConflictStatus: 'conflict' });
                     return false;
                 }
 
-                // Clean merge: apply combined state locally and push back to cloud
                 await applyMergedStateLocally(currentProjectId, mergeRes.merged);
                 localState.lexicon = mergeRes.merged.lexicon;
                 localState.phrases = mergeRes.merged.phrases;
@@ -120,7 +128,6 @@ export function useAutoSync() {
                 localState.wiki = mergeRes.merged.wiki;
             }
 
-            // Determine if we should record a version history checkpoint (at most every 30 mins)
             let shouldSaveVersion = false;
             try {
                 const lastSave = parseInt(localStorage.getItem(LAST_VERSION_SAVE_KEY) || '0', 10);
@@ -147,7 +154,7 @@ export function useAutoSync() {
         }
     }, []);
 
-    // Debounced trigger
+    // Debounced trigger for local edits
     const triggerAutoSync = useCallback(() => {
         const config = useConfigStore.getState();
 
@@ -166,7 +173,7 @@ export function useAutoSync() {
             clearTimeout(timeoutRef.current);
         }
 
-        // Live mode uses fast 1.5s debounce; standard auto-sync uses 5s
+        // Live mode uses 1.5s debounce; standard auto-sync uses 5s
         const debounceMs = config.isProActive ? 1500 : 5000;
 
         timeoutRef.current = setTimeout(async () => {
@@ -196,105 +203,248 @@ export function useAutoSync() {
         };
     }, [triggerAutoSync]);
 
-    // 2. Realtime listener: cross-device live updates and presence
+    // 2. Track authentication session
     useEffect(() => {
-        let channel = null;
-        let profileChannel = null;
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setActiveSession(session);
+        });
 
-        const setupRealtime = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) return;
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setActiveSession(session);
+        });
 
-            const config = useConfigStore.getState();
-            const projectId = config.projectId;
-            if (!projectId || projectId.startsWith('local_')) return;
+        return () => subscription.unsubscribe();
+    }, []);
 
-            const myDeviceId = getDeviceId();
+    // Helper: Pull and apply or merge remote project state
+    const syncRemoteProject = useCallback(async (projectId, forceSwitch = false) => {
+        if (!projectId || projectId.startsWith('local_')) return;
+        if (isSyncing.current) return;
 
-            // Project Realtime channel (changes & presence)
-            channel = supabase.channel(`live_project_${projectId}`, {
+        const curConfig = useConfigStore.getState();
+
+        try {
+            const remote = await pullRemoteProject(projectId);
+            if (!remote) return;
+
+            const isDifferentProject = curConfig.projectId !== projectId;
+            const localTime = curConfig.lastCloudSync ? new Date(curConfig.lastCloudSync).getTime() : 0;
+
+            if (forceSwitch || isDifferentProject) {
+                // Device switched or had only a local scratchpad: load cloud project
+                await applyMergedStateLocally(projectId, remote.remoteState);
+                try {
+                    useProjectStore.getState().saveProjectToArchive(
+                        { ...remote.remoteState.config, projectId },
+                        remote.remoteState.lexicon,
+                        remote.remoteState.phrases
+                    );
+                } catch (e) {
+                    // Ignore local storage error
+                }
+                return;
+            }
+
+            if (remote.remoteTimestamp > localTime + 2000) {
+                const localState = {
+                    config: curConfig,
+                    lexicon: useLexiconStore.getState().lexicon || [],
+                    phrases: useLexiconStore.getState().phrases || [],
+                    wiki: curConfig.wikiPages || {}
+                };
+
+                const mergeRes = await performProjectMerge({
+                    projectId,
+                    localState,
+                    remoteState: remote.remoteState,
+                    mode: curConfig.isAutoSyncEnabled ? MERGE_MODES.AUTO : MERGE_MODES.REVIEW,
+                    decisions: {}
+                });
+
+                if (mergeRes.conflicts.length === 0) {
+                    await applyMergedStateLocally(projectId, mergeRes.merged);
+                    try {
+                        useProjectStore.getState().saveProjectToArchive(
+                            { ...mergeRes.merged.config, projectId },
+                            mergeRes.merged.lexicon,
+                            mergeRes.merged.phrases
+                        );
+                    } catch (e) {
+                        // Ignore local storage error
+                    }
+                } else {
+                    curConfig.updateConfig({ syncConflictStatus: 'conflict' });
+                }
+            }
+        } catch (e) {
+            console.warn("syncRemoteProject error:", e);
+        }
+    }, []);
+
+    // Helper: Discover and load the user's latest active conlang from the cloud
+    const checkAndSyncLatestProject = useCallback(async (userId) => {
+        if (!userId) return;
+        const curConfig = useConfigStore.getState();
+        if (!curConfig.isAutoSyncEnabled) return;
+
+        try {
+            const latest = await fetchLatestCloudProject(userId);
+            if (!latest) return;
+
+            const isLocalOnly = !curConfig.projectId || curConfig.projectId.startsWith('local_');
+            const isDifferentProject = curConfig.projectId !== latest.projectId;
+            const localTime = curConfig.lastCloudSync ? new Date(curConfig.lastCloudSync).getTime() : 0;
+
+            if (isLocalOnly || isDifferentProject) {
+                await syncRemoteProject(latest.projectId, true);
+            } else if (latest.updatedAt > localTime + 2000) {
+                await syncRemoteProject(latest.projectId, false);
+            }
+        } catch (e) {
+            console.warn("checkAndSyncLatestProject error:", e);
+        }
+    }, [syncRemoteProject]);
+
+    // 3. Initial sync check & profile check when session changes or mounts
+    useEffect(() => {
+        if (!activeSession) return;
+
+        const checkProfileAndSync = async () => {
+            try {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('live_auto_sync, is_pro, live_until')
+                    .eq('id', activeSession.user.id)
+                    .maybeSingle();
+
+                if (profile && profile.live_auto_sync !== undefined && profile.live_auto_sync !== null) {
+                    useConfigStore.setState({ isAutoSyncEnabled: Boolean(profile.live_auto_sync) });
+                }
+
+                // If Auto Sync is active, pull latest project from cloud immediately
+                const isAuto = profile ? Boolean(profile.live_auto_sync) : useConfigStore.getState().isAutoSyncEnabled;
+                if (isAuto) {
+                    await checkAndSyncLatestProject(activeSession.user.id);
+                }
+            } catch (err) {
+                console.warn("Profile sync check error:", err);
+            }
+        };
+
+        checkProfileAndSync();
+    }, [activeSession, checkAndSyncLatestProject]);
+
+    // 4. Realtime channels: Account-level and Project-level subscriptions
+    useEffect(() => {
+        if (!activeSession) return;
+
+        const userId = activeSession.user.id;
+        const myDeviceId = getDeviceId();
+        const accountChannel = getAccountChannel(userId);
+
+        if (!accountChannel) return;
+
+        // Account channel broadcast listeners
+        accountChannel
+            .on('broadcast', { event: 'project_updated' }, (msg) => {
+                const payload = msg?.payload;
+                if (!payload || payload.deviceId === myDeviceId) return;
+
+                const curConfig = useConfigStore.getState();
+                if (!curConfig.isAutoSyncEnabled) return;
+
+                syncRemoteProject(payload.projectId, payload.projectId !== curConfig.projectId);
+            })
+            .on('broadcast', { event: 'toggle_auto_sync' }, (msg) => {
+                const payload = msg?.payload;
+                if (!payload || payload.deviceId === myDeviceId) return;
+
+                const enabled = Boolean(payload.enabled);
+                useConfigStore.setState({ isAutoSyncEnabled: enabled });
+
+                if (enabled && payload.activeProjectId) {
+                    syncRemoteProject(payload.activeProjectId, true);
+                }
+            });
+
+        // Project channel for presence & postgres_changes
+        let projectChannel = null;
+        const curProjectId = useConfigStore.getState().projectId;
+
+        if (curProjectId && !curProjectId.startsWith('local_')) {
+            projectChannel = supabase.channel(`live_project_${curProjectId}`, {
                 config: {
                     presence: { key: myDeviceId }
                 }
             });
 
-            channel
+            projectChannel
                 .on('postgres_changes', {
                     event: '*',
                     schema: 'public',
                     table: 'conlang_snapshots',
-                    filter: `project_id=eq.${projectId}`
-                }, async () => {
-                    // Remote update occurred
-                    if (isSyncing.current) return;
+                    filter: `project_id=eq.${curProjectId}`
+                }, () => {
                     const curConfig = useConfigStore.getState();
                     if (!curConfig.isAutoSyncEnabled) return;
-
-                    try {
-                        const remote = await pullRemoteProject(projectId);
-                        if (!remote) return;
-
-                        const localTime = curConfig.lastCloudSync ? new Date(curConfig.lastCloudSync).getTime() : 0;
-                        if (remote.remoteTimestamp > localTime + 2000) {
-                            const localState = {
-                                config: curConfig,
-                                lexicon: useLexiconStore.getState().lexicon || [],
-                                phrases: useLexiconStore.getState().phrases || [],
-                                wiki: curConfig.wikiPages || {}
-                            };
-
-                            const mergeRes = await performProjectMerge({
-                                projectId,
-                                localState,
-                                remoteState: remote.remoteState,
-                                mode: curConfig.isAutoSyncEnabled ? MERGE_MODES.AUTO : MERGE_MODES.REVIEW,
-                                decisions: {}
-                            });
-
-                            if (mergeRes.conflicts.length === 0) {
-                                await applyMergedStateLocally(projectId, mergeRes.merged);
-                            } else {
-                                curConfig.updateConfig({ syncConflictStatus: 'conflict' });
-                            }
-                        }
-                    } catch (e) {
-                        console.warn("Realtime sync handler error:", e);
-                    }
+                    syncRemoteProject(curProjectId, false);
                 })
                 .on('presence', { event: 'sync' }, () => {
-                    const state = channel.presenceState();
+                    const state = projectChannel.presenceState();
                     const activeCount = Object.keys(state).length || 1;
                     useConfigStore.setState({ devicesOnlineCount: activeCount });
                 })
                 .subscribe(async (status) => {
                     if (status === 'SUBSCRIBED') {
-                        await channel.track({
+                        await projectChannel.track({
                             onlineAt: new Date().toISOString(),
                             deviceId: myDeviceId
                         });
                     }
                 });
-
-            // Account-level profiles Realtime channel (propagates live_auto_sync toggle across devices)
-            profileChannel = supabase.channel(`live_profile_${session.user.id}`)
-                .on('postgres_changes', {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'profiles',
-                    filter: `id=eq.${session.user.id}`
-                }, (payload) => {
-                    if (payload.new && payload.new.live_auto_sync !== undefined && payload.new.live_auto_sync !== null) {
-                        useConfigStore.setState({ isAutoSyncEnabled: Boolean(payload.new.live_auto_sync) });
-                    }
-                })
-                .subscribe();
-        };
-
-        setupRealtime();
+        }
 
         return () => {
-            if (channel) supabase.removeChannel(channel);
-            if (profileChannel) supabase.removeChannel(profileChannel);
+            if (projectChannel) {
+                supabase.removeChannel(projectChannel);
+            }
         };
-    }, [pushToCloud]);
+    }, [activeSession, syncRemoteProject]);
+
+    // 5. Mobile tab wakeup / sleep recovery & window focus
+    useEffect(() => {
+        if (!activeSession) return;
+
+        const handleWakeup = () => {
+            if (document.visibilityState === 'visible') {
+                checkAndSyncLatestProject(activeSession.user.id);
+            }
+        };
+
+        const handleFocus = () => {
+            checkAndSyncLatestProject(activeSession.user.id);
+        };
+
+        document.addEventListener('visibilitychange', handleWakeup);
+        window.addEventListener('focus', handleFocus);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleWakeup);
+            window.removeEventListener('focus', handleFocus);
+        };
+    }, [activeSession, checkAndSyncLatestProject]);
+
+    // 6. Periodic liveness heartbeat (every 12 seconds when auto-sync is active)
+    useEffect(() => {
+        if (!activeSession) return;
+
+        const interval = setInterval(() => {
+            const curConfig = useConfigStore.getState();
+            if (curConfig.isAutoSyncEnabled && document.visibilityState === 'visible') {
+                checkAndSyncLatestProject(activeSession.user.id);
+            }
+        }, 12000);
+
+        return () => clearInterval(interval);
+    }, [activeSession, checkAndSyncLatestProject]);
 }

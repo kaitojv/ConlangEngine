@@ -86,9 +86,9 @@ export default function SyncConflictManager() {
 
                 setRemotePackage(remote);
 
-                // If Live Auto Sync is enabled and there are no conflicting simultaneous edits,
+                // If Live Auto Sync is enabled and there are no direct conflicting edits,
                 // apply cleanly without interrupting user
-                if (isAutoSyncEnabled && initialMerge.conflicts.length === 0 && initialMerge.similar.length === 0) {
+                if (isAutoSyncEnabled && initialMerge.conflicts.length === 0) {
                     await applyMergedStateLocally(projectId, initialMerge.merged);
                     if (initialMerge.remoteChanged) {
                         await pushProjectState(session, projectId, initialMerge.merged, { skipVersions: true });
@@ -98,7 +98,7 @@ export default function SyncConflictManager() {
                     return;
                 }
 
-                // If review is needed or conflicts exist, prompt user
+                // If review is needed (auto-sync is off) or direct conflicts exist, prompt user
                 updateConfig({ syncConflictStatus: 'conflict' });
                 setIsReviewOpen(true);
             }
@@ -107,12 +107,21 @@ export default function SyncConflictManager() {
         }
     }, [session, projectId, lastCloudSync, isAutoSyncEnabled, updateConfig, t]);
 
-    // Check on mount and window focus
+    // Check on mount, window focus, and tab wakeup (visibilitychange)
     useEffect(() => {
         checkForUpdates();
         const handleFocus = () => checkForUpdates();
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') checkForUpdates();
+        };
+
         window.addEventListener('focus', handleFocus);
-        return () => window.removeEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleVisibility);
+
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleVisibility);
+        };
     }, [checkForUpdates]);
 
     // Compute live merge based on current decisions

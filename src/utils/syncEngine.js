@@ -17,6 +17,7 @@ import { mergeProject, MERGE_MODES } from './syncMerge.js';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import LZString from 'lz-string';
+import { broadcastProjectUpdate } from './realtimeSync.js';
 
 /**
  * Builds a compressed cloud-ready payload from current project state.
@@ -183,11 +184,14 @@ export async function pushProjectState(session, projectId, state, options = {}) 
         }
     }
 
+    const nowIso = new Date().toISOString();
+
     // 1. Snapshot table (for sharing & base sync)
     const { error: snapErr } = await supabase.from('conlang_snapshots').upsert({
         user_id: activeSession?.user?.id || null,
         project_id: projectId,
-        project_data: finalPayload
+        project_data: finalPayload,
+        updated_at: nowIso
     }, { onConflict: 'project_id' });
 
     if (snapErr) throw snapErr;
@@ -197,7 +201,8 @@ export async function pushProjectState(session, projectId, state, options = {}) 
         const { error: conlangErr } = await supabase.from('conlangs').upsert({
             user_id: activeSession.user.id,
             project_id: projectId,
-            project_data: finalPayload
+            project_data: finalPayload,
+            updated_at: nowIso
         }, { onConflict: 'project_id' });
 
         if (conlangErr) console.warn("Could not upsert to conlangs table:", conlangErr);
@@ -215,6 +220,13 @@ export async function pushProjectState(session, projectId, state, options = {}) 
                 console.warn("Could not save version checkpoint:", vErr);
             }
         }
+
+        // 4. Instant peer-to-peer broadcast to all devices on this account
+        broadcastProjectUpdate({
+            userId: activeSession.user.id,
+            projectId,
+            remoteTimestamp: Date.now()
+        }).catch(() => {});
     }
 
     // Save as local sync base now that cloud has confirmed receipt
@@ -226,7 +238,7 @@ export async function pushProjectState(session, projectId, state, options = {}) 
     });
 
     useConfigStore.getState().updateConfig({
-        lastCloudSync: new Date().toISOString(),
+        lastCloudSync: nowIso,
         syncConflictStatus: 'resolved'
     });
 
