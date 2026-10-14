@@ -656,32 +656,39 @@ export const useConfigStore = create(
                 const nextCustomGlyphs = { ...state.customGlyphs };
                 codesSet.forEach(code => delete nextCustomGlyphs[code]);
 
+                // Strip the codes from every script's glyph map, tracking which scripts changed
+                const nextScriptDataById = { ...(scriptDataById || {}) };
+                const changedScriptIds = new Set();
+                Object.keys(nextScriptDataById).forEach(sId => {
+                    if (nextScriptDataById[sId]?.customGlyphs) {
+                        const sg = { ...nextScriptDataById[sId].customGlyphs };
+                        let changed = false;
+                        codesSet.forEach(code => {
+                            if (sg[code] !== undefined) {
+                                delete sg[code];
+                                changed = true;
+                            }
+                        });
+                        if (changed) {
+                            nextScriptDataById[sId] = { ...nextScriptDataById[sId], customGlyphs: sg };
+                            changedScriptIds.add(sId);
+                        }
+                    }
+                });
+
                 if (projectId) {
                     saveLargeDataToDB(projectId, { customGlyphs: nextCustomGlyphs });
-                    const scriptData = scriptDataById[defaultScriptId] || {};
-                    const nextScriptGlyphs = { ...(scriptData.customGlyphs || {}) };
-                    codesSet.forEach(code => delete nextScriptGlyphs[code]);
-                    saveScriptDataToDB(projectId, defaultScriptId, { ...scriptData, customGlyphs: nextScriptGlyphs });
+                    // Persist every script that changed (previously only the default script was saved,
+                    // so orphans in other scripts came back after a reload).
+                    changedScriptIds.add(defaultScriptId);
+                    changedScriptIds.forEach(sId => {
+                        if (nextScriptDataById[sId]) {
+                            saveScriptDataToDB(projectId, sId, nextScriptDataById[sId]);
+                        }
+                    });
                 }
 
                 set((state) => {
-                    const nextScriptDataById = { ...state.scriptDataById };
-                    Object.keys(nextScriptDataById).forEach(sId => {
-                        if (nextScriptDataById[sId]?.customGlyphs) {
-                            const sg = { ...nextScriptDataById[sId].customGlyphs };
-                            let changed = false;
-                            codesSet.forEach(code => {
-                                if (sg[code] !== undefined) {
-                                    delete sg[code];
-                                    changed = true;
-                                }
-                            });
-                            if (changed) {
-                                nextScriptDataById[sId] = { ...nextScriptDataById[sId], customGlyphs: sg };
-                            }
-                        }
-                    });
-
                     return {
                         customGlyphs: nextCustomGlyphs,
                         scriptDataById: nextScriptDataById,

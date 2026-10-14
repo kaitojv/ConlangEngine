@@ -436,6 +436,12 @@ export default function TypographyStudio() {
             removeAction(keysToRemove);
         }
         await handleRecompileFont();
+        // Push immediately so a later cloud pull doesn't resurrect the removed glyphs
+        try {
+            await pushProjectToCloud(null, false, `Removed ${keysToRemove.length} unused glyph(s)`);
+        } catch (err) {
+            console.error('Cloud sync after glyph cleanup failed:', err);
+        }
     };
 
     const handleAutoMap = () => {
