@@ -14,7 +14,7 @@ import { transliterateText } from './transliteration.js';
  * @param {Array} lexicon - Full lexicon array (for logographic/syllabic lookups).
  * @returns {Object} { text, scriptId, scriptName, scriptType, writingDirection, fontFamily, usedDirectForm }
  */
-export function renderWordInScript(entry, config, lexicon = []) {
+export function renderWordInScript(entry, config, lexicon = [], scriptIdOverride = null) {
     if (!entry) {
         return {
             text: '',
@@ -27,7 +27,7 @@ export function renderWordInScript(entry, config, lexicon = []) {
         };
     }
 
-    const scriptId = resolveWordScriptId(entry, config);
+    const scriptId = scriptIdOverride || resolveWordScriptId(entry, config);
     const script = getScriptSystem(config, scriptId);
     const scriptConfig = buildScriptConfig(config, scriptId);
 
@@ -38,7 +38,8 @@ export function renderWordInScript(entry, config, lexicon = []) {
 
     const directForm = entry.scriptForms?.[scriptId]
         || (isLogographic ? entry.ideogram : '')
-        || (entry.ideogram && !entry.scriptOverride ? entry.ideogram : '');
+        || (entry.ideogram && !entry.scriptOverride && !scriptIdOverride ? entry.ideogram : '')
+        || (entry.ideogram && scriptId === entry.scriptOverride ? entry.ideogram : '');
 
     const text = directForm || transliterateText(entry.word, scriptConfig, lexicon);
 

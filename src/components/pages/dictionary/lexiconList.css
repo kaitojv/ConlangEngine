@@ -55,7 +55,17 @@
 }
 
 .filter-select {
-    width: 160px; /* Specific width for the toolbar dropdowns */
+    min-width: 140px;
+    width: auto;
+    max-width: 100%;
+}
+
+.sort-select {
+    min-width: 175px;
+}
+
+.script-switcher-select {
+    min-width: 220px;
 }
 
 .alpha-filter-bar {

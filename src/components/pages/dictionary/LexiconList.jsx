@@ -350,23 +350,44 @@ export default function LexiconList() {
 
         if (filters.search && filters.search.trim() !== '') {
             result.sort((a, b) => b.searchScore - a.searchScore);
-        } else if (filters.sort === 'newest') result.sort((a, b) => b.createdAt - a.createdAt);
-        else if (filters.sort === 'oldest') result.sort((a, b) => a.createdAt - b.createdAt);
-        else if (filters.sort === 'az' || filters.sort === 'za') {
+        } else if (filters.sort === 'newest' || filters.sort === 'oldest') {
+            const getTimestamp = (entry) => {
+                if (typeof entry.createdAt === 'number' && !isNaN(entry.createdAt)) return entry.createdAt;
+                if (entry.createdAt) {
+                    const parsed = new Date(entry.createdAt).getTime();
+                    if (!isNaN(parsed)) return parsed;
+                }
+                if (typeof entry.id === 'number' && !isNaN(entry.id)) return entry.id;
+                return 0;
+            };
+            result.sort((a, b) => {
+                const diff = filters.sort === 'newest'
+                    ? getTimestamp(b) - getTimestamp(a)
+                    : getTimestamp(a) - getTimestamp(b);
+                if (diff !== 0) return diff;
+                return filters.sort === 'newest'
+                    ? String(b.id || '').localeCompare(String(a.id || ''))
+                    : String(a.id || '').localeCompare(String(b.id || ''));
+            });
+        } else if (filters.sort === 'az' || filters.sort === 'za') {
             const collator = createCustomAlphabetCollator(customAlphabet);
             if (collator) {
                 result.sort((a, b) => {
-                    const strA = a.word.replace(/\*/g, '').toLowerCase();
-                    const strB = b.word.replace(/\*/g, '').toLowerCase();
+                    const strA = (a.word || '').replace(/[*-]/g, '').trim().toLowerCase();
+                    const strB = (b.word || '').replace(/[*-]/g, '').trim().toLowerCase();
                     const cmp = collator(strA, strB);
-                    return filters.sort === 'az' ? cmp : -cmp;
+                    if (cmp !== 0) return filters.sort === 'az' ? cmp : -cmp;
+                    const fallback = strA.localeCompare(strB, undefined, { sensitivity: 'base' });
+                    return filters.sort === 'az' ? fallback : -fallback;
                 });
             } else {
                 result.sort((a, b) => {
-                    const strA = a.word.replace(/\*/g, '');
-                    const strB = b.word.replace(/\*/g, '');
-                    const cmp = strA.localeCompare(strB);
-                    return filters.sort === 'az' ? cmp : -cmp;
+                    const strA = (a.word || '').replace(/[*-]/g, '').trim();
+                    const strB = (b.word || '').replace(/[*-]/g, '').trim();
+                    const cmp = strA.localeCompare(strB, undefined, { sensitivity: 'base' });
+                    if (cmp !== 0) return filters.sort === 'az' ? cmp : -cmp;
+                    const caseCmp = strA.localeCompare(strB);
+                    return filters.sort === 'az' ? caseCmp : -caseCmp;
                 });
             }
         }
@@ -552,9 +573,11 @@ export default function LexiconList() {
                     </select>
 
                     <select 
-                        className="filter-select"
+                        className="filter-select sort-select"
                         value={filters.sort}
                         onChange={(e) => updateFilter('sort', e.target.value)}
+                        title={t('lexicon.sortTooltip')}
+                        aria-label={t('lexicon.sortTooltip')}
                     >
                         <option value="newest">{t('lexicon.sortNewest')}</option>
                         <option value="oldest">{t('lexicon.sortOldest')}</option>
@@ -580,7 +603,8 @@ export default function LexiconList() {
                             className="filter-select script-switcher-select"
                             value={activeDisplayScript}
                             onChange={(e) => setActiveDisplayScript(e.target.value)}
-                            title="Switch active script display in dictionary"
+                            title={t('lexicon.scriptSwitcherTooltip')}
+                            aria-label={t('lexicon.scriptSwitcherTooltip')}
                         >
                             <option value="auto">{t('lexicon.scriptAuto')}</option>
                             <option value="latin">{t('lexicon.scriptLatin')}</option>
@@ -816,7 +840,7 @@ export default function LexiconList() {
                     if (isLatinSelected) {
                         displayWord = safeWord;
                     } else if (activeDisplayScript && activeDisplayScript !== 'auto') {
-                        displayWord = renderWordStringInScript(safeWord, configFull, activeDisplayScript).text || safeWord;
+                        displayWord = renderWordInScript(baseEntry, configFull, lexicon, activeDisplayScript).text || safeWord;
                     } else if (baseEntry.scriptOverride) {
                         displayWord = renderWordInScript(baseEntry, configFull, lexicon).text;
                     } else if (baseEntry.ideogram) {
@@ -893,7 +917,7 @@ export default function LexiconList() {
                                     )}
 
                                     {/* Compact bracket form — shown when toggle is off */}
-                                    {(!['alphabetic', 'abjad', 'abugida'].includes(phonologyTypes || 'alphabetic')) && !showRomanization && (
+                                    {(!['alphabetic', 'abjad', 'abugida'].includes(phonologyTypes || 'alphabetic')) && !showRomanization && !isLatinSelected && (
                                         <span className="notranslate entry-base-word">
                                             [{safeWord}]
                                         </span>
