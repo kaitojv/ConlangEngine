@@ -17,6 +17,7 @@ import { Info, User } from 'lucide-react';
 import { supabase } from '../../../utils/supabaseClient.js';
 import toast from 'react-hot-toast';
 import { useSharing } from '../../../hooks/useSharing.jsx';
+import { containsCustomGlyph } from '../../../utils/scriptResolver.js';
 
 export default function SystemTab() {
 
@@ -32,6 +33,8 @@ export default function SystemTab() {
     const setFullConfig = useConfigStore((state) => state.setFullConfig);
     const updateConfig = useConfigStore((state) => state.updateConfig);
     const customLabels = useConfigStore((state) => state.customLabels) || {};
+    const customGlyphs = useConfigStore((state) => state.customGlyphs) || {};
+    const scriptDataById = useConfigStore((state) => state.scriptDataById) || {};
     const setLexicon = useLexiconStore((state) => state.setLexicon);
     const fileInputRef = useRef(null);
     const legacyInputRef = useRef(null);
@@ -695,6 +698,7 @@ export default function SystemTab() {
                     
                     <Input 
                         label={t('settings.appTitle')}
+                        className={containsCustomGlyph(customLabels.appTitle, customGlyphs, scriptDataById) ? "custom-font-text notranslate" : ""}
                         placeholder="ConlangEngine" 
                         value={customLabels.appTitle || ''}
                         onChange={(e) => updateConfig({ customLabels: { ...(useConfigStore.getState().customLabels || {}), appTitle: e.target.value } })}
@@ -705,16 +709,20 @@ export default function SystemTab() {
                         "Home", "Conlangs", "Settings", "Create Word", "Semantic Explorer",
                         "Generator", "Orthography & Numbers", "Analyzer", "Root Map", 
                         "Sentence Mapper", "Reader", "Library & Writing", "Study & Flashcards", "Help & Info"
-                    ].map(label => (
-                        <Input 
-                            key={label}
-                            label={label}
-                            className="custom-font-text notranslate"
-                            placeholder={label} 
-                            value={customLabels[label] || ''}
-                            onChange={(e) => updateConfig({ customLabels: { ...(useConfigStore.getState().customLabels || {}), [label]: e.target.value } })}
-                        />
-                    ))}
+                    ].map(label => {
+                        const val = customLabels[label] || '';
+                        const hasCustom = containsCustomGlyph(val, customGlyphs, scriptDataById);
+                        return (
+                            <Input 
+                                key={label}
+                                label={label}
+                                className={hasCustom ? "custom-font-text notranslate" : ""}
+                                placeholder={label} 
+                                value={val}
+                                onChange={(e) => updateConfig({ customLabels: { ...(useConfigStore.getState().customLabels || {}), [label]: e.target.value } })}
+                            />
+                        );
+                    })}
                 </div>
             </Card>
 

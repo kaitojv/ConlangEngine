@@ -9,6 +9,7 @@ import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
 import { DARK_THEMES, LIGHT_THEMES } from '@/utils/themePresets.js';
+import { containsCustomGlyph } from '@/utils/scriptResolver.js';
 import './navbar.css';
 
 // We define the navigation structure outside the component so it isn't recreated on every single render.
@@ -68,6 +69,8 @@ export default function NavBar({ isMenuOpen, closeMenu }) {
     const isProActive = useConfigStore(state => state.isProActive);
     const theme = useConfigStore(state => state.theme);
     const customLabels = useConfigStore(state => state.customLabels) || {};
+    const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
+    const scriptDataById = useConfigStore(state => state.scriptDataById) || {};
     const updateConfig = useConfigStore(state => state.updateConfig);
     const [session, setSession] = useState(null);
 
@@ -119,41 +122,47 @@ export default function NavBar({ isMenuOpen, closeMenu }) {
                 </header>
 
                 <div className="navbar">
-                    {NAV_GROUPS.map((group) => (
-                        <section key={group.key} className="nav-group">
-                            <h4 className="nav-group-label">
-                                {customLabels[group.fallbackTitle] || t(`nav.${group.key}`)}
-                            </h4>
-                            
-                            {group.items.map((item) => {
-                                const { id, key, label, requiresLive } = item;
-                                const Icon = item.Icon;
-                                // If this tab requires a LIVE subscription and the user doesn't have it, show a locked version
-                                const displayLabel = customLabels[label] || t(`nav.${key}`);
+                    {NAV_GROUPS.map((group) => {
+                        const groupTitle = customLabels[group.fallbackTitle] || t(`nav.${group.key}`);
+                        const isGroupCustom = containsCustomGlyph(groupTitle, customGlyphs, scriptDataById);
+                        return (
+                            <section key={group.key} className="nav-group">
+                                <h4 className={`nav-group-label ${isGroupCustom ? 'custom-font-text notranslate' : ''}`.trim()}>
+                                    {groupTitle}
+                                </h4>
                                 
-                                if (requiresLive && !isLive) {
-                                    return (
-                                        <div key={id} className="nb locked" title={t('nav.lockedWorkspaces')}>
-                                            <Lock className="nav-icon" size={18} />
-                                            <span className="nav-label">{displayLabel}</span>
-                                        </div>
-                                    );
-                                }
+                                {group.items.map((item) => {
+                                    const { id, key, label, requiresLive } = item;
+                                    const Icon = item.Icon;
+                                    // If this tab requires a LIVE subscription and the user doesn't have it, show a locked version
+                                    const displayLabel = customLabels[label] || t(`nav.${key}`);
+                                    const isLabelCustom = containsCustomGlyph(displayLabel, customGlyphs, scriptDataById);
+                                    const customClass = isLabelCustom ? 'custom-font-text notranslate' : '';
+                                    
+                                    if (requiresLive && !isLive) {
+                                        return (
+                                            <div key={id} className="nb locked" title={t('nav.lockedWorkspaces')}>
+                                                <Lock className="nav-icon" size={18} />
+                                                <span className={`nav-label ${customClass}`.trim()}>{displayLabel}</span>
+                                            </div>
+                                        );
+                                    }
 
-                                return (
-                                    <NavLink 
-                                        key={id} 
-                                        to={id}
-                                        className={({isActive}) => `nb ${isActive ? 'on' : ''}`} 
-                                        onClick={closeMenu} 
-                                    >
-                                        <Icon className="nav-icon" size={18} />
-                                        <span className="nav-label">{displayLabel}</span>
-                                    </NavLink>
-                                );
-                            })}
-                        </section>
-                    ))}
+                                    return (
+                                        <NavLink 
+                                            key={id} 
+                                            to={id}
+                                            className={({isActive}) => `nb ${isActive ? 'on' : ''}`} 
+                                            onClick={closeMenu} 
+                                        >
+                                            <Icon className="nav-icon" size={18} />
+                                            <span className={`nav-label ${customClass}`.trim()}>{displayLabel}</span>
+                                        </NavLink>
+                                    );
+                                })}
+                            </section>
+                        );
+                    })}
                 </div>
             </nav>
         </>

@@ -28,6 +28,7 @@ import BackupStatus from '../BackupStatus/BackupStatus.jsx';
 import { sanitizeBackup } from '../../../utils/schemaValidator.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { renderWordInScript } from '../../../utils/scriptRendering.js';
+import { containsCustomGlyph } from '../../../utils/scriptResolver.js';
 
 export default function Header({ openMenu, onBackupNow }) {
     const navigate = useNavigate();
@@ -271,6 +272,10 @@ export default function Header({ openMenu, onBackupNow }) {
     };
 
     const customLabels = useConfigStore(state => state.customLabels) || {};
+    const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
+    const scriptDataById = useConfigStore(state => state.scriptDataById) || {};
+    const appTitleText = customLabels.appTitle || "ConlangEngine";
+    const isAppTitleCustom = containsCustomGlyph(appTitleText, customGlyphs, scriptDataById);
 
     return (
         <>
@@ -281,7 +286,7 @@ export default function Header({ openMenu, onBackupNow }) {
                         <Menu size={20} />
                     </button>
                     <div className="hdr-brand">
-                        <h1 className="app-dinamic-title">{customLabels.appTitle || "ConlangEngine"}</h1>
+                        <h1 className={`app-dinamic-title ${isAppTitleCustom ? 'custom-font-text notranslate' : ''}`.trim()}>{appTitleText}</h1>
                         {isLive ? (
                             <span
                                 className="hdr-badge badge-live"

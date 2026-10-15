@@ -287,3 +287,41 @@ export function repairScriptSystems(config) {
 
     return { scriptSystems: systems, scriptRules: rules };
 }
+
+/**
+ * Detects whether a string contains custom conlang characters / glyphs
+ * (Private Use Area code points or explicit keys in customGlyphs).
+ *
+ * @param {string} str - The string to check
+ * @param {object} [customGlyphs] - Config customGlyphs map
+ * @param {object} [scriptDataById] - Multi-script data map
+ * @returns {boolean}
+ */
+export function containsCustomGlyph(str, customGlyphs = null, scriptDataById = null) {
+    if (!str || typeof str !== 'string') return false;
+    for (const ch of str) {
+        const cp = ch.codePointAt(0);
+        if (!cp) continue;
+        // 1. Unicode Private Use Areas (PUA) where custom font glyphs are assigned:
+        //    - BMP PUA: U+E000 - U+F8FF (57344 - 63743)
+        //    - Supplementary PUA-A: U+F0000 - U+FFFFD (983040 - 1048573)
+        //    - Supplementary PUA-B: U+100000 - U+10FFFD (1048576 - 1114109)
+        if ((cp >= 0xE000 && cp <= 0xF8FF) || (cp >= 0xF0000 && cp <= 0x10FFFD)) {
+            return true;
+        }
+        // 2. Direct match in root customGlyphs (keyed by cp number, cp string, or character)
+        if (customGlyphs && (customGlyphs[cp] || customGlyphs[String(cp)] || customGlyphs[ch])) {
+            return true;
+        }
+        // 3. Direct match in any multi-script customGlyphs
+        if (scriptDataById && typeof scriptDataById === 'object') {
+            for (const sData of Object.values(scriptDataById)) {
+                const sGlyphs = sData?.customGlyphs;
+                if (sGlyphs && (sGlyphs[cp] || sGlyphs[String(cp)] || sGlyphs[ch])) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
