@@ -40,6 +40,8 @@ import { CharacterCount } from '@tiptap/extension-character-count';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Mark, mergeAttributes } from '@tiptap/core';
 import { createGrammarAnalyzer } from '@/utils/grammarAnalyzer.js';
+import LiveTranslatorPanel from './LiveTranslatorPanel.jsx';
+import LexiconEditModal from '../dictionary/LexiconEditModal.jsx';
 
 const ConlangSpan = Mark.create({
     name: 'conlangSpan',
@@ -331,62 +333,81 @@ function importDefaults(ruleName) {
     return { trigger: '', type: 'word', position: 'suffix' };
 }
 
-const ANIMACY_SCOPES = {
-    "pronoun_1_2": {
-        description: "1st/2nd Person only",
-        test: (entry, pInfo) => pInfo && (pInfo.person === "1st" || pInfo.person === "2nd")
-    },
-    "pronoun": {
-        description: "Any personal pronoun",
-        test: (entry, pInfo) => !!pInfo
-    },
-    "human": {
-        description: "Pronouns + Humans/Persons",
-        test: (entry, pInfo) => !!pInfo || /(pronoun|person|human|name|animate)/i.test(entry?.wordClass || "") || (entry?.tags || []).some(t => /(person|human|animate|name|proper)/i.test(t))
-    },
-    "animate": {
-        description: "Humans + Animals",
-        test: (entry, pInfo) => !!pInfo || /(pronoun|person|human|animal|animate|creature|beast)/i.test(entry?.wordClass || "") || (entry?.tags || []).some(t => /(animate|person|human|animal|creature)/i.test(t))
-    },
-    "concrete": {
-        description: "Concrete objects",
-        test: (entry, pInfo) => !!pInfo || (!(entry?.tags || []).includes("abstract") && !(entry?.tags || []).includes("concept"))
-    },
-    "all": {
-        description: "No restriction",
-        test: () => true
-    }
-};
+function useConlangAnalyzer() {
+    const rawLexicon = useLexiconStore((state) => state.lexicon);
+    const lexicon = useMemo(() => rawLexicon || [], [rawLexicon]);
+    const { transliterate, normalizeToBase } = useTransliterator();
+    const config = useConfigStore(useShallow(state => ({
+        grammarRules: state.grammarRules,
+        personRules: state.personRules,
+        verbMarker: state.verbMarker,
+        syntaxOrder: state.syntaxOrder,
+        wordAssistConfig: state.wordAssistConfig,
+        adjectivePlacement: state.adjectivePlacement,
+        adjectiveAgreement: state.adjectiveAgreement,
+    })));
+    const personRulesStr   = config.personRules || "";
+    const rawGrammarRules  = config.grammarRules;
+    const grammarRules     = useMemo(() => rawGrammarRules || [], [rawGrammarRules]);
+    const syntaxOrder      = config.syntaxOrder || 'SVO';
+    const rawWaConfig      = config.wordAssistConfig;
+    const waConfig         = useMemo(() => rawWaConfig || {}, [rawWaConfig]);
+    const updateConfig     = useConfigStore(state => state.updateConfig);
 
-const HUMAN_WORDS_EN = new Set([
-    "person","man","woman","boy","girl","child","baby","adult","human",
-    "father","mother","son","daughter","brother","sister","parent","sibling",
-    "friend","enemy","teacher","student","doctor","nurse","king","queen",
-    "prince","princess","lord","lady","sir","madam","hero","villain",
-    "leader","follower","master","servant","owner","guest","host","visitor",
-    "citizen","soldier","guard","priest","monk","witch","wizard","warrior",
-    "merchant","farmer","hunter","baker","maker","worker","player","artist",
-    "writer","speaker","reader","thinker","listener"
-]);
+    const personRulesArray = useMemo(() => {
+        if (Array.isArray(personRulesStr)) return personRulesStr;
+        if (typeof personRulesStr !== 'string' || !personRulesStr.trim()) return [];
+        return personRulesStr.split(/[\n,]/).map(line => {
+            if (!line.includes(':')) return null;
+            const parts = line.split(':');
+            const pg = parts[0].trim();
+            let person = null, number = 'S', gender = null;
+            if (pg.includes('1')) person = '1st';
+            else if (pg.includes('2')) person = '2nd';
+            else if (pg.includes('3')) person = '3rd';
+            else if (pg.includes('4')) person = '4th';
+            const upperPg = pg.toUpperCase();
+            if (upperPg.includes('S')) number = 'S';
+            if (upperPg.includes('P')) number = 'P';
+            else if (upperPg.includes('C')) number = 'C';
+            else if (upperPg.includes('D')) number = 'D';
+            else if (upperPg.includes('B')) number = 'B';
+            if (/masc/i.test(pg)) gender = 'Masc';
+            else if (/fem/i.test(pg)) gender = 'Fem';
+            else if (/neut/i.test(pg)) gender = 'Neut';
+            else if (/anim/i.test(pg)) gender = 'Anim';
+            else if (/inan/i.test(pg)) gender = 'Inan';
+            const fap = parts[1].trim().split('/');
+            return { id: `pr-${pg}`, person, number, gender, freeForm: fap[0]?.trim() || '', affix: fap[1]?.trim() || '', appliesTo: 'all' };
+        }).filter(Boolean);
+    }, [personRulesStr]);
 
-const ANIMAL_WORDS_EN = new Set([
-    "dog","cat","bird","fish","horse","cow","pig","sheep","goat","deer",
-    "wolf","bear","lion","tiger","elephant","monkey","snake","frog","bee",
-    "ant","fly","spider","worm","mouse","rat","rabbit","fox","duck","owl",
-    "eagle","shark","whale","dolphin","dragon","creature","beast","animal"
-]);
+    const analyzer = useMemo(() => createGrammarAnalyzer({
+        lexicon,
+        grammarRules,
+        syntaxOrder: waConfig?.syntaxOrder || syntaxOrder,
+        waConfig,
+        personRulesArray,
+        transliterate,
+        normalizeToBase,
+        verbMarker: config.verbMarker,
+        adjectivePlacement: config.adjectivePlacement,
+        adjectiveAgreement: config.adjectiveAgreement
+    }), [lexicon, grammarRules, syntaxOrder, waConfig, personRulesArray, transliterate, normalizeToBase, config.verbMarker, config.adjectivePlacement, config.adjectiveAgreement]);
 
-const CASE_NEVER_WORDS = new Set([
-    "myself", "yourself", "himself", "herself", "itself",
-    "ourselves", "yourselves", "themselves", "oneself",
-    "it", "there"
-]);
-
-const COPULA_VERBS = new Set([
-    "am", "is", "are", "was", "were", "be", "been", "being", "become", "seem", "appear",
-    "look", "feel", "sound", "smell", "taste", "remain", "stay", "turn"
-]);
-
+    return {
+        analyzer,
+        lexicon,
+        transliterate,
+        normalizeToBase,
+        config,
+        grammarRules,
+        personRulesArray,
+        syntaxOrder,
+        waConfig,
+        updateConfig
+    };
+}
 
 function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
     const { t } = useTranslation();
@@ -475,28 +496,41 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
     ).length;
 
     const roleLabels = {
-        'Q': 'Question Word',
-        'C': 'Comparative',
-        'T': 'Time',
-        'L': 'Place',
-        'J': 'Adjective',
-        'N': 'Negation',
-        'O': 'Object',
-        'R': 'Adverb',
-        'M': 'Modal',
-        'V': 'Verb',
         'S': 'Subject',
-        'A': 'Article',
-        'P': 'Preposition',
-        'G': 'Genitive'
+        'V': 'Verb',
+        'O': 'Direct Object',
+        'D': 'Indirect Object (Dative)',
+        'M': 'Modal Verb',
+        'N': 'Negation',
+        'P': 'Preposition / Adposition',
+        'L': 'Location / Place',
+        'T': 'Time',
+        'Q': 'Question Word',
+        'C': 'Comparative / Particle',
+        'R': 'Adverb'
     };
-    let syntaxOrder = wa.syntaxOrder;
+
+    let syntaxOrder = (wa.syntaxOrder || '')
+        .split('')
+        .filter(r => roleLabels[r])
+        .join('');
+
     if (!syntaxOrder) {
-        syntaxOrder = config.syntaxOrder || 'SVO';
-        const defaultRest = 'QCTLJNORVMSAPG';
-        defaultRest.split('').forEach(r => {
-            if (!syntaxOrder.includes(r)) syntaxOrder += r;
+        const baseOrder = (config.syntaxOrder || 'SVO').toUpperCase();
+        const core = [];
+        for (const c of baseOrder) {
+            if (['S', 'V', 'O'].includes(c) && !core.includes(c)) core.push(c);
+        }
+        ['S', 'V', 'O'].forEach(c => { if (!core.includes(c)) core.push(c); });
+
+        const defaultSeq = ['Q', 'C', 'T', 'L'];
+        core.forEach(c => {
+            if (c === 'S') defaultSeq.push('S');
+            else if (c === 'V') defaultSeq.push('M', 'V', 'N');
+            else if (c === 'O') defaultSeq.push('O', 'D');
         });
+        ['P', 'R'].forEach(r => { if (!defaultSeq.includes(r)) defaultSeq.push(r); });
+        syntaxOrder = defaultSeq.join('');
     } else {
         Object.keys(roleLabels).forEach(r => {
             if (!syntaxOrder.includes(r)) syntaxOrder += r;
@@ -542,7 +576,41 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
                     <h4 style={{ fontSize: '0.8rem', fontWeight: 800, margin: 0, color: 'var(--acc)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Settings size={15} /> {t('wiki.wordAssistSettings.syntacticPriority')}
                     </h4>
-                    <span style={{ fontSize: '0.62rem', color: 'var(--tx3)' }}>{t('wiki.wordAssistSettings.dragHint')}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const baseOrder = (config.syntaxOrder || 'SVO').toUpperCase();
+                                const core = [];
+                                for (const c of baseOrder) {
+                                    if (['S', 'V', 'O'].includes(c) && !core.includes(c)) core.push(c);
+                                }
+                                ['S', 'V', 'O'].forEach(c => { if (!core.includes(c)) core.push(c); });
+
+                                const defaultSeq = ['Q', 'C', 'T', 'L'];
+                                core.forEach(c => {
+                                    if (c === 'S') defaultSeq.push('S');
+                                    else if (c === 'V') defaultSeq.push('M', 'V', 'N');
+                                    else if (c === 'O') defaultSeq.push('O', 'D');
+                                });
+                                ['P', 'R'].forEach(r => { if (!defaultSeq.includes(r)) defaultSeq.push(r); });
+                                updateConfig({ wordAssistConfig: { ...wa, syntaxOrder: defaultSeq.join('') } });
+                            }}
+                            style={{
+                                background: 'none',
+                                border: '1px solid var(--bd)',
+                                borderRadius: '4px',
+                                color: 'var(--acc)',
+                                fontSize: '0.62rem',
+                                padding: '2px 8px',
+                                cursor: 'pointer'
+                            }}
+                            title="Reset constituent order to match Settings > Grammar"
+                        >
+                            Reset to Grammar ({config.syntaxOrder || 'SVO'})
+                        </button>
+                        <span style={{ fontSize: '0.62rem', color: 'var(--tx3)' }}>{t('wiki.wordAssistSettings.dragHint')}</span>
+                    </div>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {syntaxOrder.split('').map((role, idx) => (
@@ -567,7 +635,7 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
                                 e.currentTarget.style.background = 'var(--s2)';
                             }}
                         >
-                            <span>{idx + 1}. {roleLabels[role] || role}</span>
+                            <span style={{ color: 'var(--tx)', whiteSpace: 'nowrap' }}>{idx + 1}. {roleLabels[role] || role}</span>
                             <div style={{ display: 'flex', gap: '2px', marginLeft: '4px' }}>
                                 <button onClick={() => moveRole(idx, -1)} disabled={idx === 0} style={{ padding: 0, border: 'none', background: 'none', color: 'var(--tx3)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><ChevronUp size={11}/></button>
                                 <button onClick={() => moveRole(idx, 1)} disabled={idx === syntaxOrder.length - 1} style={{ padding: 0, border: 'none', background: 'none', color: 'var(--tx3)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><ChevronDown size={11}/></button>
@@ -675,6 +743,10 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
                     ))}
                     {roleOverrides.length === 0 && <div style={{ fontSize: '0.7rem', color: 'var(--tx3)' }}>{t('wiki.wordAssistSettings.noOverrides')}</div>}
                 </div>
+            </div>
+
+            <div style={{ marginBottom: '12px', padding: '10px 14px', background: 'rgba(236, 72, 153, 0.08)', borderRadius: '8px', border: '1px solid rgba(236, 72, 153, 0.25)', fontSize: '0.74rem', color: 'var(--tx)' }}>
+                <strong>✨ Morphology Rules Auto-Active:</strong> Case affixes (Accusative, Genitive, Dative, Locative) and verb tenses defined in <strong>Settings &gt; Grammar &gt; Morphology</strong> are automatically applied to translated words. Custom triggers below are only needed for non-standard manual overrides.
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -869,91 +941,41 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
     const [mode, setMode] = useState('edit');
     const [text, setText] = useState(content || '');
     const [wordAssist, setWordAssist] = useState(false);
-    const [suggestions, setSuggestions] = useState([]);
-    const [activeSuggIdx, setActiveSuggIdx] = useState(0);
-    const [draggedChip, setDraggedChip] = useState(null); // { suggIdx, chipIdx }
-    const [showWaTip, setShowWaTip] = useState(true);
-    const [wordRange, setWordRange] = useState(null); // { start, end } of current word in text
     const [isWaSettingsOpen, setIsWaSettingsOpen] = useState(false);
-    const [manualRoles, setManualRoles] = useState({}); // Local manual overrides for parsing (keyed by lowercase word)
+    const [wordForAdd, setWordForAdd] = useState(null);
+    const [activeSentence, setActiveSentence] = useState('');
     const textareaRef = useRef(null);
 
-    const lexicon = useLexiconStore((state) => state.lexicon);
-    const { transliterate, normalizeToBase } = useTransliterator();
-    // Only used for getUniqueParsings(), which reaches findAllParsings in
-    // morphologyEngine.jsx; that function reads these three fields only.
-    const config = useConfigStore(useShallow(state => ({
-        grammarRules: state.grammarRules,
-        personRules: state.personRules,
-        verbMarker: state.verbMarker,
-    })));
-    const personRulesStr   = useConfigStore(state => state.personRules) || "";
-    const grammarRules     = useConfigStore(state => state.grammarRules) || [];
-    const syntaxOrder      = useConfigStore(state => state.syntaxOrder) || 'SVO';
-    const waConfig         = useConfigStore(state => state.wordAssistConfig) || {};
-    const updateConfig     = useConfigStore(state => state.updateConfig);
-    const storedWritingDir = useConfigStore(state => state.writingDirection) || 'ltr';
-    // Prefer prop (passed from WikiTab parent) over store value
-    const writingDirection = props_writingDirection || storedWritingDir;
-    const isRTL            = writingDirection === 'rtl';
-
-    // Normalise personRules into a flat object array regardless of legacy/modern format
-    const personRulesArray = useMemo(() => {
-        if (Array.isArray(personRulesStr)) return personRulesStr;
-        if (typeof personRulesStr !== 'string' || !personRulesStr.trim()) return [];
-        
-        return personRulesStr.split(/[\n,]/).map(line => {
-            if (!line.includes(':')) return null;
-            const parts = line.split(':');
-            const pg = parts[0].trim();
-            let person = null, number = 'S', gender = null;
-            
-            if (pg.includes('1')) person = '1st';
-            else if (pg.includes('2')) person = '2nd';
-            else if (pg.includes('3')) person = '3rd';
-            else if (pg.includes('4')) person = '4th';
-            
-            const upperPg = pg.toUpperCase();
-            if (upperPg.includes('S')) number = 'S';
-            if (upperPg.includes('P')) number = 'P';
-            else if (upperPg.includes('C')) number = 'C';
-            else if (upperPg.includes('D')) number = 'D';
-            else if (upperPg.includes('B')) number = 'B';
-            
-            if (/masc/i.test(pg)) gender = 'Masc';
-            else if (/fem/i.test(pg)) gender = 'Fem';
-            else if (/neut/i.test(pg)) gender = 'Neut';
-            else if (/anim/i.test(pg)) gender = 'Anim';
-            else if (/inan/i.test(pg)) gender = 'Inan';
-            
-            const fap = parts[1].trim().split('/');
-            return { id: `pr-${pg}`, person, number, gender, freeForm: fap[0]?.trim() || '', affix: fap[1]?.trim() || '', appliesTo: 'all' };
-        }).filter(Boolean);
-    }, [personRulesStr]);
-
-    const analyzer = useMemo(() => createGrammarAnalyzer({
+    const {
+        analyzer,
         lexicon,
+        transliterate,
+        normalizeToBase,
+        config,
         grammarRules,
+        personRulesArray,
         syntaxOrder,
         waConfig,
-        personRulesArray,
-        transliterate,
-        adjectivePlacement: useConfigStore.getState().adjectivePlacement,
-        adjectiveAgreement: useConfigStore.getState().adjectiveAgreement
-    }), [lexicon, grammarRules, syntaxOrder, waConfig, personRulesArray, transliterate]);
+        updateConfig
+    } = useConlangAnalyzer();
 
-    const { computePhraseSuggestion, lemmatize, matchesTranslation, reorderBreakdown } = analyzer;
-
+    const storedWritingDir = useConfigStore(state => state.writingDirection) || 'ltr';
+    const writingDirection = props_writingDirection || storedWritingDir;
+    const isVertical       = writingDirection?.startsWith('vertical');
 
     // Auto-save and content sync
     useEffect(() => {
-        const t = setTimeout(() => onSave(text), 2000);
-        return () => clearTimeout(t);
+        const tm = setTimeout(() => onSave(text), 2000);
+        return () => clearTimeout(tm);
     }, [text, onSave]);
-    useEffect(() => { setText(content || ''); }, [content]);
 
-    const isVertical = writingDirection?.startsWith('vertical');
-    // Build affixMap for the Interlinear Reader (affix → label)
+    const [prevContent, setPrevContent] = useState(content);
+    if (content !== prevContent) {
+        setPrevContent(content);
+        setText(content || '');
+    }
+
+    // Build affixMap for the Interlinear Reader
     const affixMap = useMemo(() => {
         const map = {};
         const processAffix = (aff, data) => {
@@ -977,38 +999,34 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         return map;
     }, [personRulesArray, grammarRules]);
 
-    // Combine lexicon with pronouns for the reader to find
     const extendedLexicon = useMemo(() => {
-        const pronouns = personRulesArray
-            .filter(r => r.freeForm)
-            .map(r => ({
-                id: `pronoun-${r.id}`,
-                word: r.freeForm,
-                wordClass: 'pronoun',
-                translation: `${r.person} ${r.number}${r.gender ? ' ' + r.gender : ''}`,
-                definition: r.translation || ''
-            }));
-        return [...lexicon, ...pronouns];
+        const prList = [];
+        personRulesArray.forEach(rule => {
+            if (rule.freeForm) {
+                const p = rule.person ? rule.person.replace(/[a-z]/g, '') : '';
+                const n = rule.number || '';
+                const g = rule.gender ? '.' + rule.gender : '';
+                prList.push({
+                    id: rule.id,
+                    word: rule.freeForm,
+                    wordClass: 'pronoun',
+                    translation: `${p}${n}${g} pronoun`,
+                    definition: `Personal pronoun (${rule.person || ''} ${rule.number || ''} ${rule.gender || ''})`.trim()
+                });
+            }
+        });
+        return [...lexicon, ...prList];
     }, [lexicon, personRulesArray]);
 
-    // Helper to find entry even if inflected
-    const findEntry = (token) => {
-        const clean = token.replace(/[.,!?()[\]{}"`:;]/g, '').replace(/[‘’]/g, "'");
+    const findEntry = (wordToken) => {
+        const clean = wordToken.replace(/[.,/#!$%^&*;:{}=\-_'~`()?"'’]/g, '');
         if (!clean) return { entry: null, isExact: false };
-        
-        // Exact match in extendedLexicon
+
         const cleanLower = clean.toLowerCase();
         let exactEntry = extendedLexicon.find(e => e.word.replace(/\*/g,'').replace(/[‘’]/g, "'").toLowerCase() === cleanLower);
         if (exactEntry) return { entry: exactEntry, isExact: true };
 
-        // Robust parsing using morphology engine
         const parsings = getUniqueParsings(clean, lexicon, config, normalizeToBase);
-        
-        if (cleanLower.includes('prikar') || cleanLower.includes('mas')) {
-            console.log("findEntry Debug for:", cleanLower);
-            console.log("Parsings:", parsings);
-        }
-
         if (parsings.length > 0) {
             const p = parsings[0];
             const isExact = p.rules.length === 0;
@@ -1021,7 +1039,6 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
             };
         }
 
-        // Fallback to WikiTab's naive affixMap lookup for cases where the grammar rule is missing applyTo
         const sortedLexicon = [...extendedLexicon].sort((a, b) => b.word.length - a.word.length);
         for (const e of sortedLexicon) {
             const root = e.word.replace(/\*/g,'').replace(/[‘’]/g, "'").toLowerCase();
@@ -1037,420 +1054,80 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
         return { entry: null, isExact: false };
     };
 
-    // ── Word Assist ──────────────────────────────────────────────────────────────
-
-    // English pronoun → grammatical features
-    const PRONOUN_MAP = {
-        'i':      { base: 'i',    person: '1st', number: 'S', role: 'S' },
-        'me':     { base: 'i',    person: '1st', number: 'S', role: 'O', case: 'objective' },
-        'my':     { base: 'i',    person: '1st', number: 'S', role: null, case: 'genitive' },
-        'mine':   { base: 'i',    person: '1st', number: 'S', role: null, case: 'genitive' },
-        'we':     { base: 'we',   person: '1st', number: 'P', role: 'S' },
-        'us':     { base: 'we',   person: '1st', number: 'P', role: 'O', case: 'objective' },
-        'our':    { base: 'we',   person: '1st', number: 'P', role: null, case: 'genitive' },
-        'ours':   { base: 'we',   person: '1st', number: 'P', role: null, case: 'genitive' },
-        'you':    { base: 'you',  person: '2nd', number: 'S', role: 'S' },
-        'your':   { base: 'you',  person: '2nd', number: 'S', role: null, case: 'genitive' },
-        'yours':  { base: 'you',  person: '2nd', number: 'S', role: null, case: 'genitive' },
-        'he':     { base: 'he',   person: '3rd', number: 'S', gender: 'Masc', role: 'S' },
-        'him':    { base: 'he',   person: '3rd', number: 'S', gender: 'Masc', role: 'O', case: 'objective' },
-        'his':    { base: 'he',   person: '3rd', number: 'S', gender: 'Masc', role: null, case: 'genitive' },
-        'she':    { base: 'she',  person: '3rd', number: 'S', gender: 'Fem',  role: 'S' },
-        'her':    { base: 'she',  person: '3rd', number: 'S', gender: 'Fem',  role: 'O', case: 'objective' },
-        'hers':   { base: 'she',  person: '3rd', number: 'S', gender: 'Fem',  role: null, case: 'genitive' },
-        'it':     { base: 'it',   person: '3rd', number: 'S', gender: 'Neut', role: null },
-        'its':    { base: 'it',   person: '3rd', number: 'S', gender: 'Neut', role: null, case: 'genitive' },
-        'they':   { base: 'they', person: '3rd', number: 'P', role: 'S' },
-        'them':   { base: 'they', person: '3rd', number: 'P', role: 'O', case: 'objective' },
-        'their':  { base: 'they', person: '3rd', number: 'P', role: null, case: 'genitive' },
-        'theirs': { base: 'they', person: '3rd', number: 'P', role: null, case: 'genitive' },
+    const updateActiveSentence = (val, cursor) => {
+        if (!val) {
+            setActiveSentence('');
+            return;
+        }
+        const selStart = textareaRef.current?.selectionStart;
+        const selEnd = textareaRef.current?.selectionEnd;
+        if (selEnd !== undefined && selStart !== undefined && selEnd > selStart) {
+            setActiveSentence(val.slice(selStart, selEnd).trim());
+            return;
+        }
+        const pos = cursor !== undefined ? cursor : (textareaRef.current?.selectionStart || 0);
+        const before = val.slice(0, pos);
+        const after = val.slice(pos);
+        const lineStart = before.lastIndexOf('\n') === -1 ? 0 : before.lastIndexOf('\n') + 1;
+        const nextNl = after.indexOf('\n');
+        const lineEnd = nextNl === -1 ? val.length : pos + nextNl;
+        const currentLine = val.slice(lineStart, lineEnd).trim();
+        setActiveSentence(currentLine);
     };
-
-
-    // Apply an affix notation to a base word:
-    //   -'ma  → suffix  → soir + 'ma = soir'ma
-    //   un'-  → prefix  → un' + soir  = un'soir
-    const applyAffixToBase = (base, affix) => {
-        if (!base || !affix) return base;
-        const a = affix.trim();
-        if (a.startsWith('-')) return base + a.slice(1);      // suffix
-        if (a.startsWith("'")) return base + a;               // apostrophe suffix edge case
-        if (a.endsWith('-'))   return a.slice(0, -1) + base;  // prefix
-        if (a.endsWith("'"))   return a + base;               // apostrophe prefix edge case
-        return base + ' ' + a;                                // particle (space-separated)
-    };
-
-    // Get 1-based position of a role letter in the syntaxOrder string
-    const rolePosition = (role) => syntaxOrder.indexOf(role) + 1; // 0 if not found
-
-    // Type → colour token for the badge
-    const TYPE_COLORS = { direct: 'var(--acc)', pronoun: '#10b981', inflected: '#f59e0b', 'grammar-case': '#ec4899' };
-    const TYPE_LABELS  = { direct: 'lexicon', pronoun: 'pronoun', inflected: 'conjugated', 'grammar-case': 'case' };
-
-    const getWordAtCursor = (str, pos) => {
-        let start = pos;
-        while (start > 0 && !/\s/.test(str[start - 1])) start--;
-        let end = pos;
-        while (end < str.length && !/\s/.test(str[end])) end++;
-        return { word: str.slice(start, end), start, end };
-    };
-
-    const FUNCTION_WORDS = new Set([
-        'the', 'a', 'an', 'of', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'and', 'or', 'but', 'if', 'as',
-        'is', 'are', 'was', 'were', 'be', 'been', 'being', 'do', 'does', 'did', 'have', 'has', 'had',
-        'my', 'your', 'his', 'her', 'its', 'our', 'their', 'me', 'us', 'him', 'them'
-    ]);
-
-    ;
 
     const handleTextChange = (e) => {
         const val = e.target.value;
         setText(val);
-        if (!wordAssist) return;
-
-        const cursor = e.target.selectionStart;
-        const { word, start, end } = getWordAtCursor(val, cursor);
-        const query = word.replace(/[.,!?()[\]{}"`:;]/g, '').toLowerCase();
-
-        // ── Phrase translation — always computed so the summary stays visible ──────
-        const phraseSuggs = computePhraseSuggestion(val, cursor, syntaxOrder, manualRoles);
-        const combined = [...(Array.isArray(phraseSuggs) ? phraseSuggs : [])];
-
-        // ── Lexicon & Inflections — only if query is long enough ──────────────────
-        if (query.length >= 2) {
-            setWordRange({ start, end });
-            const { lemma, wordCase, isAgentive, tense: wordTense } = lemmatize(query);
-
-            const directBucket    = [];
-            const pronounBucket   = [];
-            const inflectedBucket = [];
-
-        // ── Bucket 1: Direct lexicon translation matches ──────────────────────────
-        lexicon
-            .filter(e => matchesTranslation(e.translation, query) || matchesTranslation(e.translation, lemma))
-            .sort((a, b) => {
-                const ta = (a.translation||'').toLowerCase(), tb = (b.translation||'').toLowerCase();
-                const score = (t) => t === query ? 0 : t.startsWith(query + ' ') ? 1 : 2;
-                return score(ta) - score(tb) || a.word.length - b.word.length;
-            })
-            .slice(0, 6)   // allow up to 6 direct matches
-            .forEach(entry => {
-                const base = entry.word.replace(/\*/g, '');
-                const wc   = (entry.wordClass || '').toLowerCase();
-                const role = wc.includes('verb') ? 'V' : wc.includes('noun') || wc.includes('adj') ? 'O' : null;
-                directBucket.push({ key: `d-${entry.id}`, type: 'direct', romanized: base, display: transliterate(base, lexicon), gloss: entry.translation, definition: entry.definition, wordClass: entry.wordClass, role, label: '' });
-
-                // ── Verb inflections — only for the verb, max 2 person forms per verb ──
-                if (wc.includes('verb') || !entry.wordClass) {
-                    personRulesArray
-                        .filter(r => { const at=(r.appliesTo||'all').toLowerCase(); return at==='all'||at.includes('verb'); })
-                        .slice(0, 2)   // cap: only first 2 person rules per verb
-                        .forEach(rule => {
-                            if (!rule.affix) return;
-                            const inflected = applyAffixToBase(base, rule.affix);
-                            const personLabel = `${rule.person} ${rule.number}${rule.gender?' '+rule.gender:''}`;
-                            inflectedBucket.push({ key: `inf-${entry.id}-${rule.id}`, type: 'inflected', romanized: inflected, display: transliterate(inflected, lexicon), gloss: entry.translation, definition: entry.definition, wordClass: entry.wordClass, role: 'V', label: personLabel });
-                        });
-
-                    // ── Grammar case forms — max 3 per verb ──
-                    grammarRules
-                        .filter(r => r.affix && (r.appliesTo === 'all' || r.appliesTo === 'verb' || !r.appliesTo))
-                        .filter(r => {
-                            const name = (r.name || '').toLowerCase();
-                            // Show relevant forms detected from English word tense
-                            if (wordTense === 'gerund' && (name.includes('gerund') || name.includes('continuous') || name.includes('progressive'))) return true;
-                            if (wordCase === 'comparative' && isAgentive && name.includes('agentive')) return true;
-                            return ['passive', 'gerund', 'continuous', 'progressive', 'agentive'].some(k => name.includes(k));
-                        })
-                        .forEach(rule => {
-                            const cased = applyAffixToBase(base, rule.affix);
-                            inflectedBucket.push({ key: `gc-${entry.id}-${rule.id}`, type: 'grammar-case', romanized: cased, display: transliterate(cased, lexicon), gloss: entry.translation, definition: entry.definition, wordClass: entry.wordClass, role: 'V', label: rule.name || rule.condition || '' });
-                        });
-                }
-
-                // ── Adjective/Noun forms ──
-                if (wc.includes('adj') || wc.includes('noun')) {
-                     grammarRules
-                        .filter(r => r.affix && (r.appliesTo === 'all' || r.appliesTo.includes(wc) || !r.appliesTo))
-                        .filter(r => {
-                            const name = (r.name || '').toLowerCase();
-                            if (wordCase && name.includes(wordCase)) return true;
-                            return ['accusative', 'nominative', 'dative', 'ablative', 'locative', 'instrumental', 'vocative', 'ergative', 'comparative', 'superlative', 'possessive', 'genitive', 'agentive'].some(k => name.includes(k));
-                        })
-                        .forEach(rule => {
-                            const cased = applyAffixToBase(base, rule.affix);
-                            inflectedBucket.push({ key: `gc-adj-${entry.id}-${rule.id}`, type: 'grammar-case', romanized: cased, display: transliterate(cased, lexicon), gloss: entry.translation, definition: entry.definition, wordClass: entry.wordClass, role: 'O', label: rule.name || rule.condition || '' });
-                        });
-                }
-            });
-
-        // ── Bucket 2: English pronoun → free-form + case-marked forms ─────────────
-        const pronounInfo = PRONOUN_MAP[query];
-        if (pronounInfo) {
-            personRulesArray
-                .filter(r => {
-                    const pMatch = r.person === pronounInfo.person;
-                    const nMatch = !pronounInfo.number || r.number === pronounInfo.number;
-                    const gMatch = !pronounInfo.gender || !r.gender || r.gender === pronounInfo.gender;
-                    return pMatch && nMatch && gMatch;
-                })
-                .forEach(rule => {
-                    if (rule.freeForm) {
-                        const pLabel = `${rule.person} ${rule.number}${rule.gender?' '+rule.gender:''}`;
-                        pronounBucket.push({ key: `pron-${rule.id}`, type: 'pronoun', romanized: rule.freeForm, display: transliterate(rule.freeForm, lexicon), gloss: query, wordClass: 'Pronoun', role: pronounInfo.role, label: pLabel });
-                        grammarRules
-                            .filter(r => r.affix && (r.appliesTo === 'all' || r.appliesTo === 'noun' || r.appliesTo === 'pronoun' || !r.appliesTo))
-                            .slice(0, 2)
-                            .forEach(gr => {
-                                const cased = applyAffixToBase(rule.freeForm, gr.affix);
-                                pronounBucket.push({ key: `pron-case-${rule.id}-${gr.id}`, type: 'grammar-case', romanized: cased, display: transliterate(cased, lexicon), gloss: query, wordClass: 'Pronoun', role: pronounInfo.role, label: `${rule.person} ${rule.number} · ${gr.name||gr.condition||'case'}` });
-                            });
-                    }
-                });
+        if (wordAssist) {
+            updateActiveSentence(val, e.target.selectionStart);
         }
-            
-            // Merge all buckets into the combined list (which already has phrase suggestions)
-            combined.push(...directBucket.slice(0, 6), ...pronounBucket, ...inflectedBucket);
-        }
-
-        // Final assembly
-        if (query.length >= 2 && !FUNCTION_WORDS.has(query)) {
-            const hasLexiconMatch = combined.some(s => s.type === 'direct' || s.type === 'inflected');
-            if (!hasLexiconMatch) {
-                combined.push({
-                    key: 'no-match-fallback', type: 'direct', romanized: `[${query}]`, display: `[${query}]`,
-                    gloss: 'Not found in lexicon', wordClass: 'Unknown', role: 'O', label: 'Missing'
-                });
-            }
-        }
-
-        setSuggestions(combined.slice(0, 50));
-        setActiveSuggIdx(0);
     };
 
-
-    const applySuggestion = (sugg) => {
-        if (!wordRange) return;
-        let insertStart, insertEnd;
-
-        if (sugg.type === 'phrase') {
-            // Replace the entire current line
-            insertStart = sugg.lineStart;
-            insertEnd   = sugg.lineEnd;
-        } else {
-            insertStart = wordRange.start;
-            insertEnd   = wordRange.end;
+    const handleSelectOrCursor = () => {
+        if (wordAssist && textareaRef.current) {
+            updateActiveSentence(text, textareaRef.current.selectionStart);
         }
+    };
 
-        const insertion = sugg.romanized;
-        const newText   = text.slice(0, insertStart) + insertion + text.slice(insertEnd);
+    const handleInsertTranslation = (insertedText) => {
+        if (!textareaRef.current) return;
+        const el = textareaRef.current;
+        const start = el.selectionStart;
+        const end = el.selectionEnd;
+        
+        let newText;
+        let nextCursor;
+        if (start !== end) {
+            newText = text.slice(0, start) + insertedText + text.slice(end);
+            nextCursor = start + insertedText.length;
+        } else {
+            const before = text.slice(0, start);
+            const after = text.slice(start);
+            const lineStart = before.lastIndexOf('\n') === -1 ? 0 : before.lastIndexOf('\n') + 1;
+            const nextNl = after.indexOf('\n');
+            const lineEnd = nextNl === -1 ? text.length : start + nextNl;
+            const currentLine = text.slice(lineStart, lineEnd).trim();
+            
+            if (currentLine && currentLine === activeSentence) {
+                newText = text.slice(0, lineStart) + insertedText + text.slice(lineEnd);
+                nextCursor = lineStart + insertedText.length;
+            } else {
+                newText = before + insertedText + after;
+                nextCursor = start + insertedText.length;
+            }
+        }
         setText(newText);
-        setSuggestions([]);
-        setWordRange(null);
+        onSave(newText);
         setTimeout(() => {
             if (textareaRef.current) {
-                const pos = insertStart + insertion.length;
-                textareaRef.current.selectionStart = pos;
-                textareaRef.current.selectionEnd   = pos;
+                textareaRef.current.selectionStart = nextCursor;
+                textareaRef.current.selectionEnd = nextCursor;
                 textareaRef.current.focus();
             }
         }, 0);
     };
-    
-    const handleChipReorder = (suggIdx, fromIdx, toIdx) => {
-        if (fromIdx === toIdx) return;
-        const newSuggestions = [...suggestions];
-        const sugg = { ...newSuggestions[suggIdx] };
-        if (!sugg.reordered) return;
-        
-        const reordered = [...sugg.reordered];
-        const [moved] = reordered.splice(fromIdx, 1);
-        reordered.splice(toIdx, 0, moved);
-        
-        sugg.reordered = reordered;
-        sugg.romanized = reordered.map(w => w.conlang).join(' ');
-        sugg.display = transliterate(sugg.romanized, lexicon);
-        
-        newSuggestions[suggIdx] = sugg;
-        setSuggestions(newSuggestions);
-        setDraggedChip(null);
-    };
 
-    const handleChipClick = (e, suggIdx, chipIdx) => {
-        e.stopPropagation();
-        const newSuggestions = [...suggestions];
-        const sugg = { ...newSuggestions[suggIdx] };
-        if (!sugg.reordered) return;
-        
-        const reordered = [...sugg.reordered];
-        const itemToUpdate = reordered[chipIdx];
-        if (!itemToUpdate) return;
-
-        const breakdown = [...(sugg.wordBreakdown || sugg.reordered)];
-        const breakdownItem = breakdown.find((w, i) => w && (i === chipIdx || w === itemToUpdate)) || itemToUpdate;
-        
-        const base = breakdownItem.entry?.word || (breakdownItem.conlang || '').replace(/[[\]]/g, '');
-        const wc = (breakdownItem.entry?.wordClass || '').toLowerCase();
-        
-        const matches = lexicon.filter(e => {
-            const t1 = (e.translation || '').toLowerCase();
-            const t2 = (e.shortTranslation || '').toLowerCase();
-            const searchTerms = [(itemToUpdate.original || '').toLowerCase()];
-            return searchTerms.some(term => matchesTranslation(t1, term) || matchesTranslation(t2, term));
-        });
-
-        let matchingRules = [];
-        if (wc.includes('noun') || wc.includes('adj')) {
-             matchingRules = grammarRules.filter(r => r.affix && (r.appliesTo === 'all' || r.appliesTo.includes(wc) || !r.appliesTo))
-                                         .filter(r => {
-                                             const name = (r.name || '').toLowerCase();
-                                             return ['accusative', 'nominative', 'dative', 'ablative', 'locative', 'instrumental', 'vocative', 'ergative', 'comparative', 'superlative', 'possessive', 'genitive', 'agentive'].some(k => name.includes(k));
-                                         });
-        } else if (wc.includes('verb')) {
-             matchingRules = grammarRules.filter(r => r.affix && (r.appliesTo === 'all' || r.appliesTo === 'verb' || !r.appliesTo))
-                                         .filter(r => {
-                                             const name = (r.name || '').toLowerCase();
-                                             return ['passive', 'gerund', 'continuous', 'progressive', 'agentive'].some(k => name.includes(k));
-                                         });
-        }
-
-        const totalOptions = matches.length + matchingRules.length;
-        const cycleIdx = itemToUpdate.caseCycleIdx !== undefined ? itemToUpdate.caseCycleIdx + 1 : 0;
-        const skipIdx  = totalOptions;
-
-
-        if (cycleIdx < matches.length) {
-            // Cycle through Lexicon Matches (Synonyms)
-            const m = matches[cycleIdx];
-            itemToUpdate.conlang = m.word;
-            itemToUpdate.entry = m;
-            itemToUpdate.ruleName = `Match ${cycleIdx + 1}/${matches.length}`;
-            itemToUpdate.caseCycleIdx = cycleIdx;
-            itemToUpdate.inflected = false;
-            itemToUpdate.swallowed = false;
-        } else if (cycleIdx < totalOptions) {
-            // Standard Grammar Rule cycle
-            const ruleIdx = cycleIdx - matches.length;
-            const rule = matchingRules[ruleIdx];
-            itemToUpdate.conlang = applyAffixToBase(base, rule.affix);
-            itemToUpdate.ruleName = rule.name || rule.condition || 'case';
-            itemToUpdate.caseCycleIdx = cycleIdx;
-            itemToUpdate.inflected = true;
-            itemToUpdate.swallowed = false;
-        } else if (cycleIdx === skipIdx) {
-            // Drop/Skip state
-            itemToUpdate.swallowed = true;
-            itemToUpdate.ruleName = "SKIP";
-            itemToUpdate.caseCycleIdx = skipIdx;
-            itemToUpdate.conlang = `[${base}]`; 
-        } else {
-            // Reset to base state
-            itemToUpdate.swallowed = false;
-            let conlang = base;
-            if (itemToUpdate.markers && itemToUpdate.markers.length > 0) {
-                itemToUpdate.markers.forEach(t => {
-                    if (t.position === 'prefix') conlang = t.marker.replace(/-$/, '') + conlang;
-                    else if (t.position === 'suffix') conlang = conlang + t.marker.replace(/^-/, '');
-                });
-            }
-            itemToUpdate.conlang = conlang;
-            itemToUpdate.ruleName = null;
-            itemToUpdate.caseCycleIdx = -1;
-            itemToUpdate.inflected = false;
-        }
-        
-        const fullList = sugg.wordBreakdown || sugg.reordered || [];
-        
-        // If this is an Affix Form, we need to RE-APPLY the person marker per clause
-        if (sugg.wordBreakdown) {
-            const applyClausePersonAgreement = (clauseTokens) => {
-                // 1. Clear existing person markers in this clause
-                clauseTokens.forEach(w => {
-                    if (w && w.role === 'V' && w.inflectedByPerson) {
-                        w.conlang = w.originalConlang || w.conlang;
-                        w.inflectedByPerson = false;
-                    }
-                    if (w && w.role === 'S') w.encodedInVerb = false;
-                });
-
-                // 2. Find subject and verb in this clause
-                const subjWord = clauseTokens.find(w => w && w.role === 'S' && w.personRule?.affix);
-                if (subjWord) {
-                    let targetVerb = null;
-                    for (let j = clauseTokens.length - 1; j >= 0; j--) {
-                        const w = clauseTokens[j];
-                        if (w && w.role === 'V' && !w.swallowed && w.conlang && !w.conlang.startsWith('[')) {
-                            targetVerb = w;
-                            break;
-                        }
-                    }
-                    if (targetVerb) {
-                        if (!targetVerb.originalConlang) targetVerb.originalConlang = targetVerb.conlang;
-                        targetVerb.conlang = applyAffixToBase(targetVerb.conlang, subjWord.personRule.affix);
-                        targetVerb.inflectedByPerson = true;
-                        subjWord.encodedInVerb = true;
-                    }
-                }
-            };
-
-            let currentClause = [];
-            fullList.forEach(w => {
-                if (w && w.isPunct) {
-                    applyClausePersonAgreement(currentClause);
-                    currentClause = [];
-                } else {
-                    currentClause.push(w);
-                }
-            });
-            if (currentClause.length > 0) {
-                applyClausePersonAgreement(currentClause);
-            }
-        }
-        
-        // Reorder each clause of fullList independently
-        const newReordered = [];
-        let currentClause = [];
-        fullList.forEach(w => {
-            if (w && w.isPunct) {
-                if (currentClause.length > 0) {
-                    newReordered.push(...reorderBreakdown(currentClause));
-                    currentClause = [];
-                }
-                newReordered.push(w);
-            } else {
-                currentClause.push(w);
-            }
-        });
-        if (currentClause.length > 0) {
-            newReordered.push(...reorderBreakdown(currentClause));
-        }
-        sugg.reordered = newReordered;
-
-        sugg.romanized = sugg.reordered.filter(w => !w.swallowed && !w.encodedInVerb).map(w => w.conlang).join(' ');
-        sugg.display = transliterate(sugg.romanized, lexicon);
-
-        
-        newSuggestions[suggIdx] = sugg;
-        setSuggestions(newSuggestions);
-    };
-
-    const handleKeyDown = (e) => {
-        if (suggestions.length === 0) return;
-        if (e.key === 'Tab') {
-            e.preventDefault();
-            applySuggestion(suggestions[activeSuggIdx]);
-        } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            setActiveSuggIdx(i => Math.min(i + 1, suggestions.length - 1));
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            setActiveSuggIdx(i => Math.max(i - 1, 0));
-        } else if (e.key === 'Escape') {
-            setSuggestions([]);
-        }
-    };
-
-    // ── Interlinear render ───────────────────────────────────────────────────────
+    // Interlinear render
     const renderInterlinear = () => {
         const tokens = text.split(/(\s+)/);
         
@@ -1473,7 +1150,7 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                             const newlines = (token.match(/\n/g) || []).length;
                             return <div key={i} style={{ flexBasis: '100%', height: `${(newlines - 1) * 20}px` }} />;
                         }
-                        return null; // Skip regular spaces since we use flex gap
+                        return null;
                     }
                     
                     const { entry, isExact, personData } = findEntry(token);
@@ -1514,13 +1191,14 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+            {/* Toolbar */}
             <div className="wiki-toolbar">
                 <Button variant={mode === 'edit' ? 'imp' : 'default'} onClick={() => setMode('edit')}>{t('wiki.corpus.editText')}</Button>
                 <Button variant={mode === 'read' ? 'imp' : 'default'} onClick={() => setMode('read')}>{t('wiki.corpus.interlinearReader')}</Button>
                 <div style={{ flex: 1 }}></div>
 
-                {/* Word Assist toggle — only relevant in edit mode */}
+                {/* Word Assist / Live Translator toggle */}
                 {mode === 'edit' && (
                     <label style={{
                         display: 'flex', alignItems: 'center', gap: '6px',
@@ -1539,8 +1217,11 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                             style={{ accentColor: 'var(--acc)', width: '14px', height: '14px' }}
                             checked={wordAssist}
                             onChange={e => {
-                                setWordAssist(e.target.checked);
-                                setSuggestions([]);
+                                const next = e.target.checked;
+                                setWordAssist(next);
+                                if (next && textareaRef.current) {
+                                    updateActiveSentence(text, textareaRef.current.selectionStart);
+                                }
                             }}
                         />
                         <Languages size={14} />
@@ -1564,303 +1245,99 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                 </Button>
             </div>
 
-            {/* ── Word Assist settings & suggestions panel ── */}
-            {mode === 'edit' && wordAssist && (
-                <div style={{
-                    borderBottom: (suggestions.length > 0 || isWaSettingsOpen) ? '1px solid var(--acc)' : '1px solid var(--bd)',
-                    background: (suggestions.length > 0 || isWaSettingsOpen) ? 'var(--s4)' : 'var(--s1)',
-                    transition: 'all 0.2s'
+            {/* Split Content Area */}
+            <div style={{ 
+                flex: 1, 
+                display: 'flex', 
+                flexDirection: 'row', 
+                gap: '12px', 
+                minHeight: 0, 
+                overflow: 'hidden' 
+            }}>
+                {/* Left Editor Pane */}
+                <div style={{ 
+                    flex: 1, 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    minWidth: 0, 
+                    background: 'var(--s1)', 
+                    borderRadius: '8px', 
+                    border: '1px solid var(--bd)',
+                    overflowY: 'auto' 
                 }}>
-                    {isWaSettingsOpen && (
-                        <div className="wa-settings-overlay">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                                <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}><Wand2 size={18} color="var(--acc)" /> {t('wiki.corpus.configuration')}</h4>
-                                <Button variant="default" onClick={() => setIsWaSettingsOpen(false)} style={{ padding: '2px 8px' }}>{t('wiki.corpus.close')}</Button>
-                            </div>
-                            <WordAssistSettingsMenu config={{ wordAssistConfig: waConfig }} updateConfig={updateConfig} grammarRules={grammarRules} />
-                            <div style={{ marginTop: '15px', padding: '10px', background: 'rgba(139, 92, 246, 0.1)', borderRadius: '8px', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                                <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--tx3)', display: 'flex', gap: '6px' }}>
-                                    <Info size={14} /> {t('wiki.corpus.configHelp')}
-                                </p>
-                            </div>
-                        </div>
+                    {mode === 'edit' ? (
+                        <textarea 
+                            ref={textareaRef}
+                            className="custom-font-text notranslate"
+                            style={{ 
+                                width: '100%', height: '100%', minHeight: '380px', 
+                                background: 'transparent', border: 'none', color: 'var(--tx)', 
+                                resize: 'none', outline: 'none', fontSize: '1.05rem',
+                                padding: '16px',
+                                lineHeight: '1.6',
+                                boxSizing: 'border-box'
+                            }}
+                            value={text}
+                            onChange={handleTextChange}
+                            onSelect={handleSelectOrCursor}
+                            onClick={handleSelectOrCursor}
+                            onKeyUp={handleSelectOrCursor}
+                            placeholder={wordAssist
+                                ? t('wiki.corpus.placeholderEnglish')
+                                : t('wiki.corpus.placeholderConlang')}
+                        />
+                    ) : (
+                        renderInterlinear()
                     )}
-
-                    {/* Status bar — always visible when word assist is on */}
-                    {showWaTip && (
-                        <WordAssistTutorial onClose={() => setShowWaTip(false)} />
-                    )}
-
-                    {wordRange && (suggestions.length > 0 || !FUNCTION_WORDS.has(text.slice(wordRange.start, wordRange.end).toLowerCase())) && (
-                        <div style={{
-                            padding: '4px 14px',
-                            fontSize: '0.7rem',
-                            color: suggestions.length > 0 ? 'var(--acc)' : 'var(--tx3)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            borderBottom: suggestions.length > 0 ? '1px solid var(--bd)' : 'none',
-                            fontWeight: 600,
-                            letterSpacing: '0.04em'
-                        }}>
-                            <Languages size={11} />
-                            {suggestions.length > 0
-                                ? t('wiki.corpus.matchesInfo', {
-                                    count: suggestions.length,
-                                    plural: suggestions.length > 1 ? 'es' : '',
-                                    word: text.slice(wordRange.start, wordRange.end)
-                                  })
-                                : t('wiki.corpus.noMatchInfo', {
-                                    word: text.slice(wordRange.start, wordRange.end)
-                                  })}
-                        </div>
-                    )}
-                    {/* Suggestions list with type/role badges */}
-                    {suggestions.map((sugg, idx) => {
-                        const color = TYPE_COLORS[sugg.type] || 'var(--acc)';
-                        const typeLabel = TYPE_LABELS[sugg.type] || sugg.type;
-                        const rpos = sugg.role ? rolePosition(sugg.role) : 0;
-                        const isActive = idx === activeSuggIdx;
-
-                        // ── Special: phrase suggestion card ──────────────────────────────
-                        if (sugg.type === 'phrase') {
-                            const pc = sugg.label === 'Alt. Reading' ? '#0ea5e9' : '#8b5cf6';
-                            return (
-                                <div
-                                    key={sugg.key}
-                                    onClick={() => applySuggestion(sugg)}
-                                    onMouseEnter={() => setActiveSuggIdx(idx)}
-                                    style={{
-                                        padding: '8px 14px',
-                                        cursor: 'pointer',
-                                        background: isActive
-                                            ? `color-mix(in srgb, ${pc} 15%, transparent)`
-                                            : `color-mix(in srgb, ${pc} 6%, transparent)`,
-                                        borderLeft: isActive ? `3px solid ${pc}` : `3px solid color-mix(in srgb, ${pc} 35%, transparent)`,
-                                        borderBottom: '1px solid var(--bd)',
-                                        transition: 'background 0.15s',
-                                    }}
-                                >
-                                    {/* Top row: badge + full phrase */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '5px', flexWrap: 'wrap',
-                                        direction: isRTL ? 'rtl' : 'ltr' }}>
-                                        <span style={{ fontSize: '0.6rem', fontWeight: 700, color: 'white', background: pc, borderRadius: '4px', padding: '1px 6px', fontFamily: 'sans-serif', textTransform: 'uppercase', letterSpacing: '0.07em', whiteSpace: 'nowrap' }}>
-                                            ✦ {sugg.label || 'phrase'}
-                                        </span>
-                                        <span className="custom-font-text notranslate" style={{ fontSize: '1.15rem', fontWeight: 700, color: pc,
-                                            direction: isRTL ? 'rtl' : 'ltr', unicodeBidi: isRTL ? 'bidi-override' : 'normal' }}>
-                                            {sugg.display}
-                                        </span>
-                                        <span style={{ fontSize: '0.9rem', color: 'var(--tx)', fontFamily: 'sans-serif', fontWeight: 600,
-                                            direction: isRTL ? 'rtl' : 'ltr', unicodeBidi: isRTL ? 'bidi-override' : 'normal' }}>
-                                            {sugg.romanized}
-                                        </span>
-                                        <span style={{ marginLeft: isRTL ? 0 : 'auto', marginRight: isRTL ? 'auto' : 0, fontSize: '0.63rem', fontWeight: 700, background: 'var(--s3)', color: 'var(--tx2)', borderRadius: '4px', padding: '1px 6px', fontFamily: 'sans-serif', whiteSpace: 'nowrap' }}>
-                                            {syntaxOrder} · {isRTL ? 'RTL' : 'LTR'}
-                                        </span>
-                                    </div>
-                                    {/* Bottom row: word-by-word breakdown chips */}
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px',
-                                        flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                                        {sugg.reordered?.map((breakdown, chipIdx) => {
-                                            if (!breakdown || !breakdown.original) return null;
-                                            const isMissing = !breakdown.found;
-                                            const isFunction = FUNCTION_WORDS.has(breakdown.original.toLowerCase());
-                                            if (isFunction && isMissing) return null;
-
-                                            const isDragging = draggedChip?.suggIdx === idx && draggedChip?.chipIdx === chipIdx;
-
-                                            return (
-                                                <div 
-                                                    key={chipIdx}
-                                                    draggable
-                                                    onDragStart={(e) => {
-                                                        e.stopPropagation();
-                                                        setDraggedChip({ suggIdx: idx, chipIdx: chipIdx });
-                                                        e.dataTransfer.effectAllowed = "move";
-                                                    }}
-                                                    onDragOver={(e) => {
-                                                        e.preventDefault();
-                                                        e.dataTransfer.dropEffect = "move";
-                                                    }}
-                                                    onDragEnd={() => setDraggedChip(null)}
-                                                    onDrop={(e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        if (draggedChip && draggedChip.suggIdx === idx) {
-                                                            handleChipReorder(idx, draggedChip.chipIdx, chipIdx);
-                                                        }
-                                                    }}
-                                                    onClick={(e) => handleChipClick(e, idx, chipIdx)}
-                                                    style={{ 
-                                                        fontSize: '0.65rem', padding: '2px 8px', borderRadius: '4px', 
-                                                        background: isMissing ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.1)',
-                                                        border: `1px solid ${isMissing ? 'rgba(255,255,255,0.1)' : pc + '44'}`,
-                                                        display: 'flex', flexDirection: 'column', color: isMissing ? '#999' : 'white',
-                                                        opacity: (breakdown.encodedInVerb || breakdown.swallowed) ? 0.4 : (isDragging ? 0.2 : 1),
-                                                        textDecoration: (breakdown.encodedInVerb || breakdown.swallowed) ? 'line-through' : 'none',
-                                                        cursor: isDragging ? 'grabbing' : 'pointer',
-                                                        transition: 'all 0.1s ease',
-                                                        transform: isDragging ? 'scale(0.95)' : 'scale(1)',
-                                                        userSelect: 'none',
-                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                                                        position: 'relative'
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
-                                                        e.currentTarget.style.transform = 'translateY(-1px)';
-                                                        e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        e.currentTarget.style.background = isMissing ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.1)';
-                                                        e.currentTarget.style.transform = 'translateY(0)';
-                                                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-                                                    }}
-                                                >
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                        <span style={{ fontWeight: 600 }}>{breakdown.original}</span>
-                                                        <span>→</span>
-                                                        <span style={{ color: pc, fontWeight: 700 }}>{breakdown.conlang}</span>
-                                                    </div>
-                                                    <div style={{ fontSize: '0.55rem', opacity: 0.6, display: 'flex', flexWrap: 'wrap', gap: '5px', alignItems: 'center' }}>
-                                                        <span 
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                const ROLES = ['S', 'V', 'O', 'M', 'J', 'R', 'P', 'A', 'Q', 'G', 'C', 'T', 'L', 'N'];
-                                                                const currentRole = breakdown.role || 'O';
-                                                                const idx = ROLES.indexOf(currentRole);
-                                                                const nextRole = ROLES[(idx + 1) % ROLES.length];
-                                                                
-                                                                const newManualRoles = { ...manualRoles, [breakdown.original.toLowerCase()]: nextRole };
-                                                                setManualRoles(newManualRoles);
-                                                                
-                                                                // Re-trigger suggestion compilation by faking a text change event
-                                                                setTimeout(() => {
-                                                                    const phraseSuggs = computePhraseSuggestion(text, textareaRef.current?.selectionStart || 0, syntaxOrder, newManualRoles);
-                                                                    setSuggestions(prev => {
-                                                                        const combined = [...(Array.isArray(phraseSuggs) ? phraseSuggs : [])];
-                                                                        const others = prev.filter(p => p.type !== 'phrase');
-                                                                        return [...combined, ...others];
-                                                                    });
-                                                                }, 0);
-                                                            }}
-                                                            style={{ 
-                                                                fontWeight: 600, 
-                                                                cursor: 'pointer', 
-                                                                background: 'rgba(255,255,255,0.1)', 
-                                                                padding: '1px 4px', 
-                                                                borderRadius: '4px',
-                                                                border: '1px dashed rgba(255,255,255,0.3)',
-                                                                transition: 'all 0.1s'
-                                                            }}
-                                                            title={t('wiki.corpus.overrideRoleTooltip')}
-                                                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.2)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.8)'; }}
-                                                            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}
-                                                        >
-                                                            [{breakdown.role === 'V' ? t('wiki.corpus.verb') : breakdown.role === 'S' ? t('wiki.corpus.subject') : breakdown.role === 'O' ? t('wiki.corpus.object') : breakdown.role}]
-                                                        </span>
-                                                        {breakdown.entry?.wordClass && <span>[{breakdown.entry.wordClass}]</span>}
-                                                        {breakdown.ruleName && <span style={{ color: '#ffcc00' }}>({breakdown.ruleName})</span>}
-                                                        {breakdown.inflected && <span title={breakdown.ruleSource || 'Grammar Rule Applied'} style={{ color: '#ffcc00', cursor: 'help' }}>✦</span>}
-                                                        {breakdown.matchCount > 1 && (
-                                                            <span style={{ color: '#00ccff' }}>
-                                                                ({breakdown.matchCount} alts: {breakdown.alternatives?.join(', ')})
-                                                            </span>
-                                                        )}
-                                                        {!breakdown.found && breakdown.debugSearch && (
-                                                            <span style={{ color: '#ff4444', fontStyle: 'italic' }}>
-                                                                (searched: {breakdown.debugSearch})
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-
-                                </div>
-                            );
-                        }
-
-                        // ── Regular word suggestion row ──────────────────────────────────
-                        return (
-                            <div
-                                key={sugg.key}
-                                onClick={() => applySuggestion(sugg)}
-                                style={{
-                                    padding: '6px 14px',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '10px',
-                                    background: isActive ? 'color-mix(in srgb, var(--acc) 12%, transparent)' : 'transparent',
-                                    borderLeft: isActive ? `3px solid ${color}` : '3px solid transparent',
-                                    transition: 'background 0.15s'
-                                }}
-                                onMouseEnter={() => setActiveSuggIdx(idx)}
-                            >
-
-                                {/* Type badge */}
-                                <span style={{ fontSize: '0.6rem', fontWeight: 700, color: 'white', background: color, borderRadius: '4px', padding: '1px 5px', fontFamily: 'sans-serif', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
-                                    {typeLabel}
-                                </span>
-
-                                {/* Script form */}
-                                <span className="custom-font-text notranslate" style={{ fontSize: '1.1rem', fontWeight: 700, color, minWidth: '80px' }}>
-                                    {sugg.display}
-                                </span>
-
-                                {/* Romanized form */}
-                                <span style={{ fontSize: '0.88rem', color: 'var(--tx)', fontFamily: 'sans-serif', fontWeight: 600 }}>
-                                    {sugg.romanized}
-                                </span>
-
-                                {/* Morphological label (person, case name, etc.) */}
-                                {sugg.label && (
-                                    <span style={{ fontSize: '0.75rem', color, fontFamily: 'sans-serif', fontStyle: 'italic', opacity: 0.85 }}>
-                                        {sugg.label}
-                                    </span>
-                                )}
-
-                                {/* English gloss */}
-                                <span style={{ fontSize: '0.8rem', color: 'var(--tx2)', fontFamily: 'sans-serif', marginLeft: 'auto' }}>
-                                    "{sugg.gloss}"
-                                </span>
-
-                                {/* Word order position badge */}
-                                {sugg.role && rpos > 0 && (
-                                    <span style={{ fontSize: '0.65rem', fontWeight: 700, background: 'var(--s3)', color: 'var(--tx2)', borderRadius: '4px', padding: '1px 5px', fontFamily: 'sans-serif', whiteSpace: 'nowrap' }}>
-                                        {syntaxOrder[rpos-1]} pos {rpos}/{syntaxOrder.length}
-                                    </span>
-                                )}
-                            </div>
-                        );
-                    })}
                 </div>
-            )}
 
-            <div style={{ flex: 1, padding: '15px', background: 'var(--s1)', borderRadius: '0 0 8px 8px', overflowY: 'auto' }}>
-                {mode === 'edit' ? (
-                    <textarea 
-                        ref={textareaRef}
-                        className="custom-font-text notranslate"
-                        style={{ 
-                            width: '100%', height: '100%', minHeight: '400px', 
-                            background: 'transparent', border: 'none', color: 'var(--tx)', 
-                            resize: 'none', outline: 'none', fontSize: '1.1rem',
-                            fontFamily: wordAssist ? 'var(--font-body, sans-serif)' : undefined
-                        }}
-                        value={text}
-                        onChange={handleTextChange}
-                        onKeyDown={handleKeyDown}
-                        placeholder={wordAssist
-                            ? t('wiki.corpus.placeholderEnglish')
-                            : t('wiki.corpus.placeholderConlang')}
-                    />
-                ) : (
-                    renderInterlinear()
+                {/* Right Live Translator Pane */}
+                {mode === 'edit' && wordAssist && (
+                    <div style={{ 
+                        width: '380px', 
+                        minWidth: '320px', 
+                        maxWidth: '45%', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        height: '100%',
+                        minHeight: 0
+                    }}>
+                        <LiveTranslatorPanel
+                            analyzer={analyzer}
+                            initialSourceText={activeSentence}
+                            onInsert={handleInsertTranslation}
+                            onClose={() => setWordAssist(false)}
+                            onOpenSettings={() => setIsWaSettingsOpen(true)}
+                            onOpenAddWord={(missingWordObj) => setWordForAdd(missingWordObj)}
+                            syntaxOrder={waConfig?.syntaxOrder || syntaxOrder}
+                            transliterate={transliterate}
+                            lexicon={lexicon}
+                        />
+                    </div>
                 )}
             </div>
+
+            {/* Settings Modal */}
+            <Modal isOpen={isWaSettingsOpen} onClose={() => setIsWaSettingsOpen(false)} title={t('wiki.corpus.wordAssistSettings')}>
+                <div style={{ maxHeight: '75vh', overflowY: 'auto', paddingRight: '4px' }}>
+                    <WordAssistSettingsMenu 
+                        config={{ ...config, wordAssistConfig: waConfig }} 
+                        updateConfig={updateConfig} 
+                        grammarRules={grammarRules} 
+                    />
+                </div>
+            </Modal>
+
+            {/* Quick Add Word to Lexicon Modal */}
+            {wordForAdd && (
+                <Modal isOpen={!!wordForAdd} onClose={() => setWordForAdd(null)} title={t('lexicon.addWordModalTitle') || 'Add Word to Lexicon'}>
+                    <LexiconEditModal 
+                        wordObj={wordForAdd} 
+                        mode="add" 
+                        onClose={() => setWordForAdd(null)} 
+                    />
+                </Modal>
+            )}
         </div>
     );
 }
@@ -1897,6 +1374,31 @@ function LegacyWikiEditor({ content, onSave }) {
     const [selectedScriptId, setSelectedScriptId] = useState(config.activeScriptSystemId || 'default');
     const [writingDirection, setWritingDirection] = useState('horizontal');
 
+    // Word Assist Live Translator state
+    const [wordAssist, setWordAssist] = useState(false);
+    const [isWaSettingsOpen, setIsWaSettingsOpen] = useState(false);
+    const [wordForAdd, setWordForAdd] = useState(null);
+    const [activeSentence, setActiveSentence] = useState('');
+
+    const {
+        analyzer,
+        syntaxOrder,
+        waConfig,
+        updateConfig,
+        grammarRules
+    } = useConlangAnalyzer();
+
+    const updateActiveSentence = () => {
+        if (!editor) return;
+        const { from, to } = editor.state.selection;
+        if (from !== to) {
+            setActiveSentence(editor.state.doc.textBetween(from, to, ' ').trim());
+            return;
+        }
+        const $pos = editor.state.selection.$from;
+        setActiveSentence($pos.parent.textContent || '');
+    };
+
     const onSaveRef = useRef(onSave);
     useEffect(() => {
         onSaveRef.current = onSave;
@@ -1924,6 +1426,14 @@ function LegacyWikiEditor({ content, onSave }) {
         onBlur: ({ editor }) => {
             if (editor && !editor.isDestroyed && onSaveRef.current) {
                 onSaveRef.current(editor.getHTML());
+            }
+        },
+        onSelectionUpdate: ({ editor: ed }) => {
+            const { from, to } = ed.state.selection;
+            if (from !== to) {
+                setActiveSentence(ed.state.doc.textBetween(from, to, ' ').trim());
+            } else {
+                setActiveSentence(ed.state.selection.$from.parent.textContent || '');
             }
         }
     });
@@ -2041,6 +1551,17 @@ function LegacyWikiEditor({ content, onSave }) {
                 <button className="wiki-tool-btn" onClick={() => setIconPickerOpen(true)} title={t('wiki.richText.insertIcon')}><Smile size={16} /></button>
                 <button className={`wiki-tool-btn ${editor.isActive('link') ? 'active' : ''}`} onClick={() => setLinkModalOpen(true)} title={t('wiki.richText.insertLink')}><Link size={16} /></button>
                 <button className="wiki-tool-btn" title={t('wiki.richText.formatConlang')} onClick={handleConlangBtnClick}><Type size={16} /> <span style={{fontSize: '0.7rem', marginLeft: '4px', fontWeight: 'bold'}}>{t('wiki.richText.conlangBadge')}</span></button>
+                <button 
+                    className={`wiki-tool-btn ${wordAssist ? 'active' : ''}`} 
+                    title="Live Word Assist & Translator" 
+                    onClick={() => {
+                        const next = !wordAssist;
+                        setWordAssist(next);
+                        if (next) updateActiveSentence();
+                    }}
+                >
+                    <Languages size={16} /> <span style={{ fontSize: '0.7rem', marginLeft: '4px', fontWeight: 'bold' }}>Word Assist</span>
+                </button>
                 
                 <div style={{ flex: 1 }}></div>
                 <Button variant="save" onClick={() => onSave(editor.getHTML())}><div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}><Save size={16} /> {t('wiki.saveDocument')}</div></Button>
@@ -2073,11 +1594,29 @@ function LegacyWikiEditor({ content, onSave }) {
                 </div>
             )}
 
-            <div className="wiki-editor-container" style={{ flex: 1, overflow: 'auto', padding: '0', display: 'flex', flexDirection: 'column' }}>
-                <EditorContent 
-                    editor={editor} 
-                    className="wiki-editor-tiptap"
-                />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'row', minHeight: 0, gap: '12px', overflow: 'hidden' }}>
+                <div className="wiki-editor-container" style={{ flex: 1, overflow: 'auto', padding: '0', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                    <EditorContent 
+                        editor={editor} 
+                        className="wiki-editor-tiptap"
+                    />
+                </div>
+
+                {wordAssist && (
+                    <div style={{ width: '380px', minWidth: '320px', maxWidth: '45%', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+                        <LiveTranslatorPanel
+                            analyzer={analyzer}
+                            initialSourceText={activeSentence}
+                            onInsert={(insertedText) => editor.commands.insertContent(insertedText)}
+                            onClose={() => setWordAssist(false)}
+                            onOpenSettings={() => setIsWaSettingsOpen(true)}
+                            onOpenAddWord={(missingWordObj) => setWordForAdd(missingWordObj)}
+                            syntaxOrder={waConfig?.syntaxOrder || syntaxOrder}
+                            transliterate={transliterateText}
+                            lexicon={lexicon}
+                        />
+                    </div>
+                )}
             </div>
 
             <Modal isOpen={linkModalOpen} onClose={() => setLinkModalOpen(false)} title={t('wiki.richText.insertLink')}>
@@ -2144,6 +1683,28 @@ function LegacyWikiEditor({ content, onSave }) {
                     </div>
                 </div>
             </Modal>
+
+            {/* Word Assist Settings Modal */}
+            <Modal isOpen={isWaSettingsOpen} onClose={() => setIsWaSettingsOpen(false)} title={t('wiki.corpus.wordAssistSettings')}>
+                <div style={{ maxHeight: '75vh', overflowY: 'auto', paddingRight: '4px' }}>
+                    <WordAssistSettingsMenu 
+                        config={{ wordAssistConfig: waConfig }} 
+                        updateConfig={updateConfig} 
+                        grammarRules={grammarRules} 
+                    />
+                </div>
+            </Modal>
+
+            {/* Quick Add Word to Lexicon Modal */}
+            {wordForAdd && (
+                <Modal isOpen={!!wordForAdd} onClose={() => setWordForAdd(null)} title={t('lexicon.addWordModalTitle') || 'Add Word to Lexicon'}>
+                    <LexiconEditModal 
+                        wordObj={wordForAdd} 
+                        mode="add" 
+                        onClose={() => setWordForAdd(null)} 
+                    />
+                </Modal>
+            )}
         </div>
     );
 }

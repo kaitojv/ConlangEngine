@@ -136,11 +136,16 @@ export const applyRuleToWord = (baseWord, rule, grammarRules, vowels, consonants
     if (!parsed) return currentBase;
 
     const { clean, type, position } = parsed;
+    let effType = (rule.position && ['prefix', 'suffix', 'infix'].includes(rule.position)) ? rule.position : type;
+    if (rule.affix.endsWith('-') || rule.affix.endsWith("'")) effType = 'prefix';
+    else if (rule.affix.startsWith('-') || rule.affix.startsWith("'")) effType = 'suffix';
 
-    if (type === 'suffix') {
-        return currentBase + clean;
-    } else if (type === 'prefix') {
-        return clean + currentBase;
+    const affixStr = clean || rule.affix.replace(/^[-=]+|[-=]+$/g, '');
+
+    if (effType === 'suffix') {
+        return currentBase + affixStr;
+    } else if (effType === 'prefix') {
+        return affixStr + currentBase;
     } else if (type === 'infix') {
         // 1. Handle @V position (after first vowel)
         if (position === 'V' && vowels) {

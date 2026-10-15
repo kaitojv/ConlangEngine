@@ -1,0 +1,1498 @@
+Analisando o código do grammarAnalyzer.js de ponta a ponta, dá para ver que você já construiu uma base muito inteligente — especialmente com a marcação diferencial de objeto (DOM) baseada na hierarquia de animacidade e definitude, o suporte a zero copula e a reordenação sintática por blocos.
+
+Ao mesmo tempo, existem bugs silenciosos (incluindo cálculos inteiros que o código faz e depois descarta), inconsistências de configurações entre Sujeito e Objeto, e oportunidades excelentes para conectar o analisador diretamente ao useConfigStore e ao waConfig.
+
+1. Bugs Silenciosos e Código Inconsistente Encontrados
+Leitura alternativa de ambiguidade (finalBAlt / finalRAlt) é calculada e descartada: Nas linhas 873–876 e 932–950, o código detecta quando há 2 ou mais substantivos ambíguos (S e O), inverte seus papéis sintáticos, reordena a frase em finalRAlt e... nunca adiciona finalRAlt ao array results. Todo esse processamento é perdido antes do return.
+
+Inconsistência de adjectivePlacement entre Sujeito e Objeto: No reorderBreakdown, quando o papel é 'O' (linha 356) ou 'P' (linha 299), o código usa (m.role === 'J' || m.role === 'C' ? adjPos : waConfig.adjPos). Porém, quando o papel é 'S' (linha 342), 'V' (linha 369) ou no modificador avulso (linha 325), ele ignora a variável adjPos (que vem de adjectivePlacement nas configOptions) e lê apenas waConfig.adjPos. Na prática, adjetivos no Sujeito ignoram a configuração adjectivePlacement do app.
+
+Preposições travadas no início do bloco (sem suporte a Posposições): Nas linhas 400–406, o block.tokens.sort força role === 'P' a vir sempre primeiro (return -1). Se a língua configurada for SOV ou usar posposições (via waConfig.adpPos === 'after' ou waConfig.prepPos === 'post'), o analisador impede que a posposição vá para o fim do sintagma.
+
+Lematizador comparando palavra em inglês com a palavra na conlang (e.word em vez de e.translation): Nas linhas 489, 516 e 634, o lemmatize e o classificador verificam lexicon.find(e => e.word.replace(/\*/g,'').toLowerCase() === lower). Como a entrada digitada no Word Assist está em inglês, comparar lower com e.word (que é a forma na conlang, conforme usado na linha 786) só funciona se a palavra na conlang for idêntica ao inglês; o correto ali é buscar em e.translation / e.shortTranslation via matchesTranslation.
+
+Gatilhos do Word Assist bloqueiam regras gramaticais normais: Na linha 796 (if (wordMarkers.length === 0)), se uma palavra recebe qualquer marcador do Word Assist (por exemplo, um marcador de caso acusativo para O), o bloco if impede que ela receba as grammarRules da matriz (como plural -s ou tempo verbal). Um objeto direto no plural acaba perdendo o plural se tiver marcação de caso no Word Assist.
+
+Substantivos no singular nunca ativam concordância verbal de 3ª pessoa: Na linha 761 (else if (info.person || info.number || PRONOUN_MAP[q])), pronomes recebem personRule, mas substantivos comuns no singular (ex.: "the cat") saem do lemmatize apenas com { lemma: 'cat', tense: 'present' } (sem person: '3rd' e sem number: 'S'). Assim, frases com sujeito nominal nunca conjugam o verbo na 3ª pessoa.
+
+Afixo de concordância pessoa-verbo ignora a fonologia do useConfigStore: Na linha 916, a concordância verbal usa applyAffixToBase(targetToken.conlang, subjToken.personRule.affix) (mera concatenação de strings) em vez de tentar applyRuleToWord com as vogais e consoantes do useConfigStore, perdendo regras de harmonia vocálica ou alomorfia.
+
+Duplicações e variáveis órfãs:
+
+PRONOUN_MAP está declarado duas vezes no mesmo arquivo (linhas 147–171 e 422–446).
+
+if (TIME_WORDS.has(low)) return 'T'; aparece duplicado no preClassified (linhas 586 e 607).
+
+comparisonTargetIdx é calculado quando q === 'than' (linhas 722–724), mas nunca é utilizado.
+
+GRAMMAR_RULE_IMPORT_MAP, TYPE_COLORS e TYPE_LABELS estão declarados localmente mas não são exportados nem usados internamente.
+
+2. Como Aprimorar Integrando com as Settings (useConfigStore & waConfig)
+Podemos conectar o grammarAnalyzer.js às configurações globais e de projeto para torná-lo muito mais flexível:
+
+Leitura centralizada e reativa do useConfigStore:
+Em vez de chamar useConfigStore.getState() repetidamente dentro de loops for e forEach (linhas 413 e 807), lemos o snapshot da store no início da análise e extraímos não só vowels, consonants e otherPhonemes, mas também configurações tipológicas e ortográficas (caseSensitive, proDrop, adpositionType, headDirection, numberMarking, ergativity).
+
+Suporte a Pro-Drop Configurável (waConfig.proDrop):
+Atualmente, quando há sufixo de pessoa no verbo (clauseBAffix), o código define subjToken.encodedInVerb = true e sempre omite o pronome sujeito na linha 956. Adicionando suporte a waConfig.proDrop ('always' | 'optional' | 'never'), o usuário pode escolher se a língua omite o pronome, gera as duas sugestões (Free vs. Pro-Drop) ou mantém o pronome explícito mesmo com o verbo conjugado.
+
+Alinhamento Morfossintático (waConfig.alignment: Nominativo-Acusativo vs. Ergativo-Absolutivo):
+Você já calculou hasObject (transitivade da oração) nas linhas 675–682! Com apenas algumas linhas a mais conectadas a waConfig.alignment === 'ergative', o analisador pode distinguir automaticamente Sujeito Transitivo (A / Ergativo) de Sujeito Intransitivo (S / Absolutivo) e Objeto (O / Absolutivo), aplicando as regras da matriz ou do Word Assist de forma tipologicamente autêntica.
+
+Lematização Inteligente em Inglês com Fallback no Léxico:
+No lemmatize, palavras como loved, tried, running ou making sofrem corte seco (slice(0, -2) ou slice(0, -3)), virando lov, tri, runn, mak. Podemos adicionar um resolvedor de candidatos ([stem, stem + 'e', stemSemConsoanteDupla, stemY]) que verifica qual raiz realmente existe nas traduções do lexicon antes de retornar o lema.
+
+Adposições (Preposições vs. Posposições) e Grau Comparativo (than):
+
+Usar waConfig.adpPos (ou adjectivePlacement / syntaxOrder como dica) para ordenar role === 'P' antes ou depois do sintagma nominal.
+
+Aproveitar o comparisonTargetIdx que já estava esboçado na linha 722 para aplicar automaticamente uma regra ou marcador de caso comparative_target / ablative / standard_of_comparison ao substantivo que vem depois de "than".
+
+3. Código Completo Polido e Aprimorado (grammarAnalyzer.js)
+Abaixo está o arquivo completo refatorado. Ele mantém 100% de compatibilidade com as assinaturas atuais do seu app (createGrammarAnalyzer e seus métodos exportados, além de exportar as constantes auxiliares para a UI), corrige todos os bugs listados e integra as novas opções de configuração:
+
+JavaScript
+
+import { applyRuleToWord } from '@/utils/morphologyEngine.jsx';
+import { useConfigStore } from '@/store/useConfigStore.jsx';
+
+const MODAL_VERBS = new Set([
+    'can', 'could', 'will', 'would', 'shall', 'should', 'may', 'might', 'must',
+    'ought to', 'used to', 'dare', 'need', 'have to', 'has to', 'had to'
+]);
+
+const ING_NOUNS = new Set([
+    'morning', 'evening', 'spring', 'ceiling', 'building', 'king', 'ring', 'thing', 'wing', 'string', 'sting', 'swing', 'sing',
+    'bling', 'ding', 'fling', 'ping', 'sling', 'wedding', 'pudding', 'blessing', 'boarding', 'clothing', 'coating',
+    'crossing', 'drawing', 'earning', 'feeling', 'filling', 'finding', 'flooring', 'funding', 'gathering', 'greeting',
+    'heading', 'helping', 'inning', 'landing', 'lining', 'meaning', 'meeting', 'opening', 'parking', 'planning', 'posting',
+    'reading', 'roofing', 'seating', 'setting', 'serving', 'siding', 'spelling', 'stirring', 'stuffing', 'topping', 'training',
+    'warning', 'wiring', 'writing', 'pricing', 'savings', 'earnings', 'belongings', 'surroundings', 'findings', 'proceedings',
+    'dealings', 'innings', 'trimmings', 'workings', 'underpinnings', 'outskirts', 'during', 'among', 'along', 'nothing',
+    'something', 'anything', 'everything', 'herring', 'sibling', 'darling', 'dumpling',
+    'farthing', 'offspring', 'shilling', 'sterling', 'fledgling', 'nestling', 'underling', 'hireling'
+]);
+
+const ING_ADJECTIVES = new Set([
+    'interesting', 'boring', 'exciting', 'amazing', 'charming', 'daring', 'demanding', 'thrilling', 'willing', 'unwilling',
+    'appealing', 'appalling', 'astonishing', 'convincing', 'cunning', 'dashing', 'daunting', 'deserving', 'distinguishing',
+    'embarrassing', 'encouraging', 'entertaining', 'existing', 'fascinating', 'fitting', 'flattering', 'forgiving', 'glaring',
+    'haunting', 'imposing', 'inspiring', 'insulting', 'inviting', 'lasting', 'leading', 'living', 'long-lasting', 'loving',
+    'misleading', 'missing', 'outstanding', 'overwhelming', 'pressing', 'promising', 'remaining', 'rewarding', 'shocking',
+    'smashing', 'startling', 'striking', 'stunning', 'surrounding', 'tiring', 'touching', 'underlying', 'unfolding',
+    'unrelenting', 'varying', 'welcoming', 'working'
+]);
+
+const VERB_3SG = new Set([
+    'is', 'has', 'does', 'goes', 'says', 'pays', 'plays', 'stays', 'makes', 'takes', 'gives', 'lives', 'loves', 'moves',
+    'proves', 'serves', 'saves', 'runs', 'comes', 'becomes', 'seems', 'feels', 'keeps', 'sees', 'meets', 'gets', 'puts',
+    'sets', 'lets', 'cuts', 'hits', 'sits', 'fits', 'hurts', 'quits', 'splits', 'knows', 'shows', 'grows', 'flows', 'throws',
+    'follows', 'allows', 'borrows', 'needs', 'reads', 'leads', 'feeds', 'breeds', 'speeds', 'bleeds', 'means', 'cleans'
+]);
+
+const S_NOUNS_SING = new Set([
+    'status', 'bonus', 'campus', 'census', 'nexus', 'virus', 'focus', 'cactus', 'radius', 'stimulus', 'syllabus', 'apparatus',
+    'caucus', 'chorus', 'circus', 'corpus', 'exodus', 'fungus', 'genius', 'hiatus', 'impetus', 'lapsus', 'prospectus', 'ruckus',
+    'terminus', 'tinnitus', 'tonus', 'physics', 'mathematics', 'economics', 'politics', 'ethics', 'athletics', 'acoustics',
+    'aerobics', 'robotics', 'genetics', 'linguistics', 'statistics', 'logistics', 'gymnastics', 'class', 'glass', 'grass',
+    'mass', 'pass', 'less', 'dress', 'press', 'stress', 'mess', 'boss', 'loss', 'cross', 'moss', 'toss', 'plus', 'thus', 'bus', 'pus'
+]);
+
+const ER_BLOCKLIST = new Set([
+    'her', 'water', 'butter', 'sister', 'brother', 'mother', 'father', 'daughter', 'winter', 'summer', 'after', 'river',
+    'flower', 'tower', 'power', 'cover', 'silver', 'copper', 'timber', 'letter', 'dinner', 'supper', 'chapter', 'answer',
+    'cancer', 'center', 'corner', 'counter', 'danger', 'disorder', 'filter', 'finger', 'flutter', 'foster', 'gather',
+    'gender', 'hunger', 'laughter', 'lawyer', 'leader', 'leather', 'liver', 'lobster', 'manner', 'master', 'matter',
+    'member', 'monster', 'murder', 'offer', 'other', 'oyster', 'partner', 'pepper', 'pitcher', 'plaster', 'poster',
+    'powder', 'prefer', 'proper', 'quarter', 'render', 'shelter', 'shower', 'slander', 'soccer', 'spider', 'suffer',
+    'sugar', 'thunder', 'traitor', 'transfer', 'trigger', 'tumbler', 'ulcer', 'usher', 'vector', 'vendor', 'venture',
+    'weather', 'whisper', 'wonder', 'teacher', 'writer', 'player', 'worker', 'manager', 'officer', 'driver', 'farmer',
+    'hunter', 'baker', 'singer', 'dancer', 'painter', 'runner', 'climber', 'fighter', 'rider', 'swimmer', 'winner',
+    'loser', 'builder', 'buyer', 'seller', 'dealer', 'healer', 'reader', 'speaker', 'keeper', 'seeker',
+    'maker', 'taker', 'breaker', 'shaker', 'helper', 'opener', 'closer', 'owner', 'user', 'view'
+]);
+
+const EST_BLOCKLIST = new Set([
+    'forest', 'interest', 'protest', 'contest', 'harvest', 'manifest', 'modest', 'honest', 'arrest', 'earnest', 'request',
+    'suggest', 'digest', 'invest', 'infest', 'attest', 'bequest', 'breast', 'chest', 'crest', 'jest', 'nest', 'pest',
+    'quest', 'rest', 'test', 'vest', 'west', 'zest', 'beast', 'feast', 'least', 'yeast', 'priest'
+]);
+
+const ED_ADJECTIVES = new Set([
+    'naked', 'sacred', 'wicked', 'ragged', 'rugged', 'jagged', 'cragged', 'beloved', 'learned', 'blessed', 'dogged', 'aged',
+    'wretched', 'crooked'
+]);
+
+const COMPARATIVE_IRREGULAR = {
+    "better":   { lemma: "good",   type: "comparative" },
+    "worse":    { lemma: "bad",    type: "comparative" },
+    "farther":  { lemma: "far",    type: "comparative" },
+    "further":  { lemma: "far",    type: "comparative" },
+    "more":     { lemma: "many",   type: "comparative" },
+    "less":     { lemma: "little", type: "comparative" },
+    "fewer":    { lemma: "few",    type: "comparative" },
+    "elder":    { lemma: "old",    type: "comparative" },
+    "older":    { lemma: "old",    type: "comparative" },
+    "best":     { lemma: "good",   type: "superlative" },
+    "worst":    { lemma: "bad",    type: "superlative" },
+    "farthest": { lemma: "far",    type: "superlative" },
+    "furthest": { lemma: "far",    type: "superlative" },
+    "most":     { lemma: "many",   type: "superlative" },
+    "least":    { lemma: "little", type: "superlative" },
+    "fewest":   { lemma: "few",    type: "superlative" },
+    "eldest":   { lemma: "old",    type: "superlative" },
+    "oldest":   { lemma: "old",    type: "superlative" },
+    "latest":   { lemma: "late",   type: "superlative" },
+    "last":     { lemma: "late",   type: "superlative" },
+    "nearest":  { lemma: "near",   type: "superlative" },
+    "next":     { lemma: "near",   type: "superlative" },
+};
+
+const IRREGULAR_VERBS = {
+    "am":    { lemma: "be",      tense: "present", person: "1st", number: "S" },
+    "is":    { lemma: "be",      tense: "present", person: "3rd", number: "S" },
+    "are":   { lemma: "be",      tense: "present" },
+    "was":   { lemma: "be",      tense: "past",    number: "S" },
+    "were":  { lemma: "be",      tense: "past",    number: "P" },
+    "been":  { lemma: "be",      tense: "past_participle" },
+    "being": { lemma: "be",      tense: "gerund" },
+    "does":  { lemma: "do",      tense: "present", person: "3rd", number: "S" },
+    "did":   { lemma: "do",      tense: "past" },
+    "done":  { lemma: "do",      tense: "past_participle" },
+    "has":   { lemma: "have",    tense: "present", person: "3rd", number: "S" },
+    "had":   { lemma: "have",    tense: "past",    isParticiple: true },
+    "went":  { lemma: "go",      tense: "past" },
+    "gone":  { lemma: "go",      tense: "past_participle" },
+    "goes":  { lemma: "go",      tense: "present", person: "3rd", number: "S" },
+    "saw":   { lemma: "see",     tense: "past" },
+    "seen":  { lemma: "see",     tense: "past_participle" },
+    "ate":   { lemma: "eat",     tense: "past" },
+    "eaten": { lemma: "eat",     tense: "past_participle" },
+    "bought":  { lemma: "buy",   tense: "past", isParticiple: true },
+    "brought": { lemma: "bring", tense: "past", isParticiple: true },
+    "thought": { lemma: "think", tense: "past", isParticiple: true },
+    "caught":  { lemma: "catch", tense: "past", isParticiple: true },
+    "taught":  { lemma: "teach", tense: "past", isParticiple: true },
+    "took":   { lemma: "take",   tense: "past" },
+    "taken":  { lemma: "take",   tense: "past_participle" },
+    "made":   { lemma: "make",   tense: "past", isParticiple: true },
+    "came":   { lemma: "come",   tense: "past" },
+    "come":   { lemma: "come",   tense: "past_participle" },
+    "said":   { lemma: "say",    tense: "past", isParticiple: true },
+    "told":   { lemma: "tell",   tense: "past", isParticiple: true },
+    "knew":   { lemma: "know",   tense: "past" },
+    "known":  { lemma: "know",   tense: "past_participle" },
+    "grew":   { lemma: "grow",   tense: "past" },
+    "grown":  { lemma: "grow",   tense: "past_participle" },
+    "threw":  { lemma: "throw",  tense: "past" },
+    "thrown": { lemma: "throw",  tense: "past_participle" },
+    "showed": { lemma: "show",   tense: "past" },
+    "shown":  { lemma: "show",   tense: "past_participle" },
+    "wrote":  { lemma: "write",  tense: "past" },
+    "written":{ lemma: "write",  tense: "past_participle" },
+    "rode":   { lemma: "ride",   tense: "past" },
+    "ridden": { lemma: "ride",   tense: "past_participle" },
+    "drove":  { lemma: "drive",  tense: "past" },
+    "driven": { lemma: "drive",  tense: "past_participle" },
+    "rose":   { lemma: "rise",   tense: "past" },
+    "risen":  { lemma: "rise",   tense: "past_participle" },
+    "spoke":   { lemma: "speak",  tense: "past" },
+    "spoken":  { lemma: "speak",  tense: "past_participle" },
+    "broke":   { lemma: "break",  tense: "past" },
+    "broken":  { lemma: "break",  tense: "past_participle" },
+    "stole":   { lemma: "steal",  tense: "past" },
+    "stolen":  { lemma: "steal",  tense: "past_participle" },
+    "froze":   { lemma: "freeze", tense: "past" },
+    "frozen":  { lemma: "freeze", tense: "past_participle" },
+    "gave":    { lemma: "give",    tense: "past" },
+    "given":   { lemma: "give",    tense: "past_participle" },
+    "forgave": { lemma: "forgive", tense: "past" },
+    "forgiven":{ lemma: "forgive", tense: "past_participle" },
+    "found":   { lemma: "find",   tense: "past", isParticiple: true },
+    "bound":   { lemma: "bind",   tense: "past", isParticiple: true },
+    "ground":  { lemma: "grind",  tense: "past", isParticiple: true },
+    "ran":     { lemma: "run",    tense: "past" },
+    "run":     { lemma: "run",    tense: "past_participle" },
+    "won":     { lemma: "win",    tense: "past", isParticiple: true },
+    "began":   { lemma: "begin",  tense: "past" },
+    "begun":   { lemma: "begin",  tense: "past_participle" },
+    "swam":    { lemma: "swim",   tense: "past" },
+    "swum":    { lemma: "swim",   tense: "past_participle" },
+    "sang":    { lemma: "sing",   tense: "past" },
+    "sung":    { lemma: "sing",   tense: "past_participle" },
+    "rang":    { lemma: "ring",   tense: "past" },
+    "rung":    { lemma: "ring",   tense: "past_participle" },
+    "drank":   { lemma: "drink",  tense: "past" },
+    "drunk":   { lemma: "drink",  tense: "past_participle" },
+    "shrank":  { lemma: "shrink", tense: "past" },
+    "shrunk":  { lemma: "shrink", tense: "past_participle" },
+    "put":   { lemma: "put",   tense: "past", isParticiple: true, invariable: true },
+    "cut":   { lemma: "cut",   tense: "past", isParticiple: true, invariable: true },
+    "hit":   { lemma: "hit",   tense: "past", isParticiple: true, invariable: true },
+    "set":   { lemma: "set",   tense: "past", isParticiple: true, invariable: true },
+    "let":   { lemma: "let",   tense: "past", isParticiple: true, invariable: true },
+    "shut":  { lemma: "shut",  tense: "past", isParticiple: true, invariable: true },
+    "cost":  { lemma: "cost",  tense: "past", isParticiple: true, invariable: true },
+    "hurt":  { lemma: "hurt",  tense: "past", isParticiple: true, invariable: true },
+    "quit":  { lemma: "quit",  tense: "past", isParticiple: true, invariable: true },
+    "read":  { lemma: "read",  tense: "past", isParticiple: true, invariable: true },
+    "spread":{ lemma: "spread",tense: "past", isParticiple: true, invariable: true },
+    "cast":  { lemma: "cast",  tense: "past", isParticiple: true, invariable: true },
+    "burst": { lemma: "burst", tense: "past", isParticiple: true, invariable: true },
+};
+
+export const PRONOUN_MAP = {
+    'i':      { base: 'i',    person: '1st', number: 'S', role: 'S' },
+    'me':     { base: 'i',    person: '1st', number: 'S', role: 'O', case: 'objective' },
+    'my':     { base: 'i',    person: '1st', number: 'S', role: null, case: 'genitive' },
+    'mine':   { base: 'i',    person: '1st', number: 'S', role: null, case: 'genitive' },
+    'we':     { base: 'we',   person: '1st', number: 'P', role: 'S' },
+    'us':     { base: 'we',   person: '1st', number: 'P', role: 'O', case: 'objective' },
+    'our':    { base: 'we',   person: '1st', number: 'P', role: null, case: 'genitive' },
+    'ours':   { base: 'we',   person: '1st', number: 'P', role: null, case: 'genitive' },
+    'you':    { base: 'you',  person: '2nd', number: 'S', role: 'S' },
+    'your':   { base: 'you',  person: '2nd', number: 'S', role: null, case: 'genitive' },
+    'yours':  { base: 'you',  person: '2nd', number: 'S', role: null, case: 'genitive' },
+    'he':     { base: 'he',   person: '3rd', number: 'S', gender: 'Masc', role: 'S' },
+    'him':    { base: 'he',   person: '3rd', number: 'S', gender: 'Masc', role: 'O', case: 'objective' },
+    'his':    { base: 'he',   person: '3rd', number: 'S', gender: 'Masc', role: null, case: 'genitive' },
+    'she':    { base: 'she',  person: '3rd', number: 'S', gender: 'Fem',  role: 'S' },
+    'her':    { base: 'she',  person: '3rd', number: 'S', gender: 'Fem',  role: 'O', case: 'objective' },
+    'hers':   { base: 'she',  person: '3rd', number: 'S', gender: 'Fem',  role: null, case: 'genitive' },
+    'it':     { base: 'it',   person: '3rd', number: 'S', gender: 'Neut', role: null },
+    'its':    { base: 'it',   person: '3rd', number: 'S', gender: 'Neut', role: null, case: 'genitive' },
+    'they':   { base: 'they', person: '3rd', number: 'P', role: 'S' },
+    'them':   { base: 'they', person: '3rd', number: 'P', role: 'O', case: 'objective' },
+    'their':  { base: 'they', person: '3rd', number: 'P', role: null, case: 'genitive' },
+    'theirs': { base: 'they', person: '3rd', number: 'P', role: null, case: 'genitive' },
+};
+
+export const GRAMMAR_RULE_IMPORT_MAP = [
+    { keywords: ['past', 'preterit', 'preterite'], trigger: 'was, did', type: 'word', position: 'suffix' },
+    { keywords: ['future'], trigger: 'will', type: 'word', position: 'suffix' },
+    { keywords: ['perfect'], trigger: 'have, has, had', type: 'word', position: 'suffix' },
+    { keywords: ['plural'], trigger: '-s', type: 'suffix', position: 'suffix' },
+    { keywords: ['negat', 'negative'], trigger: 'not', type: 'word', position: 'prefix' },
+    { keywords: ['gerund', 'continuous', 'progressive'], trigger: '-ing', type: 'suffix', position: 'suffix' },
+    { keywords: ['passive'], trigger: 'was, been', type: 'word', position: 'suffix' },
+    { keywords: ['possessive', 'genitive'], trigger: "'s", type: 'suffix', position: 'suffix' },
+    { keywords: ['comparative'], trigger: 'more, -er', type: 'word', position: 'before' },
+    { keywords: ['superlative'], trigger: 'most, -est', type: 'word', position: 'before' },
+    { keywords: ['agentive'], trigger: '-er, -or', type: 'suffix', position: 'suffix' },
+    { keywords: ['object', 'accusative'], trigger: 'O', type: 'trigger', position: 'suffix' },
+    { keywords: ['subject', 'nominative', 'ergative'], trigger: 'S', type: 'trigger', position: 'suffix' },
+];
+
+export const TYPE_COLORS = { direct: 'var(--acc)', pronoun: '#10b981', inflected: '#f59e0b', 'grammar-case': '#ec4899' };
+export const TYPE_LABELS = { direct: 'lexicon', pronoun: 'pronoun', inflected: 'conjugated', 'grammar-case': 'case' };
+
+const ANIMACY_SCOPES = {
+    "pronoun_1_2": {
+        description: "1st/2nd Person only",
+        test: (entry, pInfo) => pInfo && (pInfo.person === "1st" || pInfo.person === "2nd")
+    },
+    "pronoun": {
+        description: "Any personal pronoun",
+        test: (entry, pInfo) => !!pInfo
+    },
+    "human": {
+        description: "Pronouns + Humans/Persons",
+        test: (entry, pInfo) => !!pInfo || /(pronoun|person|human|name|animate)/i.test(entry?.wordClass || "") || (entry?.tags || []).some(t => /(person|human|animate|name|proper)/i.test(t))
+    },
+    "animate": {
+        description: "Humans + Animals",
+        test: (entry, pInfo) => !!pInfo || /(pronoun|person|human|animal|animate|creature|beast)/i.test(entry?.wordClass || "") || (entry?.tags || []).some(t => /(animate|person|human|animal|creature)/i.test(t))
+    },
+    "concrete": {
+        description: "Concrete objects",
+        test: (entry, pInfo) => !!pInfo || (!(entry?.tags || []).includes("abstract") && !(entry?.tags || []).includes("concept"))
+    },
+    "all": {
+        description: "No restriction",
+        test: () => true
+    }
+};
+
+const HUMAN_WORDS_EN = new Set([
+    "person","man","woman","boy","girl","child","baby","adult","human",
+    "father","mother","son","daughter","brother","sister","parent","sibling",
+    "friend","enemy","teacher","student","doctor","nurse","king","queen",
+    "prince","princess","lord","lady","sir","madam","hero","villain",
+    "leader","follower","master","servant","owner","guest","host","visitor",
+    "citizen","soldier","guard","priest","monk","witch","wizard","warrior",
+    "merchant","farmer","hunter","baker","maker","worker","player","artist",
+    "writer","speaker","reader","thinker","listener"
+]);
+
+const ANIMAL_WORDS_EN = new Set([
+    "dog","cat","bird","fish","horse","cow","pig","sheep","goat","deer",
+    "wolf","bear","lion","tiger","elephant","monkey","snake","frog","bee",
+    "ant","fly","spider","worm","mouse","rat","rabbit","fox","duck","owl",
+    "eagle","shark","whale","dolphin","dragon","creature","beast","animal"
+]);
+
+const CASE_NEVER_WORDS = new Set([
+    "myself", "yourself", "himself", "herself", "itself",
+    "ourselves", "yourselves", "themselves", "oneself",
+    "it", "there"
+]);
+
+const COPULA_VERBS = new Set([
+    "am", "is", "are", "was", "were", "be", "been", "being", "become", "seem", "appear",
+    "look", "feel", "sound", "smell", "taste", "remain", "stay", "turn"
+]);
+
+const FUNCTION_WORDS = new Set([
+    'the', 'a', 'an', 'of', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'and', 'or', 'but', 'if', 'as',
+    'is', 'are', 'was', 'were', 'be', 'been', 'being', 'do', 'does', 'did', 'have', 'has', 'had',
+    'my', 'your', 'his', 'her', 'its', 'our', 'their', 'me', 'us', 'him', 'them'
+]);
+
+function getAnimacyLevel(token, lexEntry, pronounInfo) {
+    if (pronounInfo) {
+        return (pronounInfo.person === "1st" || pronounInfo.person === "2nd") ? "pronoun_1_2" : "pronoun";
+    }
+    const wc = (lexEntry?.wordClass || "").toLowerCase();
+    const tags = (lexEntry?.tags || []).map(t => t.toLowerCase());
+    const q = (token.original || "").toLowerCase();
+
+    if (wc.includes("proper") || wc.includes("name") || tags.some(t => ["person","human","name","proper","character"].includes(t))) return "human";
+    if (wc.includes("person") || wc.includes("human") || HUMAN_WORDS_EN.has(q)) return "human";
+    if (wc.includes("animal") || wc.includes("creature") || tags.some(t => ["animal","creature","beast"].includes(t)) || ANIMAL_WORDS_EN.has(q)) return "animate";
+    if (tags.some(t => ["abstract","concept"].includes(t))) return "abstract";
+    
+    if (/^[A-Z]/.test(token.original || "") && token.sentencePosition > 0) return "human";
+
+    return "concrete";
+}
+
+function getDefiniteness(tokenIdx, allTokens) {
+    const q = (allTokens[tokenIdx]?.original || "").toLowerCase();
+    const isPronoun = ["i","me","you","he","him","she","her","it","we","us","they","them"].includes(q);
+    
+    const prev = allTokens.slice(Math.max(0, tokenIdx - 2), tokenIdx).map(t => (t.original || "").toLowerCase());
+    const isDefinite = isPronoun || prev.some(p => p === "the" || ["this","that","these","those"].includes(p) || ["my","your","his","her","its","our","their"].includes(p));
+    const isIndefinite = !isPronoun && prev.some(p => p === "a" || p === "an") && !isDefinite;
+    const isSpecific = isDefinite || /^[A-Z]/.test(allTokens[tokenIdx]?.original || "");
+    
+    return { isDefinite, isIndefinite, isSpecific };
+}
+
+function applyCaseToObject(token, trigger, lexEntry, pronounInfo, context) {
+    if (!token || !trigger || trigger.type !== "trigger") return false;
+    if (token.role !== trigger.trigger) return false;
+    if (CASE_NEVER_WORDS.has((token.original || "").toLowerCase())) return false;
+
+    const dom = trigger.domConditions || {};
+    const scope = dom.animacyMin || trigger.scope || "all";
+    
+    const animacyLevel = getAnimacyLevel(token, lexEntry, pronounInfo);
+    if (scope !== "all") {
+        const tester = ANIMACY_SCOPES[scope];
+        if (tester && !tester.test(lexEntry, pronounInfo)) {
+            const hierarchy = ["pronoun_1_2", "pronoun", "human", "animate", "concrete", "abstract", "all"];
+            if (hierarchy.indexOf(animacyLevel) > hierarchy.indexOf(scope)) return false;
+        }
+    }
+
+    if (dom.requiresDefinite && !context.isDefinite) return false;
+    if (dom.requiresIndefinite && !context.isIndefinite) return false;
+    if (dom.requiresSpecific && !context.isSpecific) return false;
+    if (dom.numberRestriction && token.number !== dom.numberRestriction) return false;
+    
+    if (dom.personRestriction) {
+        const allowed = Array.isArray(dom.personRestriction) ? dom.personRestriction : [dom.personRestriction];
+        if (!allowed.includes(pronounInfo?.person || token.person)) return false;
+    }
+    
+    if (dom.genderRestriction) {
+        const g = pronounInfo?.gender || lexEntry?.gender;
+        if (g !== dom.genderRestriction) return false;
+    }
+
+    if (dom.requiredTags?.length > 0) {
+        const tags = (lexEntry?.tags || []).map(t => t.toLowerCase());
+        if (!dom.requiredTags.every(rt => tags.includes(rt.toLowerCase()))) return false;
+    }
+
+    if (dom.excludedTags?.length > 0) {
+        const tags = (lexEntry?.tags || []).map(t => t.toLowerCase());
+        if (dom.excludedTags.some(et => tags.includes(et.toLowerCase()))) return false;
+    }
+
+    return true;
+}
+
+export function createGrammarAnalyzer(configOptions = {}) {
+    const storeState = typeof useConfigStore?.getState === 'function' ? useConfigStore.getState() : {};
+
+    const { 
+        lexicon = storeState.lexicon || [],
+        grammarRules = storeState.grammarRules || [],
+        syntaxOrder = storeState.syntaxOrder || 'SVO',
+        waConfig = storeState.waConfig || {},
+        personRulesArray = storeState.personRulesArray || [],
+        overrideCopulaBehavior = null, 
+        transliterate = (s) => s,
+        adjectivePlacement = storeState.adjectivePlacement || 'pre-nominal',
+        adjectiveAgreement = storeState.adjectiveAgreement ?? false,
+        adpositionPlacement = storeState.adpositionPlacement || waConfig?.adpPos || 'pre', // 'pre' | 'post'
+        proDropMode = storeState.proDropMode || waConfig?.proDrop || 'always', // 'always' | 'optional' | 'never'
+        alignment = storeState.alignment || waConfig?.alignment || 'accusative', // 'accusative' | 'ergative'
+        caseSensitive = storeState.caseSensitiveOrthography ?? false
+    } = configOptions;
+
+    const adjPosDefault = adjectivePlacement === 'post-nominal' ? 'after' : (waConfig?.adjPos || 'before');
+    const isPostpositional = adpositionPlacement === 'post' || adpositionPlacement === 'after' || waConfig?.adpPos === 'after';
+
+    // Helper para resolver posição de modificadores de forma consistente em S, O, P e V
+    const resolveModifierPos = (modRole) => {
+        if (modRole === 'G') return waConfig?.genPos || 'before';
+        if (modRole === 'R') return waConfig?.advPos || 'before';
+        if (modRole === 'J' || modRole === 'C') return adjPosDefault;
+        return waConfig?.adjPos || adjPosDefault;
+    };
+
+    // Helper centralizado para aplicar regras fonológicas/morfológicas usando o estado do useConfigStore
+    const applyPhonologicalRule = (word, rule) => {
+        const vStore = typeof useConfigStore?.getState === 'function' ? useConfigStore.getState() : storeState;
+        const cleanWord = caseSensitive ? word.normalize('NFC') : word;
+        return applyRuleToWord(
+            cleanWord,
+            rule,
+            grammarRules,
+            vStore.vowels,
+            vStore.consonants,
+            vStore.otherPhonemes
+        );
+    };
+
+    const applyAffixToBase = (base, affix, ruleObj = null) => {
+        if (!base || !affix) return base;
+        if (ruleObj && (ruleObj.condition || ruleObj.regex)) {
+            try {
+                return applyPhonologicalRule(base, ruleObj);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        const a = affix.trim();
+        if (a.startsWith('-')) return base + a.slice(1);
+        if (a.startsWith("'")) return base + a;
+        if (a.endsWith('-'))   return a.slice(0, -1) + base;
+        if (a.endsWith("'"))   return a + base;
+        return base + ' ' + a;
+    };
+
+    const matchesTranslation = (translation, q) => {
+        if (!translation || !q) return false;
+        const t = translation.normalize('NFC').toLowerCase().trim();
+        const query = q.normalize('NFC').toLowerCase().trim();
+        
+        if (t === query) return true;
+        
+        const definitions = t.split(/[,;/]/).map(d => d.trim().toLowerCase()).filter(Boolean);
+        if (definitions.includes(query)) return true;
+        if (definitions.some(d => d === query || d === 'to ' + query)) return true;
+
+        if (FUNCTION_WORDS.has(query)) return false;
+
+        const esc = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        try {
+            const regex = new RegExp('(^|[^a-z0-9])' + esc + '($|[^a-z0-9])', 'i');
+            if (definitions.some(d => regex.test(d))) return true;
+        } catch {
+            // Fallback below handles malformed regex queries
+        }
+        
+        if (query.length >= 3) {
+            if (definitions.some(d => d.includes(query))) return true;
+            if (t.includes(query)) return true;
+        }
+
+        return false;
+    };
+
+    // Resolve English stem candidates against the lexicon (fixes 'loved' -> 'love', 'running' -> 'run', 'tried' -> 'try')
+    const resolveEnglishStem = (rawStem, originalWord, suffixType) => {
+        const candidates = [rawStem];
+        if (suffixType === 'ed' || suffixType === 'ing' || suffixType === 'er' || suffixType === 'est') {
+            candidates.push(rawStem + 'e'); // lov -> love, mak -> make
+            if (rawStem.length >= 3 && rawStem[rawStem.length - 1] === rawStem[rawStem.length - 2]) {
+                candidates.push(rawStem.slice(0, -1)); // runn -> run, stopp -> stop
+            }
+            if (rawStem.endsWith('i')) {
+                candidates.push(rawStem.slice(0, -1) + 'y'); // tri -> try, happi -> happy
+            }
+        }
+        for (const cand of candidates) {
+            if (lexicon.some(e => (e.translation && matchesTranslation(e.translation, cand)) || (e.shortTranslation && matchesTranslation(e.shortTranslation, cand)))) {
+                return cand;
+            }
+        }
+        return rawStem;
+    };
+
+    const lemmatize = (word, context = {}) => {
+        const lower = word.normalize('NFC').toLowerCase();
+        const { prevTokens = [] } = context;
+        const prev1 = prevTokens[prevTokens.length - 1]?.toLowerCase();
+
+        // Level 0: Blocklists & Irregulars
+        if (IRREGULAR_VERBS[lower]) return { ...IRREGULAR_VERBS[lower] };
+        if (PRONOUN_MAP[lower]) return { lemma: PRONOUN_MAP[lower].base, tense: 'present', ...PRONOUN_MAP[lower] };
+        if (COMPARATIVE_IRREGULAR[lower]) return { ...COMPARATIVE_IRREGULAR[lower] };
+
+        // Level 1: Direct Lexicon Translation Match (Fixed: checks translation first, then conlang root)
+        const literalMatch = lexicon.find(e =>
+            (e.translation && e.translation.toLowerCase().trim() === lower) ||
+            (e.shortTranslation && e.shortTranslation.toLowerCase().trim() === lower) ||
+            e.word?.replace(/\*/g, '').toLowerCase() === lower
+        );
+        if (literalMatch && literalMatch.wordClass) {
+            const isNoun = literalMatch.wordClass.toLowerCase().includes('noun');
+            return {
+                lemma: lower,
+                wordClass: literalMatch.wordClass,
+                tense: 'present',
+                ...(isNoun ? { person: '3rd', number: 'S' } : {})
+            };
+        }
+
+        // Level 2: Suffix Analysis
+        if (lower.endsWith('ing')) {
+            if (ING_NOUNS.has(lower)) return { lemma: lower, wordClass: 'Noun', person: '3rd', number: 'S' };
+            if (ING_ADJECTIVES.has(lower)) return { lemma: lower, wordClass: 'Adjective' };
+            const rawStem = lower.slice(0, -3);
+            if (rawStem.length < 2) return { lemma: lower, wordClass: 'Noun', person: '3rd', number: 'S' };
+            const stem = resolveEnglishStem(rawStem, lower, 'ing');
+            if (['am','is','are','was','were','been','be'].includes(prev1)) return { lemma: stem, tense: 'gerund', role: 'V' };
+            return { lemma: stem, tense: 'gerund' };
+        }
+
+        if (lower.endsWith('s') && !lower.endsWith('ss')) {
+            if (VERB_3SG.has(lower)) {
+                const rawStem = lower.endsWith('es') ? lower.slice(0, -2) : lower.slice(0, -1);
+                return { lemma: resolveEnglishStem(rawStem, lower, 's'), person: '3rd', number: 'S', tense: 'present' };
+            }
+            if (S_NOUNS_SING.has(lower)) return { lemma: lower, singular: true, wordClass: 'Noun', person: '3rd', number: 'S' };
+             
+            const stem = lower.endsWith('ies') ? lower.slice(0, -3) + 'y' : lower.endsWith('es') ? lower.slice(0, -2) : lower.slice(0, -1);
+            const verbMatch = lexicon.find(e => e.translation && matchesTranslation(e.translation, stem) && e.wordClass?.toLowerCase().includes('verb'));
+             
+            if (verbMatch || ['he','she','it'].includes(prev1)) {
+                return { lemma: stem, person: '3rd', number: 'S', tense: 'present' };
+            }
+            return { lemma: stem, isPlural: true, person: '3rd', number: 'P' };
+        }
+
+        if (lower.endsWith('er')) {
+            if (ER_BLOCKLIST.has(lower)) return { lemma: lower, wordClass: 'Noun', person: '3rd', number: 'S' };
+            const rawStem = lower.endsWith('ier') ? lower.slice(0, -3) + 'y' : lower.slice(0, -2);
+            const stem = resolveEnglishStem(rawStem, lower, 'er');
+            const isAdj = lexicon.some(e =>
+                (matchesTranslation(e.translation, stem) || e.word?.replace(/\*/g, '').toLowerCase() === stem) &&
+                e.wordClass?.toLowerCase().includes('adj')
+            );
+            if (isAdj) return { lemma: stem, case: 'comparative' };
+        }
+
+        if (lower.endsWith('est')) {
+            if (EST_BLOCKLIST.has(lower)) return { lemma: lower };
+            const rawStem = lower.endsWith('iest') ? lower.slice(0, -4) + 'y' : lower.slice(0, -3);
+            const stem = resolveEnglishStem(rawStem, lower, 'est');
+            return { lemma: stem, case: 'superlative' };
+        }
+
+        if (lower.endsWith('ed')) {
+            if (ED_ADJECTIVES.has(lower)) return { lemma: lower, wordClass: 'Adjective' };
+            const isPerfect = ['have','has','had'].includes(prev1);
+            const isPassive = ['was','were','been'].includes(prev1);
+            const rawStem = lower.slice(0, -2);
+            const stem = resolveEnglishStem(rawStem, lower, 'ed');
+            return { lemma: stem, tense: 'past', isParticiple: true, isPerfect, isPassive };
+        }
+
+        if (lower.endsWith("'s")) return { lemma: lower.slice(0, -2), case: 'possessive', person: '3rd', number: 'S' };
+
+        return { lemma: lower, tense: 'present', person: '3rd', number: 'S' };
+    };
+
+    const reorderBreakdown = (breakdownArray) => {
+        const roleOrder = {};
+        const customOrder = waConfig?.syntaxOrder;
+        let sOrder = customOrder || syntaxOrder || 'QCTLJNORVMSAPG';
+        
+        'QCTLJNORVMSAPG'.split('').forEach(r => { if (!sOrder.includes(r)) sOrder += r; });
+        sOrder.split('').forEach((r, idx) => { roleOrder[r] = idx; });
+
+        const activeTokens = breakdownArray.filter(Boolean);
+        activeTokens.forEach((tok, idx) => {
+            tok.originalPos = idx;
+        });
+        
+        const blocks = [];
+        let currentModifiers = [];
+        let j = 0;
+
+        const partitionModifiers = (mods) => {
+            const before = [];
+            const after = [];
+            mods.forEach(m => {
+                const pos = resolveModifierPos(m.role);
+                if (pos === 'after') after.push(m);
+                else before.push(m);
+            });
+            return { before, after };
+        };
+
+        while (j < activeTokens.length) {
+            const tokenObj = activeTokens[j];
+            const r = tokenObj.role;
+
+            if (r === 'P') {
+                const pBlock = {
+                    type: 'Prepositional',
+                    headRole: 'P',
+                    tokens: [tokenObj]
+                };
+                j++;
+                const pMods = [];
+                while (j < activeTokens.length && ['A', 'G', 'J', 'C', 'R'].includes(activeTokens[j].role)) {
+                    pMods.push(activeTokens[j]);
+                    j++;
+                }
+                if (j < activeTokens.length && ['O', 'S'].includes(activeTokens[j].role)) {
+                    const before = [];
+                    const after = [];
+                    pMods.forEach(m => {
+                        const pos = resolveModifierPos(m.role);
+                        if (pos === 'priority') {
+                            blocks.push({ type: 'Standalone', headRole: m.role, tokens: [m] });
+                        } else if (pos === 'after') {
+                            after.push(m);
+                        } else {
+                            before.push(m);
+                        }
+                    });
+                    pBlock.tokens.push(...before, activeTokens[j], ...after);
+                    pBlock.headRole = activeTokens[j].role;
+                    j++;
+                } else {
+                    pMods.forEach(m => {
+                        const pos = resolveModifierPos(m.role);
+                        if (pos === 'priority') {
+                            blocks.push({ type: 'Standalone', headRole: m.role, tokens: [m] });
+                        } else {
+                            pBlock.tokens.push(m);
+                        }
+                    });
+                }
+                blocks.push(pBlock);
+                continue;
+            }
+
+            if (['A', 'G', 'J', 'C', 'R'].includes(r)) {
+                const pos = resolveModifierPos(r);
+                if (pos === 'priority') {
+                    if (currentModifiers.length > 0) {
+                        blocks.push({
+                            type: 'Standalone',
+                            headRole: currentModifiers[0].role,
+                            tokens: currentModifiers
+                        });
+                        currentModifiers = [];
+                    }
+                    blocks.push({
+                        type: 'Standalone',
+                        headRole: r,
+                        tokens: [tokenObj]
+                    });
+                } else {
+                    currentModifiers.push(tokenObj);
+                }
+                j++;
+                continue;
+            }
+
+            if (r === 'S' || r === 'O') {
+                const { before, after } = partitionModifiers(currentModifiers);
+                blocks.push({
+                    type: r === 'S' ? 'Subject' : 'Object',
+                    headRole: r,
+                    headToken: tokenObj,
+                    tokens: [...before, tokenObj, ...after]
+                });
+                currentModifiers = [];
+                j++;
+                continue;
+            }
+
+            if (r === 'V' || r === 'M' || r === 'N') {
+                const { before, after } = partitionModifiers(currentModifiers);
+                const lastBlock = blocks[blocks.length - 1];
+                if (lastBlock && lastBlock.type === 'Verb') {
+                    lastBlock.tokens.push(...before, tokenObj, ...after);
+                } else {
+                    blocks.push({
+                        type: 'Verb',
+                        headRole: 'V',
+                        headToken: tokenObj,
+                        tokens: [...before, tokenObj, ...after]
+                    });
+                }
+                currentModifiers = [];
+                j++;
+                continue;
+            }
+
+            if (currentModifiers.length > 0) {
+                blocks.push({
+                    type: 'Standalone',
+                    headRole: currentModifiers[0].role,
+                    tokens: currentModifiers
+                });
+                currentModifiers = [];
+            }
+            blocks.push({
+                type: 'Standalone',
+                headRole: r,
+                tokens: [tokenObj]
+            });
+            j++;
+        }
+
+        if (currentModifiers.length > 0) {
+            const lastBlock = blocks[blocks.length - 1];
+            if (lastBlock) {
+                const { before, after } = partitionModifiers(currentModifiers);
+                lastBlock.tokens.push(...before, ...after);
+            } else {
+                blocks.push({
+                    type: 'Standalone',
+                    headRole: currentModifiers[0].role,
+                    tokens: currentModifiers
+                });
+            }
+        }
+
+        blocks.sort((a, b) => {
+            const weightA = a.headRole === 'K' ? -1 : (roleOrder[a.headRole] ?? 99);
+            const weightB = b.headRole === 'K' ? -1 : (roleOrder[b.headRole] ?? 99);
+            return weightA - weightB;
+        });
+
+        // Respect Preposition vs Postposition settings
+        blocks.forEach(block => {
+            block.tokens.sort((a, b) => {
+                if (a.role === 'P' && b.role !== 'P') return isPostpositional ? 1 : -1;
+                if (b.role === 'P' && a.role !== 'P') return isPostpositional ? -1 : 1;
+                return 0;
+            });
+        });
+
+        if (adjectiveAgreement) {
+            blocks.forEach(block => {
+                if (block.headToken?.appliedRules?.length > 0) {
+                    block.tokens.forEach(t => {
+                        if (t.role === 'J') {
+                            let c = t.conlang;
+                            block.headToken.appliedRules.forEach(r => {
+                                try {
+                                    c = applyPhonologicalRule(c, r);
+                                    t.inflected = true;
+                                    t.ruleSource = (t.ruleSource ? t.ruleSource + ', ' : '') + 'Adjective Agreement: ' + (r.name || r.condition);
+                                } catch (e) {
+                                    console.error(e);
+                                }
+                            });
+                            t.conlang = c;
+                        }
+                    });
+                }
+            });
+        }
+
+        const result = [];
+        blocks.forEach(block => {
+            result.push(...block.tokens);
+        });
+        return result;
+    };
+
+    const resolveTempo = (stack) => {
+        if (!stack || stack.length === 0) return null;
+        if (stack.includes('will') || stack.includes('shall')) return 'future';
+        if (stack.includes('have') || stack.includes('has')) return 'perfect';
+        if (stack.includes('had')) return 'past_perfect';
+        if (stack.includes('be_past') || stack.includes('was') || stack.includes('were')) return 'past';
+        if (stack.includes('did')) return 'past';
+        if (stack.includes('would')) return 'conditional';
+        return null;
+    };
+
+    const findGrammarRule = (trigger, fallbackName) => {
+        if (!grammarRules) return null;
+        const lt = (trigger || '').toLowerCase();
+        const lf = (fallbackName || '').toLowerCase();
+        
+        const aliases = {
+            'accusative': ['accusative', 'acusativo', 'acusative', 'acc', 'obj', 'objective'],
+            'ergative': ['ergative', 'ergativo', 'erg'],
+            'absolutive': ['absolutive', 'absolutivo', 'abs'],
+            'ablative': ['ablative', 'ablativo', 'abl', 'than', 'comparative_target'],
+            'genitive': ['genitive', 'genitivo', 'possessive', 'possessivo', 'gen'],
+            'plural': ['plural', 'pl'],
+            'past': ['past', 'pretérito', 'preterite', 'ed'],
+            'future': ['future', 'futuro'],
+            'comparative': ['comparative', 'comparativo', 'er'],
+            'superlative': ['superlative', 'superlativo', 'est']
+        };
+
+        const targets = new Set([lt, lf].filter(Boolean));
+        if (aliases[lt]) aliases[lt].forEach(a => targets.add(a));
+        if (aliases[lf]) aliases[lf].forEach(a => targets.add(a));
+
+        let found = grammarRules.find(r => targets.has((r.waTrigger || '').toLowerCase()));
+        if (found) return found;
+
+        found = grammarRules.find(r => targets.has((r.name || '').toLowerCase()));
+        if (found) return found;
+
+        return grammarRules.find(r => {
+            const rn = (r.name || '').toLowerCase();
+            return [...targets].some(t => t.length > 2 && rn.includes(t));
+        });
+    };
+
+    const computePhraseSuggestion = (val, cursor, customSyntaxOrder = syntaxOrder, userManualRoles = {}, copulaOverride = overrideCopulaBehavior) => {
+        const lineStart = val.lastIndexOf('\n', cursor - 1) + 1;
+        const rawEnd    = val.indexOf('\n', cursor);
+        const lineEnd   = rawEnd === -1 ? val.length : rawEnd;
+        const line      = val.slice(lineStart, lineEnd).trim();
+        if (!line) return null;
+
+        const PREPOSITIONS = new Set(['of', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'from', 'about', 'under', 'over', 'into', 'through', 'after', 'before', 'between', 'during', 'without', 'against']);
+        const ARTICLES = new Set(['the', 'a', 'an']);
+        const QUESTION_WORDS = new Set(['who', 'what', 'where', 'when', 'why', 'how', 'which']);
+        const TIME_WORDS = new Set(['now', 'then', 'today', 'tomorrow', 'yesterday', 'tonight', 'always', 'never', 'sometimes', 'often']);
+        const PLACE_WORDS = new Set(['here', 'there', 'everywhere', 'nowhere', 'somewhere', 'anywhere', 'up', 'down', 'left', 'right', 'inside', 'outside']);
+        const CONJUNCTIONS = new Set(['and', 'or', 'but', 'if', 'as', 'because', 'so', 'although', 'though', 'unless', 'until', 'while', 'since', 'then']);
+
+        const globalOverrides = (waConfig?.roleOverrides || []).reduce((acc, curr) => {
+            if (curr.word && curr.role) {
+                curr.word.split(',').map(w => w.trim().toLowerCase()).filter(Boolean).forEach(w => {
+                    acc[w] = curr.role;
+                });
+            }
+            return acc;
+        }, {});
+        const mergedOverrides = { ...globalOverrides, ...userManualRoles };
+
+        const parseClause = (clauseText, inheritedRole = 'S') => {
+            const rawTokens = clauseText.trim().split(/\s+/).filter(Boolean);
+            if (rawTokens.length === 0) return { breakdown: [], phraseIsNegative: false };
+            
+            const tokens = rawTokens.map(t => t.replace(/[.,!?()[\]{}"`:;]/g, ''));
+            const tokenData = tokens.map((t, idx) => {
+                const low = t.toLowerCase();
+                const info = lemmatize(low, { prevTokens: tokens.slice(0, idx) });
+                const context = getDefiniteness(idx, rawTokens.map(rt => ({ original: rt.replace(/[.,!?()[\]{}"`:;]/g, '') })));
+                return { original: t, low, info, context };
+            });
+
+            const preClassified = tokens.map((t, idx) => {
+                const low = t.toLowerCase();
+                const info = tokenData[idx].info;
+                const lemma = info.lemma;
+                
+                if (mergedOverrides[low]) return mergedOverrides[low];
+                
+                if (TIME_WORDS.has(low)) return 'T';
+                if (PLACE_WORDS.has(low)) return 'L';
+                if (QUESTION_WORDS.has(low)) return 'Q';
+                if (CONJUNCTIONS.has(low)) return 'K';
+                if (PREPOSITIONS.has(low)) return 'P';
+                if (ARTICLES.has(low)) return 'A';
+                if (low === 'not' || low === "n't") return 'N';
+
+                if (COPULA_VERBS.has(low) || MODAL_VERBS.has(low) || ['will','would','have','has','had','am','is','are','was','were','do','does','did','been'].includes(low)) {
+                    if (['am','is','are','was','were','be','been','being'].includes(low)) {
+                        const behavior = copulaOverride || waConfig?.copulaBehavior || 'normal';
+                        if (behavior === 'omit') return 'SKIP';
+                        if (behavior === 'replace') {
+                            const repl = waConfig?.copulaReplacement || 'be';
+                            tokens[idx] = repl;
+                            tokenData[idx].original = repl;
+                            tokenData[idx].low = repl.toLowerCase();
+                            tokenData[idx].info = { lemma: repl.toLowerCase(), tense: 'present' };
+                            tokenData[idx].isCopulaReplacement = true;
+                            return 'V';
+                        }
+                    }
+                    return 'M';
+                }
+
+                if (PRONOUN_MAP[low]) {
+                    const pm = PRONOUN_MAP[low];
+                    if (pm.case === 'genitive') return 'G';
+                    return pm.role || 'NOUN';
+                }
+
+                const matches = lexicon.filter(e => e.translation && matchesTranslation(e.translation, lemma));
+                const match = matches.sort((a, b) => {
+                    const ta = (a.translation || '').toLowerCase();
+                    const tb = (b.translation || '').toLowerCase();
+                    const aExact = ta === lemma || ta.split(/[,;/]/).map(d => d.trim().toLowerCase()).includes(lemma);
+                    const bExact = tb === lemma || tb.split(/[,;/]/).map(d => d.trim().toLowerCase()).includes(lemma);
+                    if (aExact && !bExact) return -1;
+                    if (!aExact && bExact) return 1;
+                    return (a.translation || '').length - (b.translation || '').length;
+                })[0];
+
+                if (match) {
+                    const wc = (match.wordClass || '').toLowerCase();
+                    if (wc.includes('verb')) return 'V';
+                    if (wc.includes('adj')) return 'J';
+                    if (wc.includes('adv')) return 'R';
+                    if (wc.includes('noun')) return 'NOUN';
+                }
+
+                if (low.endsWith('ing') && !ING_NOUNS.has(low) && !ING_ADJECTIVES.has(low)) return 'V';
+                if (low.endsWith('ed') && !ED_ADJECTIVES.has(low)) return 'V';
+                if (low.endsWith('er') && !ER_BLOCKLIST.has(low)) {
+                    const stem = resolveEnglishStem(low.endsWith('ier') ? low.slice(0, -3) + 'y' : low.slice(0, -2), low, 'er');
+                    if (lexicon.some(e => (matchesTranslation(e.translation, stem) || e.word?.replace(/\*/g,'').toLowerCase() === stem) && e.wordClass?.toLowerCase().includes('adj'))) return 'J';
+                }
+
+                return 'NOUN';
+            });
+
+            // Pass 2: Contextual Verb Identification
+            const catenativeVerbs = new Set(['want', 'wants', 'wanted', 'need', 'needs', 'needed', 'try', 'tries', 'tried', 'like', 'likes', 'liked', 'love', 'loves', 'loved', 'hate', 'hates', 'hated', 'start', 'starts', 'started', 'begin', 'begins', 'began', 'continue', 'continues', 'continued', 'hope', 'hopes', 'hoped', 'plan', 'plans', 'planned', 'expect', 'expects', 'expected', 'decide', 'decides', 'decided', 'going', 'used', 'ought', 'have', 'has', 'had', 'got', 'able', 'about', 'ready', 'supposed']);
+            for (let idx = 0; idx < preClassified.length; idx++) {
+                const low = tokens[idx].toLowerCase();
+                const prevLow = idx > 0 ? tokens[idx-1].toLowerCase() : '';
+                const prevPrevLow = idx > 1 ? tokens[idx-2].toLowerCase() : '';
+                
+                if (!mergedOverrides[low]) {
+                    if (idx > 0 && preClassified[idx-1] === 'M' && ['NOUN', 'O', 'S'].includes(preClassified[idx])) {
+                        preClassified[idx] = 'V';
+                    } else if (prevLow === 'to') {
+                        if (catenativeVerbs.has(prevPrevLow)) {
+                            if (preClassified[idx-2] === 'V' && !mergedOverrides[prevPrevLow]) {
+                                preClassified[idx-2] = 'M';
+                            }
+                            if (['NOUN', 'O', 'S'].includes(preClassified[idx])) {
+                                preClassified[idx] = 'V';
+                            }
+                        } else if (['NOUN', 'O', 'S'].includes(preClassified[idx])) {
+                            const info = tokenData[idx].info;
+                            const matches = lexicon.filter(e => e.translation && matchesTranslation(e.translation, info.lemma));
+                            if (matches.some(m => m.wordClass?.toLowerCase().includes('verb'))) {
+                                preClassified[idx] = 'V';
+                            }
+                        }
+                    }
+                }
+            }
+
+            const firstVerbIdx = preClassified.findIndex(role => role === 'V' || role === 'M');
+            const lastVerbIdx = preClassified.map(r => r === 'V' || r === 'M').lastIndexOf(true);
+
+            let hasObject = false;
+            if (firstVerbIdx !== -1) {
+                hasObject = tokens.slice(firstVerbIdx + 1).some((t, idx) => {
+                    const globalIdx = firstVerbIdx + 1 + idx;
+                    const role = preClassified[globalIdx];
+                    return role === 'NOUN' || role === 'O' || PRONOUN_MAP[t.toLowerCase()]?.role === 'O';
+                });
+            }
+
+            const PRONOUN_OR_DET = new Set([
+                'all', 'some', 'none', 'any', 'both', 'each', 'few', 'many', 'several', 
+                'everything', 'nothing', 'anything', 'something', 'everyone', 'someone', 
+                'anyone', 'nobody', 'everybody', 'somebody', 'anybody', 'much', 'more', 
+                'most', 'enough', 'other', 'others', 'another',
+                'this', 'that', 'these', 'those'
+            ]);
+
+            const finalRoles = preClassified.map((role, idx) => {
+                const low = tokens[idx].toLowerCase();
+                if (mergedOverrides[low]) return mergedOverrides[low];
+
+                if (idx === lastVerbIdx && (role === 'M' || role === 'V')) {
+                    return 'V';
+                }
+                
+                if (low === 'her') {
+                    const nextRole = preClassified[idx + 1];
+                    if (nextRole === 'NOUN' || nextRole === 'J') return 'G';
+                    return 'O';
+                }
+
+                if (PRONOUN_OR_DET.has(low)) {
+                    let isPronoun = true;
+                    for (let k = idx + 1; k < preClassified.length; k++) {
+                        const r = preClassified[k];
+                        if (r === 'NOUN' || (tokens[k] && PRONOUN_MAP[tokens[k].toLowerCase()])) {
+                            isPronoun = false;
+                            break;
+                        }
+                        if (r === 'V' || r === 'M' || r === 'P' || r === 'K') break;
+                    }
+                    if (isPronoun) {
+                        return (firstVerbIdx === -1 || idx < firstVerbIdx) ? 'S' : 'O';
+                    }
+                    return 'J';
+                }
+
+                if (role === 'NOUN') {
+                    if (firstVerbIdx === -1) return inheritedRole;
+                    if (idx < firstVerbIdx) return 'S';
+                    return 'O';
+                }
+
+                return role;
+            });
+
+            const breakdown = [];
+            let i = 0;
+            let activeTense = null;
+            let comparisonTargetIdx = -1;
+            let phraseIsNegative = false;
+            let auxiliaryStack = [];
+
+            while (i < tokens.length) {
+                const q = tokens[i].toLowerCase();
+                const fullForm = rawTokens[i];
+                const info = tokenData[i].info;
+                const context = tokenData[i].context;
+                const lemma = info.lemma;
+                const role = finalRoles[i];
+                const isComparisonTarget = (i === comparisonTargetIdx);
+
+                const isAuxiliary = (role === 'M');
+                const isArticle = (role === 'A');
+                let personRule = null;
+
+                if (q === 'than') {
+                    comparisonTargetIdx = i + 1;
+                    if (tokens[i+1] && ['the','a','an'].includes(tokens[i+1].toLowerCase())) comparisonTargetIdx = i + 2;
+                    breakdown[i] = { original: fullForm, conlang: '', role: 'C', swallowed: true };
+                    i++; continue;
+                }
+                
+                if (role === 'SKIP') {
+                    breakdown[i] = { original: fullForm, conlang: `[${q}]`, role: 'M', swallowed: true };
+                    i++; continue;
+                }
+
+                if (q === 'to' && tokens[i+1]) {
+                    const nextLow = tokens[i+1].toLowerCase();
+                    const nextInfo = lemmatize(nextLow);
+                    const nextMatch = lexicon.find(e => e.translation && matchesTranslation(e.translation, nextInfo.lemma));
+                    const isNextVerb = nextMatch?.wordClass?.toLowerCase().includes('verb') || 
+                                     IRREGULAR_VERBS[nextLow] || 
+                                     (!['the','a','an','my','your','his','her','its','our','their'].includes(nextLow) && !ANIMAL_WORDS_EN.has(nextLow) && !HUMAN_WORDS_EN.has(nextLow));
+                    
+                    if (isNextVerb) {
+                        const toMatch = lexicon.find(e => e.translation && matchesTranslation(e.translation, 'to'));
+                        if (!toMatch) {
+                            breakdown[i] = { original: fullForm, conlang: `[${q}]`, role: 'C', swallowed: true };
+                            i++; continue;
+                        }
+                    }
+                }
+
+                if (['will', 'would', 'shall', 'should', 'can', 'could', 'may', 'might', 'must'].includes(q)) { auxiliaryStack.push(q); }
+                else if (['have', 'has', 'had'].includes(q)) { auxiliaryStack.push(q); }
+                else if (['am', 'is', 'are'].includes(q)) { auxiliaryStack.push('be_pres'); }
+                else if (['was', 'were'].includes(q)) { auxiliaryStack.push('be_past'); }
+                else if (['do', 'does', 'did'].includes(q)) { auxiliaryStack.push('do'); }
+                else if (q === 'been') { auxiliaryStack.push('been'); }
+
+                let matches = lexicon.filter(e => {
+                    const transMatch = e.translation && matchesTranslation(e.translation, q);
+                    const shortMatch = e.shortTranslation && matchesTranslation(e.shortTranslation, q);
+                    return transMatch || shortMatch;
+                });
+                let matchTarget = q;
+                if (matches.length === 0) {
+                    matches = lexicon.filter(e => {
+                        const transMatch = e.translation && matchesTranslation(e.translation, lemma);
+                        const shortMatch = e.shortTranslation && matchesTranslation(e.shortTranslation, lemma);
+                        return transMatch || shortMatch;
+                    });
+                    matchTarget = lemma;
+                }
+                let match = matches.sort((a, b) => {
+                    const ta = (a.shortTranslation || a.translation || '').toLowerCase();
+                    const tb = (b.shortTranslation || b.translation || '').toLowerCase();
+                    const aExact = ta === matchTarget || ta.split(/[,;/]/).map(d => d.trim().toLowerCase()).includes(matchTarget);
+                    const bExact = tb === matchTarget || tb.split(/[,;/]/).map(d => d.trim().toLowerCase()).includes(matchTarget);
+                    if (aExact && !bExact) return -1;
+                    if (!aExact && bExact) return 1;
+                    return ta.length - tb.length;
+                })[0];
+
+                if (role === 'N') {
+                    phraseIsNegative = true;
+                } else if (role === 'S' && (info.person || info.number || PRONOUN_MAP[q])) {
+                    const subjPerson = info.person || '3rd';
+                    const subjNumber = info.number || (info.isPlural ? 'P' : 'S');
+                    const subjGender = info.gender || match?.gender;
+
+                    if (copulaOverride === 'omit' || copulaOverride === 'replace') {
+                        personRule = personRulesArray.find(r => 
+                            (!r.person || r.person === subjPerson) && 
+                            (!r.number || r.number === subjNumber) && 
+                            (!r.gender || r.gender === subjGender) && 
+                            r.appliesTo && r.appliesTo.replace(/[\s_]/g, '').toLowerCase().includes('zerocopula')
+                        );
+                    }
+                    if (!personRule) {
+                        personRule = personRulesArray.find(r => 
+                            (!r.person || r.person === subjPerson) && 
+                            (!r.number || r.number === subjNumber) && 
+                            (!r.gender || r.gender === subjGender) && 
+                            (!r.appliesTo || !r.appliesTo.replace(/[\s_]/g, '').toLowerCase().includes('zerocopula'))
+                        );
+                    }
+                }
+
+                const wordMarkers = (waConfig?.triggers || []).filter(t => {
+                    if (t.type === 'trigger' && t.trigger === role) {
+                        if (t.domConditions?.requiresTransitive && !hasObject) return false;
+                        return applyCaseToObject(
+                            { original: q, role, number: info.isPlural ? 'P' : 'S', person: info.person || '3rd', sentencePosition: i },
+                            t,
+                            match,
+                            PRONOUN_MAP[q],
+                            context
+                        );
+                    }
+                    if (t.type === 'word' && t.trigger.toLowerCase().split(',').some(s => s.trim() === q)) return true;
+                    if (t.type === 'suffix' && q.endsWith(t.trigger.toLowerCase().replace(/^-/, ''))) {
+                        const cleanTrigger = t.trigger.toLowerCase().replace(/^-/, '');
+                        if ((cleanTrigger === 's' || cleanTrigger === 'es') && (role === 'V' || role === 'M')) {
+                            return false;
+                        }
+                        return true;
+                    }
+                    return false;
+                });
+
+                if (tokenData[i].isCopulaReplacement && !match) {
+                    match = { word: tokens[i], wordClass: 'Verb', translation: tokens[i] };
+                }
+
+                if (match || (personRule && PRONOUN_MAP[q])) {
+                    let conlang = (match ? match.word : personRule.freeForm).replace(/\*/g, '');
+                    let inflected = false;
+                    let appliedRuleName = '';
+                    let appliedRuleSource = '';
+
+                    if (match?.wordClass?.toLowerCase().includes('verb') && !isAuxiliary) {
+                        activeTense = resolveTempo(auxiliaryStack) || info.tense;
+                        auxiliaryStack = [];
+                    }
+
+                    // Apply Matrix Grammar Rules (even if Word Assist case triggers exist, without duplicating same category)
+                    const appliedRules = [];
+                    const possibleRules = [];
+                    if (activeTense && role === 'V') possibleRules.push(findGrammarRule(activeTense));
+                    if (info.isPlural) possibleRules.push(findGrammarRule('plural'));
+                    if (info.case === 'genitive' || q.endsWith("'s") || role === 'G') possibleRules.push(findGrammarRule('genitive', 'possessive'));
+                    if (isComparisonTarget) possibleRules.push(findGrammarRule('ablative', 'than'));
+
+                    // Morphosyntactic alignment support (Accusative vs Ergative)
+                    const hasRoleTriggerInWA = wordMarkers.some(wm => wm.type === 'trigger' && wm.trigger === role);
+                    if (!hasRoleTriggerInWA) {
+                        if (alignment === 'ergative') {
+                            if (role === 'S' && hasObject) possibleRules.push(findGrammarRule('ergative'));
+                            else if (role === 'S' || role === 'O') possibleRules.push(findGrammarRule('absolutive'));
+                        } else if (info.case === 'objective' || role === 'O') {
+                            possibleRules.push(findGrammarRule('objective', 'accusative'));
+                        }
+                    }
+
+                    if (info.case === 'comparative') possibleRules.push(findGrammarRule('comparative'));
+                    if (info.case === 'superlative') possibleRules.push(findGrammarRule('superlative'));
+
+                    for (const r of possibleRules) {
+                        if (r?.affix) {
+                            const tClass = (match?.wordClass || '').toLowerCase();
+                            if (r.appliesTo && r.appliesTo !== 'all' && r.appliesTo.trim() !== '') {
+                                if (!tClass.includes(r.appliesTo.toLowerCase())) continue;
+                            }
+
+                            try {
+                                conlang = applyPhonologicalRule(conlang, r);
+                                inflected = true;
+                                appliedRuleName = r.name || r.condition;
+                                appliedRuleSource = (appliedRuleSource ? appliedRuleSource + ', ' : '') + 'Grammar Rule: ' + appliedRuleName;
+                                appliedRules.push(r);
+                            } catch (e) {
+                                console.error(e);
+                            }
+                        }
+                    }
+
+                    wordMarkers.sort((a, b) => (a.priority || 0) - (b.priority || 0)).forEach(t => {
+                        if (t.position === 'prefix' || t.position === 'before') conlang = t.marker.replace(/-$/, '') + (t.position === 'before' ? ' ' : '') + conlang;
+                        else if (t.position === 'suffix' || t.position === 'after') conlang = conlang + (t.position === 'after' ? ' ' : '') + t.marker.replace(/^-/, '');
+                        else if (t.position === 'endOfSentence') phraseIsNegative = true;
+                        inflected = true;
+                        appliedRuleSource = (appliedRuleSource ? appliedRuleSource + ', ' : '') + 'Word Assist: ' + (t.name || t.trigger || t.marker);
+                    });
+
+                    breakdown[i] = {
+                        original: fullForm, conlang, found: true, entry: match, role, inflected,
+                        ruleName: appliedRuleName, ruleSource: appliedRuleSource, isAuxiliary, isArticle, personRule,
+                        isPronoun: !!PRONOUN_MAP[q],
+                        swallowed: false, context, appliedRules,
+                        animacy: getAnimacyLevel({ original: q, sentencePosition: i }, match, PRONOUN_MAP[q])
+                    };
+                } else {
+                    let conlang = `[${q}]`;
+                    let inflected = false;
+                    let appliedRuleSource = '';
+
+                    wordMarkers.sort((a, b) => (a.priority || 0) - (b.priority || 0)).forEach(t => {
+                        if (t.position === 'prefix' || t.position === 'before') conlang = t.marker.replace(/-$/, '') + (t.position === 'before' ? ' ' : '') + conlang;
+                        else if (t.position === 'suffix' || t.position === 'after') conlang = conlang + (t.position === 'after' ? ' ' : '') + t.marker.replace(/^-/, '');
+                        else if (t.position === 'endOfSentence') phraseIsNegative = true;
+                        inflected = true;
+                        appliedRuleSource = 'Word Assist: ' + (t.name || t.trigger || t.marker);
+                    });
+
+                    breakdown[i] = { 
+                        original: fullForm, conlang, role, found: false, 
+                        inflected, ruleSource: appliedRuleSource,
+                        swallowed: isAuxiliary || isArticle,
+                        animacy: getAnimacyLevel({ original: q, sentencePosition: i }, null, PRONOUN_MAP[q])
+                    };
+                }
+                i++;
+            }
+
+            return { breakdown, phraseIsNegative };
+        };
+
+        const parts = line.split(/([.,;:!?]+)/);
+        const segments = [];
+        for (let idx = 0; idx < parts.length; idx++) {
+            const part = parts[idx];
+            if (idx % 2 === 0) {
+                if (part.trim()) segments.push({ type: 'text', text: part });
+            } else {
+                segments.push({ type: 'punct', text: part });
+            }
+        }
+
+        if (segments.length === 0) return null;
+
+        const finalBFree = [];
+        const finalBAffix = [];
+        const finalBAlt = [];
+        
+        const finalRFree = [];
+        const finalRAffix = [];
+        const finalRAlt = [];
+
+        let totalPhraseIsNegative = false;
+        let hasAmbiguousReading = false;
+        let currentInheritedRole = 'S';
+
+        segments.forEach((seg) => {
+            if (seg.type === 'punct') {
+                const punctToken = {
+                    original: seg.text,
+                    conlang: seg.text.trim(),
+                    role: 'PUNCT',
+                    swallowed: false,
+                    found: true,
+                    isPunct: true
+                };
+                finalBFree.push(punctToken);
+                finalBAffix.push(punctToken);
+                finalBAlt.push(punctToken);
+                
+                finalRFree.push(punctToken);
+                finalRAffix.push(punctToken);
+                finalRAlt.push(punctToken);
+            } else {
+                const parsed = parseClause(seg.text, currentInheritedRole);
+                
+                const roles = parsed.breakdown.map(w => w?.role).filter(Boolean);
+                if (roles.includes('V') || roles.includes('M')) {
+                    currentInheritedRole = 'O';
+                } else if (roles.includes('S')) {
+                    currentInheritedRole = 'S';
+                }
+                
+                if (parsed.phraseIsNegative) totalPhraseIsNegative = true;
+                
+                const clauseBFree = JSON.parse(JSON.stringify(parsed.breakdown));
+                const clauseBAffix = JSON.parse(JSON.stringify(parsed.breakdown));
+                
+                // Person agreement for this clause
+                const subjToken = clauseBAffix.find(w => w && w.role === 'S' && w.personRule);
+                if (subjToken) {
+                    let targetToken = clauseBAffix.filter(w => w && w.role === 'V' && !w.swallowed && !w.isAuxiliary).pop();
+                    
+                    if (!targetToken) {
+                        targetToken = clauseBAffix.filter(w => w && (w.role === 'J' || w.role === 'NOUN') && !w.swallowed).pop();
+                    }
+
+                    if (targetToken && subjToken.personRule.affix) {
+                        targetToken.conlang = applyAffixToBase(targetToken.conlang, subjToken.personRule.affix, subjToken.personRule);
+                        targetToken.inflected = true;
+                        targetToken.ruleSource = (targetToken.ruleSource ? targetToken.ruleSource + ', ' : '') + 'Person Agreement: ' + (subjToken.personRule.name || subjToken.personRule.person);
+                        // Only drop subject if it's a pronoun AND proDropMode allows it
+                        if (subjToken.isPronoun && proDropMode !== 'never') {
+                            subjToken.encodedInVerb = true;
+                        }
+                    }
+                }
+                
+                const clauseRFree = reorderBreakdown(clauseBFree);
+                const clauseRAffix = reorderBreakdown(clauseBAffix);
+                
+                finalBFree.push(...clauseBFree);
+                finalBAffix.push(...clauseBAffix);
+                
+                finalRFree.push(...clauseRFree);
+                finalRAffix.push(...clauseRAffix);
+
+                // Alternate reading if ambiguous between Subject and Object
+                const ambiguousWords = parsed.breakdown.filter(w =>
+                    w && (w.role === 'S' || w.role === 'O') &&
+                    !PRONOUN_MAP[w.original?.toLowerCase()] &&
+                    w.found
+                );
+                if (ambiguousWords.length >= 2) {
+                    hasAmbiguousReading = true;
+                    const clauseBAlt = JSON.parse(JSON.stringify(parsed.breakdown));
+                    clauseBAlt.forEach(w => {
+                        if (w && w.role === 'S') w.role = 'O';
+                        else if (w && w.role === 'O') w.role = 'S';
+                    });
+                    const clauseRAlt = reorderBreakdown(clauseBAlt);
+                    finalBAlt.push(...clauseBAlt);
+                    finalRAlt.push(...clauseRAlt);
+                } else {
+                    finalBAlt.push(...clauseBFree);
+                    finalRAlt.push(...clauseRFree);
+                }
+            }
+        });
+
+        const buildRomanizedString = (reorderedList) => {
+            let s = '';
+            reorderedList.forEach((w) => {
+                if (!w || w.swallowed || w.encodedInVerb) return;
+                const wordStr = w.conlang;
+                if (!wordStr) return;
+                
+                if (w.isPunct) {
+                    s = s.trim() + wordStr + ' ';
+                } else {
+                    s += wordStr + ' ';
+                }
+            });
+            return s.trim();
+        };
+
+        const appendNegation = (romStr) => {
+            if (totalPhraseIsNegative && waConfig?.negation?.position === 'endOfSentence' && waConfig?.negation?.content) {
+                return (romStr + ' ' + waConfig.negation.content).trim();
+            }
+            return romStr;
+        };
+
+        const results = [];
+        const romFree = appendNegation(buildRomanizedString(finalRFree));
+        const romAffix = appendNegation(buildRomanizedString(finalRAffix));
+        const romAlt = hasAmbiguousReading ? appendNegation(buildRomanizedString(finalRAlt)) : '';
+
+        const useAffix = (romAffix !== romFree && (romAffix.trim() || finalBAffix.length > 0));
+        
+        const primaryRom = useAffix ? romAffix : romFree;
+        const primaryBreakdown = useAffix ? finalBAffix : finalBFree;
+        const primaryReordered = useAffix ? finalRAffix : finalRFree;
+        
+        if (primaryRom.trim() || primaryBreakdown.length > 0) {
+            results.push({
+                key: 'phrase-primary', type: 'phrase', label: 'TRANSLATION SUGGESTION',
+                romanized: primaryRom || '[empty]',
+                wordBreakdown: primaryBreakdown, reordered: primaryReordered, lineStart, lineEnd
+            });
+        }
+
+        if (useAffix && romAffix.trim() && romFree.trim()) {
+            results.push({
+                key: 'phrase-affix', type: 'phrase', label: 'TRANSLATION SUGGESTION (Affix Form)',
+                romanized: romAffix || '[empty]',
+                wordBreakdown: finalBAffix, reordered: finalRAffix, lineStart, lineEnd
+            });
+            results[0].label = 'TRANSLATION SUGGESTION (Free Form)';
+            results[0].romanized = romFree;
+            results[0].wordBreakdown = finalBFree;
+            results[0].reordered = finalRFree;
+        }
+
+        // Expose alternate S/O ambiguity reading when it produces a distinct sentence
+        if (hasAmbiguousReading && romAlt.trim() && romAlt !== romFree && romAlt !== romAffix) {
+            results.push({
+                key: 'phrase-alt-ambiguity',
+                type: 'phrase',
+                label: 'ALTERNATE READING (Inverted S/O)',
+                romanized: romAlt,
+                wordBreakdown: finalBAlt,
+                reordered: finalRAlt,
+                lineStart,
+                lineEnd
+            });
+        }
+
+        if (!copulaOverride && waConfig?.copulaBehavior === 'zero_copula') {
+            const suggsOmit = computePhraseSuggestion(val, cursor, customSyntaxOrder, userManualRoles, 'omit') || [];
+            let suggsReplace = [];
+            
+            if (waConfig?.copulaReplacement && waConfig.copulaReplacement.trim() !== '') {
+                suggsReplace = computePhraseSuggestion(val, cursor, customSyntaxOrder, userManualRoles, 'replace') || [];
+            }
+            
+            suggsOmit.forEach(s => {
+                if (s.label) s.label = s.label.replace('TRANSLATION SUGGESTION', 'TRANSLATION (Zero Copula: Omit)');
+                s.key = s.key + '-omit';
+            });
+            suggsReplace.forEach(s => {
+                if (s.label) s.label = s.label.replace('TRANSLATION SUGGESTION', 'TRANSLATION (Zero Copula: Marker)');
+                s.key = s.key + '-replace';
+            });
+            
+            return [...suggsOmit, ...suggsReplace];
+        }
+
+        return results.map(res => {
+            const tokens = res.romanized.split(' ');
+            const filtered = [];
+            for (let j = 0; j < tokens.length; j++) {
+                if (j > 0 && tokens[j] === tokens[j-1]) continue;
+                filtered.push(tokens[j]);
+            }
+            const rom = filtered.join(' ');
+            return { ...res, romanized: rom, display: transliterate(rom, lexicon) };
+        });
+    };
+
+    return {
+        computePhraseSuggestion,
+        lemmatize,
+        matchesTranslation,
+        findGrammarRule
+    };
+}
