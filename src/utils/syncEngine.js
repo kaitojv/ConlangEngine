@@ -19,6 +19,15 @@ import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import LZString from 'lz-string';
 import { broadcastProjectUpdate } from './realtimeSync.js';
 
+// Device-level preference: stored in localStorage so it isn't merged into project config.
+export const SYNC_REVIEW_PREF_KEY = 'ce_showSyncReview';
+export const isSyncReviewEnabled = () => {
+    try { return localStorage.getItem(SYNC_REVIEW_PREF_KEY) !== 'false'; } catch { return true; }
+};
+export const setSyncReviewEnabled = (enabled) => {
+    try { localStorage.setItem(SYNC_REVIEW_PREF_KEY, enabled ? 'true' : 'false'); } catch { /* ignore */ }
+};
+
 /**
  * Builds a compressed cloud-ready payload from current project state.
  */

@@ -8,8 +8,9 @@ import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import Modal from '@/components/UI/Modal/Modal.jsx';
-import { CloudUpload, CloudDownload, Trophy, Activity, User, LogOut, Globe, MessageCircle, BookOpen, Crown, Cog, Puzzle, Tags, Flame, GitBranch, Share2, Heart, Coffee, PieChart, Sparkles, Book, Library, BrainCircuit, ScrollText, Network, Ear, ArrowLeftRight, Layers, Volume2, PenTool, Shapes, Download, Trash2, Edit2, History, RotateCcw, RefreshCw } from 'lucide-react';
+import { CloudUpload, CloudDownload, Trophy, Activity, User, LogOut, Globe, MessageCircle, BookOpen, Crown, Cog, Puzzle, Tags, Flame, GitBranch, GitMerge, Share2, Heart, Coffee, PieChart, Sparkles, Book, Library, BrainCircuit, ScrollText, Network, Ear, ArrowLeftRight, Layers, Volume2, PenTool, Shapes, Download, Trash2, Edit2, History, RotateCcw, RefreshCw } from 'lucide-react';
 import './profileTab.css';
+import { isSyncReviewEnabled, setSyncReviewEnabled } from '@/utils/syncEngine.js';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ALLOWED_REDIRECTS } from '@/utils/navigationConstants.js';
 import { supabase } from '@/utils/supabaseClient.js';
@@ -169,6 +170,13 @@ export default function ProfileTab() {
         updateConfig: state.updateConfig,
         setFullConfig: state.setFullConfig,
     })));
+
+    const [showSyncReview, setShowSyncReview] = useState(() => isSyncReviewEnabled());
+    const toggleSyncReview = () => {
+        const next = !showSyncReview;
+        setShowSyncReview(next);
+        setSyncReviewEnabled(next);
+    };
 
     // Check the user's progress and unlock any achievements they've earned
     useEffect(() => {
@@ -679,6 +687,28 @@ export default function ProfileTab() {
                                 </div>
                             </div>
                             <p className="profile-settings-hint">{t('profile.autoSyncHint')}</p>
+                        </div>
+                    )}
+                    {session && (
+                        <div>
+                            <div className="profile-toggle-row">
+                                <label htmlFor="sync-review-toggle" className="profile-toggle-label">
+                                    <GitMerge size={14} style={{ marginRight: '6px', position: 'relative', top: '2px' }}/> {t('profile.syncReview') || 'Review sync changes'}
+                                </label>
+                                <button
+                                    id="sync-review-toggle"
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={showSyncReview}
+                                    className={`profile-switch ${showSyncReview ? 'is-on' : ''}`}
+                                    onClick={toggleSyncReview}
+                                >
+                                    <span className="profile-switch-knob" />
+                                </button>
+                            </div>
+                            <p className="profile-settings-hint">
+                                {t('profile.syncReviewHint') || 'Show the Sync & Merge review when another device changed this language. When off, clean merges apply automatically; real conflicts are still shown.'}
+                            </p>
                         </div>
                     )}
                 </div>

@@ -26,6 +26,8 @@ export default {
   displayNameHint: "Este nombre aparece en el saludo de inicio y en los PDFs exportados.",
   autoSync: "Sincronización Automática en la Nube",
   autoSyncHint: "Sube automáticamente tus cambios a la nube (y crea una instantánea en el historial) unos segundos después de dejar de escribir.",
+  syncReview: "Revisar cambios de sincronización",
+  syncReviewHint: "Muestra el panel de revisión cuando otro dispositivo modifica este idioma. Al desactivarse, los cambios sin conflicto se combinan automáticamente.",
   liveTitle: "Conlang Engine LIVE (De por vida)",
   liveDesc: "¡Apoya el proyecto para desbloquear Sincronización en la Nube y Copias multidispotivo para siempre! Pago único de $5.00 USD.",
   altSupport: "Otras formas de apoyar:",

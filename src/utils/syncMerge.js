@@ -45,7 +45,7 @@ export const DEVICE_LOCAL_CONFIG_KEYS = new Set([
     'projectId', 'lastCloudSync', 'syncConflictStatus', 'activeTab',
     'isThemeModalOpen', 'showSettings', 'isSidebarOpen', 'isRehydrating',
     'isAutoSyncEnabled', 'isProActive', 'appLanguage', 'activity',
-    'wikiPages', 'wiki',
+    'devicesOnlineCount', 'wikiPages', 'wiki',
 ]);
 
 /** How each entry collection identifies "the same word". */

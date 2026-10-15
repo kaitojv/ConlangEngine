@@ -26,6 +26,8 @@ export default {
   displayNameHint: "This name appears on the homepage greeting and exported PDFs.",
   autoSync: "Auto-Sync to Cloud",
   autoSyncHint: "Automatically push your changes to the cloud (and create a version history snapshot) a few seconds after you stop typing.",
+  syncReview: "Review sync changes",
+  syncReviewHint: "Show the Sync & Merge review when another device changed this language. When off, clean merges apply automatically; real conflicts are still shown.",
   liveTitle: "Conlang Engine LIVE (Lifetime)",
   liveDesc: "Support the project to unlock Cloud Sync and Multi-device backups forever! One-time purchase of $5.00 USD.",
   altSupport: "Alternative ways to support:",

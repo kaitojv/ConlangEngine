@@ -26,6 +26,8 @@ export default {
   displayNameHint: "此名称将显示在主页问候语和导出的 PDF 文档中。",
   autoSync: "自动同步至云端",
   autoSyncHint: "在停止输入几秒后，自动将更改推送到云端（并保存历史版本快照）。",
+  syncReview: "审查同步更改",
+  syncReviewHint: "当其他设备修改了此语言时显示同步审查窗口。关闭后，无冲突的更改将自动合并。",
   liveTitle: "Conlang Engine LIVE（终身版）",
   liveDesc: "支持本项目以永久解锁云端同步与多设备备份！一次性仅需 $5.00 USD。",
   altSupport: "其他支持方式：",

@@ -256,6 +256,51 @@
     line-height: 1.4;
 }
 
+.profile-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.profile-toggle-label {
+    font-size: 0.9rem;
+    color: var(--tx);
+    font-weight: bold;
+}
+
+.profile-switch {
+    width: 40px;
+    height: 22px;
+    border-radius: 20px;
+    border: none;
+    padding: 0;
+    background: var(--s3);
+    position: relative;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    flex-shrink: 0;
+}
+
+.profile-switch.is-on {
+    background: var(--acc);
+}
+
+.profile-switch-knob {
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: left 0.3s ease;
+}
+
+.profile-switch.is-on .profile-switch-knob {
+    left: 20px;
+}
+
 /* PayPal Integration Styling */
 .paypal-integration-area {
     width: 100%;

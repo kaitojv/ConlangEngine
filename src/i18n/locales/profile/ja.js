@@ -26,6 +26,8 @@ export default {
   displayNameHint: "この名前はホームページの挨拶やエクスポートされたPDFに表示されます。",
   autoSync: "クラウド自動同期",
   autoSyncHint: "入力終了の数秒後に変更内容をクラウドへ自動保存し、履歴スナップショットを作成します。",
+  syncReview: "同期の変更点を確認する",
+  syncReviewHint: "他の端末で変更があった場合に同期・マージ確認画面を表示します。無効の場合、競合のない変更は自動でマージされます。",
   liveTitle: "Conlang Engine LIVE（永久ライセンス）",
   liveDesc: "プロジェクトを支援して、クラウド同期と複数端末間バックアップを永久に利用可能に！1回限りの $5.00 USD。",
   altSupport: "その他の支援方法：",

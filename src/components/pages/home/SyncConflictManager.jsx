@@ -21,9 +21,10 @@ import {
     pullRemoteProject,
     performProjectMerge,
     applyMergedStateLocally,
-    pushProjectState
+    pushProjectState,
+    isSyncReviewEnabled
 } from '@/utils/syncEngine.js';
-import { MERGE_MODES, SIMILARITY } from '@/utils/syncMerge.js';
+import { MERGE_MODES, SIMILARITY, mergeProject } from '@/utils/syncMerge.js';
 import './syncConflictManager.css';
 
 export default function SyncConflictManager() {
@@ -84,11 +85,29 @@ export default function SyncConflictManager() {
                     decisions: {}
                 });
 
-                setRemotePackage(remote);
+                const hasConflicts = initialMerge.conflicts.length > 0;
+                const hasSimilar = initialMerge.similar.length > 0;
+                const hasIncomingChanges = initialMerge.localChanged || hasConflicts || hasSimilar;
 
-                // If Live Auto Sync is enabled and there are no direct conflicting edits,
-                // apply cleanly without interrupting user
-                if (isAutoSyncEnabled && initialMerge.conflicts.length === 0) {
+                // Cloud timestamp moved but content is identical or has no incoming updates for this device:
+                // acknowledge new cloud timestamp and do NOT interrupt user with a review modal.
+                if (!hasIncomingChanges) {
+                    updateConfig({ lastCloudSync: new Date(remote.remoteTimestamp).toISOString() });
+                    if (initialMerge.remoteChanged && isAutoSyncEnabled) {
+                        await pushProjectState(session, projectId, initialMerge.merged, { skipVersions: true });
+                    }
+                    setRemotePackage(null);
+                    return;
+                }
+
+                setRemotePackage({
+                    ...remote,
+                    base: initialMerge.base
+                });
+
+                // If Live Auto Sync is enabled, or the user opted out of the review modal,
+                // apply clean merges silently without interrupting user. Real conflicts still require user decision.
+                if ((isAutoSyncEnabled || !isSyncReviewEnabled()) && !hasConflicts) {
                     await applyMergedStateLocally(projectId, initialMerge.merged);
                     if (initialMerge.remoteChanged) {
                         await pushProjectState(session, projectId, initialMerge.merged, { skipVersions: true });
@@ -98,7 +117,7 @@ export default function SyncConflictManager() {
                     return;
                 }
 
-                // If review is needed (auto-sync is off) or direct conflicts exist, prompt user
+                // Review needed or direct conflicts exist: prompt user
                 updateConfig({ syncConflictStatus: 'conflict' });
                 setIsReviewOpen(true);
             }
@@ -124,7 +143,7 @@ export default function SyncConflictManager() {
         };
     }, [checkForUpdates]);
 
-    // Compute live merge based on current decisions
+    // Compute live merge synchronously based on current decisions
     const currentMerge = useMemo(() => {
         if (!remotePackage) return null;
         const localConfig = useConfigStore.getState();
@@ -139,15 +158,14 @@ export default function SyncConflictManager() {
             wiki: localWiki
         };
 
-        // Synchronous 3-way merge evaluation
-        return performProjectMerge({
-            projectId,
-            localState,
-            remoteState: remotePackage.remoteState,
+        return mergeProject({
+            base: remotePackage.base || null,
+            local: localState,
+            remote: remotePackage.remoteState,
             mode: MERGE_MODES.REVIEW,
             decisions
         });
-    }, [remotePackage, projectId, decisions]);
+    }, [remotePackage, decisions]);
 
     const handleApplyMerged = async () => {
         if (!remotePackage || !currentMerge) return;
