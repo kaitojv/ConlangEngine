@@ -85,7 +85,6 @@ function App(){
   const projectId = useConfigStore(state => state.projectId);
   const rehydrateBloat = useConfigStore(state => state.rehydrateBloat);
   const isRehydrating = useConfigStore(state => state.isRehydrating);
-  const purgeBloatedGlyphs = useConfigStore(state => state.purgeBloatedGlyphs);
   const hasCompletedOnboarding = useConfigStore(state => state.hasCompletedOnboarding);
   
   const appLanguage = useConfigStore(state => state.appLanguage) || 'en';
@@ -110,10 +109,6 @@ function App(){
           navigate('/onboarding');
       }
   }, [hasCompletedOnboarding, location.pathname, navigate]);
-
-  React.useEffect(() => {
-      if (purgeBloatedGlyphs) purgeBloatedGlyphs();
-  }, [purgeBloatedGlyphs]);
 
   // Auto-compile the block font if missing (e.g. stripped from cloud sync payload to prevent Supabase timeouts)
   const phonologyTypes = useConfigStore(state => state.phonologyTypes);

@@ -40,12 +40,16 @@ export async function buildCloudPayload({ config, lexicon, phrases = [], wiki = 
         delete configData.customFont;
     }
     if (configData.scriptDataById) {
-        Object.values(configData.scriptDataById).forEach(script => {
-            if (typeof script.customFontBase64 === 'string' && script.customFontBase64.length > 2000000) {
-                delete script.customFontBase64;
-                delete script.customFont;
+        const cleanScriptData = {};
+        Object.entries(configData.scriptDataById).forEach(([id, script]) => {
+            const scriptClone = { ...script };
+            if (typeof scriptClone.customFontBase64 === 'string' && scriptClone.customFontBase64.length > 2000000) {
+                delete scriptClone.customFontBase64;
+                delete scriptClone.customFont;
             }
+            cleanScriptData[id] = scriptClone;
         });
+        configData.scriptDataById = cleanScriptData;
     }
 
     const payload = {

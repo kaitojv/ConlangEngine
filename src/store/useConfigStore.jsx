@@ -299,67 +299,101 @@ const STORE_NAME = 'bloat';
 
 export const saveLargeDataToDB = (projectId, data) => {
     return new Promise((resolve) => {
-        if (!projectId) return resolve(false);
-        const req = indexedDB.open(DB_NAME, 3);
-        req.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME);
+        if (!projectId || typeof indexedDB === 'undefined') return resolve(false);
+        const timer = setTimeout(() => resolve(false), 5000);
+        let done = false;
+        const finish = (val) => {
+            if (!done) {
+                done = true;
+                clearTimeout(timer);
+                resolve(val);
             }
         };
-        req.onsuccess = (e) => {
-            try {
-                const db = e.target.result;
-                const tx = db.transaction(STORE_NAME, 'readwrite');
-                const store = tx.objectStore(STORE_NAME);
 
-                // Get existing data to merge
-                const getReq = store.get(projectId);
-                getReq.onsuccess = () => {
-                    const existing = getReq.result || {};
-                    // One-level deep merge: per-script-id data objects (e.g. `default`,
-                    // `script-123`) must merge field-by-field. A shallow `{...existing, ...data}`
-                    // would replace a whole script's data object when only one field
-                    // (e.g. customGlyphs) is written, silently wiping siblings like
-                    // alphabetGlyphs. See FIX.md (alphabet glyph wipe bug).
-                    const merged = { ...existing };
-                    for (const key of Object.keys(data)) {
-                        const incoming = data[key];
-                        const prev = merged[key];
-                        const isPlainObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
-                        merged[key] = (isPlainObj(prev) && isPlainObj(incoming))
-                            ? { ...prev, ...incoming }
-                            : incoming;
-                    }
-                    store.put(merged, projectId);
-                };
-                tx.oncomplete = () => resolve(true);
-            } catch { resolve(false); }
-        };
+        try {
+            const req = indexedDB.open(DB_NAME, 3);
+            req.onblocked = () => finish(false);
+            req.onerror = () => finish(false);
+            req.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME);
+                }
+            };
+            req.onsuccess = (e) => {
+                try {
+                    const db = e.target.result;
+                    const tx = db.transaction(STORE_NAME, 'readwrite');
+                    tx.onerror = () => finish(false);
+                    tx.onabort = () => finish(false);
+                    const store = tx.objectStore(STORE_NAME);
+
+                    // Get existing data to merge
+                    const getReq = store.get(projectId);
+                    getReq.onerror = () => finish(false);
+                    getReq.onsuccess = () => {
+                        try {
+                            const existing = getReq.result || {};
+                            // One-level deep merge: per-script-id data objects (e.g. `default`,
+                            // `script-123`) must merge field-by-field. A shallow `{...existing, ...data}`
+                            // would replace a whole script's data object when only one field
+                            // (e.g. customGlyphs) is written, silently wiping siblings like
+                            // alphabetGlyphs. See FIX.md (alphabet glyph wipe bug).
+                            const merged = { ...existing };
+                            for (const key of Object.keys(data)) {
+                                const incoming = data[key];
+                                const prev = merged[key];
+                                const isPlainObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
+                                merged[key] = (isPlainObj(prev) && isPlainObj(incoming))
+                                    ? { ...prev, ...incoming }
+                                    : incoming;
+                            }
+                            store.put(merged, projectId);
+                        } catch { finish(false); }
+                    };
+                    tx.oncomplete = () => finish(true);
+                } catch { finish(false); }
+            };
+        } catch { finish(false); }
     });
 };
 
 export const loadLargeDataFromDB = (projectId) => {
     return new Promise((resolve) => {
-        if (!projectId) return resolve(null);
-        const req = indexedDB.open(DB_NAME, 3);
-        req.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME);
+        if (!projectId || typeof indexedDB === 'undefined') return resolve(null);
+        const timer = setTimeout(() => resolve(null), 4000);
+        let done = false;
+        const finish = (val) => {
+            if (!done) {
+                done = true;
+                clearTimeout(timer);
+                resolve(val);
             }
         };
-        req.onsuccess = (e) => {
-            try {
+
+        try {
+            const req = indexedDB.open(DB_NAME, 3);
+            req.onblocked = () => finish(null);
+            req.onerror = () => finish(null);
+            req.onupgradeneeded = (e) => {
                 const db = e.target.result;
-                if (!db.objectStoreNames.contains(STORE_NAME)) return resolve(null);
-                const tx = db.transaction(STORE_NAME, 'readonly');
-                const getReq = tx.objectStore(STORE_NAME).get(projectId);
-                getReq.onsuccess = () => resolve(getReq.result);
-                getReq.onerror = () => resolve(null);
-            } catch { resolve(null); }
-        };
-        req.onerror = () => resolve(null);
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME);
+                }
+            };
+            req.onsuccess = (e) => {
+                try {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) return finish(null);
+                    const tx = db.transaction(STORE_NAME, 'readonly');
+                    tx.onerror = () => finish(null);
+                    tx.onabort = () => finish(null);
+                    const getReq = tx.objectStore(STORE_NAME).get(projectId);
+                    getReq.onsuccess = () => finish(getReq.result || null);
+                    getReq.onerror = () => finish(null);
+                } catch { finish(null); }
+            };
+        } catch { finish(null); }
     });
 };
 
@@ -372,25 +406,40 @@ const saveScriptDataToDB = (projectId, scriptId, data) => {
 
 const loadScriptDataFromDB = (projectId, scriptId) => {
     return new Promise((resolve) => {
-        if (!projectId) return resolve(null);
-        const req = indexedDB.open(DB_NAME, 3);
-        req.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME);
+        if (!projectId || typeof indexedDB === 'undefined') return resolve(null);
+        const timer = setTimeout(() => resolve(null), 4000);
+        let done = false;
+        const finish = (val) => {
+            if (!done) {
+                done = true;
+                clearTimeout(timer);
+                resolve(val);
             }
         };
-        req.onsuccess = (e) => {
-            try {
+
+        try {
+            const req = indexedDB.open(DB_NAME, 3);
+            req.onblocked = () => finish(null);
+            req.onerror = () => finish(null);
+            req.onupgradeneeded = (e) => {
                 const db = e.target.result;
-                if (!db.objectStoreNames.contains(STORE_NAME)) return resolve(null);
-                const tx = db.transaction(STORE_NAME, 'readonly');
-                const getReq = tx.objectStore(STORE_NAME).get(scriptKey(projectId, scriptId));
-                getReq.onsuccess = () => resolve(getReq.result);
-                getReq.onerror = () => resolve(null);
-            } catch { resolve(null); }
-        };
-        req.onerror = () => resolve(null);
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME);
+                }
+            };
+            req.onsuccess = (e) => {
+                try {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) return finish(null);
+                    const tx = db.transaction(STORE_NAME, 'readonly');
+                    tx.onerror = () => finish(null);
+                    tx.onabort = () => finish(null);
+                    const getReq = tx.objectStore(STORE_NAME).get(scriptKey(projectId, scriptId));
+                    getReq.onsuccess = () => finish(getReq.result || null);
+                    getReq.onerror = () => finish(null);
+                } catch { finish(null); }
+            };
+        } catch { finish(null); }
     });
 };
 
@@ -639,13 +688,8 @@ export const useConfigStore = create(
                 set(() => ({ ...INITIAL_CONFIG, ...newConfig, appLanguage: targetLang }));
             },
 
-            // Cleanup utility to wipe bloated legacy state
-            purgeBloatedGlyphs: () => set((state) => {
-                if (Object.keys(state.customGlyphs || {}).length > 200) {
-                    return { customGlyphs: {} };
-                }
-                return {};
-            }),
+            // Cleanup utility (deprecated: no-op to protect user glyphs)
+            purgeBloatedGlyphs: () => set(() => ({})),
 
             removeCustomGlyphs: (charCodesToRemove) => {
                 const state = useConfigStore.getState();

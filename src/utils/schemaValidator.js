@@ -68,6 +68,12 @@ export function sanitizeConfig(rawConfig, isSave = false) {
         clean.hasCompletedOnboarding = true;
     }
 
+    // Ensure scriptDataById is deeply cloned so downstream mutations (like cloud font stripping)
+    // cannot mutate the live Zustand store in-memory!
+    if (clean.scriptDataById && typeof clean.scriptDataById === 'object') {
+        clean.scriptDataById = JSON.parse(JSON.stringify(clean.scriptDataById));
+    }
+
     // Deduplicate legacy root bloat fields to prevent doubled JSON file size
     // when scriptDataById is present (as of PR 7). rehydrateBloat handles
     // reconstructing these into the root during startup.
