@@ -8,6 +8,7 @@ export default {
   generating: "生成中...",
   copyPublicLink: "公開リンクをコピー",
   pushToCloud: "クラウドへ保存",
+  pushing: "送信中...",
   pullFromCloud: "クラウドから取得",
   versionHistory: "バージョン履歴",
   signOut: "ログアウト",

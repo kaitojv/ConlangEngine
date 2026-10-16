@@ -8,6 +8,7 @@ export default {
   generating: "Generando...",
   copyPublicLink: "Copiar Enlace Público",
   pushToCloud: "Subir a la Nube",
+  pushing: "Subiendo...",
   pullFromCloud: "Bajar de la Nube",
   versionHistory: "Historial de Versiones",
   signOut: "Cerrar Sesión",

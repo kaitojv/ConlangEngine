@@ -140,6 +140,8 @@ export default {
     heading3: "Heading 3",
     bulletList: "Bullet List",
     orderedList: "Numbered List",
+    indent: "Increase Indent",
+    outdent: "Decrease Indent",
     quote: "Quote",
     subscript: "Subscript",
     superscript: "Superscript",

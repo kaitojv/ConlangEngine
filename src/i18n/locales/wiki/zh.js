@@ -140,6 +140,8 @@ export default {
     heading3: "标题 3",
     bulletList: "无序列表",
     orderedList: "有序列表",
+    indent: "增加缩进",
+    outdent: "减少缩进",
     quote: "引用块",
     subscript: "下标",
     superscript: "上标",

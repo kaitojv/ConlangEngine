@@ -8,6 +8,7 @@ export default {
   generating: "Генерация...",
   copyPublicLink: "Скопировать публичную ссылку",
   pushToCloud: "Отправить в облако",
+  pushing: "Отправка...",
   pullFromCloud: "Загрузить из облака",
   versionHistory: "История версий",
   signOut: "Выйти",

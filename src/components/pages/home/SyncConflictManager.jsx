@@ -1,5 +1,4 @@
-// src/components/pages/home/SyncConflictManager.jsx
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
@@ -44,6 +43,7 @@ export default function SyncConflictManager() {
     const [decisions, setDecisions] = useState({});
     const [isApplying, setIsApplying] = useState(false);
     const [isReviewOpen, setIsReviewOpen] = useState(false);
+    const dismissedTimestampsRef = useRef(new Set());
 
     // Track active session
     useEffect(() => {
@@ -54,13 +54,47 @@ export default function SyncConflictManager() {
         return () => subscription.unsubscribe();
     }, []);
 
+    // Dismiss review modal cleanly for this remote version
+    const handleDismiss = useCallback(() => {
+        if (remotePackage?.remoteTimestamp) {
+            dismissedTimestampsRef.current.add(remotePackage.remoteTimestamp);
+        }
+        setIsReviewOpen(false);
+        setRemotePackage(null);
+        updateConfig({
+            syncConflictStatus: 'ignored',
+            lastCloudSync: remotePackage?.remoteTimestamp
+                ? new Date(remotePackage.remoteTimestamp).toISOString()
+                : new Date().toISOString()
+        });
+    }, [remotePackage, updateConfig]);
+
+    // Close review modal immediately if user toggles off "Review sync changes" in Profile
+    useEffect(() => {
+        const handleReviewPrefChange = (e) => {
+            if (!e.detail) {
+                setIsReviewOpen(false);
+                setRemotePackage(null);
+                updateConfig({ syncConflictStatus: 'resolved' });
+            }
+        };
+        window.addEventListener('ce-sync-review-changed', handleReviewPrefChange);
+        return () => window.removeEventListener('ce-sync-review-changed', handleReviewPrefChange);
+    }, [updateConfig]);
+
     // Check remote cloud state for updates
     const checkForUpdates = useCallback(async () => {
         if (!session || !projectId || projectId.startsWith('local_')) return;
+        if (isReviewOpen && remotePackage) return;
 
         try {
             const remote = await pullRemoteProject(projectId);
             if (!remote) return;
+
+            // If user dismissed this remote snapshot during this session, do not reopen
+            if (dismissedTimestampsRef.current.has(remote.remoteTimestamp)) {
+                return;
+            }
 
             const localTime = lastCloudSync ? new Date(lastCloudSync).getTime() : 0;
             // Buffer to prevent false positives from immediate self-pushes
@@ -77,11 +111,12 @@ export default function SyncConflictManager() {
                     wiki: localWiki
                 };
 
+                const reviewEnabled = isSyncReviewEnabled();
                 const initialMerge = await performProjectMerge({
                     projectId,
                     localState,
                     remoteState: remote.remoteState,
-                    mode: isAutoSyncEnabled ? MERGE_MODES.AUTO : MERGE_MODES.REVIEW,
+                    mode: (!reviewEnabled || isAutoSyncEnabled) ? MERGE_MODES.AUTO : MERGE_MODES.REVIEW,
                     decisions: {}
                 });
 
@@ -92,7 +127,10 @@ export default function SyncConflictManager() {
                 // Cloud timestamp moved but content is identical or has no incoming updates for this device:
                 // acknowledge new cloud timestamp and do NOT interrupt user with a review modal.
                 if (!hasIncomingChanges) {
-                    updateConfig({ lastCloudSync: new Date(remote.remoteTimestamp).toISOString() });
+                    updateConfig({ 
+                        lastCloudSync: new Date(remote.remoteTimestamp).toISOString(),
+                        syncConflictStatus: 'resolved'
+                    });
                     if (initialMerge.remoteChanged && isAutoSyncEnabled) {
                         await pushProjectState(session, projectId, initialMerge.merged, { skipVersions: true });
                     }
@@ -100,16 +138,15 @@ export default function SyncConflictManager() {
                     return;
                 }
 
-                setRemotePackage({
-                    ...remote,
-                    base: initialMerge.base
-                });
-
-                // If Live Auto Sync is enabled, or the user opted out of the review modal,
-                // apply clean merges silently without interrupting user. Real conflicts still require user decision.
-                if ((isAutoSyncEnabled || !isSyncReviewEnabled()) && !hasConflicts) {
+                // If review is turned off, or Live Auto Sync is enabled with clean merge:
+                // Apply merges automatically without interrupting user.
+                if (!reviewEnabled || (isAutoSyncEnabled && !hasConflicts)) {
                     await applyMergedStateLocally(projectId, initialMerge.merged);
-                    if (initialMerge.remoteChanged) {
+                    updateConfig({ 
+                        lastCloudSync: new Date(remote.remoteTimestamp).toISOString(),
+                        syncConflictStatus: 'resolved'
+                    });
+                    if (initialMerge.remoteChanged && isAutoSyncEnabled) {
                         await pushProjectState(session, projectId, initialMerge.merged, { skipVersions: true });
                     }
                     toast.success(t('sync.status.autoMergedToast'));
@@ -117,14 +154,18 @@ export default function SyncConflictManager() {
                     return;
                 }
 
-                // Review needed or direct conflicts exist: prompt user
+                // Review needed: prompt user
+                setRemotePackage({
+                    ...remote,
+                    base: initialMerge.base
+                });
                 updateConfig({ syncConflictStatus: 'conflict' });
                 setIsReviewOpen(true);
             }
         } catch (err) {
             console.warn("Could not check for cloud updates:", err);
         }
-    }, [session, projectId, lastCloudSync, isAutoSyncEnabled, updateConfig, t]);
+    }, [session, projectId, lastCloudSync, isAutoSyncEnabled, isReviewOpen, remotePackage, updateConfig, t]);
 
     // Check on mount, window focus, and tab wakeup (visibilitychange)
     useEffect(() => {
@@ -183,7 +224,10 @@ export default function SyncConflictManager() {
             setIsReviewOpen(false);
             setRemotePackage(null);
             setDecisions({});
-            updateConfig({ syncConflictStatus: 'resolved' });
+            updateConfig({ 
+                syncConflictStatus: 'resolved',
+                lastCloudSync: new Date().toISOString()
+            });
         } catch (err) {
             console.error("Failed to apply merge:", err);
             toast.error(err.message || "Failed to merge");
@@ -200,7 +244,12 @@ export default function SyncConflictManager() {
             toast.success(t('sync.status.pulledToast'));
             setIsReviewOpen(false);
             setRemotePackage(null);
-            updateConfig({ syncConflictStatus: 'resolved' });
+            updateConfig({ 
+                syncConflictStatus: 'resolved',
+                lastCloudSync: remotePackage?.remoteTimestamp
+                    ? new Date(remotePackage.remoteTimestamp).toISOString()
+                    : new Date().toISOString()
+            });
         } catch (err) {
             toast.error(err.message || "Failed to pull cloud version");
         } finally {
@@ -229,7 +278,10 @@ export default function SyncConflictManager() {
             toast.success(t('sync.status.pushedToast'));
             setIsReviewOpen(false);
             setRemotePackage(null);
-            updateConfig({ syncConflictStatus: 'resolved' });
+            updateConfig({ 
+                syncConflictStatus: 'resolved',
+                lastCloudSync: new Date().toISOString()
+            });
         } catch (err) {
             toast.error(err.message || "Failed to keep local version");
         } finally {
@@ -253,10 +305,7 @@ export default function SyncConflictManager() {
     return (
         <Modal
             isOpen={isReviewOpen}
-            onClose={() => {
-                setIsReviewOpen(false);
-                updateConfig({ syncConflictStatus: 'ignored' });
-            }}
+            onClose={handleDismiss}
             title={
                 <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <AlertTriangle size={18} color="var(--acc)" />

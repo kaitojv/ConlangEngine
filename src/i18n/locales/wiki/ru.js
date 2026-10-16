@@ -140,6 +140,8 @@ export default {
     heading3: "Заголовок 3",
     bulletList: "Маркированный список",
     orderedList: "Нумерованный список",
+    indent: "Увеличить отступ",
+    outdent: "Уменьшить отступ",
     quote: "Цитата",
     subscript: "Нижний индекс",
     superscript: "Верхний индекс",

@@ -22,7 +22,22 @@ export function buildWorkspaceSnapshot({ exportAll = true } = {}) {
     const phrases = lexiconState.phrases || [];
 
     const project = { ...useProjectStore.getState() };
-    if (!exportAll) project.localProjects = [];
+    if (!exportAll) {
+        project.localProjects = [];
+    } else if (Array.isArray(project.localProjects)) {
+        project.localProjects = project.localProjects.map(p => {
+            if (p?.project_data?.config) {
+                return {
+                    ...p,
+                    project_data: {
+                        ...p.project_data,
+                        config: sanitizeConfig(p.project_data.config, true)
+                    }
+                };
+            }
+            return p;
+        });
+    }
 
     return { config, project, lexicon, phrases };
 }

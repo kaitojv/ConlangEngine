@@ -26,6 +26,8 @@ import { CsvImportModal } from './CsvImportModal.jsx';
 import AnkiExportModal from '../../UI/AnkiExportModal/AnkiExportModal.jsx';
 import BackupStatus from '../BackupStatus/BackupStatus.jsx';
 import { sanitizeBackup } from '../../../utils/schemaValidator.jsx';
+import { useBackupStore } from '../../../store/useBackupStore.jsx';
+import { saveSyncBase } from '../../../utils/syncBaseStore.js';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { renderWordInScript } from '../../../utils/scriptRendering.js';
 import { containsCustomGlyph } from '../../../utils/scriptResolver.js';
@@ -157,6 +159,9 @@ export default function Header({ openMenu, onBackupNow }) {
                 // SEC-4: Validate and sanitize the backup through our schema validator
                 const data = sanitizeBackup(rawData);
                 
+                // Pause auto-sync and backup detection during load
+                useBackupStore.getState().suppress(3000);
+
                 // BUG-1: Use proper store setters instead of raw setState
                 if (data.config) {
                     useConfigStore.getState().setFullConfig(data.config);
@@ -166,6 +171,18 @@ export default function Header({ openMenu, onBackupNow }) {
                 }
                 if (data.phrases) {
                     useLexiconStore.getState().setPhrases(data.phrases);
+                }
+
+                // Establish this loaded snapshot as the sync base so future cloud sync
+                // treats this as the clean local baseline
+                const loadedProjectId = data.config?.projectId || useConfigStore.getState().projectId;
+                if (loadedProjectId) {
+                    saveSyncBase(loadedProjectId, {
+                        config: data.config || useConfigStore.getState(),
+                        lexicon: data.lexicon || [],
+                        phrases: data.phrases || [],
+                        wiki: data.config?.wikiPages || {}
+                    }).catch(err => console.warn("Could not save sync base on load:", err));
                 }
                 
                 if (loadAll && data.project && Array.isArray(data.project.localProjects)) {

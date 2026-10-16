@@ -223,7 +223,7 @@ assert.deepStrictEqual(exportedSnapshotConfig.scriptDataById['default'].customGl
 assert.strictEqual(exportedSnapshotConfig.scriptDataById['default'].customFontBase64, 'AAEAAAASAQA...dGVzdA==');
 assert.strictEqual(exportedSnapshotConfig.scriptDataById['default'].alphabetGlyphs['a'], '\uE000');
 assert.strictEqual(exportedSnapshotConfig.scriptDataById['default'].syllabaryMap['ka'], '\uE000');
-assert.strictEqual(exportedSnapshotConfig.scriptDataById['script-secondary'].customGlyphs[57345], strokeData);
+assert.deepStrictEqual(exportedSnapshotConfig.scriptDataById['script-secondary'].customGlyphs[57345], strokeData);
 console.log('✓ Export snapshot preserves all glyph strokes, fonts, character maps in scriptDataById');
 
 // 7b. Simulate Import: sanitizeBackup on the exported file

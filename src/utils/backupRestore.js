@@ -9,6 +9,7 @@ import { useLexiconStore } from '../store/useLexiconStore.jsx';
 import { useProjectStore } from '../store/useProjectStore.jsx';
 import { useBackupStore } from '../store/useBackupStore.jsx';
 import { sanitizeBackup } from './schemaValidator.jsx';
+import { saveSyncBase } from './syncBaseStore.js';
 
 // Restore config / lexicon / project archive from a payload.
 // Returns the restored projectId (from the payload config), or null.
@@ -18,7 +19,7 @@ export function restoreBackupPayload(payload, { lastBackupTime, lastBackupVersio
     const data = sanitizeBackup(payload);
 
     // Pause change detection across the synchronous setState batch (+ buffer).
-    useBackupStore.getState().suppress(1500);
+    useBackupStore.getState().suppress(3000);
 
     if (data.config) useConfigStore.getState().setFullConfig(data.config);
     if (data.lexicon) useLexiconStore.getState().setLexicon(data.lexicon);
@@ -28,6 +29,15 @@ export function restoreBackupPayload(payload, { lastBackupTime, lastBackupVersio
     }
 
     const projectId = data.config?.projectId || null;
+    if (projectId) {
+        saveSyncBase(projectId, {
+            config: data.config || useConfigStore.getState(),
+            lexicon: data.lexicon || [],
+            phrases: data.phrases || [],
+            wiki: data.config?.wikiPages || {}
+        }).catch(err => console.warn("Could not save sync base on restore:", err));
+    }
+
     if (projectId && (lastBackupTime || lastBackupVersion)) {
         const patch = {};
         if (lastBackupTime) patch.lastBackupTime = lastBackupTime;

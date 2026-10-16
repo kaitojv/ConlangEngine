@@ -25,7 +25,12 @@ export const isSyncReviewEnabled = () => {
     try { return localStorage.getItem(SYNC_REVIEW_PREF_KEY) !== 'false'; } catch { return true; }
 };
 export const setSyncReviewEnabled = (enabled) => {
-    try { localStorage.setItem(SYNC_REVIEW_PREF_KEY, enabled ? 'true' : 'false'); } catch { /* ignore */ }
+    try { 
+        localStorage.setItem(SYNC_REVIEW_PREF_KEY, enabled ? 'true' : 'false'); 
+    } catch { /* ignore */ }
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ce-sync-review-changed', { detail: enabled }));
+    }
 };
 
 /**

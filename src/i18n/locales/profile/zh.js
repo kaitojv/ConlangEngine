@@ -8,6 +8,7 @@ export default {
   generating: "生成中...",
   copyPublicLink: "复制公开链接",
   pushToCloud: "推送到云端",
+  pushing: "推送中...",
   pullFromCloud: "从云端拉取",
   versionHistory: "版本历史",
   signOut: "退出登录",

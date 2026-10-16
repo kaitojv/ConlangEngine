@@ -140,6 +140,8 @@ export default {
     heading3: "Título 3",
     bulletList: "Lista com Marcadores",
     orderedList: "Lista Numerada",
+    indent: "Aumentar Recuo",
+    outdent: "Diminuir Recuo",
     quote: "Citação",
     subscript: "Subscrito",
     superscript: "Sobrescrito",

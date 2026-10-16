@@ -10,6 +10,7 @@ import { pushProjectState } from '@/utils/syncEngine.js';
  * Can be called standalone or from useSharing hook.
  */
 export async function pushProjectToCloud(session = null, isManualSync = false, versionName = null) {
+    const isManual = Boolean(isManualSync && typeof isManualSync !== 'object');
     let activeSession = session;
     if (!activeSession) {
         try {
@@ -21,7 +22,7 @@ export async function pushProjectToCloud(session = null, isManualSync = false, v
     }
 
     // Only enforce session for manual "Push to Cloud" button
-    if (isManualSync && !activeSession) {
+    if (isManual && !activeSession) {
         toast.error("You must be logged in to sync!");
         return false;
     }
@@ -40,26 +41,36 @@ export async function pushProjectToCloud(session = null, isManualSync = false, v
         wiki: state.wikiPages || {}
     };
 
+    let toastId = null;
+    if (isManual) {
+        toastId = toast.loading('Pushing to cloud...');
+    }
+
     try {
-        const defaultVersionName = isManualSync ? `Manual Save — ${new Date().toLocaleString()}` : null;
+        const defaultVersionName = isManual ? `Manual Save — ${new Date().toLocaleString()}` : null;
         const res = await pushProjectState(activeSession, currentProjectId, localState, {
-            versionName: versionName || defaultVersionName
+            versionName: (typeof versionName === 'string' && versionName) ? versionName : defaultVersionName
         });
 
         if (res.success) {
-            if (isManualSync) {
-                toast.success('Cloud Sync Complete!');
+            if (isManual) {
+                if (toastId) toast.success('Cloud Sync Complete!', { id: toastId });
+                else toast.success('Cloud Sync Complete!');
                 state.logActivity?.('Pushed dictionary to the cloud.');
             }
             return true;
         } else {
-            if (isManualSync) toast.error(`Sync failed: ${res.error}`);
+            if (isManual) {
+                if (toastId) toast.error(`Sync failed: ${res.error}`, { id: toastId });
+                else toast.error(`Sync failed: ${res.error}`);
+            }
             return false;
         }
     } catch (err) {
         console.error("Cloud push failed:", err);
-        if (isManualSync) {
-            toast.error(`Sync failed: ${err.message}`);
+        if (isManual) {
+            if (toastId) toast.error(`Sync failed: ${err.message}`, { id: toastId });
+            else toast.error(`Sync failed: ${err.message}`);
         }
         return false;
     }
@@ -67,10 +78,17 @@ export async function pushProjectToCloud(session = null, isManualSync = false, v
 
 export function useSharing(session) {
     const [isSharing, setIsSharing] = useState(false);
+    const [isPushing, setIsPushing] = useState(false);
     const projectId = useConfigStore(state => state.projectId);
 
     const handlePushToCloud = async (isManualSync = true, versionName = null) => {
-        return pushProjectToCloud(session, isManualSync, versionName);
+        const manual = typeof isManualSync === 'boolean' ? isManualSync : true;
+        setIsPushing(true);
+        try {
+            return await pushProjectToCloud(session, manual, typeof versionName === 'string' ? versionName : null);
+        } finally {
+            setIsPushing(false);
+        }
     };
 
     const handleShareLink = async () => {
@@ -112,5 +130,5 @@ export function useSharing(session) {
         }
     };
 
-    return { isSharing, handleShareLink, handlePushToCloud };
+    return { isSharing, isPushing, handleShareLink, handlePushToCloud };
 }

@@ -86,6 +86,16 @@ export function sanitizeConfig(rawConfig, isSave = false) {
         delete clean.customFontBase64;
     }
 
+    // Strip account and runtime-sync state when saving/exporting backups or building cloud payloads
+    if (isSave) {
+        delete clean.lastCloudSync;
+        delete clean.syncConflictStatus;
+        delete clean.isAutoSyncEnabled;
+        delete clean.isProActive;
+        delete clean.devicesOnlineCount;
+        delete clean.isRehydrating;
+    }
+
     return clean;
 }
 
@@ -178,9 +188,18 @@ export function sanitizeBackup(data) {
     }
 
     const rawPhrases = data.phrases || data.lexicon?.phrases || null;
+    const cleanConfig = data.config ? sanitizeConfig(data.config) : null;
+    if (cleanConfig) {
+        delete cleanConfig.lastCloudSync;
+        delete cleanConfig.syncConflictStatus;
+        delete cleanConfig.isAutoSyncEnabled;
+        delete cleanConfig.isProActive;
+        delete cleanConfig.devicesOnlineCount;
+        delete cleanConfig.isRehydrating;
+    }
 
     return {
-        config: data.config ? sanitizeConfig(data.config) : null,
+        config: cleanConfig,
         lexicon: data.lexicon ? sanitizeLexicon(data.lexicon) : null,
         phrases: rawPhrases ? sanitizePhrases(rawPhrases) : null,
         project: data.project && typeof data.project === 'object' ? data.project : null

@@ -661,7 +661,30 @@ export const useConfigStore = create(
                     }
                 }
 
-                const projectId = newConfig.projectId || useConfigStore.getState().projectId;
+                const curState = useConfigStore.getState();
+                const projectId = newConfig.projectId || curState.projectId;
+
+                // Account and device-specific state that MUST NEVER be overwritten by loading a project save file
+                const preservedAccountDeviceState = {
+                    isAutoSyncEnabled: curState.isAutoSyncEnabled,
+                    isProActive: curState.isProActive,
+                    devicesOnlineCount: curState.devicesOnlineCount || 1,
+                    activeTab: curState.activeTab,
+                    isThemeModalOpen: curState.isThemeModalOpen,
+                    showSettings: curState.showSettings,
+                    isSidebarOpen: curState.isSidebarOpen,
+                    // Loading a save file is a user-initiated local baseline change; reset sync conflict status and establish fresh local time
+                    lastCloudSync: new Date().toISOString(),
+                    syncConflictStatus: 'resolved',
+                };
+
+                // Strip runtime/account keys from incoming newConfig to prevent leaking
+                delete newConfig.lastCloudSync;
+                delete newConfig.syncConflictStatus;
+                delete newConfig.isAutoSyncEnabled;
+                delete newConfig.isProActive;
+                delete newConfig.devicesOnlineCount;
+
                 if (projectId) {
                     const bloat = {};
                     if (newConfig.customFontBase64) bloat.customFontBase64 = newConfig.customFontBase64;
@@ -683,9 +706,14 @@ export const useConfigStore = create(
                     newConfig.scriptSystems = repaired.scriptSystems;
                     newConfig.scriptRules = { ...(newConfig.scriptRules || {}), ...repaired.scriptRules };
                 }
-                const activeLang = useConfigStore.getState().appLanguage || getInitialLanguage();
+                const activeLang = curState.appLanguage || getInitialLanguage();
                 const targetLang = newConfig.appLanguage || activeLang;
-                set(() => ({ ...INITIAL_CONFIG, ...newConfig, appLanguage: targetLang }));
+                set(() => ({
+                    ...INITIAL_CONFIG,
+                    ...newConfig,
+                    ...preservedAccountDeviceState,
+                    appLanguage: targetLang
+                }));
             },
 
             // Cleanup utility (deprecated: no-op to protect user glyphs)

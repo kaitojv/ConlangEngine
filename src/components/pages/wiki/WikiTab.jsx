@@ -19,7 +19,8 @@ import {
     AlignLeft, AlignCenter, AlignRight, AlignJustify,
     Highlighter, Subscript as SubscriptIcon, Superscript as SuperscriptIcon,
     Strikethrough, List, ListOrdered, Undo, Redo, Eraser,
-    Rows, Columns, ArrowUpFromLine, ArrowDownFromLine, ArrowLeftFromLine, ArrowRightFromLine
+    Rows, Columns, ArrowUpFromLine, ArrowDownFromLine, ArrowLeftFromLine, ArrowRightFromLine,
+    Indent as IndentIcon, Outdent as OutdentIcon
 } from 'lucide-react';
 
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -42,6 +43,7 @@ import { Mark, mergeAttributes } from '@tiptap/core';
 import { createGrammarAnalyzer } from '@/utils/grammarAnalyzer.js';
 import LiveTranslatorPanel from './LiveTranslatorPanel.jsx';
 import LexiconEditModal from '../dictionary/LexiconEditModal.jsx';
+import { Indent } from './indentExtension.js';
 
 const ConlangSpan = Mark.create({
     name: 'conlangSpan',
@@ -1408,6 +1410,7 @@ function LegacyWikiEditor({ content, onSave }) {
     const editor = useEditor({
         extensions: [
             StarterKit,
+            Indent,
             TiptapTable.configure({ resizable: true }),
             TableRow,
             TableHeader,
@@ -1537,9 +1540,11 @@ function LegacyWikiEditor({ content, onSave }) {
                 <button className={`wiki-tool-btn ${editor.isActive('heading', { level: 2 }) ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title={t('wiki.richText.heading2')}><Heading2 size={16} /></button>
                 <button className={`wiki-tool-btn ${editor.isActive('heading', { level: 3 }) ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title={t('wiki.richText.heading3')}><Heading3 size={16} /></button>
                 
-                {/* Lists & Quotes */}
+                {/* Lists, Indentation & Quotes */}
                 <button className={`wiki-tool-btn ${editor.isActive('bulletList') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleBulletList().run()} title={t('wiki.richText.bulletList')}><List size={16} /></button>
                 <button className={`wiki-tool-btn ${editor.isActive('orderedList') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleOrderedList().run()} title={t('wiki.richText.orderedList')}><ListOrdered size={16} /></button>
+                <button className="wiki-tool-btn" onClick={() => editor.chain().focus().outdent().run()} disabled={!editor.can().outdent()} title={`${t('wiki.richText.outdent')} (Shift+Tab)`}><OutdentIcon size={16} /></button>
+                <button className="wiki-tool-btn" onClick={() => editor.chain().focus().indent().run()} disabled={!editor.can().indent()} title={`${t('wiki.richText.indent')} (Tab)`}><IndentIcon size={16} /></button>
                 <button className={`wiki-tool-btn ${editor.isActive('blockquote') ? 'active' : ''}`} onClick={() => editor.chain().focus().toggleBlockquote().run()} title={t('wiki.richText.quote')}><Quote size={16} /></button>
                 <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px', height: '24px' }}></div>
                 

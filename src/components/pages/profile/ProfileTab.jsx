@@ -369,7 +369,7 @@ export default function ProfileTab() {
     };
 
     // Use the unified sharing hook
-    const { isSharing, handleShareLink, handlePushToCloud } = useSharing(session);
+    const { isSharing, isPushing, handleShareLink, handlePushToCloud } = useSharing(session);
 
     // Retrieve cloud backups and save ALL of them into the local project archive
     const handlePullFromCloud = async () => {
@@ -575,8 +575,11 @@ export default function ProfileTab() {
                                 </Button>
                                 {isProActive && (
                                     <>
-                                        <Button variant="default" className="push-btn" onClick={handlePushToCloud}>
-                                            <div className="btn-content"><CloudUpload size={16}/> {t('profile.pushToCloud')}</div>
+                                        <Button variant="default" className="push-btn" onClick={() => handlePushToCloud(true)} disabled={isPushing}>
+                                            <div className="btn-content">
+                                                <CloudUpload size={16} className={isPushing ? 'animate-spin' : ''}/> 
+                                                {isPushing ? ` ${t('profile.pushing') || 'Pushing...'}` : ` ${t('profile.pushToCloud')}`}
+                                            </div>
                                         </Button>
                                         <Button variant="default" className="pull-btn" onClick={handlePullFromCloud}>
                                             <div className="btn-content"><CloudDownload size={16}/> {t('profile.pullFromCloud')}</div>

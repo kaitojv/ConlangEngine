@@ -140,6 +140,8 @@ export default {
     heading3: "見出し 3",
     bulletList: "箇条書き",
     orderedList: "番号付きリスト",
+    indent: "インデントを増やす",
+    outdent: "インデントを減らす",
     quote: "引用",
     subscript: "下付き",
     superscript: "上付き",

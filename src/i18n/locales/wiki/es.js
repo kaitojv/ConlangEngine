@@ -140,6 +140,8 @@ export default {
     heading3: "Encabezado 3",
     bulletList: "Lista con Viñetas",
     orderedList: "Lista Numerada",
+    indent: "Aumentar Sangría",
+    outdent: "Disminuir Sangría",
     quote: "Cita",
     subscript: "Subíndice",
     superscript: "Superíndice",
