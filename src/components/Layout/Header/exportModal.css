@@ -796,7 +796,7 @@ input:checked + .slider:before {
 }
 
 /* FOOTER */
-.vrb-footer {
+.export-modal-footer {
     display: flex;
     justify-content: flex-end;
     align-items: center;

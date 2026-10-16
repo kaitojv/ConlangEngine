@@ -587,7 +587,7 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
                     )}
                 </div>
 
-                <div className="vrb-footer">
+                <div className="export-modal-footer">
                     <Button variant="edit" onClick={onClose} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)' }} disabled={isProcessing}>
                         {t('exportModal.cancel')}
                     </Button>

@@ -212,3 +212,213 @@
     font-size: 0.74rem;
     color: var(--tx2);
 }
+
+/* Conlang Icon Picker */
+.conlang-icon-picker-section {
+    margin-top: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.conlang-icon-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.conlang-icon-label {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--tx);
+    margin-bottom: 2px;
+}
+
+.conlang-icon-desc {
+    font-size: 0.75rem;
+    color: var(--tx2);
+    margin: 0;
+}
+
+.conlang-icon-selected-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm, 8px);
+    font-size: 0.8rem;
+    color: var(--tx);
+}
+
+.conlang-icon-selected-badge svg {
+    color: var(--acc);
+}
+
+.conlang-icon-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.conlang-icon-search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.conlang-icon-search-icon {
+    position: absolute;
+    left: 12px;
+    color: var(--tx3);
+    pointer-events: none;
+}
+
+.conlang-icon-search-input {
+    width: 100%;
+    padding: 8px 32px 8px 34px;
+    font-size: 0.82rem;
+    background: var(--s2);
+    color: var(--tx);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm, 8px);
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.conlang-icon-search-input:focus {
+    border-color: var(--acc);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 20%, transparent);
+}
+
+.conlang-icon-clear-btn {
+    position: absolute;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--tx3);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: color 0.15s ease;
+}
+
+.conlang-icon-clear-btn:hover {
+    color: var(--tx);
+}
+
+.conlang-icon-categories {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
+}
+
+.conlang-icon-category-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    font-size: 0.74rem;
+    font-weight: 500;
+    border-radius: 6px;
+    border: 1px solid var(--bd);
+    background: var(--s2);
+    color: var(--tx2);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+}
+
+.conlang-icon-category-chip:hover {
+    color: var(--tx);
+    border-color: var(--bd2, var(--tx3));
+    background: var(--s3);
+}
+
+.conlang-icon-category-chip.active {
+    background: var(--acc);
+    color: #fff;
+    border-color: var(--acc);
+}
+
+.conlang-icon-chip-count {
+    font-size: 0.68rem;
+    opacity: 0.8;
+}
+
+.conlang-icon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+    gap: 0.5rem;
+    max-height: 240px;
+    overflow-y: auto;
+    padding: 6px;
+    background: var(--s1);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm, 8px);
+    scrollbar-width: thin;
+}
+
+.conlang-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+    padding: 0.5rem;
+    background: var(--s2);
+    color: var(--tx);
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.conlang-icon-btn:hover {
+    background: var(--s3);
+    border-color: var(--bd2, var(--tx3));
+}
+
+.conlang-icon-btn.active {
+    background: var(--acc);
+    color: #fff;
+    border-color: var(--acc);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--acc) 30%, transparent);
+}
+
+.conlang-icon-empty {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    text-align: center;
+    gap: 0.5rem;
+    color: var(--tx2);
+    font-size: 0.82rem;
+}
+
+.conlang-icon-empty-btn {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    background: var(--s3);
+    color: var(--tx);
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.conlang-icon-empty-btn:hover {
+    border-color: var(--acc);
+    color: var(--acc);
+}

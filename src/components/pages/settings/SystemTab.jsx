@@ -4,12 +4,12 @@ import Card from '../../UI/Card/Card.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import './systemtab.css';
-import { Palette, CaseLower, Database, ToggleLeft, Globe, Type, Code, Copy, Check, Languages } from 'lucide-react';
+import { Palette, CaseLower, Database, ToggleLeft, Globe, Type, Code, Copy, Check, Languages, Search, X } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { useConfigStore, INITIAL_CONFIG } from '../../../store/useConfigStore.jsx';
 import { useProjectStore } from '../../../store/useProjectStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
-import { CONLANG_ICONS, getConlangIcon } from '../../../utils/iconMap.jsx';
+import { CONLANG_ICONS, CONLANG_ICON_CATEGORIES, getConlangIcon } from '../../../utils/iconMap.jsx';
 import { DARK_THEMES, LIGHT_THEMES, PRIDE_THEMES_DARK, PRIDE_THEMES_LIGHT } from '../../../utils/themePresets.js';
 import { UI_FONTS } from '../../../utils/uiFonts.js';
 import Modal from '../../UI/Modal/Modal.jsx';
@@ -48,9 +48,33 @@ export default function SystemTab() {
     const { handlePushToCloud } = useSharing(session);
 
     const [copiedSnippet, setCopiedSnippet] = React.useState('');
+    const [iconSearch, setIconSearch] = React.useState('');
+    const [selectedIconCategory, setSelectedIconCategory] = React.useState('all');
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
     const currentProjectId = useConfigStore((state) => state.projectId);
+
+    const filteredConlangIcons = React.useMemo(() => {
+        let baseList = Object.keys(CONLANG_ICONS);
+        if (selectedIconCategory !== 'all') {
+            const cat = CONLANG_ICON_CATEGORIES.find(c => c.id === selectedIconCategory);
+            if (cat?.icons) {
+                baseList = cat.icons;
+            }
+        }
+        if (iconSearch.trim()) {
+            const q = iconSearch.trim().toLowerCase();
+            return baseList.filter(name => name.toLowerCase().includes(q));
+        }
+        return baseList;
+    }, [iconSearch, selectedIconCategory]);
+
+    const hasMatchesInOtherCategories = React.useMemo(() => {
+        if (!iconSearch.trim() || selectedIconCategory === 'all') return false;
+        if (filteredConlangIcons.length > 0) return false;
+        const q = iconSearch.trim().toLowerCase();
+        return Object.keys(CONLANG_ICONS).some(name => name.toLowerCase().includes(q));
+    }, [iconSearch, selectedIconCategory, filteredConlangIcons]);
 
     const handleCopySnippet = (code, id) => {
         navigator.clipboard.writeText(code);
@@ -362,37 +386,97 @@ export default function SystemTab() {
                     </label>
                 </div>
                 
-                <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <label style={{ fontWeight: 600, fontSize: '0.85rem' }}>{t('settings.system.conlangIcon')}</label>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--tx2)', marginBottom: '0.5rem' }}>{t('settings.system.conlangIconDesc')}</p>
-                    
-                    <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(40px, 1fr))', 
-                        gap: '0.5rem',
-                        maxWidth: '100%'
-                    }}>
-                        {Object.keys(CONLANG_ICONS).map(iconName => (
-                            <button
-                                key={iconName}
-                                onClick={() => handleIconChange(iconName)}
-                                title={iconName}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    padding: '0.5rem',
-                                    background: conlangIcon === iconName ? 'var(--acc)' : 'var(--s1)',
-                                    color: conlangIcon === iconName ? '#fff' : 'var(--tx)',
-                                    border: `1px solid ${conlangIcon === iconName ? 'var(--acc)' : 'var(--bd)'}`,
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease'
-                                }}
-                            >
-                                {getConlangIcon(iconName, 18)}
-                            </button>
-                        ))}
+                <div className="conlang-icon-picker-section">
+                    <div className="conlang-icon-header">
+                        <div>
+                            <div className="conlang-icon-label">{t('settings.system.conlangIcon')}</div>
+                            <p className="conlang-icon-desc">{t('settings.system.conlangIconDesc')}</p>
+                        </div>
+                        <div className="conlang-icon-selected-badge" title={`Current icon: ${conlangIcon}`}>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--tx3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                {t('settings.system.selectedIcon') || 'Selected'}:
+                            </span>
+                            {getConlangIcon(conlangIcon, 16)}
+                            <span style={{ fontWeight: 600 }}>{conlangIcon}</span>
+                        </div>
+                    </div>
+
+                    <div className="conlang-icon-controls">
+                        <div className="conlang-icon-search-box">
+                            <Search size={14} className="conlang-icon-search-icon" />
+                            <input
+                                type="text"
+                                className="conlang-icon-search-input"
+                                placeholder={t('settings.system.searchIcons') || 'Search 120+ icons...'}
+                                value={iconSearch}
+                                onChange={(e) => setIconSearch(e.target.value)}
+                            />
+                            {iconSearch && (
+                                <button
+                                    type="button"
+                                    className="conlang-icon-clear-btn"
+                                    onClick={() => setIconSearch('')}
+                                    title="Clear search"
+                                >
+                                    <X size={13} />
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="conlang-icon-categories" role="tablist">
+                            {CONLANG_ICON_CATEGORIES.map(cat => {
+                                const isActive = selectedIconCategory === cat.id;
+                                const label = t(cat.labelKey) || cat.fallbackLabel;
+                                const count = cat.id === 'all' 
+                                    ? Object.keys(CONLANG_ICONS).length 
+                                    : (cat.icons?.length || 0);
+
+                                return (
+                                    <button
+                                        key={cat.id}
+                                        type="button"
+                                        role="tab"
+                                        aria-selected={isActive}
+                                        className={`conlang-icon-category-chip ${isActive ? 'active' : ''}`}
+                                        onClick={() => setSelectedIconCategory(cat.id)}
+                                    >
+                                        {label} <span className="conlang-icon-chip-count">({count})</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="conlang-icon-grid" role="region" aria-label="Icon selection grid">
+                        {filteredConlangIcons.length > 0 ? (
+                            filteredConlangIcons.map(iconName => (
+                                <button
+                                    key={iconName}
+                                    type="button"
+                                    onClick={() => handleIconChange(iconName)}
+                                    title={iconName}
+                                    aria-label={iconName}
+                                    className={`conlang-icon-btn ${conlangIcon === iconName ? 'active' : ''}`}
+                                >
+                                    {getConlangIcon(iconName, 18)}
+                                </button>
+                            ))
+                        ) : (
+                            <div className="conlang-icon-empty">
+                                <p>
+                                    {t('settings.system.noIconsFound', { query: iconSearch }) || `No icons found matching "${iconSearch}".`}
+                                </p>
+                                {hasMatchesInOtherCategories && (
+                                    <button
+                                        type="button"
+                                        className="conlang-icon-empty-btn"
+                                        onClick={() => setSelectedIconCategory('all')}
+                                    >
+                                        Search in all categories
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 
