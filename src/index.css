@@ -112,10 +112,37 @@ html, body {
 body {
   background-color: var(--bg);
   background-image: 
+    var(--pattern-overlay, none),
     radial-gradient(circle at 50% -20%, color-mix(in srgb, var(--acc) 15%, transparent) 0%, transparent 60%),
     radial-gradient(circle at -20% 100%, color-mix(in srgb, var(--acc2) 8%, transparent) 0%, transparent 50%);
-  background-repeat: no-repeat;
+  background-repeat: repeat, no-repeat, no-repeat;
+  background-size: var(--pattern-size, auto), auto, auto;
   background-attachment: fixed;
+}
+
+/* UI Density Modes */
+[data-density="compact"] table th,
+[data-density="compact"] table td {
+  padding: 4px 8px !important;
+  font-size: 0.85rem;
+}
+[data-density="compact"] .card,
+[data-density="compact"] .sg-card {
+  padding: 12px 14px !important;
+  gap: 8px !important;
+}
+[data-density="compact"] .content {
+  padding-top: 20px !important;
+}
+
+[data-density="spacious"] table th,
+[data-density="spacious"] table td {
+  padding: 14px 18px !important;
+}
+[data-density="spacious"] .card,
+[data-density="spacious"] .sg-card {
+  padding: 24px 28px !important;
+  gap: 16px !important;
 }
 
 /* Custom scrollbar styles */

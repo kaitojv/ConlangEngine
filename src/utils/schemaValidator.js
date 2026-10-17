@@ -40,6 +40,7 @@ export const VALID_CONFIG_KEYS = new Set([
     'usesParticles',
     // UI state
     'isDialect', 'hasCompletedOnboarding', 'floatingBackground', 'appLanguage', 'devicesOnlineCount', 'appUiFont', 'isAutoSyncEnabled',
+    'uiDensity', 'uiRadius', 'uiPattern', 'linkThemeToConlang', 'conlangThemes',
     // Study / Course gamification
     'studyXP', 'courseLevelScores', 'dailyChallengeDate', 'dailyChallengeCompleted',
     'studySoundEffects', 'courseProgress'

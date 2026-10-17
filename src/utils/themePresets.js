@@ -22,6 +22,106 @@ export const DARK_THEMES = [
         }
     },
     {
+        name: "Nordic Frost",
+        preview: "linear-gradient(135deg, #0a0f1d, #38bdf8)",
+        colors: {
+            bg: "#0a0f1d",
+            s1: "#10172a",
+            s2: "#151f38",
+            s3: "#1e2b4d",
+            s4: "#0e1424",
+            header: "#070a14",
+            font: "#f1f5f9",
+            font2: "#94a3b8",
+            accent: "#38bdf8",
+            accent2: "#0284c7",
+            accent3: "#0369a1",
+            border: "rgba(56, 189, 248, 0.16)",
+            blur: "0px",
+            glow: "rgba(56, 189, 248, 0.2)"
+        }
+    },
+    {
+        name: "Rose Pine Dusk",
+        preview: "linear-gradient(135deg, #191724, #eb6f92)",
+        colors: {
+            bg: "#191724",
+            s1: "#1f1d2e",
+            s2: "#26233a",
+            s3: "#2a283f",
+            s4: "#16141f",
+            header: "#14121e",
+            font: "#e0def4",
+            font2: "#908caa",
+            accent: "#eb6f92",
+            accent2: "#f6c177",
+            accent3: "#ebbcba",
+            border: "rgba(235, 111, 146, 0.18)",
+            blur: "0px",
+            glow: "rgba(235, 111, 146, 0.2)"
+        }
+    },
+    {
+        name: "Emerald Obsidian",
+        preview: "linear-gradient(135deg, #080d0a, #10b981)",
+        colors: {
+            bg: "#080d0a",
+            s1: "#0d1712",
+            s2: "#13221b",
+            s3: "#1c3026",
+            s4: "#09100c",
+            header: "#050806",
+            font: "#f0fdf4",
+            font2: "#86efac",
+            accent: "#10b981",
+            accent2: "#34d399",
+            accent3: "#059669",
+            border: "rgba(16, 185, 129, 0.16)",
+            blur: "0px",
+            glow: "rgba(16, 185, 129, 0.2)"
+        }
+    },
+    {
+        name: "Slate Indigo",
+        preview: "linear-gradient(135deg, #0f121e, #6366f1)",
+        colors: {
+            bg: "#0f121e",
+            s1: "#171b2d",
+            s2: "#1e233b",
+            s3: "#282e4e",
+            s4: "#111422",
+            header: "#0a0c14",
+            font: "#f8fafc",
+            font2: "#a5b4fc",
+            accent: "#6366f1",
+            accent2: "#818cf8",
+            accent3: "#4338ca",
+            border: "rgba(99, 102, 241, 0.18)",
+            blur: "0px",
+            glow: "rgba(99, 102, 241, 0.2)"
+        }
+    },
+    {
+        name: "Titanium Minimal",
+        preview: "linear-gradient(135deg, #000000, #404040)",
+        colors: {
+            bg: "#000000",
+            s1: "#0a0a0a",
+            s2: "#141414",
+            s3: "#1e1e1e",
+            s4: "#060606",
+            header: "#000000",
+            font: "#ededed",
+            font2: "#888888",
+            accent: "#ffffff",
+            accent2: "#cccccc",
+            accent3: "#555555",
+            border: "rgba(255, 255, 255, 0.12)",
+            blur: "0px",
+            glow: "rgba(255, 255, 255, 0.1)"
+        }
+    },
+    {
         name: "Obsidian Void",
         preview: "linear-gradient(135deg, #000000, #0a0a0a)",
         colors: {
@@ -416,6 +516,46 @@ export const DARK_THEMES = [
 ];
 
 export const LIGHT_THEMES = [
+    {
+        name: "Alpine Snow",
+        preview: "linear-gradient(135deg, #f8fafc, #0284c7)",
+        colors: {
+            bg: "#f8fafc",
+            s1: "#ffffff",
+            s2: "#f1f5f9",
+            s3: "#e2e8f0",
+            s4: "#ffffff",
+            header: "#ffffff",
+            font: "#0f172a",
+            font2: "#64748b",
+            accent: "#0284c7",
+            accent2: "#0369a1",
+            accent3: "#e0f2fe",
+            border: "rgba(15, 23, 42, 0.08)",
+            blur: "0px",
+            glow: "rgba(2, 132, 199, 0.12)"
+        }
+    },
+    {
+        name: "Lavender Soft",
+        preview: "linear-gradient(135deg, #faf8ff, #7c3aed)",
+        colors: {
+            bg: "#faf8ff",
+            s1: "#ffffff",
+            s2: "#f3eefc",
+            s3: "#e9e1f8",
+            s4: "#ffffff",
+            header: "#ffffff",
+            font: "#23173a",
+            font2: "#75638e",
+            accent: "#7c3aed",
+            accent2: "#6d28d9",
+            accent3: "#ede9fe",
+            border: "rgba(124, 58, 237, 0.1)",
+            blur: "0px",
+            glow: "rgba(124, 58, 237, 0.15)"
+        }
+    },
     {
         name: "Clean Paper",
         preview: "#ffffff",
@@ -1297,3 +1437,122 @@ export const PRIDE_THEMES_LIGHT = [
         }
     },
 ];
+
+/**
+ * Safely encodes a theme configuration into a shareable string code (ce-theme:...)
+ */
+export function encodeThemeCode(theme) {
+    if (!theme || !theme.colors) {
+        throw new Error('Theme must contain a valid colors object');
+    }
+    const payload = {
+        v: 1,
+        name: theme.name || 'Custom Theme',
+        colors: theme.colors,
+        appUiFont: theme.appUiFont || undefined,
+        uiDensity: theme.uiDensity || undefined,
+        uiRadius: theme.uiRadius || undefined,
+        uiPattern: theme.uiPattern || undefined,
+        exportedAt: new Date().toISOString()
+    };
+    const jsonStr = JSON.stringify(payload);
+    // Base64 encode supporting UTF-8 characters across browser and Node environments
+    const encoded = typeof btoa !== 'undefined'
+        ? btoa(unescape(encodeURIComponent(jsonStr)))
+        : (globalThis.Buffer ? globalThis.Buffer.from(jsonStr, 'utf-8').toString('base64') : '');
+    return `ce-theme:${encoded}`;
+}
+
+/**
+ * Decodes a shareable theme code (ce-theme:...) back into a theme configuration
+ */
+export function decodeThemeCode(code) {
+    if (typeof code !== 'string') {
+        throw new Error('Invalid theme code: must be a string');
+    }
+    const trimmed = code.trim();
+    if (!trimmed.startsWith('ce-theme:')) {
+        throw new Error('Invalid theme code format. Expected "ce-theme:..."');
+    }
+    const b64 = trimmed.slice('ce-theme:'.length);
+    let jsonStr = '';
+    try {
+        if (typeof atob !== 'undefined') {
+            jsonStr = decodeURIComponent(escape(atob(b64)));
+        } else if (globalThis.Buffer) {
+            jsonStr = globalThis.Buffer.from(b64, 'base64').toString('utf-8');
+        }
+    } catch {
+        throw new Error('Could not decode theme code. Check for copy/paste errors.');
+    }
+
+    let parsed = null;
+    try {
+        parsed = JSON.parse(jsonStr);
+    } catch {
+        throw new Error('Theme code content is corrupted JSON.');
+    }
+
+    if (!parsed || typeof parsed !== 'object' || !parsed.colors || typeof parsed.colors !== 'object') {
+        throw new Error('Theme code does not contain a valid colors definition.');
+    }
+
+    return {
+        name: parsed.name || 'Imported Theme',
+        colors: parsed.colors,
+        appUiFont: parsed.appUiFont || undefined,
+        uiDensity: parsed.uiDensity || undefined,
+        uiRadius: parsed.uiRadius || undefined,
+        uiPattern: parsed.uiPattern || undefined
+    };
+}
+
+/**
+ * Exports a theme configuration as a downloadable JSON file
+ */
+export function exportThemeJSON(theme, customName) {
+    const filename = `${(customName || theme.name || 'conlang-theme').toLowerCase().replace(/[^a-z0-9_-]/g, '_')}.json`;
+    const payload = {
+        conlangEngineTheme: true,
+        version: 1,
+        name: customName || theme.name || 'Custom Theme',
+        colors: theme.colors,
+        appUiFont: theme.appUiFont,
+        uiDensity: theme.uiDensity,
+        uiRadius: theme.uiRadius,
+        uiPattern: theme.uiPattern,
+        exportedAt: new Date().toISOString()
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+/**
+ * Validates and parses a JSON theme file string
+ */
+export function parseThemeJSON(jsonString) {
+    const data = JSON.parse(jsonString);
+    if (!data || typeof data !== 'object') {
+        throw new Error('Invalid JSON');
+    }
+    const colors = data.colors || (data.config && data.config.colors);
+    if (!colors || typeof colors !== 'object') {
+        throw new Error('File does not contain a valid colors definition');
+    }
+    return {
+        name: data.name || 'Imported Theme',
+        colors: colors,
+        appUiFont: data.appUiFont || (data.config && data.config.appUiFont),
+        uiDensity: data.uiDensity || (data.config && data.config.uiDensity),
+        uiRadius: data.uiRadius || (data.config && data.config.uiRadius),
+        uiPattern: data.uiPattern || (data.config && data.config.uiPattern)
+    };
+}
+

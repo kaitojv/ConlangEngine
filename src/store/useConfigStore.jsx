@@ -80,6 +80,11 @@ export const INITIAL_CONFIG = {
     customFont: null,
     appUiFont: "'Outfit', sans-serif",
     theme: 'dark',
+    uiDensity: 'default', // 'compact' | 'default' | 'spacious'
+    uiRadius: 'modern',   // 'sharp' | 'modern' | 'pill'
+    uiPattern: 'none',    // 'none' | 'dots' | 'grid' | 'cross'
+    linkThemeToConlang: false, // binds theme/colors/font/density/radius/pattern to active conlang
+    conlangThemes: {},    // { [projectId]: { theme, colors, appUiFont, uiDensity, uiRadius, uiPattern } }
     colors: {
         bg: '#0b0f19',
         header: '#080812',
@@ -664,6 +669,37 @@ export const useConfigStore = create(
                 const curState = useConfigStore.getState();
                 const projectId = newConfig.projectId || curState.projectId;
 
+                // Handle conlang-to-theme binding
+                const linkTheme = newConfig.linkThemeToConlang !== undefined ? newConfig.linkThemeToConlang : curState.linkThemeToConlang;
+                let mergedConlangThemes = { ...(curState.conlangThemes || {}), ...(newConfig.conlangThemes || {}) };
+                if (linkTheme && curState.projectId && curState.projectId !== projectId) {
+                    // Save outgoing conlang's theme
+                    mergedConlangThemes[curState.projectId] = {
+                        theme: curState.theme,
+                        colors: curState.colors,
+                        appUiFont: curState.appUiFont,
+                        uiDensity: curState.uiDensity || 'default',
+                        uiRadius: curState.uiRadius || 'modern',
+                        uiPattern: curState.uiPattern || 'none'
+                    };
+                }
+
+                // If loading a project that has a saved theme, restore it
+                let projectThemeOverride = {};
+                if (linkTheme && projectId && mergedConlangThemes[projectId]) {
+                    projectThemeOverride = mergedConlangThemes[projectId];
+                }
+
+                if (projectThemeOverride.colors) {
+                    newConfig.colors = projectThemeOverride.colors;
+                }
+                if (projectThemeOverride.theme) {
+                    newConfig.theme = projectThemeOverride.theme;
+                }
+                if (projectThemeOverride.appUiFont) {
+                    newConfig.appUiFont = projectThemeOverride.appUiFont;
+                }
+
                 // Account and device-specific state that MUST NEVER be overwritten by loading a project save file
                 const preservedAccountDeviceState = {
                     isAutoSyncEnabled: curState.isAutoSyncEnabled,
@@ -673,6 +709,11 @@ export const useConfigStore = create(
                     isThemeModalOpen: curState.isThemeModalOpen,
                     showSettings: curState.showSettings,
                     isSidebarOpen: curState.isSidebarOpen,
+                    linkThemeToConlang: linkTheme,
+                    conlangThemes: mergedConlangThemes,
+                    uiDensity: projectThemeOverride.uiDensity || newConfig.uiDensity || curState.uiDensity || 'default',
+                    uiRadius: projectThemeOverride.uiRadius || newConfig.uiRadius || curState.uiRadius || 'modern',
+                    uiPattern: projectThemeOverride.uiPattern || newConfig.uiPattern || curState.uiPattern || 'none',
                     // Loading a save file is a user-initiated local baseline change; reset sync conflict status and establish fresh local time
                     lastCloudSync: new Date().toISOString(),
                     syncConflictStatus: 'resolved',
@@ -1258,11 +1299,31 @@ export const useConfigStore = create(
                 let newActivity = [...(state.activity || [])].filter(a => !a.text.includes('isProActive'));
 
                 // Prevent spamming the timeline with system updates or rapid identical updates
-                const systemKeys = ['isProActive', 'activity', 'theme', 'autoReturnToLexicon', 'conlangName', 'appLanguage'];
+                const systemKeys = ['isProActive', 'activity', 'theme', 'autoReturnToLexicon', 'conlangName', 'appLanguage', 'uiDensity', 'uiRadius', 'uiPattern', 'linkThemeToConlang', 'conlangThemes'];
                 const isSystemOnly = keys.every(k => systemKeys.includes(k));
 
                 if (!isSystemOnly) {
                     newActivity = [{ text, time: now }, ...newActivity].slice(0, 15);
+                }
+
+                // If linkThemeToConlang is active, keep the conlangThemes map updated with latest theme metrics
+                const effectiveLinkTheme = newConfig.linkThemeToConlang !== undefined ? newConfig.linkThemeToConlang : state.linkThemeToConlang;
+                if (effectiveLinkTheme && state.projectId) {
+                    const hasThemeChanges = newConfig.colors || newConfig.theme || newConfig.appUiFont || newConfig.uiDensity || newConfig.uiRadius || newConfig.uiPattern;
+                    if (hasThemeChanges) {
+                        newConfig.conlangThemes = {
+                            ...(state.conlangThemes || {}),
+                            [state.projectId]: {
+                                ...(state.conlangThemes?.[state.projectId] || {}),
+                                theme: newConfig.theme || state.theme,
+                                colors: newConfig.colors || state.colors,
+                                appUiFont: newConfig.appUiFont || state.appUiFont,
+                                uiDensity: newConfig.uiDensity || state.uiDensity || 'default',
+                                uiRadius: newConfig.uiRadius || state.uiRadius || 'modern',
+                                uiPattern: newConfig.uiPattern || state.uiPattern || 'none',
+                            }
+                        };
+                    }
                 }
 
                 if (newConfig.appLanguage) {

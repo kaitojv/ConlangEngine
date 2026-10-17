@@ -4,13 +4,22 @@ import Card from '../../UI/Card/Card.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import './systemtab.css';
-import { Palette, CaseLower, Database, ToggleLeft, Globe, Type, Code, Copy, Check, Languages, Search, X } from 'lucide-react';
+import { Palette, CaseLower, Database, ToggleLeft, Globe, Type, Code, Copy, Check, Languages, Search, X, Sliders, Share2, Download, Upload, Sparkles } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { useConfigStore, INITIAL_CONFIG } from '../../../store/useConfigStore.jsx';
 import { useProjectStore } from '../../../store/useProjectStore.jsx';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { CONLANG_ICONS, CONLANG_ICON_CATEGORIES, getConlangIcon } from '../../../utils/iconMap.jsx';
-import { DARK_THEMES, LIGHT_THEMES, PRIDE_THEMES_DARK, PRIDE_THEMES_LIGHT } from '../../../utils/themePresets.js';
+import { 
+    DARK_THEMES, 
+    LIGHT_THEMES, 
+    PRIDE_THEMES_DARK, 
+    PRIDE_THEMES_LIGHT, 
+    encodeThemeCode, 
+    decodeThemeCode, 
+    exportThemeJSON, 
+    parseThemeJSON 
+} from '../../../utils/themePresets.js';
 import { UI_FONTS } from '../../../utils/uiFonts.js';
 import Modal from '../../UI/Modal/Modal.jsx';
 import { Info, User } from 'lucide-react';
@@ -38,7 +47,22 @@ export default function SystemTab() {
     const setLexicon = useLexiconStore((state) => state.setLexicon);
     const fileInputRef = useRef(null);
     const legacyInputRef = useRef(null);
+    const uiDensity = useConfigStore((state) => state.uiDensity) || 'default';
+    const uiRadius = useConfigStore((state) => state.uiRadius) || 'modern';
+    const uiPattern = useConfigStore((state) => state.uiPattern) || 'none';
+    const linkThemeToConlang = useConfigStore((state) => state.linkThemeToConlang) || false;
+    const appUiFont = useConfigStore((state) => state.appUiFont) || "'Outfit', sans-serif";
+    const conlangName = useConfigStore((state) => state.conlangName) || 'My Conlang';
+
     const [isThemeModalOpen, setIsThemeModalOpen] = React.useState(false);
+    const [isImportModalOpen, setIsImportModalOpen] = React.useState(false);
+    const [themeSearchQuery, setThemeSearchQuery] = React.useState('');
+    const [themeFilterCategory, setThemeFilterCategory] = React.useState('all');
+    const [themeCodeInput, setThemeCodeInput] = React.useState('');
+    const [importPreview, setImportPreview] = React.useState(null);
+    const [importError, setImportError] = React.useState('');
+    const [hasCopiedTheme, setHasCopiedTheme] = React.useState(false);
+    const themeFileInputRef = useRef(null);
     const [session, setSession] = React.useState(null);
 
     React.useEffect(() => {
@@ -53,6 +77,128 @@ export default function SystemTab() {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
     const currentProjectId = useConfigStore((state) => state.projectId);
+
+    const allThemesList = React.useMemo(() => {
+        const list = [];
+        DARK_THEMES.forEach(t => list.push({ ...t, category: 'dark' }));
+        LIGHT_THEMES.forEach(t => list.push({ ...t, category: 'light' }));
+        PRIDE_THEMES_DARK.forEach(t => list.push({ ...t, category: 'pride', sub: 'Dark Pride' }));
+        PRIDE_THEMES_LIGHT.forEach(t => list.push({ ...t, category: 'pride', sub: 'Light Pride' }));
+        return list;
+    }, []);
+
+    const themeCategoryCounts = React.useMemo(() => ({
+        all: allThemesList.length,
+        dark: allThemesList.filter(t => t.category === 'dark').length,
+        light: allThemesList.filter(t => t.category === 'light').length,
+        pride: allThemesList.filter(t => t.category === 'pride').length,
+    }), [allThemesList]);
+
+    const filteredThemes = React.useMemo(() => {
+        return allThemesList.filter(t => {
+            if (themeFilterCategory !== 'all' && t.category !== themeFilterCategory) {
+                return false;
+            }
+            if (themeSearchQuery.trim()) {
+                const q = themeSearchQuery.trim().toLowerCase();
+                return t.name.toLowerCase().includes(q);
+            }
+            return true;
+        });
+    }, [allThemesList, themeFilterCategory, themeSearchQuery]);
+
+    const isThemeCurrent = (themeColors) => {
+        if (!colors || !themeColors) return false;
+        return colors.bg === themeColors.bg && colors.accent === themeColors.accent;
+    };
+
+    const handleCopyThemeCode = () => {
+        try {
+            const code = encodeThemeCode({
+                name: `${conlangName} Theme`,
+                colors,
+                appUiFont,
+                uiDensity,
+                uiRadius,
+                uiPattern
+            });
+            navigator.clipboard.writeText(code);
+            setHasCopiedTheme(true);
+            setTimeout(() => setHasCopiedTheme(false), 2000);
+            toast.success(t('settings.system.themeCodeCopied', 'Theme code copied to clipboard!'));
+        } catch (e) {
+            console.error('Failed to encode theme:', e);
+            toast.error('Failed to copy theme code');
+        }
+    };
+
+    const handleExportThemeFile = () => {
+        try {
+            exportThemeJSON({
+                name: `${conlangName} Theme`,
+                colors,
+                appUiFont,
+                uiDensity,
+                uiRadius,
+                uiPattern
+            });
+            toast.success(t('settings.system.themeFileDownloaded', 'Theme JSON downloaded!'));
+        } catch (e) {
+            console.error('Failed to export theme:', e);
+            toast.error('Failed to export theme file');
+        }
+    };
+
+    const handleThemeCodeInputChange = (e) => {
+        const val = e.target.value;
+        setThemeCodeInput(val);
+        setImportError('');
+        if (!val.trim()) {
+            setImportPreview(null);
+            return;
+        }
+        try {
+            const decoded = decodeThemeCode(val.trim());
+            setImportPreview(decoded);
+        } catch (err) {
+            setImportPreview(null);
+            setImportError(err.message);
+        }
+    };
+
+    const handleThemeFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            try {
+                const parsed = parseThemeJSON(evt.target.result);
+                setImportPreview(parsed);
+                setImportError('');
+                toast.success('Theme file parsed successfully');
+            } catch (err) {
+                setImportError(err.message || 'Invalid theme file format');
+                setImportPreview(null);
+            } finally {
+                if (themeFileInputRef.current) themeFileInputRef.current.value = '';
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    const handleApplyImportedTheme = () => {
+        if (!importPreview || !importPreview.colors) return;
+        const patch = { colors: importPreview.colors };
+        if (importPreview.appUiFont) patch.appUiFont = importPreview.appUiFont;
+        if (importPreview.uiDensity) patch.uiDensity = importPreview.uiDensity;
+        if (importPreview.uiRadius) patch.uiRadius = importPreview.uiRadius;
+        if (importPreview.uiPattern) patch.uiPattern = importPreview.uiPattern;
+        updateConfig(patch);
+        setIsImportModalOpen(false);
+        setThemeCodeInput('');
+        setImportPreview(null);
+        toast.success(t('settings.system.themeImportSuccess', 'Theme applied successfully!'));
+    };
 
     const filteredConlangIcons = React.useMemo(() => {
         let baseList = Object.keys(CONLANG_ICONS);
@@ -81,7 +227,6 @@ export default function SystemTab() {
         setCopiedSnippet(id);
         setTimeout(() => setCopiedSnippet(''), 2000);
     };
-
 
     const applyThemePreset = (preset) => {
         // Fully replace colors with preset to avoid stale keys from previous themes
@@ -630,70 +775,189 @@ export default function SystemTab() {
             <Card>
                 <h2 className='flex sg-title'><Palette /> {t('settings.themeTitle')}</h2>
                 <p>{t('settings.themeDesc')}</p>
-                <Button variant="primary" onClick={() => setIsThemeModalOpen(true)} style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-                    {t('settings.openThemeGallery')}
-                </Button>
+
+                <div className="theme-actions-bar">
+                    <Button variant="primary" onClick={() => setIsThemeModalOpen(true)}>
+                        <Palette size={16} /> {t('settings.openThemeGallery')} ({allThemesList.length})
+                    </Button>
+                    <Button variant="secondary" onClick={handleCopyThemeCode}>
+                        {hasCopiedTheme ? <Check size={16} /> : <Share2 size={16} />} {hasCopiedTheme ? t('settings.copied', 'Copied!') : t('settings.system.copyThemeCode', 'Copy Theme Code')}
+                    </Button>
+                    <Button variant="secondary" onClick={handleExportThemeFile}>
+                        <Download size={16} /> {t('settings.system.exportTheme', 'Export JSON')}
+                    </Button>
+                    <Button variant="secondary" onClick={() => { setIsImportModalOpen(true); setImportPreview(null); setThemeCodeInput(''); setImportError(''); }}>
+                        <Upload size={16} /> {t('settings.system.importTheme', 'Import Theme')}
+                    </Button>
+                </div>
                 
+                {/* Visual Theme Gallery Modal */}
                 <Modal isOpen={isThemeModalOpen} onClose={() => setIsThemeModalOpen(false)} title={t('settings.system.themeGalleryModalTitle')}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxHeight: '60vh', overflowY: 'auto', paddingRight: '10px' }}>
-                        <div>
-                            <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>{t('settings.system.darkThemes')}</p>
-                            <div className='theme-btn-box'>
-                                {DARK_THEMES.map((theme, i) => (
-                                    <button
-                                        key={`dark-${i}`}
-                                        title={theme.name}
-                                        onClick={() => { applyThemePreset(theme.colors); setIsThemeModalOpen(false); }}
-                                        className="theme-btn"
-                                        style={{ background: theme.preview }}
-                                    />
-                                ))}
-                            </div>
+                    <div className="theme-gallery-controls">
+                        <div className="theme-gallery-search-bar">
+                            <Search size={16} className="theme-gallery-search-icon" />
+                            <input
+                                type="text"
+                                className="theme-gallery-search-input"
+                                placeholder={t('settings.system.searchThemesPlaceholder', 'Search themes by name...')}
+                                value={themeSearchQuery}
+                                onChange={(e) => setThemeSearchQuery(e.target.value)}
+                            />
+                            {themeSearchQuery && (
+                                <button
+                                    type="button"
+                                    className="theme-gallery-clear-btn"
+                                    onClick={() => setThemeSearchQuery('')}
+                                >
+                                    <X size={14} />
+                                </button>
+                            )}
                         </div>
 
-                        <div>
-                            <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>{t('settings.system.lightThemes')}</p>
-                            <div className='theme-btn-box'>
-                                {LIGHT_THEMES.map((theme, i) => (
-                                    <button
-                                        key={`light-${i}`}
-                                        title={theme.name}
-                                        onClick={() => { applyThemePreset(theme.colors); setIsThemeModalOpen(false); }}
-                                        className="theme-btn"
-                                        style={{ background: theme.preview }}
-                                    />
-                                ))}
-                            </div>
+                        <div className="theme-gallery-filter-pills">
+                            {[
+                                { id: 'all', label: t('settings.system.allThemes', 'All'), count: themeCategoryCounts.all },
+                                { id: 'dark', label: t('settings.system.darkThemes', 'Dark'), count: themeCategoryCounts.dark },
+                                { id: 'light', label: t('settings.system.lightThemes', 'Light'), count: themeCategoryCounts.light },
+                                { id: 'pride', label: t('settings.system.prideThemes', 'Pride'), count: themeCategoryCounts.pride }
+                            ].map(pill => (
+                                <button
+                                    key={pill.id}
+                                    type="button"
+                                    className={`theme-filter-pill ${themeFilterCategory === pill.id ? 'active' : ''}`}
+                                    onClick={() => setThemeFilterCategory(pill.id)}
+                                >
+                                    <span>{pill.label}</span>
+                                    <span className="theme-filter-pill-count">({pill.count})</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="theme-cards-grid">
+                        {filteredThemes.map((theme, i) => {
+                            const isCurrent = isThemeCurrent(theme.colors);
+                            return (
+                                <div
+                                    key={`${theme.category}-${theme.name}-${i}`}
+                                    className={`theme-card ${isCurrent ? 'active' : ''}`}
+                                    onClick={() => {
+                                        applyThemePreset(theme.colors);
+                                        updateConfig({ theme: theme.category === 'light' ? 'light' : 'dark' });
+                                        setIsThemeModalOpen(false);
+                                    }}
+                                >
+                                    <div className="theme-card-preview" style={{ background: theme.colors.bg || theme.preview }}>
+                                        <div className="theme-card-mini-nav" style={{ background: theme.colors.header || theme.colors.s1 }}>
+                                            <div className="theme-card-mini-dots">
+                                                <div className="theme-card-mini-dot" style={{ background: theme.colors.accent }} />
+                                                <div className="theme-card-mini-dot" style={{ background: theme.colors.accent2 || theme.colors.font2 }} />
+                                            </div>
+                                            <div className="theme-card-mini-search" style={{ background: theme.colors.s4 || theme.colors.s2 }} />
+                                        </div>
+                                        <div className="theme-card-mini-body">
+                                            <div className="theme-card-mini-card" style={{ background: theme.colors.s1, borderColor: theme.colors.border }}>
+                                                <div className="theme-card-mini-title" style={{ background: theme.colors.font }} />
+                                                <div className="theme-card-mini-line" style={{ background: theme.colors.font2 }} />
+                                                <div className="theme-card-mini-btn" style={{ background: theme.colors.accent }} />
+                                            </div>
+                                        </div>
+                                        <div className="theme-card-swatches">
+                                            <span className="theme-card-swatch" style={{ background: theme.colors.bg }} />
+                                            <span className="theme-card-swatch" style={{ background: theme.colors.s1 }} />
+                                            <span className="theme-card-swatch" style={{ background: theme.colors.accent }} />
+                                            <span className="theme-card-swatch" style={{ background: theme.colors.font }} />
+                                        </div>
+                                    </div>
+                                    <div className="theme-card-footer">
+                                        <div className="theme-card-info">
+                                            <span className="theme-card-name">{theme.name}</span>
+                                            <span className="theme-card-badge">{theme.sub || theme.category}</span>
+                                        </div>
+                                        {isCurrent ? (
+                                            <span className="theme-card-applied">
+                                                <Check size={14} /> {t('settings.system.applied', 'Applied')}
+                                            </span>
+                                        ) : (
+                                            <button type="button" className="theme-card-apply-btn">
+                                                {t('settings.system.applyBtn', 'Apply')}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </Modal>
+
+                {/* Import Theme Modal */}
+                <Modal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} title={t('settings.system.importThemeTitle', 'Import Custom Theme')}>
+                    <div className="theme-import-box">
+                        <p>{t('settings.system.importThemeDesc', 'Paste a shareable theme code (starts with ce-theme:...) or upload a theme JSON file.')}</p>
+
+                        <textarea
+                            className="theme-code-textarea"
+                            placeholder="ce-theme:eyJ2IjoxLCJuYW1lIjoi..."
+                            value={themeCodeInput}
+                            onChange={handleThemeCodeInputChange}
+                        />
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <Button variant="secondary" onClick={() => themeFileInputRef.current?.click()}>
+                                <Upload size={14} /> {t('settings.system.uploadThemeFile', 'Upload JSON File')}
+                            </Button>
+                            <input
+                                type="file"
+                                ref={themeFileInputRef}
+                                accept=".json,application/json"
+                                style={{ display: 'none' }}
+                                onChange={handleThemeFileUpload}
+                            />
                         </div>
 
-                        <div>
-                            <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>{t('settings.system.darkPrideFlags')}</p>
-                            <div className='theme-btn-box'>
-                                {PRIDE_THEMES_DARK.map((theme, i) => (
-                                    <button
-                                        key={`pride-dark-${i}`}
-                                        title={theme.name}
-                                        onClick={() => { applyThemePreset(theme.colors); setIsThemeModalOpen(false); }}
-                                        className="theme-btn"
-                                        style={{ background: theme.preview }}
-                                    />
-                                ))}
+                        {importError && (
+                            <div className="theme-import-error">
+                                {importError}
                             </div>
-                        </div>
-                        
-                        <div>
-                            <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>{t('settings.system.lightPrideFlags')}</p>
-                            <div className='theme-btn-box'>
-                                {PRIDE_THEMES_LIGHT.map((theme, i) => (
-                                    <button
-                                        key={`pride-light-${i}`}
-                                        title={theme.name}
-                                        onClick={() => { applyThemePreset(theme.colors); setIsThemeModalOpen(false); }}
-                                        className="theme-btn"
-                                        style={{ background: theme.preview }}
-                                    />
-                                ))}
+                        )}
+
+                        {importPreview && (
+                            <div className="theme-import-preview-box">
+                                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                                    {importPreview.name || 'Imported Theme'}
+                                </span>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--tx2)' }}>
+                                    {importPreview.appUiFont && <div>Font: {importPreview.appUiFont}</div>}
+                                    {importPreview.uiDensity && <div>Density: {importPreview.uiDensity}</div>}
+                                    {importPreview.uiRadius && <div>Curvature: {importPreview.uiRadius}</div>}
+                                    {importPreview.uiPattern && <div>Pattern: {importPreview.uiPattern}</div>}
+                                </div>
+                                <div className="theme-import-preview-swatches">
+                                    {['bg', 's1', 'accent', 'font'].map(k => (
+                                        importPreview.colors[k] && (
+                                            <span
+                                                key={k}
+                                                className="theme-import-preview-swatch"
+                                                style={{ background: importPreview.colors[k] }}
+                                                title={`${k}: ${importPreview.colors[k]}`}
+                                            />
+                                        )
+                                    ))}
+                                </div>
                             </div>
+                        )}
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+                            <Button variant="secondary" onClick={() => setIsImportModalOpen(false)}>
+                                {t('common.cancel', 'Cancel')}
+                            </Button>
+                            <Button
+                                variant="primary"
+                                disabled={!importPreview}
+                                onClick={handleApplyImportedTheme}
+                            >
+                                <Sparkles size={14} /> {t('settings.system.applyImportedTheme', 'Apply Theme')}
+                            </Button>
                         </div>
                     </div>
                 </Modal>
@@ -773,6 +1037,101 @@ export default function SystemTab() {
                     </div>
                 </div>
 
+            </Card>
+
+            <Card>
+                <h2 className='flex sg-title'><Sliders /> {t('settings.system.densityTitle', 'UI Density & Corner Geometry')}</h2>
+                <p>{t('settings.system.densityDesc', 'Customize information density, border radii, and subtle texture patterns for your preferred workspace aesthetic.')}</p>
+
+                <div className="ui-customization-grid">
+                    {/* UI Density */}
+                    <div className="ui-metric-group">
+                        <label className="ui-metric-label">{t('settings.system.densityLabel', 'Display Density')}</label>
+                        <div className="ui-segment-group">
+                            {[
+                                { id: 'compact', label: t('settings.system.densityCompact', 'Compact'), desc: t('settings.system.densityCompactDesc', 'Tighter table padding, see 2x more lexicon rows') },
+                                { id: 'default', label: t('settings.system.densityDefault', 'Default'), desc: t('settings.system.densityDefaultDesc', 'Balanced comfort and spacing') },
+                                { id: 'spacious', label: t('settings.system.densitySpacious', 'Spacious'), desc: t('settings.system.densitySpaciousDesc', 'Generous margins and large clickable touch targets') }
+                            ].map(opt => (
+                                <button
+                                    key={opt.id}
+                                    type="button"
+                                    className={`ui-segment-btn ${uiDensity === opt.id ? 'active' : ''}`}
+                                    onClick={() => updateConfig({ uiDensity: opt.id })}
+                                >
+                                    <span className="ui-segment-title">{opt.label}</span>
+                                    <span className="ui-segment-desc">{opt.desc}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Corner Geometry */}
+                    <div className="ui-metric-group">
+                        <label className="ui-metric-label">{t('settings.system.radiusLabel', 'Corner Curvature')}</label>
+                        <div className="ui-segment-group">
+                            {[
+                                { id: 'sharp', label: t('settings.system.radiusSharp', 'Sharp (2px)'), radius: '2px', desc: t('settings.system.radiusSharpDesc', 'Precision industrial look') },
+                                { id: 'modern', label: t('settings.system.radiusModern', 'Modern (14px)'), radius: '10px', desc: t('settings.system.radiusModernDesc', 'Refined standard corners') },
+                                { id: 'pill', label: t('settings.system.radiusPill', 'Pill (24px)'), radius: '18px', desc: t('settings.system.radiusPillDesc', 'Smooth, friendly curves') }
+                            ].map(opt => (
+                                <button
+                                    key={opt.id}
+                                    type="button"
+                                    className={`ui-segment-btn ${uiRadius === opt.id ? 'active' : ''}`}
+                                    onClick={() => updateConfig({ uiRadius: opt.id })}
+                                >
+                                    <div className="ui-radius-preview" style={{ borderRadius: opt.radius }} />
+                                    <span className="ui-segment-title">{opt.label}</span>
+                                    <span className="ui-segment-desc">{opt.desc}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Background Texture Pattern */}
+                    <div className="ui-metric-group">
+                        <label className="ui-metric-label">{t('settings.system.patternLabel', 'Background Texture Pattern')}</label>
+                        <div className="ui-segment-group">
+                            {[
+                                { id: 'none', label: t('settings.system.patternNone', 'Clean Solid'), desc: t('settings.system.patternNoneDesc', 'Minimal background without texture') },
+                                { id: 'dots', label: t('settings.system.patternDots', 'Subtle Dots'), desc: t('settings.system.patternDotsDesc', 'Discreet architectural dot grid') },
+                                { id: 'grid', label: t('settings.system.patternGrid', 'Technical Grid'), desc: t('settings.system.patternGridDesc', 'Subtle engineering grid overlay') },
+                                { id: 'cross', label: t('settings.system.patternCross', 'Fine Crosses'), desc: t('settings.system.patternCrossDesc', 'Refined alignment crossmarks') }
+                            ].map(opt => (
+                                <button
+                                    key={opt.id}
+                                    type="button"
+                                    className={`ui-segment-btn ${uiPattern === opt.id ? 'active' : ''}`}
+                                    onClick={() => updateConfig({ uiPattern: opt.id })}
+                                >
+                                    <span className="ui-segment-title">{opt.label}</span>
+                                    <span className="ui-segment-desc">{opt.desc}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Conlang Binding Toggle */}
+                    <div className="ui-metric-group">
+                        <div className="ui-toggle-row">
+                            <div>
+                                <label className="ui-metric-label" style={{ marginBottom: 2 }}>
+                                    {t('settings.system.linkThemeTitle', 'Remember Theme per Conlang')}
+                                </label>
+                                <p className="ui-toggle-sub">
+                                    {t('settings.system.linkThemeDesc', 'Automatically restore this theme, font, density, and curvature when switching to this conlang.')}
+                                </p>
+                            </div>
+                            <input
+                                type="checkbox"
+                                className="toggle toggle-primary"
+                                checked={linkThemeToConlang}
+                                onChange={(e) => updateConfig({ linkThemeToConlang: e.target.checked })}
+                            />
+                        </div>
+                    </div>
+                </div>
             </Card>
 
             <Card>
