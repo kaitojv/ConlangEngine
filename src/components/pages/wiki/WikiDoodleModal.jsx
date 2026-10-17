@@ -503,7 +503,6 @@ export default function WikiDoodleModal({ isOpen, onClose, onInsert, t }) {
                         height={460}
                         className="wiki-drawing-canvas"
                         onMouseDown={handleMouseDown}
-                        onMouseMove={handleMouseDown}
                         onMouseMove={handleMouseMove}
                         onMouseUp={handleMouseUp}
                         onMouseLeave={handleMouseUp}
