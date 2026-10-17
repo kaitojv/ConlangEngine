@@ -506,17 +506,30 @@
 .pv-wiki-content p {
     margin-bottom: 1rem;
 }
-.pv-wiki-content [data-indent="1"] { margin-left: 2rem; margin-inline-start: 2rem; }
-.pv-wiki-content [data-indent="2"] { margin-left: 4rem; margin-inline-start: 4rem; }
-.pv-wiki-content [data-indent="3"] { margin-left: 6rem; margin-inline-start: 6rem; }
-.pv-wiki-content [data-indent="4"] { margin-left: 8rem; margin-inline-start: 8rem; }
-.pv-wiki-content [data-indent="5"] { margin-left: 10rem; margin-inline-start: 10rem; }
-.pv-wiki-content [data-indent="6"] { margin-left: 12rem; margin-inline-start: 12rem; }
-.pv-wiki-content [data-indent="7"] { margin-left: 14rem; margin-inline-start: 14rem; }
-.pv-wiki-content [data-indent="8"] { margin-left: 16rem; margin-inline-start: 16rem; }
+.pv-wiki-content [data-indent="1"] { margin-left: 1.25rem; margin-inline-start: 1.25rem; }
+.pv-wiki-content [data-indent="2"] { margin-left: 2.5rem; margin-inline-start: 2.5rem; }
+.pv-wiki-content [data-indent="3"] { margin-left: 3.75rem; margin-inline-start: 3.75rem; }
+.pv-wiki-content [data-indent="4"] { margin-left: 5rem; margin-inline-start: 5rem; }
+.pv-wiki-content [data-indent="5"] { margin-left: 6.25rem; margin-inline-start: 6.25rem; }
+.pv-wiki-content [data-indent="6"] { margin-left: 7.5rem; margin-inline-start: 7.5rem; }
+.pv-wiki-content [data-indent="7"] { margin-left: 8.75rem; margin-inline-start: 8.75rem; }
+.pv-wiki-content [data-indent="8"] { margin-left: 10rem; margin-inline-start: 10rem; }
 .pv-wiki-content ul, .pv-wiki-content ol {
     margin-bottom: 1rem;
-    padding-left: 1.5rem;
+    margin-left: 1.25rem;
+    padding-left: 0;
+}
+.pv-wiki-content ul {
+    list-style-type: disc;
+}
+.pv-wiki-content ol {
+    list-style-type: decimal;
+}
+.pv-wiki-content ul ul, .pv-wiki-content ol ul {
+    list-style-type: circle;
+}
+.pv-wiki-content ul ul ul, .pv-wiki-content ol ol ul {
+    list-style-type: square;
 }
 .pv-wiki-content blockquote {
     border-left: 4px solid var(--acc, #7c3aed);

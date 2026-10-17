@@ -29,7 +29,25 @@
     padding-bottom: 5px; 
 }
 .wiki-editor-tiptap .ProseMirror a { color: var(--acc); text-decoration: underline; cursor: pointer; }
-.wiki-editor-tiptap .ProseMirror ul, .wiki-editor-tiptap .ProseMirror ol { margin-left: 20px; margin-bottom: 15px; }
+.wiki-editor-tiptap .ProseMirror ul,
+.wiki-editor-tiptap .ProseMirror ol {
+    margin-left: 1.25rem;
+    margin-bottom: 15px;
+}
+.wiki-editor-tiptap .ProseMirror ul {
+    list-style-type: disc;
+}
+.wiki-editor-tiptap .ProseMirror ol {
+    list-style-type: decimal;
+}
+.wiki-editor-tiptap .ProseMirror ul ul,
+.wiki-editor-tiptap .ProseMirror ol ul {
+    list-style-type: circle;
+}
+.wiki-editor-tiptap .ProseMirror ul ul ul,
+.wiki-editor-tiptap .ProseMirror ol ol ul {
+    list-style-type: square;
+}
 .wiki-toolbar { 
     display: flex; 
     gap: 8px; 
@@ -64,15 +82,15 @@
     pointer-events: none;
 }
 
-/* Multi-level Indentation for Paragraphs & Headings */
-.wiki-editor-tiptap .ProseMirror [data-indent="1"] { margin-left: 2rem; margin-inline-start: 2rem; }
-.wiki-editor-tiptap .ProseMirror [data-indent="2"] { margin-left: 4rem; margin-inline-start: 4rem; }
-.wiki-editor-tiptap .ProseMirror [data-indent="3"] { margin-left: 6rem; margin-inline-start: 6rem; }
-.wiki-editor-tiptap .ProseMirror [data-indent="4"] { margin-left: 8rem; margin-inline-start: 8rem; }
-.wiki-editor-tiptap .ProseMirror [data-indent="5"] { margin-left: 10rem; margin-inline-start: 10rem; }
-.wiki-editor-tiptap .ProseMirror [data-indent="6"] { margin-left: 12rem; margin-inline-start: 12rem; }
-.wiki-editor-tiptap .ProseMirror [data-indent="7"] { margin-left: 14rem; margin-inline-start: 14rem; }
-.wiki-editor-tiptap .ProseMirror [data-indent="8"] { margin-left: 16rem; margin-inline-start: 16rem; }
+/* Multi-level Indentation for Paragraphs & Headings (1.25rem / 20px step matching list alignment) */
+.wiki-editor-tiptap .ProseMirror [data-indent="1"] { margin-left: 1.25rem; margin-inline-start: 1.25rem; }
+.wiki-editor-tiptap .ProseMirror [data-indent="2"] { margin-left: 2.5rem; margin-inline-start: 2.5rem; }
+.wiki-editor-tiptap .ProseMirror [data-indent="3"] { margin-left: 3.75rem; margin-inline-start: 3.75rem; }
+.wiki-editor-tiptap .ProseMirror [data-indent="4"] { margin-left: 5rem; margin-inline-start: 5rem; }
+.wiki-editor-tiptap .ProseMirror [data-indent="5"] { margin-left: 6.25rem; margin-inline-start: 6.25rem; }
+.wiki-editor-tiptap .ProseMirror [data-indent="6"] { margin-left: 7.5rem; margin-inline-start: 7.5rem; }
+.wiki-editor-tiptap .ProseMirror [data-indent="7"] { margin-left: 8.75rem; margin-inline-start: 8.75rem; }
+.wiki-editor-tiptap .ProseMirror [data-indent="8"] { margin-left: 10rem; margin-inline-start: 10rem; }
 .wiki-page-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: var(--s1); border: 1px solid var(--bd); border-radius: var(--rad-sm); cursor: pointer; margin-bottom: 8px; transition: 0.2s; }
 .wiki-page-item:hover, .wiki-page-item.active { border-color: var(--acc); background: var(--acc2); }
 .wiki-page-item.active { border-left: 4px solid var(--acc); }

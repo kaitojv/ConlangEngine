@@ -9,7 +9,7 @@ const options = Indent.options;
 assert.deepEqual(options.types, ['paragraph', 'heading'], 'Types must include paragraph and heading');
 assert.equal(options.minLevel, 0, 'Min level is 0');
 assert.equal(options.maxLevel, 8, 'Max level is 8');
-assert.equal(options.indentSize, 2, 'Indent size is 2rem');
+assert.equal(options.indentSize, 1.25, 'Indent size is 1.25rem (20px) matching list alignment');
 console.log('✓ Extension metadata & options verified');
 
 // 2. Global attributes
@@ -27,50 +27,58 @@ assert.equal(indentAttr.parseHTML(elWithData1), 1, 'Parses data-indent=1');
 const elWithData2 = { getAttribute: (k) => k === 'data-indent' ? '2' : null, style: {} };
 assert.equal(indentAttr.parseHTML(elWithData2), 2, 'Parses data-indent=2 (indent in an indent)');
 
-// 2b. style attribute in rem
+// 2b. style attribute in rem (2.5rem / 1.25 = 2)
 const elWithStyleRem = {
     getAttribute: () => null,
-    style: { marginLeft: '4rem' }
+    style: { marginLeft: '2.5rem' }
 };
-assert.equal(indentAttr.parseHTML(elWithStyleRem), 2, 'Parses 4rem as level 2');
+assert.equal(indentAttr.parseHTML(elWithStyleRem), 2, 'Parses 2.5rem as level 2');
 
-// 2c. style attribute in px
+// 2c. style attribute in px (40px / 20px = 2)
 const elWithStylePx = {
     getAttribute: () => null,
-    style: { marginInlineStart: '64px' }
+    style: { marginInlineStart: '40px' }
 };
-assert.equal(indentAttr.parseHTML(elWithStylePx), 2, 'Parses 64px as level 2 (2rem = 32px, 64px = level 2)');
+assert.equal(indentAttr.parseHTML(elWithStylePx), 2, 'Parses 40px as level 2 (1.25rem = 20px, 40px = level 2)');
 
 // 2d. 0 or unindented
 const elClean = { getAttribute: () => null, style: {} };
 assert.equal(indentAttr.parseHTML(elClean), 0, 'Clean element is level 0');
 
-console.log('✓ parseHTML parses data-indent, rem, px, and unindented elements');
+// 2e. paragraph inside li should always return 0 (no nested paragraph indent inside list item)
+const elInsideLi = {
+    getAttribute: (k) => k === 'data-indent' ? '2' : null,
+    style: { marginLeft: '2.5rem' },
+    closest: (selector) => selector === 'li' ? {} : null
+};
+assert.equal(indentAttr.parseHTML(elInsideLi), 0, 'Element inside li always returns 0');
+
+console.log('✓ parseHTML parses data-indent, rem, px, li-guard, and unindented elements');
 
 // Test renderHTML
 // Level 0: returns empty object
 assert.deepEqual(indentAttr.renderHTML({ indent: 0 }), {}, 'Level 0 renders empty object');
 assert.deepEqual(indentAttr.renderHTML({ indent: null }), {}, 'null indent renders empty object');
 
-// Level 1: returns data-indent 1 and style margin-left: 2rem
+// Level 1: returns data-indent 1 and style margin-left: 1.25rem (20px, perfectly aligned with bullet lists)
 assert.deepEqual(indentAttr.renderHTML({ indent: 1 }), {
     'data-indent': 1,
-    style: 'margin-left: 2rem; margin-inline-start: 2rem;'
-}, 'Level 1 renders correct data-indent and style');
+    style: 'margin-left: 1.25rem; margin-inline-start: 1.25rem;'
+}, 'Level 1 renders 1.25rem matching list items');
 
-// Level 2: "indent in an indent" -> margin-left: 4rem
+// Level 2: "indent in an indent" -> margin-left: 2.5rem (40px)
 assert.deepEqual(indentAttr.renderHTML({ indent: 2 }), {
     'data-indent': 2,
-    style: 'margin-left: 4rem; margin-inline-start: 4rem;'
-}, 'Level 2 (indent in indent) renders 4rem');
+    style: 'margin-left: 2.5rem; margin-inline-start: 2.5rem;'
+}, 'Level 2 (indent in indent) renders 2.5rem');
 
-// Level 3: margin-left: 6rem
+// Level 3: margin-left: 3.75rem (60px)
 assert.deepEqual(indentAttr.renderHTML({ indent: 3 }), {
     'data-indent': 3,
-    style: 'margin-left: 6rem; margin-inline-start: 6rem;'
-}, 'Level 3 renders 6rem');
+    style: 'margin-left: 3.75rem; margin-inline-start: 3.75rem;'
+}, 'Level 3 renders 3.75rem');
 
-console.log('✓ renderHTML correctly renders multi-level indents');
+console.log('✓ renderHTML correctly renders multi-level indents in 1.25rem steps');
 
 // 3. Command logic verification on mock ProseMirror transaction & nodes
 const mockDoc = {
@@ -101,7 +109,59 @@ const dispatch = (tr) => { dispatchedTr = tr; };
 
 const commands = Indent.config.addCommands.call({ options });
 
-// Run indent
+// 3a. Verify dry-run safety for list items (regression test for the reported bug:
+// clicking on a line with a bullet list or clicking somewhere else triggered editor.can().indent()
+// which erroneously called editor.commands.sinkListItem immediately!).
+let sinkCalled = false;
+let liftCalled = false;
+const mockEditorWithSink = {
+    can: () => ({
+        sinkListItem: () => true,
+        liftListItem: () => true,
+    }),
+    commands: {
+        sinkListItem: () => { sinkCalled = true; return true; },
+        liftListItem: () => { liftCalled = true; return true; },
+    }
+};
+
+const canSinkDryRun = commands.indent.call({ options })({
+    tr: mockTr,
+    dispatch: null, // Dry run by editor.can().indent()
+    editor: mockEditorWithSink
+});
+assert.equal(canSinkDryRun, true, 'can indent returns true during dry run');
+assert.equal(sinkCalled, false, 'DRY RUN MUST NOT CALL editor.commands.sinkListItem!');
+
+const didSink = commands.indent.call({ options })({
+    tr: mockTr,
+    dispatch, // Real execution
+    editor: mockEditorWithSink
+});
+assert.equal(didSink, true);
+assert.equal(sinkCalled, true, 'Execution with dispatch calls editor.commands.sinkListItem');
+
+const canLiftDryRun = commands.outdent.call({ options })({
+    tr: mockTr,
+    dispatch: null, // Dry run
+    editor: mockEditorWithSink
+});
+assert.equal(canLiftDryRun, true, 'can outdent returns true during dry run');
+assert.equal(liftCalled, false, 'DRY RUN MUST NOT CALL editor.commands.liftListItem!');
+
+const didLift = commands.outdent.call({ options })({
+    tr: mockTr,
+    dispatch,
+    editor: mockEditorWithSink
+});
+assert.equal(didLift, true);
+assert.equal(liftCalled, true, 'Execution with dispatch calls editor.commands.liftListItem');
+
+console.log('✓ Dry-run safety verified: editor.can() checks NEVER mutate or sink list items');
+
+// Run regular indent on paragraphs/headings
+modifiedMarkups.length = 0;
+dispatchedTr = null;
 const canIndent = commands.indent.call({ options })({
     tr: mockTr,
     dispatch,
@@ -181,3 +241,4 @@ assert.equal(modifiedMarkups.length, 0);
 console.log('✓ maxLevel boundary respected');
 
 console.log('\nAll TipTap Indent extension tests passed successfully!');
+

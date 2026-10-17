@@ -8,7 +8,7 @@ export const Indent = Extension.create({
             types: ['paragraph', 'heading'],
             minLevel: 0,
             maxLevel: 8,
-            indentSize: 2, // 2rem per indent level
+            indentSize: 1.25, // 1.25rem (20px) per indent level to match bullet list alignment exactly
         };
     },
 
@@ -20,6 +20,9 @@ export const Indent = Extension.create({
                     indent: {
                         default: 0,
                         parseHTML: element => {
+                            if (element.closest && element.closest('li')) {
+                                return 0;
+                            }
                             const dataIndent = element.getAttribute('data-indent');
                             if (dataIndent) {
                                 const parsed = parseInt(dataIndent, 10);
@@ -102,13 +105,13 @@ export const Indent = Extension.create({
         return {
             indent: () => ({ tr, dispatch, editor }) => {
                 if (editor.can().sinkListItem('listItem')) {
-                    return editor.commands.sinkListItem('listItem');
+                    return dispatch ? editor.commands.sinkListItem('listItem') : true;
                 }
                 return updateIndent(tr, dispatch, 1, this.options);
             },
             outdent: () => ({ tr, dispatch, editor }) => {
                 if (editor.can().liftListItem('listItem')) {
-                    return editor.commands.liftListItem('listItem');
+                    return dispatch ? editor.commands.liftListItem('listItem') : true;
                 }
                 return updateIndent(tr, dispatch, -1, this.options);
             },
