@@ -54,14 +54,35 @@ export const letterSpacingUnits = (letterSpacing = 0, fontScale = 1) =>
  * units; multiplying that group by `k` reproduces the 2.85*scale ink scale, which
  * is what makes the drawn ink fill the advance the compiler reserved for it.
  */
-export const layoutGlyph = (metrics, traceWidth = 30) => {
+export const layoutGlyph = (metrics, traceWidth = 30, options = {}) => {
+    const isConsistent = metrics?.consistentSize !== undefined
+        ? Boolean(metrics.consistentSize)
+        : Boolean(options.consistentCharacterSize);
+    const targetAdvance = num(options.fixedAdvanceWidth, 1000);
+
     if (!metrics || !metrics.ink) {
-        return { advance: BLANK_ADVANCE, scale: 1, k: 1, x: 0, y: 0, stroke: 0, blank: true };
+        return { advance: isConsistent ? targetAdvance : BLANK_ADVANCE, scale: 1, k: 1, x: 0, y: 0, stroke: 0, blank: true };
     }
     const scale = num(metrics.scale, 1);
     const k = INK_SCALE * scale;
     const left = num(metrics.leftMargin, 0);
     const right = num(metrics.rightMargin, 0);
+
+    if (isConsistent) {
+        const inkWidth = metrics.ink.width * k;
+        const hOffset = num(metrics.xOffset, 0);
+        const leftBearing = Math.round((targetAdvance - inkWidth) / 2) + hOffset;
+        return {
+            advance: targetAdvance,
+            scale,
+            k,
+            stroke: Math.max(1, 2 * num(traceWidth, 30) * scale),
+            x: leftBearing - metrics.ink.minX * k,
+            y: -(FONT_Y_ORIGIN + FONT_Y_CEILING * scale) - num(metrics.yOffset, 0),
+            blank: false
+        };
+    }
+
     return {
         advance: left + metrics.ink.width * k + right + num(traceWidth, 30) * scale,
         scale,
@@ -84,7 +105,9 @@ export const layoutRun = (parts = [], {
     separator = '',
     traceWidth = 30,
     letterSpacing = 0,
-    fontScale = 1
+    fontScale = 1,
+    consistentCharacterSize = false,
+    fixedAdvanceWidth = 1000
 } = {}) => {
     const gap = letterSpacingUnits(letterSpacing, fontScale);
     const items = [];
@@ -97,7 +120,10 @@ export const layoutRun = (parts = [], {
         }
 
         const hasInk = Boolean(part.metrics && part.metrics.strokes && part.metrics.strokes.length);
-        const layout = layoutGlyph(hasInk ? part.metrics : null, traceWidth);
+        const layout = layoutGlyph(hasInk ? part.metrics : null, traceWidth, {
+            consistentCharacterSize,
+            fixedAdvanceWidth
+        });
         if (!hasInk) {
             // An inkless part is drawn as its text (e.g. an undrawn numeral name
             // such as "nī"), so reserve room for every character of it.

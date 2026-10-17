@@ -363,8 +363,12 @@ export const generateBlockFontData = async (config) => {
 
     for (let i = 0; i < entries.length; i += CHUNK_SIZE) {
         const chunkGlyphs = Object.fromEntries(entries.slice(i, i + CHUNK_SIZE));
-        const fontScale = config.typographySettings?.customFontScale ?? 1.0;
-        const base64Font = await compileFont(chunkGlyphs, traceWidth, fontScale);
+        const isConsistent = config.typographySettings?.consistentCharacterSize ?? true;
+        const fixedAdvance = config.typographySettings?.fixedAdvanceWidth ?? 1000;
+        const base64Font = await compileFont(chunkGlyphs, traceWidth, fontScale, {
+            consistentCharacterSize: isConsistent,
+            fixedAdvanceWidth: fixedAdvance
+        });
         if (base64Font) base64Fonts.push(base64Font);
     }
 

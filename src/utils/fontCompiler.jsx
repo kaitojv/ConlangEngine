@@ -1,14 +1,23 @@
 // src/utils/fontCompiler.js
 import opentype from 'opentype.js';
 
-export async function compileFont(customGlyphs, traceWidth = 30, fontScale = 1.0) {
+export async function compileFont(customGlyphs, traceWidth = 30, fontScale = 1.0, options = {}) {
     try {
+        const upe = Math.max(10, Math.round(1000 / fontScale));
+        const asc = Math.round(800 / fontScale);
+        const desc = Math.round(-200 / fontScale);
+
+        const isConsistentGlobal = Boolean(options?.consistentCharacterSize);
+        const targetAdvanceBase = Number(options?.fixedAdvanceWidth) || 1000;
+        const targetAdvance = Math.round(targetAdvanceBase * (upe / 1000));
+
         const notdefGlyph = new opentype.Glyph({
-            name: '.notdef', unicode: 0, advanceWidth: 600, path: new opentype.Path()
+            name: '.notdef', unicode: 0, advanceWidth: isConsistentGlobal ? targetAdvance : 600, path: new opentype.Path()
         });
 
+        const spaceAdvance = isConsistentGlobal ? targetAdvance : 500;
         const spaceGlyph = new opentype.Glyph({
-            name: 'space', unicode: 32, advanceWidth: 500, path: new opentype.Path()
+            name: 'space', unicode: 32, advanceWidth: spaceAdvance, path: new opentype.Path()
         });
 
         let glyphs = [notdefGlyph, spaceGlyph];
@@ -24,7 +33,7 @@ export async function compileFont(customGlyphs, traceWidth = 30, fontScale = 1.0
             let path = new opentype.Path();
             let r_base = traceWidth; // Configurable stroke width from Graphism tab
 
-            let meta = { scale: 1, leftMargin: 100, rightMargin: 100, yOffset: 0, isCalligraphy: false, isBrushPen: false };
+            let meta = { scale: 1, leftMargin: 100, rightMargin: 100, yOffset: 0, xOffset: 0, consistentSize: undefined, isCalligraphy: false, isBrushPen: false };
             let actualStrokes = strokeArray;
             
             if (strokeArray.length > 0) {
@@ -44,28 +53,46 @@ export async function compileFont(customGlyphs, traceWidth = 30, fontScale = 1.0
             const hasCalligraphy = meta.isCalligraphy;
             const hasBrushPen = meta.isBrushPen;
 
-            let minX = Infinity;
-            let maxX = -Infinity;
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
             let hasPoints = false;
 
             actualStrokes.forEach(strokeData => {
                 const points = Array.isArray(strokeData) ? strokeData : (strokeData.points || []);
                 points.forEach(pt => {
-                    if (pt.x < minX) minX = pt.x;
-                    if (pt.x > maxX) maxX = pt.x;
-                    hasPoints = true;
+                    if (pt && typeof pt.x === 'number' && typeof pt.y === 'number') {
+                        if (pt.x < minX) minX = pt.x;
+                        if (pt.x > maxX) maxX = pt.x;
+                        if (pt.y < minY) minY = pt.y;
+                        if (pt.y > maxY) maxY = pt.y;
+                        hasPoints = true;
+                    }
                 });
             });
 
             if (!hasPoints) {
-                minX = 0;
-                maxX = 0;
+                minX = 0; maxX = 0;
+                minY = 0; maxY = 0;
             }
 
+            const isConsistent = meta.consistentSize !== undefined ? Boolean(meta.consistentSize) : isConsistentGlobal;
             const scaledWidth = (maxX - minX) * 2.85 * meta.scale;
-            const glyphAdvanceWidth = hasPoints 
-                ? meta.leftMargin + scaledWidth + meta.rightMargin + (r_base * meta.scale)
-                : 500;
+            let glyphAdvanceWidth;
+            let glyphOriginX;
+
+            if (isConsistent) {
+                glyphAdvanceWidth = targetAdvance;
+                const hOffset = Number.isFinite(meta.xOffset) ? meta.xOffset : 0;
+                const leftBearing = hasPoints
+                    ? Math.round((targetAdvance - scaledWidth) / 2) + hOffset
+                    : Math.round(targetAdvance / 2);
+                glyphOriginX = leftBearing;
+            } else {
+                glyphAdvanceWidth = hasPoints 
+                    ? meta.leftMargin + scaledWidth + meta.rightMargin + (r_base * meta.scale)
+                    : 500;
+                glyphOriginX = meta.leftMargin;
+            }
 
             actualStrokes.forEach(strokeData => {
                 const points = Array.isArray(strokeData) ? strokeData : (strokeData.points || []);
@@ -89,16 +116,16 @@ export async function compileFont(customGlyphs, traceWidth = 30, fontScale = 1.0
 
                 if (isFilled && simplified.length >= 3) {
                     // Draw a solid filled path
-                    path.moveTo(meta.leftMargin + (simplified[0].x - minX) * 2.85 * meta.scale, 400 + ((800 - simplified[0].y * 2.85 - 400) * meta.scale) + meta.yOffset);
+                    path.moveTo(glyphOriginX + (simplified[0].x - minX) * 2.85 * meta.scale, 400 + ((800 - simplified[0].y * 2.85 - 400) * meta.scale) + meta.yOffset);
                     for (let i = 1; i < simplified.length; i++) {
-                        path.lineTo(meta.leftMargin + (simplified[i].x - minX) * 2.85 * meta.scale, 400 + ((800 - simplified[i].y * 2.85 - 400) * meta.scale) + meta.yOffset);
+                        path.lineTo(glyphOriginX + (simplified[i].x - minX) * 2.85 * meta.scale, 400 + ((800 - simplified[i].y * 2.85 - 400) * meta.scale) + meta.yOffset);
                     }
                     path.close();
                 } else {
                     // Standard thickened stroke logic
                     for (let i = 0; i < simplified.length; i++) {
                         let pt1 = simplified[i];
-                        let cx1 = meta.leftMargin + ((pt1.x - minX) * 2.85 * meta.scale);
+                        let cx1 = glyphOriginX + ((pt1.x - minX) * 2.85 * meta.scale);
                         let cy1 = 400 + ((800 - pt1.y * 2.85 - 400) * meta.scale) + meta.yOffset;
 
                         let r = r_base * meta.scale;
@@ -130,7 +157,7 @@ export async function compileFont(customGlyphs, traceWidth = 30, fontScale = 1.0
 
                         if (i < simplified.length - 1) {
                             let pt2 = simplified[i+1];
-                            let cx2 = meta.leftMargin + ((pt2.x - minX) * 2.85 * meta.scale);
+                            let cx2 = glyphOriginX + ((pt2.x - minX) * 2.85 * meta.scale);
                             let cy2 = 400 + ((800 - pt2.y * 2.85 - 400) * meta.scale) + meta.yOffset;
 
                             let next_r = r_base * meta.scale;
@@ -169,11 +196,6 @@ export async function compileFont(customGlyphs, traceWidth = 30, fontScale = 1.0
                 name: `syl_${unicode}`, unicode: unicode, advanceWidth: Math.round(glyphAdvanceWidth), path: path
             }));
         }
-
-        const upe = Math.max(10, Math.round(1000 / fontScale));
-        const asc = Math.round(800 / fontScale);
-        const desc = Math.round(-200 / fontScale);
-
         const font = new opentype.Font({
             familyName: 'ConlangFont', styleName: 'Regular', unitsPerEm: upe, ascender: asc, descender: desc, glyphs: glyphs
         });

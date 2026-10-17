@@ -280,3 +280,29 @@
     color: var(--tx3);
     margin-top: 2px;
 }
+
+.gt-consistent-size-card {
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: var(--rad-sm, 8px);
+    padding: 1.2rem;
+    margin-top: 1.5rem;
+    transition: border-color 0.2s ease;
+}
+
+.gt-consistent-size-card:hover {
+    border-color: var(--acc);
+}
+
+.gt-consistent-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--acc);
+    background: var(--s3);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+

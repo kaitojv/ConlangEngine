@@ -530,3 +530,31 @@
     color: var(--acc);
     font-weight: 600;
 }
+
+.fs-mode-chip {
+    font-size: 0.7rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--bd);
+    background: var(--s2);
+    color: var(--tx2);
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.15s ease;
+}
+
+.fs-mode-chip:hover, .fs-mode-chip.active {
+    background: var(--acc);
+    color: #fff;
+    border-color: var(--acc);
+}
+
+.fs-align-group {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 6px;
+    padding-left: 6px;
+    border-left: 1px solid var(--bd);
+}
+

@@ -48,8 +48,10 @@ function getGlyphMetrics(raw) {
         leftMargin: Number.isFinite(meta?.leftMargin) ? meta.leftMargin : DEFAULT_MARGIN,
         rightMargin: Number.isFinite(meta?.rightMargin) ? meta.rightMargin : DEFAULT_MARGIN,
         yOffset: Number.isFinite(meta?.yOffset) ? meta.yOffset : 0,
+        xOffset: Number.isFinite(meta?.xOffset) ? meta.xOffset : 0,
         scale: Number.isFinite(meta?.scale) ? meta.scale : 1,
-        ink: { minX, maxX, minY, maxY, width: maxX - minX }
+        consistentSize: meta?.consistentSize,
+        ink: { minX, maxX, minY, maxY, width: maxX - minX, height: maxY - minY }
     };
 }
 
@@ -62,7 +64,7 @@ function assert(label, actual, expected) {
 
 // A meta block + a stroke, exactly how customGlyphs stores a glyph.
 const GLYPH = [
-    { isMeta: true, scale: 1, leftMargin: 40, rightMargin: 60, yOffset: 10, isCalligraphy: false, isBrushPen: false },
+    { isMeta: true, scale: 1, leftMargin: 40, rightMargin: 60, yOffset: 10, xOffset: 5, consistentSize: true, isCalligraphy: false, isBrushPen: false },
     [{ x: 100, y: 50 }, { x: 200, y: 50 }]
 ];
 
@@ -72,8 +74,11 @@ assert('strips the meta block', m.strokes.length, 1);
 assert('reads leftMargin', m.leftMargin, 40);
 assert('reads rightMargin', m.rightMargin, 60);
 assert('reads yOffset', m.yOffset, 10);
+assert('reads xOffset', m.xOffset, 5);
+assert('reads consistentSize', m.consistentSize, true);
 assert('reads scale', m.scale, 1);
 assert('measures ink width', m.ink.width, 100);
+assert('measures ink height', m.ink.height, 0);
 assert('measures ink minX', m.ink.minX, 100);
 assert('measures ink bounds', [m.ink.minY, m.ink.maxY], [50, 50]);
 

@@ -44,7 +44,9 @@ const GlyphBaselineRow = ({
         separator,
         traceWidth: traceSetting,
         letterSpacing: spacing,
-        fontScale: scaleSetting
+        fontScale: scaleSetting,
+        consistentCharacterSize: settings.consistentCharacterSize ?? false,
+        fixedAdvanceWidth: settings.fixedAdvanceWidth ?? 1000
     });
     if (!box || box.width <= 0 || box.height <= 0) return null;
 

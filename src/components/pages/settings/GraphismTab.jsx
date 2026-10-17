@@ -4,7 +4,7 @@ import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import Modal from '../../UI/Modal/Modal.jsx';
 import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
-import { Type, Brush, Trash2, Plus, Monitor } from 'lucide-react';
+import { Type, Brush, Trash2, Plus, Monitor, Maximize2, Grid, Check } from 'lucide-react';
 import Card from '../../UI/Card/Card.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import SyllabaryManager from '../../UI/SyllabaryManager/SyllabaryManager.jsx';
@@ -290,7 +290,21 @@ export default function TypographyStudio() {
             // rendered font matches the new stroke data.
             const fontSource = simplifiedByScript[selectedScriptId] || simplifiedTopLevel;
             const settings = storeState.typographySettings || {};
-            const base64Font = await compileFont(fontSource, settings.traceWidth ?? 30, settings.customFontScale ?? 1.0);
+            const isConsistent = scriptData?.consistentCharacterSize !== undefined
+                ? scriptData.consistentCharacterSize
+                : (settings.consistentCharacterSize ?? false);
+            const fixedAdvance = scriptData?.fixedAdvanceWidth !== undefined
+                ? scriptData.fixedAdvanceWidth
+                : (settings.fixedAdvanceWidth ?? 1000);
+            const base64Font = await compileFont(
+                fontSource, 
+                settings.traceWidth ?? 30, 
+                settings.customFontScale ?? 1.0,
+                {
+                    consistentCharacterSize: isConsistent,
+                    fixedAdvanceWidth: fixedAdvance
+                }
+            );
 
             // 1. Update active Zustand store and IndexedDB
             simplifyAllGlyphs(simplifiedTopLevel, simplifiedByScript, base64Font);
@@ -321,16 +335,39 @@ export default function TypographyStudio() {
         }
     };
 
+    const isCurrentScriptConsistent = scriptData?.consistentCharacterSize !== undefined
+        ? scriptData.consistentCharacterSize
+        : (typographySettings.consistentCharacterSize ?? false);
+    const currentFixedAdvance = scriptData?.fixedAdvanceWidth !== undefined
+        ? scriptData.fixedAdvanceWidth
+        : (typographySettings.fixedAdvanceWidth ?? 1000);
+
+    const totalDrawnGlyphsCount = useMemo(() => {
+        const targetGlyphs = scriptData?.customGlyphs || (isDefaultSelected ? customGlyphs : {}) || {};
+        return Object.keys(targetGlyphs).length;
+    }, [scriptData, isDefaultSelected, customGlyphs]);
+
     const handleRecompileFont = async () => {
         const tId = toast.loading(t('settings.graphism.toastRecompilingFont'));
         try {
             const storeState = useConfigStore.getState();
             const currentSettings = storeState.typographySettings || {};
             const currentCustomGlyphs = (storeState.scriptDataById?.[selectedScriptId]?.customGlyphs) || storeState.customGlyphs || {};
+            const isConsistent = scriptData?.consistentCharacterSize !== undefined
+                ? scriptData.consistentCharacterSize
+                : (currentSettings.consistentCharacterSize ?? false);
+            const fixedAdvance = scriptData?.fixedAdvanceWidth !== undefined
+                ? scriptData.fixedAdvanceWidth
+                : (currentSettings.fixedAdvanceWidth ?? 1000);
+
             const base64Font = await compileFont(
                 currentCustomGlyphs, 
                 currentSettings.traceWidth ?? 30, 
-                currentSettings.customFontScale ?? 1.0
+                currentSettings.customFontScale ?? 1.0,
+                {
+                    consistentCharacterSize: isConsistent,
+                    fixedAdvanceWidth: fixedAdvance
+                }
             );
             
             updateScriptData(selectedScriptId, {
@@ -347,6 +384,142 @@ export default function TypographyStudio() {
         } catch (err) {
             console.error(err);
             toast.error(t('settings.graphism.toastFontRecompiledError'), { id: tId });
+        }
+    };
+
+    const handleToggleConsistentSize = async (enabled) => {
+        updateScriptData(selectedScriptId, { consistentCharacterSize: enabled });
+        if (isDefaultSelected) {
+            updateConfig({
+                typographySettings: {
+                    ...typographySettings,
+                    consistentCharacterSize: enabled
+                }
+            });
+        }
+        const storeState = useConfigStore.getState();
+        const currentSettings = storeState.typographySettings || {};
+        const currentCustomGlyphs = (storeState.scriptDataById?.[selectedScriptId]?.customGlyphs) || storeState.customGlyphs || {};
+        const base64Font = await compileFont(
+            currentCustomGlyphs, 
+            currentSettings.traceWidth ?? 30, 
+            currentSettings.customFontScale ?? 1.0,
+            {
+                consistentCharacterSize: enabled,
+                fixedAdvanceWidth: currentFixedAdvance || 1000
+            }
+        );
+        updateScriptData(selectedScriptId, { customFontBase64: base64Font });
+        if (isDefaultSelected) {
+            updateConfig({ customFontBase64: base64Font, customFont: base64Font });
+        }
+        toast.success(enabled ? 'Consistent character size enabled!' : 'Variable width mode enabled!');
+    };
+
+    const handleUpdateFixedAdvance = (advance) => {
+        updateScriptData(selectedScriptId, { fixedAdvanceWidth: advance });
+        if (isDefaultSelected) {
+            updateConfig({
+                typographySettings: {
+                    ...typographySettings,
+                    fixedAdvanceWidth: advance
+                }
+            });
+        }
+    };
+
+    const handleAutoCenterAllGlyphs = async () => {
+        const storeState = useConfigStore.getState();
+        const rawCustomGlyphs = (storeState.scriptDataById?.[selectedScriptId]?.customGlyphs) || storeState.customGlyphs || {};
+        const entries = Object.entries(rawCustomGlyphs);
+        if (entries.length === 0) {
+            toast('No drawn glyphs found in this script.');
+            return;
+        }
+
+        const tId = toast.loading('Centering all characters in em-box...');
+        try {
+            let centeredCount = 0;
+            const updatedGlyphs = {};
+
+            for (const [codeStr, strokeArray] of entries) {
+                if (!Array.isArray(strokeArray) || strokeArray.length === 0) {
+                    updatedGlyphs[codeStr] = strokeArray;
+                    continue;
+                }
+
+                let meta = { scale: 1, leftMargin: 100, rightMargin: 100, yOffset: 0, xOffset: 0, consistentSize: true };
+                let actualStrokes = strokeArray;
+
+                const firstStroke = strokeArray[0];
+                if (!Array.isArray(firstStroke) && firstStroke?.isMeta) {
+                    meta = { ...firstStroke, consistentSize: true, xOffset: 0, yOffset: 0 };
+                    actualStrokes = strokeArray.slice(1);
+                }
+
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                actualStrokes.forEach(s => {
+                    if (!Array.isArray(s)) return;
+                    s.forEach(pt => {
+                        if (pt && typeof pt.x === 'number' && typeof pt.y === 'number') {
+                            if (pt.x < minX) minX = pt.x;
+                            if (pt.x > maxX) maxX = pt.x;
+                            if (pt.y < minY) minY = pt.y;
+                            if (pt.y > maxY) maxY = pt.y;
+                        }
+                    });
+                });
+
+                if (Number.isFinite(minX)) {
+                    const cx = (minX + maxX) / 2;
+                    const cy = (minY + maxY) / 2;
+                    const dx = 150 - cx;
+                    const dy = 150 - cy;
+
+                    const shiftedStrokes = actualStrokes.map(stroke => {
+                        if (!Array.isArray(stroke)) return stroke;
+                        const shifted = stroke.map(pt => ({
+                            ...pt,
+                            x: Math.round((pt.x + dx) * 10) / 10,
+                            y: Math.round((pt.y + dy) * 10) / 10
+                        }));
+                        shifted.lineCap = stroke.lineCap;
+                        shifted.isFilled = stroke.isFilled;
+                        return shifted;
+                    });
+
+                    updatedGlyphs[codeStr] = [meta, ...shiftedStrokes];
+                    centeredCount++;
+                } else {
+                    updatedGlyphs[codeStr] = strokeArray;
+                }
+            }
+
+            if (isDefaultSelected) {
+                updateConfig({ customGlyphs: updatedGlyphs });
+            }
+            updateScriptData(selectedScriptId, { customGlyphs: updatedGlyphs, consistentCharacterSize: true });
+
+            const currentSettings = storeState.typographySettings || {};
+            const base64Font = await compileFont(
+                updatedGlyphs,
+                currentSettings.traceWidth ?? 30,
+                currentSettings.customFontScale ?? 1.0,
+                {
+                    consistentCharacterSize: true,
+                    fixedAdvanceWidth: currentFixedAdvance || 1000
+                }
+            );
+
+            updateScriptData(selectedScriptId, { customFontBase64: base64Font });
+            if (isDefaultSelected) {
+                updateConfig({ customFontBase64: base64Font, customFont: base64Font });
+            }
+
+            toast.success(`Successfully centered ${centeredCount} characters in uniform em-box!`, { id: tId });
+        } catch (err) {
+            console.error('Failed to auto-center glyphs:', err);
+            toast.error('Failed to auto-center glyphs.', { id: tId });
         }
     };
 
@@ -664,6 +837,82 @@ export default function TypographyStudio() {
                                     {(typographySettings.verticalLetterSpacing || 0).toFixed(1)}em
                                 </span>
                             </div>
+                        </div>
+
+                        {/* Consistent Character Sizes (Square / Monospace Em-Box) */}
+                        <div className="gt-consistent-size-card">
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.5rem' }}>
+                                <div>
+                                    <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', margin: 0 }}>
+                                        {t('settings.graphism.consistentSizeTitle')}
+                                    </h3>
+                                    <p style={{ fontSize: '0.82rem', color: 'var(--tx2)', margin: '0.25rem 0 0 0', lineHeight: 1.4 }}>
+                                        {t('settings.graphism.consistentSizeDesc')}
+                                    </p>
+                                </div>
+                                <input 
+                                    type="checkbox" 
+                                    className="toggle toggle-primary"
+                                    checked={isCurrentScriptConsistent}
+                                    onChange={(e) => handleToggleConsistentSize(e.target.checked)}
+                                    title="Toggle consistent square character sizes"
+                                />
+                            </div>
+
+                            {isCurrentScriptConsistent && (
+                                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--bd)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--tx)' }}>
+                                            {t('settings.graphism.emBoxAdvanceTitle')}
+                                        </span>
+                                        <span className="gt-consistent-badge">
+                                            {((currentFixedAdvance || 1000) / 1000).toFixed(2)} em ({currentFixedAdvance || 1000} units)
+                                        </span>
+                                    </div>
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.75rem' }}>
+                                        {t('settings.graphism.emBoxAdvanceDesc')}
+                                    </p>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                        <input 
+                                            type="range" 
+                                            min="600" 
+                                            max="1500" 
+                                            step="50" 
+                                            value={currentFixedAdvance || 1000}
+                                            onChange={(e) => handleUpdateFixedAdvance(parseInt(e.target.value))}
+                                            style={{ flex: 1, accentColor: 'var(--acc)' }}
+                                        />
+                                        <Button 
+                                            variant="default" 
+                                            className="btn-xs"
+                                            onClick={() => handleUpdateFixedAdvance(1000)}
+                                            title="Reset to 1.0em standard square"
+                                        >
+                                            1.0em (Square)
+                                        </Button>
+                                    </div>
+
+                                    <div style={{ marginTop: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                                        <div>
+                                            <h4 style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--tx)', margin: 0 }}>
+                                                {t('settings.graphism.autoCenterAllTitle')}
+                                            </h4>
+                                            <p style={{ fontSize: '0.8rem', color: 'var(--tx2)', margin: '0.2rem 0 0 0' }}>
+                                                {t('settings.graphism.autoCenterAllDesc')}
+                                            </p>
+                                        </div>
+                                        <Button 
+                                            variant="imp" 
+                                            className="btn-sm"
+                                            onClick={handleAutoCenterAllGlyphs}
+                                            title="Center all drawn characters in the 1.0em square em-box"
+                                        >
+                                            <Maximize2 size={14} style={{ marginRight: '6px' }} />
+                                            {t('settings.graphism.autoCenterAllBtn', { count: totalDrawnGlyphsCount })}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div style={{ marginTop: '1.5rem' }}>

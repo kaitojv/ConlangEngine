@@ -109,6 +109,8 @@ const extractInitialGlyphData = (existingCharCode, customGlyphs) => {
         leftMargin: 100,
         rightMargin: 100,
         yOffset: 0,
+        xOffset: 0,
+        consistentSize: undefined,
         isCalligraphy: false,
         isBrushPen: false,
         isChisel: false,
@@ -121,6 +123,8 @@ const extractInitialGlyphData = (existingCharCode, customGlyphs) => {
         meta.leftMargin = firstStroke.leftMargin ?? 100;
         meta.rightMargin = firstStroke.rightMargin ?? 100;
         meta.yOffset = firstStroke.yOffset ?? 0;
+        meta.xOffset = firstStroke.xOffset ?? 0;
+        meta.consistentSize = firstStroke.consistentSize;
         meta.isCalligraphy = firstStroke.isCalligraphy ?? false;
         meta.isBrushPen = firstStroke.isBrushPen ?? false;
         meta.isChisel = firstStroke.isChisel ?? false;
@@ -241,7 +245,20 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     const [leftMargin, setLeftMargin] = useState(() => initialData?.meta?.leftMargin ?? 100);
     const [rightMargin, setRightMargin] = useState(() => initialData?.meta?.rightMargin ?? 100);
     const [yOffset, setYOffset] = useState(() => initialData?.meta?.yOffset ?? 0);
+    const [xOffset, setXOffset] = useState(() => initialData?.meta?.xOffset ?? 0);
+    const [isGlyphConsistent, setIsGlyphConsistent] = useState(() => initialData?.meta?.consistentSize);
+    const [showEmBoxGuide, setShowEmBoxGuide] = useState(true);
     const [simplifyTolerance, setSimplifyTolerance] = useState(0.5);
+
+    const scriptConsistent = useConfigStore(state => {
+        const sData = resolvedScriptId ? state.scriptDataById?.[resolvedScriptId] : null;
+        return sData?.consistentCharacterSize ?? state.typographySettings?.consistentCharacterSize ?? false;
+    });
+    const fixedAdvanceWidth = useConfigStore(state => {
+        const sData = resolvedScriptId ? state.scriptDataById?.[resolvedScriptId] : null;
+        return sData?.fixedAdvanceWidth ?? state.typographySettings?.fixedAdvanceWidth ?? 1000;
+    });
+    const isConsistentActive = isGlyphConsistent !== undefined ? Boolean(isGlyphConsistent) : scriptConsistent;
 
     const [backgroundStrokes, setBackgroundStrokes] = useState([]);
     const [backgroundText, setBackgroundText] = useState('');
@@ -363,6 +380,47 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         ctx.translate(150, 150);
         ctx.scale(zoom, zoom);
         ctx.translate(-150, -150);
+
+        // Draw Em-Box quadrat guide if enabled
+        if (showEmBoxGuide) {
+            ctx.save();
+            const accColor = getComputedStyle(document.documentElement).getPropertyValue('--acc').trim() || '#3b82f6';
+            const bdColor = getComputedStyle(document.documentElement).getPropertyValue('--bd').trim() || '#334155';
+
+            // Outer 1.0em em-box boundary (0 to 300)
+            ctx.strokeStyle = bdColor;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]);
+            ctx.strokeRect(2, 2, 296, 296);
+
+            // Safe Zone (80% character body box: 30 to 270)
+            ctx.strokeStyle = accColor;
+            ctx.globalAlpha = 0.45;
+            ctx.lineWidth = 1.2;
+            ctx.setLineDash([6, 4]);
+            ctx.strokeRect(30, 30, 240, 240);
+
+            // Center Crosshairs (Quadrat Center at 150, 150)
+            ctx.globalAlpha = 0.3;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(15, 150);
+            ctx.lineTo(285, 150);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(150, 15);
+            ctx.lineTo(150, 285);
+            ctx.stroke();
+
+            // Label
+            ctx.fillStyle = accColor;
+            ctx.globalAlpha = 0.6;
+            ctx.font = '9px monospace';
+            ctx.fillText('EM-BOX (1.0em)', 34, 44);
+
+            ctx.restore();
+        }
 
         // Draw background strokes first
         if (backgroundStrokes && backgroundStrokes.length > 0) {
@@ -596,7 +654,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         }
         ctx.restore();
         ctx.restore(); // Restore retina scale
-    }, [strokes, currentStroke, brushSize, isCalligraphy, isBrushPen, isChisel, chiselAngle, isPaintBrush, isSerifPen, backgroundStrokes, backgroundText, zoom, activeTool, selectedNode, selectedStrokeIndex]);
+    }, [strokes, currentStroke, brushSize, isCalligraphy, isBrushPen, isChisel, chiselAngle, isPaintBrush, isSerifPen, backgroundStrokes, backgroundText, zoom, activeTool, selectedNode, selectedStrokeIndex, showEmBoxGuide]);
 
     const getCoords = (e) => {
         if (!canvasRef.current) return { x: 0, y: 0 };
@@ -1167,12 +1225,109 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     // Reduce the point count of the glyph currently on the canvas.
     //
     // Strokes are sampled densely so drawing and erasing stay accurate, but
+    const getStrokesBounds = (strokeList) => {
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        (strokeList || []).forEach(s => {
+            if (!Array.isArray(s) || s.isMeta) return;
+            s.forEach(pt => {
+                if (pt && typeof pt.x === 'number' && typeof pt.y === 'number') {
+                    if (pt.x < minX) minX = pt.x;
+                    if (pt.x > maxX) maxX = pt.x;
+                    if (pt.y < minY) minY = pt.y;
+                    if (pt.y > maxY) maxY = pt.y;
+                }
+            });
+        });
+        if (!Number.isFinite(minX)) return null;
+        return {
+            minX, maxX, minY, maxY,
+            width: maxX - minX,
+            height: maxY - minY,
+            centerX: (minX + maxX) / 2,
+            centerY: (minY + maxY) / 2
+        };
+    };
+
+    const handleCenterInBox = () => {
+        const bounds = getStrokesBounds(strokes);
+        if (!bounds) return toast('Canvas is empty.');
+        const dx = 150 - bounds.centerX;
+        const dy = 150 - bounds.centerY;
+        setStrokes(prev => prev.map(stroke => {
+            if (!Array.isArray(stroke) || stroke.isMeta) return stroke;
+            const shifted = stroke.map(pt => ({
+                ...pt,
+                x: Math.round((pt.x + dx) * 10) / 10,
+                y: Math.round((pt.y + dy) * 10) / 10
+            }));
+            shifted.lineCap = stroke.lineCap;
+            shifted.isFilled = stroke.isFilled;
+            return shifted;
+        }));
+        toast.success('Glyph centered in square em-box (150, 150)');
+    };
+
+    const handleCenterHorizontal = () => {
+        const bounds = getStrokesBounds(strokes);
+        if (!bounds) return toast('Canvas is empty.');
+        const dx = 150 - bounds.centerX;
+        setStrokes(prev => prev.map(stroke => {
+            if (!Array.isArray(stroke) || stroke.isMeta) return stroke;
+            const shifted = stroke.map(pt => ({
+                ...pt,
+                x: Math.round((pt.x + dx) * 10) / 10
+            }));
+            shifted.lineCap = stroke.lineCap;
+            shifted.isFilled = stroke.isFilled;
+            return shifted;
+        }));
+        toast.success('Glyph centered horizontally (x: 150)');
+    };
+
+    const handleCenterVertical = () => {
+        const bounds = getStrokesBounds(strokes);
+        if (!bounds) return toast('Canvas is empty.');
+        const dy = 150 - bounds.centerY;
+        setStrokes(prev => prev.map(stroke => {
+            if (!Array.isArray(stroke) || stroke.isMeta) return stroke;
+            const shifted = stroke.map(pt => ({
+                ...pt,
+                y: Math.round((pt.y + dy) * 10) / 10
+            }));
+            shifted.lineCap = stroke.lineCap;
+            shifted.isFilled = stroke.isFilled;
+            return shifted;
+        }));
+        toast.success('Glyph centered vertically (y: 150)');
+    };
+
+    const handleFitToEmBox = () => {
+        const bounds = getStrokesBounds(strokes);
+        if (!bounds || (bounds.width === 0 && bounds.height === 0)) return toast('Canvas is empty.');
+        const targetSize = 240; // 80% safe zone in 300px canvas
+        const maxDim = Math.max(bounds.width, bounds.height);
+        if (maxDim <= 0) return;
+        const factor = targetSize / maxDim;
+        setStrokes(prev => prev.map(stroke => {
+            if (!Array.isArray(stroke) || stroke.isMeta) return stroke;
+            const scaled = stroke.map(pt => ({
+                ...pt,
+                x: Math.round((150 + (pt.x - bounds.centerX) * factor) * 10) / 10,
+                y: Math.round((150 + (pt.y - bounds.centerY) * factor) * 10) / 10
+            }));
+            scaled.lineCap = stroke.lineCap;
+            scaled.isFilled = stroke.isFilled;
+            return scaled;
+        }));
+        toast.success('Glyph scaled proportionally to fit em-box');
+    };
+
     // that density is what makes saved glyphs huge. This rewrites the current
     // drawing in a lighter, visually equivalent form; it only affects the
     // canvas until the user saves, so it is safe to try and compare.
     const handleSimplifyStrokes = () => {
         const beforePts = countGlyphPoints(strokes);
-        const withMeta = [{ isMeta: true, scale: glyphScale, leftMargin, rightMargin, yOffset }, ...strokes];
+        const withMeta = [{ isMeta: true, scale: glyphScale, leftMargin, rightMargin, yOffset, xOffset, consistentSize: isGlyphConsistent }, ...strokes];
         const simplified = simplifyGlyph(withMeta, {
             tolerance: simplifyTolerance,
             precision: 2,
@@ -1212,6 +1367,8 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
             leftMargin: leftMargin,
             rightMargin: rightMargin,
             yOffset: yOffset,
+            xOffset: xOffset,
+            consistentSize: isGlyphConsistent,
             isCalligraphy: isCalligraphy,
             isBrushPen: isBrushPen,
             isChisel: isChisel,
@@ -1225,7 +1382,15 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         
         // 2. Compile the font
         const typographySettings = useConfigStore.getState().typographySettings || {};
-        const base64Font = await compileFont(updatedGlyphDb, typographySettings.traceWidth ?? 30, typographySettings.customFontScale ?? 1.0);
+        const base64Font = await compileFont(
+            updatedGlyphDb, 
+            typographySettings.traceWidth ?? 30, 
+            typographySettings.customFontScale ?? 1.0,
+            {
+                consistentCharacterSize: isConsistentActive,
+                fixedAdvanceWidth: fixedAdvanceWidth
+            }
+        );
         
         // 3. Save everything to Zustand
         if (base64Font) {
@@ -1324,21 +1489,55 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
 
                 <div className="fs-metadata-tools">
                     <div className="fs-metadata-group">
-                        <label className="fs-metadata-label">Scale ({glyphScale.toFixed(2)}x)</label>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '2px' }}>
+                            <label className="fs-metadata-label" style={{ marginBottom: 0 }}>Scale ({glyphScale.toFixed(2)}x)</label>
+                            <button
+                                type="button"
+                                className={`fs-mode-chip ${isConsistentActive ? 'active' : ''}`}
+                                onClick={() => setIsGlyphConsistent(prev => (prev === undefined ? !scriptConsistent : !prev))}
+                                title="Toggle between Square Em-Box mode and Variable Width mode for this character"
+                            >
+                                {isConsistentActive ? 'Square Em-Box' : 'Variable Width'}
+                            </button>
+                        </div>
                         <input type="range" className="range range-xs range-primary" min="0.5" max="2.0" step="0.05" value={glyphScale} onChange={(e) => setGlyphScale(parseFloat(e.target.value))} />
                     </div>
-                    <div className="fs-metadata-group">
-                        <label className="fs-metadata-label">Left Margin ({leftMargin})</label>
-                        <input type="range" className="range range-xs range-primary" min="-200" max="500" step="10" value={leftMargin} onChange={(e) => setLeftMargin(parseInt(e.target.value))} />
-                    </div>
-                    <div className="fs-metadata-group">
-                        <label className="fs-metadata-label">Right Margin ({rightMargin})</label>
-                        <input type="range" className="range range-xs range-primary" min="-200" max="500" step="10" value={rightMargin} onChange={(e) => setRightMargin(parseInt(e.target.value))} />
-                    </div>
-                    <div className="fs-metadata-group">
-                        <label className="fs-metadata-label">Y-Offset ({yOffset})</label>
-                        <input type="range" className="range range-xs range-primary" min="-500" max="500" step="10" value={yOffset} onChange={(e) => setYOffset(parseInt(e.target.value))} />
-                    </div>
+
+                    {isConsistentActive ? (
+                        <>
+                            <div className="fs-metadata-group">
+                                <label className="fs-metadata-label">
+                                    Advance: {((fixedAdvanceWidth || 1000) / 1000).toFixed(1)}em ({fixedAdvanceWidth || 1000})
+                                </label>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--acc)', fontWeight: 600, padding: '3px 0' }}>
+                                    Consistent Size (Auto-Centered)
+                                </span>
+                            </div>
+                            <div className="fs-metadata-group">
+                                <label className="fs-metadata-label">H-Shift ({xOffset})</label>
+                                <input type="range" className="range range-xs range-primary" min="-200" max="200" step="5" value={xOffset} onChange={(e) => setXOffset(parseInt(e.target.value))} />
+                            </div>
+                            <div className="fs-metadata-group">
+                                <label className="fs-metadata-label">V-Shift / Y-Offset ({yOffset})</label>
+                                <input type="range" className="range range-xs range-primary" min="-300" max="300" step="5" value={yOffset} onChange={(e) => setYOffset(parseInt(e.target.value))} />
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="fs-metadata-group">
+                                <label className="fs-metadata-label">Left Margin ({leftMargin})</label>
+                                <input type="range" className="range range-xs range-primary" min="-200" max="500" step="10" value={leftMargin} onChange={(e) => setLeftMargin(parseInt(e.target.value))} />
+                            </div>
+                            <div className="fs-metadata-group">
+                                <label className="fs-metadata-label">Right Margin ({rightMargin})</label>
+                                <input type="range" className="range range-xs range-primary" min="-200" max="500" step="10" value={rightMargin} onChange={(e) => setRightMargin(parseInt(e.target.value))} />
+                            </div>
+                            <div className="fs-metadata-group">
+                                <label className="fs-metadata-label">Y-Offset ({yOffset})</label>
+                                <input type="range" className="range range-xs range-primary" min="-500" max="500" step="10" value={yOffset} onChange={(e) => setYOffset(parseInt(e.target.value))} />
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -1516,6 +1715,20 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                             <Button variant="default" className="btn-sm" onClick={() => handleMove(0, gridSize)} title="Move Down"><ArrowDown size={16} /></Button>
                             <Button variant="default" className="btn-sm" onClick={() => handleMove(-gridSize, 0)} title="Move Left"><ArrowLeft size={16} /></Button>
                             <Button variant="default" className="btn-sm" onClick={() => handleMove(gridSize, 0)} title="Move Right"><ArrowRight size={16} /></Button>
+                            <div className="fs-align-group">
+                                <Button variant="default" className="btn-sm" onClick={handleCenterInBox} title="Center in Em-Box (Square: 150, 150)">
+                                    <Crosshair size={16} />
+                                </Button>
+                                <Button variant="default" className="btn-sm" onClick={handleCenterHorizontal} title="Center Horizontally (x: 150)">
+                                    <FlipHorizontal size={16} />
+                                </Button>
+                                <Button variant="default" className="btn-sm" onClick={handleCenterVertical} title="Center Vertically (y: 150)">
+                                    <FlipVertical size={16} />
+                                </Button>
+                                <Button variant="default" className="btn-sm" onClick={handleFitToEmBox} title="Fit to Em-Box (Scale proportionally to safe zone without distortion)">
+                                    <Maximize2 size={16} />
+                                </Button>
+                            </div>
                             <Button variant="default" className="btn-sm" onClick={() => setZoom(prev => Math.min(3.0, prev + 0.25))} title="Zoom Viewport In"><ZoomIn size={16} /></Button>
                             <Button variant="default" className="btn-sm" onClick={() => setZoom(prev => Math.max(1.0, prev - 0.25))} title="Zoom Viewport Out"><ZoomOut size={16} /></Button>
                             <Button variant="default" className="btn-sm" onClick={handleUndo} title="Undo">
@@ -1566,6 +1779,19 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsSnapToGrid(!isSnapToGrid); } }}
                                 >
                                     Grid Snap {isSnapToGrid ? 'ON' : 'OFF'}
+                                </span>
+                            </div>
+                            <div className="fs-status-item">
+                                <Square size={12} style={{ marginRight: '4px', opacity: showEmBoxGuide ? 1 : 0.3 }}/> 
+                                <span
+                                    role="switch"
+                                    tabIndex={0}
+                                    aria-checked={showEmBoxGuide}
+                                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                                    onClick={() => setShowEmBoxGuide(!showEmBoxGuide)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowEmBoxGuide(!showEmBoxGuide); } }}
+                                >
+                                    Em-Box Guide {showEmBoxGuide ? 'ON' : 'OFF'}
                                 </span>
                             </div>
                             <div className="fs-status-item">

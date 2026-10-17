@@ -57,9 +57,11 @@ export function getGlyphMetrics(raw) {
         leftMargin: Number.isFinite(meta?.leftMargin) ? meta.leftMargin : DEFAULT_MARGIN,
         rightMargin: Number.isFinite(meta?.rightMargin) ? meta.rightMargin : DEFAULT_MARGIN,
         yOffset: Number.isFinite(meta?.yOffset) ? meta.yOffset : 0,
+        xOffset: Number.isFinite(meta?.xOffset) ? meta.xOffset : 0,
         scale: Number.isFinite(meta?.scale) ? meta.scale : 1,
+        consistentSize: meta?.consistentSize,
         // Ink extent in authoring units, used for hit-testing the baseline.
-        ink: { minX, maxX, minY, maxY, width: maxX - minX }
+        ink: { minX, maxX, minY, maxY, width: maxX - minX, height: maxY - minY }
     };
 }
 

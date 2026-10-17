@@ -90,7 +90,16 @@ export function useFontInjector(){
                 // If no font exists yet for this script, but glyphs exist: compile!
                 if (!scriptFontMap[sId] && Object.keys(mergedGlyphs).length > 0) {
                     try {
-                        const compiled = await compileFont(mergedGlyphs, traceWidth, fontScale);
+                        const isConsistent = sData?.consistentCharacterSize !== undefined
+                            ? sData.consistentCharacterSize
+                            : (typographySettings?.consistentCharacterSize ?? false);
+                        const fixedAdvance = sData?.fixedAdvanceWidth !== undefined
+                            ? sData.fixedAdvanceWidth
+                            : (typographySettings?.fixedAdvanceWidth ?? 1000);
+                        const compiled = await compileFont(mergedGlyphs, traceWidth, fontScale, {
+                            consistentCharacterSize: isConsistent,
+                            fixedAdvanceWidth: fixedAdvance
+                        });
                         if (compiled && !isCancelled) {
                             scriptFontMap[sId] = [compiled];
                         }
@@ -103,7 +112,12 @@ export function useFontInjector(){
             // If default script still has no font but root customGlyphs exists: compile default font!
             if (!scriptFontMap[defaultScriptId] && customGlyphs && Object.keys(customGlyphs).length > 0) {
                 try {
-                    const compiled = await compileFont(customGlyphs, traceWidth, fontScale);
+                    const isConsistent = typographySettings?.consistentCharacterSize ?? false;
+                    const fixedAdvance = typographySettings?.fixedAdvanceWidth ?? 1000;
+                    const compiled = await compileFont(customGlyphs, traceWidth, fontScale, {
+                        consistentCharacterSize: isConsistent,
+                        fixedAdvanceWidth: fixedAdvance
+                    });
                     if (compiled && !isCancelled) {
                         scriptFontMap[defaultScriptId] = [compiled];
                     }
