@@ -222,6 +222,7 @@ export function buildNumeralAtoms(num, numberSystem = {}, numeralBase = 10, { ig
         useStemsForUnits = false,
         internalOrder = 'digit-first',
         magnitudeOrder = 'standard',
+        magnitudeGrouping = 'none',
         hideOne = false
     } = ns.settings || {};
 
@@ -234,30 +235,234 @@ export function buildNumeralAtoms(num, numberSystem = {}, numeralBase = 10, { ig
         return { kind: 'digit', value: digit, name: digitName };
     };
 
-    const components = [];
-    let remaining = num;
-    let power = 0;
-
-    while (remaining > 0) {
-        const digit = remaining % base;
-        if (digit > 0) {
-            if (power === 0) {
-                components.push([digitAtom(digit, useStemsForUnits)]);
-            } else {
-                const powerVal = Math.pow(base, power);
-                const pAtom = { kind: 'power', value: powerVal, name: ns.powers?.[powerVal] || `[Base^${power}]` };
-                const dAtom = (hideOne && digit === 1) ? null : digitAtom(digit, fusion);
-                if (!dAtom) components.push([pAtom]);
-                else components.push(internalOrder === 'unit-first' ? [pAtom, dAtom] : [dAtom, pAtom]);
-            }
+    // Standard positional decomposition (used for un-grouped numbers and sub-group numbers)
+    const buildPositionalAtoms = (n, ignoreIrr = false) => {
+        if (n === 0) return [];
+        if (!ignoreIrr && !ignoreIrregulars && irregulars[n]) {
+            return [[{
+                kind: 'irregular',
+                value: n,
+                name: irregulars[n],
+                fallback: buildPositionalAtoms(n, true)
+            }]];
         }
-        remaining = Math.floor(remaining / base);
-        power++;
-        if (power > 20) break;
+
+        const comps = [];
+        let remaining = n;
+        let power = 0;
+
+        while (remaining > 0) {
+            const digit = remaining % base;
+            if (digit > 0) {
+                if (power === 0) {
+                    comps.push([digitAtom(digit, useStemsForUnits)]);
+                } else {
+                    const powerVal = Math.pow(base, power);
+                    const pAtom = { kind: 'power', value: powerVal, name: ns.powers?.[powerVal] || `[Base^${power}]` };
+                    const dAtom = (hideOne && digit === 1) ? null : digitAtom(digit, fusion);
+                    if (!dAtom) comps.push([pAtom]);
+                    else comps.push(internalOrder === 'unit-first' ? [pAtom, dAtom] : [dAtom, pAtom]);
+                }
+            }
+            remaining = Math.floor(remaining / base);
+            power++;
+            if (power > 20) break;
+        }
+
+        if (magnitudeOrder === 'standard') comps.reverse();
+        return comps;
+    };
+
+    // 1. None / standard positional
+    if (!magnitudeGrouping || magnitudeGrouping === 'none') {
+        return buildPositionalAtoms(num);
     }
 
-    if (magnitudeOrder === 'standard') components.reverse();
-    return components;
+    // 2. Pairwise grouping (e.g. 2022 -> 20, 22 "twenty twenty-two")
+    if (magnitudeGrouping === 'pairs') {
+        const pairBase = base * base;
+        const groups = [];
+        let remaining = num;
+
+        while (remaining > 0) {
+            const pairVal = remaining % pairBase;
+            groups.push(pairVal);
+            remaining = Math.floor(remaining / pairBase);
+            if (groups.length > 20) break;
+        }
+
+        if (magnitudeOrder === 'standard') groups.reverse();
+
+        const resultComponents = [];
+        for (const pairVal of groups) {
+            if (pairVal === 0 && groups.length > 1) {
+                resultComponents.push([{ kind: 'zero', value: 0, name: ns.zero || '0' }]);
+            } else {
+                const pairAtoms = buildPositionalAtoms(pairVal);
+                for (const comp of pairAtoms) {
+                    resultComponents.push(comp);
+                }
+            }
+        }
+        return resultComponents.length > 0 ? resultComponents : buildPositionalAtoms(num);
+    }
+
+    // 3. Fixed exponent scale groupings: 'thousands' (base^3), 'hundreds' (base^2), 'myriad' (base^4)
+    let scaleExponent = null;
+    if (magnitudeGrouping === 'thousands') scaleExponent = 3;
+    else if (magnitudeGrouping === 'hundreds') scaleExponent = 2;
+    else if (magnitudeGrouping === 'myriad') scaleExponent = 4;
+
+    if (scaleExponent !== null) {
+        const scaleStep = Math.pow(base, scaleExponent);
+        if (num < scaleStep) {
+            return buildPositionalAtoms(num);
+        }
+
+        const groups = [];
+        let remaining = num;
+        let k = 0;
+
+        while (remaining > 0) {
+            const chunkVal = remaining % scaleStep;
+            if (chunkVal > 0) {
+                const scalePowerVal = Math.pow(base, k * scaleExponent);
+                groups.push({ k, value: chunkVal, scalePowerVal });
+            }
+            remaining = Math.floor(remaining / scaleStep);
+            k++;
+            if (k > 15) break;
+        }
+
+        if (magnitudeOrder === 'standard') groups.reverse();
+
+        const resultComponents = [];
+        for (const grp of groups) {
+            if (grp.k === 0) {
+                const subComps = buildPositionalAtoms(grp.value);
+                for (const c of subComps) resultComponents.push(c);
+            } else {
+                const pAtom = {
+                    kind: 'power',
+                    value: grp.scalePowerVal,
+                    name: ns.powers?.[grp.scalePowerVal] || `[Base^${grp.k * scaleExponent}]`
+                };
+
+                if (hideOne && grp.value === 1) {
+                    resultComponents.push([pAtom]);
+                } else {
+                    const multAtoms = buildPositionalAtoms(grp.value);
+                    if (multAtoms.length === 1 && multAtoms[0].length === 1) {
+                        const singleAtom = multAtoms[0][0];
+                        if (internalOrder === 'unit-first') {
+                            resultComponents.push([pAtom, singleAtom]);
+                        } else {
+                            resultComponents.push([singleAtom, pAtom]);
+                        }
+                    } else if (multAtoms.length > 0) {
+                        if (internalOrder === 'unit-first') {
+                            resultComponents.push([pAtom]);
+                            for (const c of multAtoms) resultComponents.push(c);
+                        } else {
+                            for (let i = 0; i < multAtoms.length - 1; i++) {
+                                resultComponents.push(multAtoms[i]);
+                            }
+                            const lastComp = multAtoms[multAtoms.length - 1];
+                            resultComponents.push([...lastComp, pAtom]);
+                        }
+                    } else {
+                        resultComponents.push([pAtom]);
+                    }
+                }
+            }
+        }
+        return resultComponents.length > 0 ? resultComponents : buildPositionalAtoms(num);
+    }
+
+    // 4. 'defined_powers': Groups by the largest defined powers in numberSystem.powers
+    if (magnitudeGrouping === 'defined_powers') {
+        const definedPowers = Object.keys(ns.powers || {})
+            .map(Number)
+            .filter(p => !isNaN(p) && p >= base)
+            .sort((a, b) => b - a);
+
+        if (definedPowers.length === 0 || num < definedPowers[definedPowers.length - 1]) {
+            return buildPositionalAtoms(num);
+        }
+
+        const groups = [];
+        let remaining = num;
+
+        for (const pVal of definedPowers) {
+            if (remaining >= pVal) {
+                const count = Math.floor(remaining / pVal);
+                if (count > 0) {
+                    groups.push({ value: count, powerVal: pVal });
+                    remaining = remaining % pVal;
+                }
+            }
+        }
+
+        const remainder = remaining;
+        const resultComponents = [];
+
+        const appendGroup = (grp) => {
+            const pAtom = {
+                kind: 'power',
+                value: grp.powerVal,
+                name: ns.powers?.[grp.powerVal] || `[${grp.powerVal}]`
+            };
+
+            if (hideOne && grp.value === 1) {
+                resultComponents.push([pAtom]);
+            } else {
+                const multAtoms = buildPositionalAtoms(grp.value);
+                if (multAtoms.length === 1 && multAtoms[0].length === 1) {
+                    const singleAtom = multAtoms[0][0];
+                    if (internalOrder === 'unit-first') {
+                        resultComponents.push([pAtom, singleAtom]);
+                    } else {
+                        resultComponents.push([singleAtom, pAtom]);
+                    }
+                } else if (multAtoms.length > 0) {
+                    if (internalOrder === 'unit-first') {
+                        resultComponents.push([pAtom]);
+                        for (const c of multAtoms) resultComponents.push(c);
+                    } else {
+                        for (let i = 0; i < multAtoms.length - 1; i++) {
+                            resultComponents.push(multAtoms[i]);
+                        }
+                        const lastComp = multAtoms[multAtoms.length - 1];
+                        resultComponents.push([...lastComp, pAtom]);
+                    }
+                } else {
+                    resultComponents.push([pAtom]);
+                }
+            }
+        };
+
+        if (magnitudeOrder === 'unit-first') {
+            if (remainder > 0) {
+                const remComps = buildPositionalAtoms(remainder);
+                for (const c of remComps) resultComponents.push(c);
+            }
+            for (let i = groups.length - 1; i >= 0; i--) {
+                appendGroup(groups[i]);
+            }
+        } else {
+            for (const grp of groups) {
+                appendGroup(grp);
+            }
+            if (remainder > 0) {
+                const remComps = buildPositionalAtoms(remainder);
+                for (const c of remComps) resultComponents.push(c);
+            }
+        }
+
+        return resultComponents.length > 0 ? resultComponents : buildPositionalAtoms(num);
+    }
+
+    return buildPositionalAtoms(num);
 }
 
 /** Written form of each component ("nū" + "nī" -> "nūnī" with fusion). */

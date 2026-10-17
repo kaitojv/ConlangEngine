@@ -2,9 +2,12 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
+import Modal from '@/components/UI/Modal/Modal.jsx';
 import { useWordGenerator } from '@/hooks/useWordGenerator.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
+import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
+import { applyRuleToWord, expandWildcardDependencies } from '@/utils/morphologyEngine.jsx';
 import { fetchDefinitionOptions } from '@/utils/semanticUtils.js';
 import DefinitionSelectModal from '@/components/UI/Modal/DefinitionSelectModal.jsx';
 import {
@@ -18,7 +21,7 @@ import {
     Wand2, Send, Check, Dice5, Globe, Star, List, BookOpen,
     Leaf, Bird, Heart, Users, Zap, Wheat, Hammer, Brain, Clock, Layers, Hash,
     Type, Landmark, Search, Sparkles, ArrowLeft, ChevronLeft, ChevronRight,
-    MessageSquare, Coins, ChevronDown, X, Filter
+    MessageSquare, Coins, ChevronDown, X, Filter, Dna
 } from 'lucide-react';
 import './vocabChecklist.css';
 
@@ -34,9 +37,19 @@ export default function VocabChecklist({ onExit }) {
     const { generateWord } = useWordGenerator();
     const addWord = useLexiconStore((state) => state.addWord);
     const checkDuplicate = useLexiconStore((state) => state.checkDuplicate);
-    const lexicon = useLexiconStore((state) => state.lexicon) || [];
-    const { normalizeToBase } = useTransliterator();
+    const rawLexicon = useLexiconStore((state) => state.lexicon);
+    const lexicon = useMemo(() => rawLexicon || [], [rawLexicon]);
+    const { normalizeToBase, transliterate } = useTransliterator();
     const navigate = useNavigate();
+
+    // Pull config store for derivations & morphological rules
+    const rawGrammarRules = useConfigStore((state) => state.grammarRules);
+    const grammarRules = useMemo(() => rawGrammarRules || [], [rawGrammarRules]);
+    const vowels = useConfigStore((state) => state.vowels);
+    const consonants = useConfigStore((state) => state.consonants);
+    const otherPhonemes = useConfigStore((state) => state.otherPhonemes);
+    const verbMarker = useConfigStore((state) => state.verbMarker);
+    const cliticsRules = useConfigStore((state) => state.cliticsRules);
 
     // Generation settings
     const [minSyllables, setMinSyllables] = useState(2);
@@ -67,6 +80,10 @@ export default function VocabChecklist({ onExit }) {
     const [defModalOptions, setDefModalOptions] = useState([]);
     const [isFetchingRowDef, setIsFetchingRowDef] = useState(false);
     const [isDefModalOpen, setIsDefModalOpen] = useState(false);
+
+    // Derivations modal state
+    const [derivModalWord, setDerivModalWord] = useState(null);
+    const [derivModalSelected, setDerivModalSelected] = useState({});
 
     // Close theme dropdown on outside click or Escape
     useEffect(() => {
@@ -200,14 +217,14 @@ export default function VocabChecklist({ onExit }) {
         });
     };
 
-    // Roll single word for a row
+    // Roll single word for a row - strictly preserves the row's chosen part of speech!
     const handleRollRow = (englishWord, wordClass) => {
         const min = Math.min(minSyllables, maxSyllables);
         const max = Math.max(minSyllables, maxSyllables);
         const result = generateWord(min, max, wordClass);
         if (result && result.word) {
             updateRowEdit(englishWord, 'conlangWord', result.word);
-            updateRowEdit(englishWord, 'wordClass', result.wordClass || wordClass);
+            updateRowEdit(englishWord, 'wordClass', wordClass);
             setSelectedEnglishWords(prev => new Set(prev).add(englishWord));
         }
     };
@@ -227,12 +244,13 @@ export default function VocabChecklist({ onExit }) {
 
             const current = newEdits[item.word];
             if (!current || !current.conlangWord.trim()) {
-                const res = generateWord(min, max, item.class);
+                const targetPOS = current?.wordClass || item.class;
+                const res = generateWord(min, max, targetPOS);
                 if (res && res.word) {
                     newEdits[item.word] = {
                         ...(current || {}),
                         conlangWord: res.word,
-                        wordClass: res.wordClass || item.class,
+                        wordClass: targetPOS,
                     };
                     newSelected.add(item.word);
                     count++;
@@ -268,6 +286,189 @@ export default function VocabChecklist({ onExit }) {
         } finally {
             setIsFetchingRowDef(false);
         }
+    };
+
+    // Quick-save single row directly into the Lexicon without navigating away
+    const handleSaveSingleRow = (englishWord) => {
+        const item = vocabDatabase.find(w => w.word === englishWord);
+        const edit = getRowEdit(englishWord, item ? item.class : 'noun');
+        if (!edit.conlangWord || !edit.conlangWord.trim()) {
+            toast.error(t('vocabChecklist.enterConlangFirst', 'Please enter or roll a word first.'));
+            return;
+        }
+
+        const cleanWord = normalizeToBase(edit.conlangWord.trim());
+        const { isDuplicateWord, isDuplicateTranslation } = checkDuplicate(cleanWord, englishWord);
+        if (isDuplicateWord || isDuplicateTranslation) {
+            toast.error(t('vocabChecklist.duplicateWordOrTrans', 'Word or translation already exists in your lexicon.'));
+            return;
+        }
+
+        const tags = edit.tags
+            ? edit.tags.split(',').map(t => t.trim()).filter(Boolean)
+            : (item && item.category ? [item.category] : []);
+
+        addWord({
+            word: cleanWord,
+            wordClass: edit.wordClass || (item ? item.class : 'noun'),
+            translation: englishWord,
+            tags: tags,
+            description: edit.description || ''
+        });
+
+        toast.success(t('vocabChecklist.savedSingle', {
+            word: cleanWord,
+            defaultValue: `Saved "${cleanWord}" to Lexicon!`
+        }));
+        setSelectedEnglishWords(prev => {
+            const next = new Set(prev);
+            next.delete(englishWord);
+            return next;
+        });
+    };
+
+    // Open derivations modal for single row
+    const handleOpenDerivModal = (englishWord) => {
+        const item = vocabDatabase.find(w => w.word === englishWord);
+        const edit = getRowEdit(englishWord, item ? item.class : 'noun');
+        if (!edit.conlangWord || !edit.conlangWord.trim()) {
+            toast.error(t('vocabChecklist.enterConlangFirst', 'Please enter or roll a word first.'));
+            return;
+        }
+        setDerivModalWord({
+            englishWord,
+            conlangWord: edit.conlangWord.trim(),
+            wordClass: edit.wordClass || (item ? item.class : 'noun'),
+            tags: edit.tags ? edit.tags.split(',').map(t => t.trim()).filter(Boolean) : (item && item.category ? [item.category] : []),
+            description: edit.description || ''
+        });
+        setDerivModalSelected({});
+    };
+
+    // Compute candidate derivations for the active modal word
+    const derivModalOptions = useMemo(() => {
+        if (!derivModalWord || !derivModalWord.conlangWord) return [];
+
+        const safeBaseWord = normalizeToBase(derivModalWord.conlangWord);
+        if (!safeBaseWord) return [];
+
+        let base = safeBaseWord;
+        if (cliticsRules) {
+            const clitics = cliticsRules.split(',').map(c => c.trim().replace(/^-/, '')).filter(Boolean);
+            const matchedClitic = clitics.find(c => base.endsWith(c));
+            if (matchedClitic) base = base.slice(0, -matchedClitic.length);
+        }
+        if (derivModalWord.wordClass === 'verb' && verbMarker) {
+            const markers = verbMarker.split(',').map(m => m.trim().replace(/^-/, '')).filter(Boolean);
+            const matchedMarker = markers.find(m => base.endsWith(m));
+            if (matchedMarker) base = base.slice(0, -matchedMarker.length);
+        }
+
+        const currentClasses = derivModalWord.wordClass
+            ? derivModalWord.wordClass.split(',').map(c => c.trim().toLowerCase())
+            : [];
+
+        const hasExplicitDerivational = grammarRules.some(r => r.isDerivational);
+        let candidateRules = hasExplicitDerivational
+            ? grammarRules.filter(r => r.isDerivational)
+            : grammarRules;
+
+        candidateRules = expandWildcardDependencies(candidateRules, grammarRules);
+
+        const results = [];
+        candidateRules.forEach(rule => {
+            const ruleClasses = (rule.appliesTo || 'all').split(',').map(c => c.trim().toLowerCase());
+            if (ruleClasses.includes('all') || currentClasses.length === 0 || currentClasses.some(cc => ruleClasses.includes(cc))) {
+                const result = applyRuleToWord(base, rule, grammarRules, vowels, consonants, otherPhonemes);
+                if (result) {
+                    const transLabel = derivModalWord.englishWord
+                        ? `${derivModalWord.englishWord} (${(rule.gloss || rule.name || 'Unnamed Rule').toLowerCase()})`
+                        : `(${(rule.gloss || rule.name || 'Unnamed Rule').toLowerCase()})`;
+
+                    let targetPOS = derivModalWord.wordClass;
+                    if (rule.targetPOS) {
+                        targetPOS = rule.targetPOS;
+                    } else if (!ruleClasses.includes('all') && ruleClasses.length > 0) {
+                        targetPOS = ruleClasses[0];
+                    }
+
+                    results.push({
+                        derivedWord: result,
+                        ruleName: rule.name || 'Unnamed Rule',
+                        rule,
+                        translationText: transLabel,
+                        targetPOS
+                    });
+                }
+            }
+        });
+
+        return results;
+    }, [derivModalWord, grammarRules, vowels, consonants, otherPhonemes, verbMarker, cliticsRules, normalizeToBase]);
+
+    // Save base word and any checked derivations directly into the Lexicon
+    const handleSaveDerivModal = () => {
+        if (!derivModalWord) return;
+
+        const safeWord = normalizeToBase(derivModalWord.conlangWord);
+        const { isDuplicateWord, isDuplicateTranslation } = checkDuplicate(safeWord, derivModalWord.englishWord);
+        if (isDuplicateWord || isDuplicateTranslation) {
+            toast.error(t('vocabChecklist.duplicateWordOrTrans', 'Word or translation already exists in your lexicon.'));
+            return;
+        }
+
+        const rootId = Date.now() + Math.random();
+
+        // 1. Add root word
+        addWord({
+            id: rootId,
+            word: safeWord,
+            wordClass: derivModalWord.wordClass,
+            translation: derivModalWord.englishWord,
+            tags: derivModalWord.tags,
+            description: derivModalWord.description || ''
+        });
+
+        // 2. Add selected derivations
+        let derivCount = 0;
+        derivModalOptions.forEach((item, idx) => {
+            if (derivModalSelected[idx]) {
+                const safeDerivWord = normalizeToBase(item.derivedWord);
+                const { isDuplicateWord: dupDeriv } = checkDuplicate(safeDerivWord, item.translationText);
+                if (!dupDeriv) {
+                    addWord({
+                        word: safeDerivWord,
+                        wordClass: item.targetPOS || derivModalWord.wordClass,
+                        translation: item.translationText,
+                        tags: derivModalWord.tags ? [...derivModalWord.tags, 'derived'] : ['derived'],
+                        description: `Derivation of ${safeWord} (${item.ruleName})`,
+                        relatedWords: [safeWord]
+                    });
+                    derivCount++;
+                }
+            }
+        });
+
+        if (derivCount > 0) {
+            toast.success(t('vocabChecklist.savedWithDerivations', {
+                word: safeWord,
+                count: derivCount,
+                defaultValue: `Saved "${safeWord}" and ${derivCount} derivations to Lexicon!`
+            }));
+        } else {
+            toast.success(t('vocabChecklist.savedSingle', {
+                word: safeWord,
+                defaultValue: `Saved "${safeWord}" to Lexicon!`
+            }));
+        }
+
+        setSelectedEnglishWords(prev => {
+            const next = new Set(prev);
+            next.delete(derivModalWord.englishWord);
+            return next;
+        });
+
+        setDerivModalWord(null);
     };
 
     // Save selected to lexicon
@@ -329,13 +530,15 @@ export default function VocabChecklist({ onExit }) {
         }
     };
 
-    // Send single to create word
-    const handleSendRowToCreate = (englishWord, wordClass, conlangWord) => {
+    // Send single to create word with all fields prefilled (including definition & tags)
+    const handleSendRowToCreate = (englishWord, wordClass, conlangWord, description, tags) => {
         navigate('/create', {
             state: {
                 prefillWord: conlangWord || '',
                 prefillTranslation: englishWord,
-                prefillClass: wordClass
+                prefillClass: wordClass,
+                prefillDefinition: description || '',
+                prefillTags: tags || ''
             }
         });
     };
@@ -693,24 +896,46 @@ export default function VocabChecklist({ onExit }) {
                                                 <option value="particle">{t('vocabChecklist.pos.particle', 'Particle')}</option>
                                             </select>
 
-                                            <button
-                                                type="button"
-                                                className="vc-icon-btn"
-                                                title={t('vocabChecklist.rollRandom')}
-                                                disabled={isCreated}
-                                                onClick={() => handleRollRow(item.word, edit.wordClass || item.class)}
-                                            >
-                                                <Dice5 size={16} />
-                                            </button>
+                                            <div className="vc-row-actions">
+                                                <button
+                                                    type="button"
+                                                    className="vc-icon-btn"
+                                                    title={t('vocabChecklist.rollRandom')}
+                                                    disabled={isCreated}
+                                                    onClick={() => handleRollRow(item.word, edit.wordClass || item.class)}
+                                                >
+                                                    <Dice5 size={15} />
+                                                </button>
 
-                                            <button
-                                                type="button"
-                                                className="vc-icon-btn"
-                                                title={t('vocabChecklist.sendToCreate')}
-                                                onClick={() => handleSendRowToCreate(item.word, edit.wordClass || item.class, edit.conlangWord)}
-                                            >
-                                                <Send size={14} />
-                                            </button>
+                                                <button
+                                                    type="button"
+                                                    className="vc-icon-btn vc-save-btn"
+                                                    title={t('vocabChecklist.saveDirect', 'Quick save to Lexicon')}
+                                                    disabled={isCreated || !edit.conlangWord?.trim()}
+                                                    onClick={() => handleSaveSingleRow(item.word)}
+                                                >
+                                                    <Check size={15} />
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    className="vc-icon-btn vc-deriv-btn"
+                                                    title={t('vocabChecklist.saveWithDerivations', 'Save with Derivations/Declensions')}
+                                                    disabled={isCreated || !edit.conlangWord?.trim()}
+                                                    onClick={() => handleOpenDerivModal(item.word)}
+                                                >
+                                                    <Dna size={15} />
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    className="vc-icon-btn"
+                                                    title={t('vocabChecklist.sendToCreate', 'Open in Word Creator')}
+                                                    onClick={() => handleSendRowToCreate(item.word, edit.wordClass || item.class, edit.conlangWord, edit.description, edit.tags)}
+                                                >
+                                                    <Send size={14} />
+                                                </button>
+                                            </div>
                                         </div>
 
                                         <div className="vc-meta-row">
@@ -722,7 +947,7 @@ export default function VocabChecklist({ onExit }) {
                                                 disabled={isCreated}
                                                 onChange={(e) => updateRowEdit(item.word, 'tags', e.target.value)}
                                             />
-                                            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                            <div className="vc-def-input-wrapper">
                                                 <input
                                                     type="text"
                                                     className="vc-meta-input"
@@ -751,7 +976,7 @@ export default function VocabChecklist({ onExit }) {
 
                 {/* ── Pagination Controls ── */}
                 {totalPages > 1 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--bd)' }}>
+                    <div className="vc-pagination">
                         <span className="vc-count-label">
                             {t('vocabChecklist.showingWords', {
                                 start: page * PAGE_SIZE + 1,
@@ -759,7 +984,7 @@ export default function VocabChecklist({ onExit }) {
                                 total: filteredWords.length
                             })}
                         </span>
-                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <div className="vc-pagination-controls">
                             <Button
                                 variant="secondary"
                                 disabled={page === 0}
@@ -767,7 +992,7 @@ export default function VocabChecklist({ onExit }) {
                             >
                                 <ChevronLeft size={16} /> {t('vocabChecklist.prev')}
                             </Button>
-                            <span style={{ fontSize: '0.82rem', color: 'var(--tx2)', padding: '0 8px' }}>
+                            <span className="vc-page-indicator">
                                 {t('vocabChecklist.pageOf', { current: page + 1, total: totalPages })}
                             </span>
                             <Button
@@ -797,6 +1022,129 @@ export default function VocabChecklist({ onExit }) {
                     }
                 }}
             />
+
+            {/* Derivations / Declensions Modal */}
+            <Modal
+                isOpen={!!derivModalWord}
+                onClose={() => setDerivModalWord(null)}
+                title={t('vocabChecklist.derivModalTitle', 'Save with Derivations & Declensions')}
+                className="vc-deriv-modal"
+            >
+                {derivModalWord && (
+                    <div className="vc-deriv-modal-body">
+                        {/* Root word summary */}
+                        <div className="vc-deriv-root-card">
+                            <div className="vc-deriv-root-header">
+                                <span className="vc-deriv-root-word custom-font-text notranslate">
+                                    {transliterate(derivModalWord.conlangWord)}
+                                </span>
+                                <span className="vc-pos-badge">{derivModalWord.wordClass}</span>
+                                <span className="vc-deriv-root-trans">"{derivModalWord.englishWord}"</span>
+                            </div>
+                            {derivModalWord.description && (
+                                <p className="vc-deriv-root-desc">{derivModalWord.description}</p>
+                            )}
+                        </div>
+
+                        {/* Derivations selection */}
+                        <div className="vc-deriv-section-header">
+                            <h4 className="vc-deriv-section-title">
+                                {t('vocabChecklist.availableDerivations', 'Available Derivations / Declensions')}
+                                {derivModalOptions.length > 0 && ` (${derivModalOptions.length})`}
+                            </h4>
+                            {derivModalOptions.length > 0 && (
+                                <button
+                                    type="button"
+                                    className="vc-deriv-toggle-all-btn"
+                                    onClick={() => {
+                                        const allSelected = derivModalOptions.every((_, idx) => derivModalSelected[idx]);
+                                        if (allSelected) {
+                                            setDerivModalSelected({});
+                                        } else {
+                                            const next = {};
+                                            derivModalOptions.forEach((_, idx) => { next[idx] = true; });
+                                            setDerivModalSelected(next);
+                                        }
+                                    }}
+                                >
+                                    {derivModalOptions.every((_, idx) => derivModalSelected[idx])
+                                        ? t('vocabChecklist.deselectAll', 'Deselect All')
+                                        : t('vocabChecklist.selectAll', 'Select All')}
+                                </button>
+                            )}
+                        </div>
+
+                        {derivModalOptions.length === 0 ? (
+                            <div className="vc-deriv-empty">
+                                <p className="vc-deriv-empty-text">
+                                    {t('vocabChecklist.noRulesForPOS', `No active grammar rules found that apply to "${derivModalWord.wordClass}". You can still save the base word directly.`)}
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="vc-deriv-list">
+                                {derivModalOptions.map((item, idx) => {
+                                    const isChecked = !!derivModalSelected[idx];
+                                    return (
+                                        <label
+                                            key={idx}
+                                            className={`vc-deriv-item ${isChecked ? 'selected' : ''}`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={isChecked}
+                                                onChange={() => {
+                                                    setDerivModalSelected(prev => ({
+                                                        ...prev,
+                                                        [idx]: !prev[idx]
+                                                    }));
+                                                }}
+                                            />
+                                            <div className="vc-deriv-item-content">
+                                                <div className="vc-deriv-item-top">
+                                                    <span className="vc-deriv-derived-word custom-font-text notranslate">
+                                                        {transliterate(item.derivedWord)}
+                                                    </span>
+                                                    <span className="vc-deriv-rule-badge">
+                                                        {item.ruleName}
+                                                    </span>
+                                                    {item.targetPOS && item.targetPOS !== derivModalWord.wordClass && (
+                                                        <span className="vc-pos-badge">{item.targetPOS}</span>
+                                                    )}
+                                                </div>
+                                                <span className="vc-deriv-trans-text">
+                                                    {item.translationText}
+                                                </span>
+                                            </div>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Modal Footer */}
+                        <div className="vc-deriv-modal-footer">
+                            <Button
+                                variant="outline"
+                                onClick={() => setDerivModalWord(null)}
+                            >
+                                {t('common.cancel', 'Cancel')}
+                            </Button>
+                            <Button
+                                variant="save"
+                                onClick={handleSaveDerivModal}
+                            >
+                                <Check size={16} />
+                                {Object.values(derivModalSelected).filter(Boolean).length > 0
+                                    ? t('vocabChecklist.saveWithCount', {
+                                        count: Object.values(derivModalSelected).filter(Boolean).length,
+                                        defaultValue: `Save Word & ${Object.values(derivModalSelected).filter(Boolean).length} Derivations`
+                                    })
+                                    : t('vocabChecklist.saveRootOnly', 'Save Root Word Only')}
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
         </div>
     );
 }

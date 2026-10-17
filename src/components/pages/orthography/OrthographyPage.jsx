@@ -385,6 +385,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
             separator: ' ', 
             internalOrder: 'digit-first',
             magnitudeOrder: 'standard',
+            magnitudeGrouping: 'none',
             hideOne: false 
         }
     };
@@ -655,6 +656,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                     <li>{t('orthography.numerals.infobox.internalFusion')}</li>
                                     <li>{t('orthography.numerals.infobox.globalFusion')}</li>
                                     <li>{t('orthography.numerals.infobox.internalOrder')}</li>
+                                    <li>{t('orthography.numerals.infobox.magnitudeGrouping')}</li>
                                     <li>{t('orthography.numerals.infobox.magnitudeOrder')}</li>
                                     <li>{t('orthography.numerals.infobox.separator')}</li>
                                 </ul>
@@ -875,6 +877,22 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                 >
                                     <option value="digit-first">{t('orthography.numerals.digitPlusPower')}</option>
                                     <option value="unit-first">{t('orthography.numerals.powerPlusDigit')}</option>
+                                </select>
+                            </div>
+
+                            <div className="select-row">
+                                <label>{t('orthography.numerals.magnitudeGrouping')}</label>
+                                <select 
+                                    className="select select-bordered select-sm w-full"
+                                    value={numberSystem.settings?.magnitudeGrouping || 'none'}
+                                    onChange={(e) => updateSystem('settings', { ...numberSystem.settings, magnitudeGrouping: e.target.value })}
+                                >
+                                    <option value="none">{t('orthography.numerals.groupingNone')}</option>
+                                    <option value="thousands">{t('orthography.numerals.groupingThousands')}</option>
+                                    <option value="pairs">{t('orthography.numerals.groupingPairs')}</option>
+                                    <option value="hundreds">{t('orthography.numerals.groupingHundreds')}</option>
+                                    <option value="myriad">{t('orthography.numerals.groupingMyriad')}</option>
+                                    <option value="defined_powers">{t('orthography.numerals.groupingDefinedPowers')}</option>
                                 </select>
                             </div>
 

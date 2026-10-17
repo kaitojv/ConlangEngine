@@ -1,10 +1,5 @@
 // test_numberComponents.js — run with: node tests/test_numberComponents.js
-//
-// Verifies the multi-component numeral fix: a number must decompose into its
-// component parts so each glyph resolves individually.
-//
-// This mirrors generateNumberComponents() from OrthographyPage.jsx, which is a
-// useCallback closed over the config store and so cannot be imported directly.
+import { buildNumeralAtoms, numeralName } from '../src/components/UI/Glyph/resolveNumeralGlyphs.js';
 
 let pass = 0;
 let fail = 0;
@@ -209,6 +204,37 @@ assert('7 inserts one separator between its 2 components', sepCount(buildCompone
 // Every glyph produced must be independently resolvable (one codepoint each).
 assert('all glyphs are single codepoints', glyphList(c12).every(ch => [...ch].length === 1), true);
 
+console.log('— magnitude grouping modes —');
+const ptSystem = {
+    zero: 'zero',
+    digits: { 1: 'um', 2: 'dois', 3: 'três', 4: 'quatro', 5: 'cinco' },
+    stems: {},
+    powers: { 10: 'dez', 100: 'cem', 1000: 'mil' },
+    irregulars: { 12: 'doze', 500: 'quinhentos' },
+    settings: { separator: ' ', magnitudeGrouping: 'thousands', magnitudeOrder: 'standard', hideOne: true }
+};
+
+const atomsPt12500 = buildNumeralAtoms(12500, ptSystem, 10);
+assert('thousands grouping gives 12 mil 500', numeralName(atomsPt12500, ptSystem.settings), 'doze mil quinhentos');
+
+const atomsPt1000 = buildNumeralAtoms(1000, ptSystem, 10);
+assert('thousands grouping with hideOne gives mil', numeralName(atomsPt1000, ptSystem.settings), 'mil');
+
+const enSystem = {
+    zero: 'zero',
+    digits: { 1: 'one', 2: 'two' },
+    stems: {},
+    powers: { 10: 'ten', 100: 'hundred' },
+    irregulars: { 20: 'twenty', 22: 'twenty-two', 12: 'twelve' },
+    settings: { separator: ' ', magnitudeGrouping: 'pairs', magnitudeOrder: 'standard' }
+};
+
+const atomsEn2022 = buildNumeralAtoms(2022, enSystem, 10);
+assert('pairs grouping gives twenty twenty-two', numeralName(atomsEn2022, enSystem.settings), 'twenty twenty-two');
+
+const enHundreds = { ...enSystem, settings: { ...enSystem.settings, magnitudeGrouping: 'hundreds' } };
+const atomsEn1200 = buildNumeralAtoms(1200, enHundreds, 10);
+assert('hundreds grouping gives twelve hundred', numeralName(atomsEn1200, enHundreds.settings), 'twelve hundred');
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
 if (fail > 0) process.exit(1);

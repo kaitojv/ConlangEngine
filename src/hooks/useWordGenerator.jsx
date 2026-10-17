@@ -30,22 +30,31 @@ export function useWordGenerator() {
     }, []);
 
     // 3. The main generation function
-    const generateWord = useCallback((allowedLengths = [2], targetClass = 'random') => {
-        // Fallback for older calls that pass minSyllables, maxSyllables
-        let lengths = Array.isArray(allowedLengths) ? allowedLengths : [];
-        if (!Array.isArray(allowedLengths)) {
-            // If it's a number, assume it's minSyllables
-            const min = allowedLengths;
-            const max = typeof targetClass === 'number' ? targetClass : min;
+    const generateWord = useCallback((...args) => {
+        let lengths = [];
+        let targetClass = 'random';
+
+        if (args.length >= 3 && typeof args[0] === 'number' && typeof args[1] === 'number') {
+            const min = Math.min(args[0], args[1]);
+            const max = Math.max(args[0], args[1]);
             for (let i = min; i <= max; i++) lengths.push(i);
-            targetClass = typeof arguments[2] === 'string' ? arguments[2] : 'random';
+            if (typeof args[2] === 'string' && args[2]) targetClass = args[2];
+        } else if (args.length >= 2 && typeof args[0] === 'number' && typeof args[1] === 'string') {
+            lengths = [args[0]];
+            targetClass = args[1];
+        } else if (args.length >= 1 && typeof args[0] === 'number') {
+            lengths = [args[0]];
+        } else if (Array.isArray(args[0])) {
+            lengths = args[0];
+            if (typeof args[1] === 'string' && args[1]) targetClass = args[1];
         }
+
         if (lengths.length === 0) lengths = [2];
 
         const numSyllables = lengths[Math.floor(Math.random() * lengths.length)];
-        const classFinal = targetClass === 'random' 
-            ? ['noun', 'verb', 'adjective'][Math.floor(Math.random() * 3)] 
-            : targetClass;
+        const classFinal = (targetClass && targetClass !== 'random')
+            ? targetClass
+            : ['noun', 'verb', 'adjective'][Math.floor(Math.random() * 3)];
         
         let orthResult = '';
         let ipaResult = '';

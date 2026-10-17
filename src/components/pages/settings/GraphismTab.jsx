@@ -498,8 +498,13 @@ export default function TypographyStudio() {
                 isOpen={showKeyboardManager} 
                 onClose={() => setShowKeyboardManager(false)}
                 title={t('settings.graphism.customKeyboardExporter')}
+                className="modal-wide km-modal-dialog"
             >
-                <KeyboardManager allChars={allChars} alphabetGlyphs={alphabetGlyphs} />
+                <KeyboardManager 
+                    initialScriptId={selectedScriptId}
+                    allChars={allChars} 
+                    alphabetGlyphs={alphabetGlyphs} 
+                />
             </Modal>
 
             <Infobox title={t('settings.graphism.title')}>

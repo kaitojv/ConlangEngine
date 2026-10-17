@@ -163,10 +163,20 @@ export default function CreateWordTab() {
         if (location.state) {
             setFormData(prev => ({
                 ...prev,
-                word: location.state.prefillWord || prev.word,
-                ipa: location.state.prefillIpa || prev.ipa,
-                wordClass: location.state.prefillClass || prev.wordClass,
-                translation: location.state.prefillTranslation || prev.translation
+                word: location.state.prefillWord ?? prev.word,
+                ipa: location.state.prefillIpa ?? prev.ipa,
+                wordClass: location.state.prefillClass ?? prev.wordClass,
+                translation: location.state.prefillTranslation ?? prev.translation,
+                definition: (location.state.prefillDefinition !== undefined && location.state.prefillDefinition !== null)
+                    ? location.state.prefillDefinition
+                    : ((location.state.prefillDescription !== undefined && location.state.prefillDescription !== null)
+                        ? location.state.prefillDescription
+                        : prev.definition),
+                tags: location.state.prefillTags
+                    ? (Array.isArray(location.state.prefillTags)
+                        ? location.state.prefillTags
+                        : String(location.state.prefillTags).split(',').map(t => t.trim()).filter(Boolean))
+                    : prev.tags
             }));
         }
 
