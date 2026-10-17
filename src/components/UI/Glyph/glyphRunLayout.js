@@ -72,13 +72,14 @@ export const layoutGlyph = (metrics, traceWidth = 30, options = {}) => {
         const inkWidth = metrics.ink.width * k;
         const hOffset = num(metrics.xOffset, 0);
         const leftBearing = Math.round((targetAdvance - inkWidth) / 2) + hOffset;
+        const centerY = (metrics.ink.minY + metrics.ink.maxY) / 2;
         return {
             advance: targetAdvance,
             scale,
             k,
             stroke: Math.max(1, 2 * num(traceWidth, 30) * scale),
             x: leftBearing - metrics.ink.minX * k,
-            y: -(FONT_Y_ORIGIN + FONT_Y_CEILING * scale) - num(metrics.yOffset, 0),
+            y: -300 - centerY * k - num(metrics.yOffset, 0),
             blank: false
         };
     }

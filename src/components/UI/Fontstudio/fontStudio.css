@@ -549,12 +549,3 @@
     border-color: var(--acc);
 }
 
-.fs-align-group {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    margin-left: 6px;
-    padding-left: 6px;
-    border-left: 1px solid var(--bd);
-}
-

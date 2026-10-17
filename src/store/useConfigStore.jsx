@@ -258,7 +258,7 @@ export const INITIAL_CONFIG = {
         activeDisplayMode: 'Base',
         letterSpacing: 0,
         verticalLetterSpacing: 0,
-        consistentCharacterSize: false,
+        consistentCharacterSize: true,
         fixedAdvanceWidth: 1000
     },
     // REST API backup system — per-project configuration (see https://github.com/niruhsa/ConlangEngine-Obsidian-Backup/blob/master/README.md)

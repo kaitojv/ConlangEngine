@@ -247,12 +247,11 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     const [yOffset, setYOffset] = useState(() => initialData?.meta?.yOffset ?? 0);
     const [xOffset, setXOffset] = useState(() => initialData?.meta?.xOffset ?? 0);
     const [isGlyphConsistent, setIsGlyphConsistent] = useState(() => initialData?.meta?.consistentSize);
-    const [showEmBoxGuide, setShowEmBoxGuide] = useState(true);
     const [simplifyTolerance, setSimplifyTolerance] = useState(0.5);
 
     const scriptConsistent = useConfigStore(state => {
         const sData = resolvedScriptId ? state.scriptDataById?.[resolvedScriptId] : null;
-        return sData?.consistentCharacterSize ?? state.typographySettings?.consistentCharacterSize ?? false;
+        return sData?.consistentCharacterSize ?? state.typographySettings?.consistentCharacterSize ?? true;
     });
     const fixedAdvanceWidth = useConfigStore(state => {
         const sData = resolvedScriptId ? state.scriptDataById?.[resolvedScriptId] : null;
@@ -380,47 +379,6 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         ctx.translate(150, 150);
         ctx.scale(zoom, zoom);
         ctx.translate(-150, -150);
-
-        // Draw Em-Box quadrat guide if enabled
-        if (showEmBoxGuide) {
-            ctx.save();
-            const accColor = getComputedStyle(document.documentElement).getPropertyValue('--acc').trim() || '#3b82f6';
-            const bdColor = getComputedStyle(document.documentElement).getPropertyValue('--bd').trim() || '#334155';
-
-            // Outer 1.0em em-box boundary (0 to 300)
-            ctx.strokeStyle = bdColor;
-            ctx.lineWidth = 1;
-            ctx.setLineDash([4, 4]);
-            ctx.strokeRect(2, 2, 296, 296);
-
-            // Safe Zone (80% character body box: 30 to 270)
-            ctx.strokeStyle = accColor;
-            ctx.globalAlpha = 0.45;
-            ctx.lineWidth = 1.2;
-            ctx.setLineDash([6, 4]);
-            ctx.strokeRect(30, 30, 240, 240);
-
-            // Center Crosshairs (Quadrat Center at 150, 150)
-            ctx.globalAlpha = 0.3;
-            ctx.lineWidth = 1;
-            ctx.setLineDash([3, 3]);
-            ctx.beginPath();
-            ctx.moveTo(15, 150);
-            ctx.lineTo(285, 150);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(150, 15);
-            ctx.lineTo(150, 285);
-            ctx.stroke();
-
-            // Label
-            ctx.fillStyle = accColor;
-            ctx.globalAlpha = 0.6;
-            ctx.font = '9px monospace';
-            ctx.fillText('EM-BOX (1.0em)', 34, 44);
-
-            ctx.restore();
-        }
 
         // Draw background strokes first
         if (backgroundStrokes && backgroundStrokes.length > 0) {
@@ -654,7 +612,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         }
         ctx.restore();
         ctx.restore(); // Restore retina scale
-    }, [strokes, currentStroke, brushSize, isCalligraphy, isBrushPen, isChisel, chiselAngle, isPaintBrush, isSerifPen, backgroundStrokes, backgroundText, zoom, activeTool, selectedNode, selectedStrokeIndex, showEmBoxGuide]);
+    }, [strokes, currentStroke, brushSize, isCalligraphy, isBrushPen, isChisel, chiselAngle, isPaintBrush, isSerifPen, backgroundStrokes, backgroundText, zoom, activeTool, selectedNode, selectedStrokeIndex]);
 
     const getCoords = (e) => {
         if (!canvasRef.current) return { x: 0, y: 0 };
@@ -1225,103 +1183,6 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     // Reduce the point count of the glyph currently on the canvas.
     //
     // Strokes are sampled densely so drawing and erasing stay accurate, but
-    const getStrokesBounds = (strokeList) => {
-        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-        (strokeList || []).forEach(s => {
-            if (!Array.isArray(s) || s.isMeta) return;
-            s.forEach(pt => {
-                if (pt && typeof pt.x === 'number' && typeof pt.y === 'number') {
-                    if (pt.x < minX) minX = pt.x;
-                    if (pt.x > maxX) maxX = pt.x;
-                    if (pt.y < minY) minY = pt.y;
-                    if (pt.y > maxY) maxY = pt.y;
-                }
-            });
-        });
-        if (!Number.isFinite(minX)) return null;
-        return {
-            minX, maxX, minY, maxY,
-            width: maxX - minX,
-            height: maxY - minY,
-            centerX: (minX + maxX) / 2,
-            centerY: (minY + maxY) / 2
-        };
-    };
-
-    const handleCenterInBox = () => {
-        const bounds = getStrokesBounds(strokes);
-        if (!bounds) return toast('Canvas is empty.');
-        const dx = 150 - bounds.centerX;
-        const dy = 150 - bounds.centerY;
-        setStrokes(prev => prev.map(stroke => {
-            if (!Array.isArray(stroke) || stroke.isMeta) return stroke;
-            const shifted = stroke.map(pt => ({
-                ...pt,
-                x: Math.round((pt.x + dx) * 10) / 10,
-                y: Math.round((pt.y + dy) * 10) / 10
-            }));
-            shifted.lineCap = stroke.lineCap;
-            shifted.isFilled = stroke.isFilled;
-            return shifted;
-        }));
-        toast.success('Glyph centered in square em-box (150, 150)');
-    };
-
-    const handleCenterHorizontal = () => {
-        const bounds = getStrokesBounds(strokes);
-        if (!bounds) return toast('Canvas is empty.');
-        const dx = 150 - bounds.centerX;
-        setStrokes(prev => prev.map(stroke => {
-            if (!Array.isArray(stroke) || stroke.isMeta) return stroke;
-            const shifted = stroke.map(pt => ({
-                ...pt,
-                x: Math.round((pt.x + dx) * 10) / 10
-            }));
-            shifted.lineCap = stroke.lineCap;
-            shifted.isFilled = stroke.isFilled;
-            return shifted;
-        }));
-        toast.success('Glyph centered horizontally (x: 150)');
-    };
-
-    const handleCenterVertical = () => {
-        const bounds = getStrokesBounds(strokes);
-        if (!bounds) return toast('Canvas is empty.');
-        const dy = 150 - bounds.centerY;
-        setStrokes(prev => prev.map(stroke => {
-            if (!Array.isArray(stroke) || stroke.isMeta) return stroke;
-            const shifted = stroke.map(pt => ({
-                ...pt,
-                y: Math.round((pt.y + dy) * 10) / 10
-            }));
-            shifted.lineCap = stroke.lineCap;
-            shifted.isFilled = stroke.isFilled;
-            return shifted;
-        }));
-        toast.success('Glyph centered vertically (y: 150)');
-    };
-
-    const handleFitToEmBox = () => {
-        const bounds = getStrokesBounds(strokes);
-        if (!bounds || (bounds.width === 0 && bounds.height === 0)) return toast('Canvas is empty.');
-        const targetSize = 240; // 80% safe zone in 300px canvas
-        const maxDim = Math.max(bounds.width, bounds.height);
-        if (maxDim <= 0) return;
-        const factor = targetSize / maxDim;
-        setStrokes(prev => prev.map(stroke => {
-            if (!Array.isArray(stroke) || stroke.isMeta) return stroke;
-            const scaled = stroke.map(pt => ({
-                ...pt,
-                x: Math.round((150 + (pt.x - bounds.centerX) * factor) * 10) / 10,
-                y: Math.round((150 + (pt.y - bounds.centerY) * factor) * 10) / 10
-            }));
-            scaled.lineCap = stroke.lineCap;
-            scaled.isFilled = stroke.isFilled;
-            return scaled;
-        }));
-        toast.success('Glyph scaled proportionally to fit em-box');
-    };
-
     // that density is what makes saved glyphs huge. This rewrites the current
     // drawing in a lighter, visually equivalent form; it only affects the
     // canvas until the user saves, so it is safe to try and compare.
@@ -1715,20 +1576,6 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                             <Button variant="default" className="btn-sm" onClick={() => handleMove(0, gridSize)} title="Move Down"><ArrowDown size={16} /></Button>
                             <Button variant="default" className="btn-sm" onClick={() => handleMove(-gridSize, 0)} title="Move Left"><ArrowLeft size={16} /></Button>
                             <Button variant="default" className="btn-sm" onClick={() => handleMove(gridSize, 0)} title="Move Right"><ArrowRight size={16} /></Button>
-                            <div className="fs-align-group">
-                                <Button variant="default" className="btn-sm" onClick={handleCenterInBox} title="Center in Em-Box (Square: 150, 150)">
-                                    <Crosshair size={16} />
-                                </Button>
-                                <Button variant="default" className="btn-sm" onClick={handleCenterHorizontal} title="Center Horizontally (x: 150)">
-                                    <FlipHorizontal size={16} />
-                                </Button>
-                                <Button variant="default" className="btn-sm" onClick={handleCenterVertical} title="Center Vertically (y: 150)">
-                                    <FlipVertical size={16} />
-                                </Button>
-                                <Button variant="default" className="btn-sm" onClick={handleFitToEmBox} title="Fit to Em-Box (Scale proportionally to safe zone without distortion)">
-                                    <Maximize2 size={16} />
-                                </Button>
-                            </div>
                             <Button variant="default" className="btn-sm" onClick={() => setZoom(prev => Math.min(3.0, prev + 0.25))} title="Zoom Viewport In"><ZoomIn size={16} /></Button>
                             <Button variant="default" className="btn-sm" onClick={() => setZoom(prev => Math.max(1.0, prev - 0.25))} title="Zoom Viewport Out"><ZoomOut size={16} /></Button>
                             <Button variant="default" className="btn-sm" onClick={handleUndo} title="Undo">
@@ -1779,19 +1626,6 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setIsSnapToGrid(!isSnapToGrid); } }}
                                 >
                                     Grid Snap {isSnapToGrid ? 'ON' : 'OFF'}
-                                </span>
-                            </div>
-                            <div className="fs-status-item">
-                                <Square size={12} style={{ marginRight: '4px', opacity: showEmBoxGuide ? 1 : 0.3 }}/> 
-                                <span
-                                    role="switch"
-                                    tabIndex={0}
-                                    aria-checked={showEmBoxGuide}
-                                    style={{ cursor: 'pointer', userSelect: 'none' }}
-                                    onClick={() => setShowEmBoxGuide(!showEmBoxGuide)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowEmBoxGuide(!showEmBoxGuide); } }}
-                                >
-                                    Em-Box Guide {showEmBoxGuide ? 'ON' : 'OFF'}
                                 </span>
                             </div>
                             <div className="fs-status-item">

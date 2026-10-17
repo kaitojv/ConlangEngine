@@ -7,7 +7,9 @@ export async function compileFont(customGlyphs, traceWidth = 30, fontScale = 1.0
         const asc = Math.round(800 / fontScale);
         const desc = Math.round(-200 / fontScale);
 
-        const isConsistentGlobal = Boolean(options?.consistentCharacterSize);
+        const isConsistentGlobal = options?.consistentCharacterSize !== undefined 
+            ? Boolean(options.consistentCharacterSize) 
+            : true;
         const targetAdvanceBase = Number(options?.fixedAdvanceWidth) || 1000;
         const targetAdvance = Math.round(targetAdvanceBase * (upe / 1000));
 
@@ -94,6 +96,15 @@ export async function compileFont(customGlyphs, traceWidth = 30, fontScale = 1.0
                 glyphOriginX = meta.leftMargin;
             }
 
+            const centerY = hasPoints ? (minY + maxY) / 2 : 150;
+            const toX = (x) => glyphOriginX + ((x - minX) * 2.85 * meta.scale);
+            const toY = (y) => {
+                if (isConsistent && hasPoints) {
+                    return 300 + ((centerY - y) * 2.85 * meta.scale) + meta.yOffset;
+                }
+                return 400 + ((800 - y * 2.85 - 400) * meta.scale) + meta.yOffset;
+            };
+
             actualStrokes.forEach(strokeData => {
                 const points = Array.isArray(strokeData) ? strokeData : (strokeData.points || []);
                 const isFilled = strokeData.isFilled || false;
@@ -116,17 +127,17 @@ export async function compileFont(customGlyphs, traceWidth = 30, fontScale = 1.0
 
                 if (isFilled && simplified.length >= 3) {
                     // Draw a solid filled path
-                    path.moveTo(glyphOriginX + (simplified[0].x - minX) * 2.85 * meta.scale, 400 + ((800 - simplified[0].y * 2.85 - 400) * meta.scale) + meta.yOffset);
+                    path.moveTo(toX(simplified[0].x), toY(simplified[0].y));
                     for (let i = 1; i < simplified.length; i++) {
-                        path.lineTo(glyphOriginX + (simplified[i].x - minX) * 2.85 * meta.scale, 400 + ((800 - simplified[i].y * 2.85 - 400) * meta.scale) + meta.yOffset);
+                        path.lineTo(toX(simplified[i].x), toY(simplified[i].y));
                     }
                     path.close();
                 } else {
                     // Standard thickened stroke logic
                     for (let i = 0; i < simplified.length; i++) {
                         let pt1 = simplified[i];
-                        let cx1 = glyphOriginX + ((pt1.x - minX) * 2.85 * meta.scale);
-                        let cy1 = 400 + ((800 - pt1.y * 2.85 - 400) * meta.scale) + meta.yOffset;
+                        let cx1 = toX(pt1.x);
+                        let cy1 = toY(pt1.y);
 
                         let r = r_base * meta.scale;
                         if (hasCalligraphy) {
@@ -157,8 +168,8 @@ export async function compileFont(customGlyphs, traceWidth = 30, fontScale = 1.0
 
                         if (i < simplified.length - 1) {
                             let pt2 = simplified[i+1];
-                            let cx2 = glyphOriginX + ((pt2.x - minX) * 2.85 * meta.scale);
-                            let cy2 = 400 + ((800 - pt2.y * 2.85 - 400) * meta.scale) + meta.yOffset;
+                            let cx2 = toX(pt2.x);
+                            let cy2 = toY(pt2.y);
 
                             let next_r = r_base * meta.scale;
                             if (hasCalligraphy) {

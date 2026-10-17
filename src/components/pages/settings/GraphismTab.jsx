@@ -337,7 +337,7 @@ export default function TypographyStudio() {
 
     const isCurrentScriptConsistent = scriptData?.consistentCharacterSize !== undefined
         ? scriptData.consistentCharacterSize
-        : (typographySettings.consistentCharacterSize ?? false);
+        : (typographySettings.consistentCharacterSize ?? true);
     const currentFixedAdvance = scriptData?.fixedAdvanceWidth !== undefined
         ? scriptData.fixedAdvanceWidth
         : (typographySettings.fixedAdvanceWidth ?? 1000);
@@ -355,7 +355,7 @@ export default function TypographyStudio() {
             const currentCustomGlyphs = (storeState.scriptDataById?.[selectedScriptId]?.customGlyphs) || storeState.customGlyphs || {};
             const isConsistent = scriptData?.consistentCharacterSize !== undefined
                 ? scriptData.consistentCharacterSize
-                : (currentSettings.consistentCharacterSize ?? false);
+                : (currentSettings.consistentCharacterSize ?? true);
             const fixedAdvance = scriptData?.fixedAdvanceWidth !== undefined
                 ? scriptData.fixedAdvanceWidth
                 : (currentSettings.fixedAdvanceWidth ?? 1000);
@@ -841,8 +841,8 @@ export default function TypographyStudio() {
 
                         {/* Consistent Character Sizes (Square / Monospace Em-Box) */}
                         <div className="gt-consistent-size-card">
-                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.5rem' }}>
-                                <div>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                                <div style={{ flex: '1 1 300px' }}>
                                     <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', margin: 0 }}>
                                         {t('settings.graphism.consistentSizeTitle')}
                                     </h3>
@@ -850,17 +850,39 @@ export default function TypographyStudio() {
                                         {t('settings.graphism.consistentSizeDesc')}
                                     </p>
                                 </div>
-                                <input 
-                                    type="checkbox" 
-                                    className="toggle toggle-primary"
-                                    checked={isCurrentScriptConsistent}
-                                    onChange={(e) => handleToggleConsistentSize(e.target.checked)}
-                                    title="Toggle consistent square character sizes"
-                                />
+                                <div className="gt-toggle-wrapper">
+                                    <span className={`gt-toggle-status ${isCurrentScriptConsistent ? 'active' : 'inactive'}`}>
+                                        {isCurrentScriptConsistent ? t('settings.graphism.statusEnabled', 'Enabled') : t('settings.graphism.statusDisabled', 'Disabled')}
+                                    </span>
+                                    <label className="gt-switch" title={isCurrentScriptConsistent ? 'Disable consistent square character sizes' : 'Enable consistent square character sizes'}>
+                                        <input 
+                                            type="checkbox" 
+                                            checked={isCurrentScriptConsistent}
+                                            onChange={(e) => handleToggleConsistentSize(e.target.checked)}
+                                        />
+                                        <span className="gt-slider round"></span>
+                                    </label>
+                                </div>
                             </div>
 
-                            {isCurrentScriptConsistent && (
-                                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--bd)' }}>
+                            {!isCurrentScriptConsistent ? (
+                                <div className="gt-consistent-disabled-box">
+                                    <span style={{ fontSize: '0.82rem', color: 'var(--tx2)' }}>
+                                        {t('settings.graphism.consistentSizeDisabledHint', 'Square em-box mode is currently disabled for this script. Characters use variable widths.')}
+                                    </span>
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <Button 
+                                            variant="sec" 
+                                            className="btn-sm"
+                                            onClick={() => handleToggleConsistentSize(true)}
+                                        >
+                                            <Check size={14} style={{ marginRight: '6px' }} />
+                                            {t('settings.graphism.enableConsistentSizeBtn', 'Enable Square Em-Box Mode')}
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="gt-consistent-active-box">
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                                         <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--tx)' }}>
                                             {t('settings.graphism.emBoxAdvanceTitle')}
