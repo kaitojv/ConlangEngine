@@ -20,7 +20,8 @@ import {
     Highlighter, Subscript as SubscriptIcon, Superscript as SuperscriptIcon,
     Strikethrough, List, ListOrdered, Undo, Redo, Eraser,
     Rows, Columns, ArrowUpFromLine, ArrowDownFromLine, ArrowLeftFromLine, ArrowRightFromLine,
-    Indent as IndentIcon, Outdent as OutdentIcon
+    Indent as IndentIcon, Outdent as OutdentIcon,
+    Image as ImageIcon, PenTool, GitBranch
 } from 'lucide-react';
 
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -44,6 +45,13 @@ import { createGrammarAnalyzer } from '@/utils/grammarAnalyzer.js';
 import LiveTranslatorPanel from './LiveTranslatorPanel.jsx';
 import LexiconEditModal from '../dictionary/LexiconEditModal.jsx';
 import { Indent } from './indentExtension.js';
+import { WikiImageNode, WikiDiagramNode, configureWikiNodeViews } from './wikiNodes.js';
+import { WikiImageComponent, WikiDiagramComponent } from './WikiNodeViews.jsx';
+import WikiImageModal from './WikiImageModal.jsx';
+import WikiDoodleModal from './WikiDoodleModal.jsx';
+import WikiDiagramModal from './WikiDiagramModal.jsx';
+
+configureWikiNodeViews(WikiImageComponent, WikiDiagramComponent);
 
 const ConlangSpan = Mark.create({
     name: 'conlangSpan',
@@ -1370,6 +1378,12 @@ function LegacyWikiEditor({ content, onSave }) {
     const [linkModalOpen, setLinkModalOpen] = useState(false);
     const [linkUrl, setLinkUrl] = useState('');
     const [iconPickerOpen, setIconPickerOpen] = useState(false);
+
+    // Rich tools state (Images, Doodles, Diagrams)
+    const [imageModalOpen, setImageModalOpen] = useState(false);
+    const [doodleModalOpen, setDoodleModalOpen] = useState(false);
+    const [diagramModalOpen, setDiagramModalOpen] = useState(false);
+    const [editingDiagramInfo, setEditingDiagramInfo] = useState(null);
     
     // Conlang font insertion state
     const [conlangModalOpen, setConlangModalOpen] = useState(false);
@@ -1424,8 +1438,17 @@ function LegacyWikiEditor({ content, onSave }) {
             TextStyle,
             Color,
             ConlangSpan,
+            WikiImageNode,
+            WikiDiagramNode,
         ],
         content: content || '',
+        editorProps: {
+            attributes: {
+                spellcheck: 'false',
+                autocorrect: 'off',
+                autocapitalize: 'off',
+            }
+        },
         onBlur: ({ editor }) => {
             if (editor && !editor.isDestroyed && onSaveRef.current) {
                 onSaveRef.current(editor.getHTML());
@@ -1459,6 +1482,20 @@ function LegacyWikiEditor({ content, onSave }) {
             if (editor && !editor.isDestroyed && onSaveRef.current) onSaveRef.current(editor.getHTML());
         };
     }, [editor]);
+
+    // Handle interactive in-document diagram edit requests
+    useEffect(() => {
+        const handleEditDiagram = (e) => {
+            if (e.detail) {
+                setEditingDiagramInfo(e.detail);
+                setDiagramModalOpen(true);
+            }
+        };
+        window.addEventListener('edit-wiki-diagram', handleEditDiagram);
+        return () => {
+            window.removeEventListener('edit-wiki-diagram', handleEditDiagram);
+        };
+    }, []);
 
     if (!editor) {
         return null;
@@ -1511,6 +1548,65 @@ function LegacyWikiEditor({ content, onSave }) {
         setConlangModalOpen(false);
     };
 
+    const handleInsertImage = ({ src, caption, alt, align, width }) => {
+        if (!editor) return;
+        const figureAttrs = `class="wiki-figure wiki-align-${align}" data-type="wiki-image" data-align="${align}" data-width="${width}" data-caption="${caption || ''}"`;
+        const styleAttr = width && width !== '100%' ? `style="max-width: ${width};"` : '';
+        let html = `<figure ${figureAttrs}><img src="${src}" alt="${alt || caption || 'Conlang illustration'}" class="wiki-image-element" ${styleAttr} />`;
+        if (caption) {
+            html += `<figcaption class="wiki-figcaption">${caption}</figcaption>`;
+        }
+        html += `</figure><p></p>`;
+        editor.chain().focus().insertContent(html).run();
+    };
+
+    const handleInsertDiagram = ({ diagramType, title, sourceData, svg, width, align }) => {
+        if (!editor) return;
+        const diagramWidth = width || '100%';
+        const diagramAlign = align || 'center';
+
+        if (editingDiagramInfo && editingDiagramInfo.pos !== null && editingDiagramInfo.pos !== undefined) {
+            try {
+                const node = editor.state.doc.nodeAt(editingDiagramInfo.pos);
+                if (node && node.type.name === 'wikiDiagram') {
+                    editor.chain().focus().setNodeSelection(editingDiagramInfo.pos).updateAttributes('wikiDiagram', {
+                        diagramType,
+                        title,
+                        sourceData,
+                        svg,
+                        width: diagramWidth,
+                        align: diagramAlign
+                    }).run();
+                    setEditingDiagramInfo(null);
+                    return;
+                }
+            } catch (err) {
+                console.warn('Fallback inserting updated diagram:', err);
+            }
+        }
+
+        const svgDataUri = svg ? (svg.startsWith('data:') ? svg : `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`) : '';
+        const safeSource = (sourceData || '').replace(/'/g, "&apos;");
+        const safeSvg = (svg || '').replace(/'/g, "&apos;");
+        const styleAttr = diagramWidth && diagramWidth !== '100%' ? `style="max-width: ${diagramWidth}; width: ${diagramWidth};"` : '';
+
+        const html = `
+        <figure class="wiki-diagram-figure wiki-align-${diagramAlign}" data-type="wiki-diagram" data-diagram-type="${diagramType}" data-diagram-title="${title}" data-diagram-source='${safeSource}' data-svg='${safeSvg}' data-width="${diagramWidth}" data-align="${diagramAlign}" ${styleAttr}>
+            <div class="wiki-diagram-header" contenteditable="false">
+                <span class="wiki-diagram-type-pill">${diagramType.toUpperCase()}</span>
+                <span class="wiki-diagram-title-text">${title}</span>
+            </div>
+            <div class="wiki-diagram-preview" contenteditable="false">
+                <img src="${svgDataUri}" alt="${title}" class="wiki-diagram-img" />
+            </div>
+            <figcaption class="wiki-diagram-caption">${title}</figcaption>
+        </figure>
+        <p></p>
+        `;
+        editor.chain().focus().insertContent(html).run();
+        setEditingDiagramInfo(null);
+    };
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <div className="wiki-toolbar" style={{ flexWrap: 'wrap', gap: '4px' }}>
@@ -1555,26 +1651,33 @@ function LegacyWikiEditor({ content, onSave }) {
                 {/* Inserts */}
                 <button className="wiki-tool-btn" onClick={() => setIconPickerOpen(true)} title={t('wiki.richText.insertIcon')}><Smile size={16} /></button>
                 <button className={`wiki-tool-btn ${editor.isActive('link') ? 'active' : ''}`} onClick={() => setLinkModalOpen(true)} title={t('wiki.richText.insertLink')}><Link size={16} /></button>
+                <button className="wiki-tool-btn" onClick={() => setImageModalOpen(true)} title={t('wiki.richText.insertImage')}><ImageIcon size={16} /></button>
+                <button className="wiki-tool-btn" onClick={() => setDoodleModalOpen(true)} title={t('wiki.richText.doodleTool')}><PenTool size={16} /></button>
+                <button className="wiki-tool-btn" onClick={() => { setEditingDiagramInfo(null); setDiagramModalOpen(true); }} title={t('wiki.richText.diagramTool')}><GitBranch size={16} /></button>
+                <button className="wiki-tool-btn" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title={t('wiki.richText.insertTable')}><TableIcon size={16} /></button>
+
+                <div style={{ width: '1px', background: 'var(--bd)', margin: '0 5px', height: '24px' }}></div>
+
                 <button className="wiki-tool-btn" title={t('wiki.richText.formatConlang')} onClick={handleConlangBtnClick}><Type size={16} /> <span style={{fontSize: '0.7rem', marginLeft: '4px', fontWeight: 'bold'}}>{t('wiki.richText.conlangBadge')}</span></button>
                 <button 
                     className={`wiki-tool-btn ${wordAssist ? 'active' : ''}`} 
-                    title="Live Word Assist & Translator" 
+                    title={t('wiki.corpus.wordAssistTooltip') || t('wiki.corpus.wordAssist') || 'Word Assist'} 
                     onClick={() => {
                         const next = !wordAssist;
                         setWordAssist(next);
                         if (next) updateActiveSentence();
                     }}
                 >
-                    <Languages size={16} /> <span style={{ fontSize: '0.7rem', marginLeft: '4px', fontWeight: 'bold' }}>Word Assist</span>
+                    <Languages size={16} /> <span style={{ fontSize: '0.7rem', marginLeft: '4px', fontWeight: 'bold' }}>{t('wiki.corpus.wordAssist') || 'Word Assist'}</span>
                 </button>
                 
                 <div style={{ flex: 1 }}></div>
                 <Button variant="save" onClick={() => onSave(editor.getHTML())}><div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}><Save size={16} /> {t('wiki.saveDocument')}</div></Button>
             </div>
             
-            {/* Table Toolbar (Contextual) */}
+            {/* Table Toolbar (Contextual - Only visible when inside an active table) */}
             {editor.can().deleteTable() && (
-                <div className="wiki-toolbar" style={{ background: 'var(--s3)', borderTop: 'none', borderBottom: '1px solid var(--bd)' }}>
+                <div className="wiki-table-context-toolbar">
                     <span style={{ fontSize: '0.75rem', color: 'var(--tx2)', margin: '0 8px', fontWeight: 'bold' }}>{t('wiki.richText.table')}</span>
                     <button className="wiki-tool-btn" onClick={() => editor.chain().focus().addColumnBefore().run()} title={t('wiki.richText.addColumnBefore')}><ArrowLeftFromLine size={14} /></button>
                     <button className="wiki-tool-btn" onClick={() => editor.chain().focus().addColumnAfter().run()} title={t('wiki.richText.addColumnAfter')}><ArrowRightFromLine size={14} /></button>
@@ -1591,19 +1694,13 @@ function LegacyWikiEditor({ content, onSave }) {
                     <button className="wiki-tool-btn" onClick={() => editor.chain().focus().deleteTable().run()} title={t('wiki.richText.deleteTable')} style={{ color: '#f87171' }}><Trash2 size={14} /></button>
                 </div>
             )}
-            
-            {/* Only show Add Table if not in a table */}
-            {!editor.can().deleteTable() && (
-                <div className="wiki-toolbar" style={{ background: 'var(--s3)', borderTop: 'none', borderBottom: '1px solid var(--bd)', padding: '4px 10px' }}>
-                    <button className="wiki-tool-btn" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><TableIcon size={14} style={{ marginRight: '4px' }} /> {t('wiki.richText.insertTable')}</button>
-                </div>
-            )}
 
             <div style={{ flex: 1, display: 'flex', flexDirection: 'row', minHeight: 0, gap: '12px', overflow: 'hidden' }}>
                 <div className="wiki-editor-container" style={{ flex: 1, overflow: 'auto', padding: '0', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                     <EditorContent 
                         editor={editor} 
                         className="wiki-editor-tiptap"
+                        spellCheck={false}
                     />
                 </div>
 
@@ -1630,6 +1727,31 @@ function LegacyWikiEditor({ content, onSave }) {
                     <Button variant="imp" onClick={setLink}>{t('wiki.richText.insertBtn')}</Button>
                 </div>
             </Modal>
+
+            <WikiImageModal 
+                isOpen={imageModalOpen} 
+                onClose={() => setImageModalOpen(false)} 
+                onInsert={handleInsertImage}
+                t={t}
+            />
+
+            <WikiDoodleModal 
+                isOpen={doodleModalOpen} 
+                onClose={() => setDoodleModalOpen(false)} 
+                onInsert={handleInsertImage}
+                t={t}
+            />
+
+            <WikiDiagramModal 
+                isOpen={diagramModalOpen} 
+                onClose={() => {
+                    setDiagramModalOpen(false);
+                    setEditingDiagramInfo(null);
+                }} 
+                onInsert={handleInsertDiagram}
+                initialData={editingDiagramInfo}
+                t={t}
+            />
 
             <Modal isOpen={iconPickerOpen} onClose={() => setIconPickerOpen(false)} title={t('wiki.richText.insertIcon')}>
                 <div className="icon-picker-grid">

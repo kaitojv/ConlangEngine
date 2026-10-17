@@ -554,6 +554,67 @@
     font-weight: 700;
 }
 
+/* Rich Wiki Content: Figures and Diagrams */
+.pv-wiki-content .wiki-figure { margin: 18px 0; display: table; clear: both; }
+.pv-wiki-content .wiki-align-center { margin-left: auto; margin-right: auto; text-align: center; }
+.pv-wiki-content .wiki-align-left { float: left; margin-right: 18px; margin-bottom: 12px; }
+.pv-wiki-content .wiki-align-right { float: right; margin-left: 18px; margin-bottom: 12px; }
+.pv-wiki-content .wiki-image-element { display: block; max-width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--bd, rgba(255, 255, 255, 0.1)); margin: 0 auto; }
+.pv-wiki-content .wiki-figcaption { margin-top: 6px; font-size: 0.8rem; color: var(--tx2, #94a3b8); text-align: center; font-style: italic; }
+
+.pv-wiki-content .wiki-diagram-figure {
+    margin: 20px auto;
+    max-width: 100%;
+    border: 1px solid var(--bd, rgba(255, 255, 255, 0.1));
+    border-radius: 6px;
+    background: var(--s2, rgba(15, 23, 42, 0.6));
+    overflow: hidden;
+    display: block;
+}
+.pv-wiki-content .wiki-diagram-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--s3, rgba(30, 41, 59, 0.7));
+    border-bottom: 1px solid var(--bd, rgba(255, 255, 255, 0.1));
+}
+.pv-wiki-content .wiki-diagram-type-pill {
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--acc, #7c3aed);
+    color: #ffffff;
+    letter-spacing: 0.05em;
+}
+.pv-wiki-content .wiki-diagram-title-text {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--tx, #f8fafc);
+}
+.pv-wiki-content .wiki-diagram-preview {
+    padding: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow-x: auto;
+    background: var(--s1, rgba(11, 15, 25, 0.8));
+}
+.pv-wiki-content .wiki-diagram-img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+.pv-wiki-content .wiki-diagram-caption {
+    font-size: 0.75rem;
+    color: var(--tx2, #94a3b8);
+    padding: 6px 12px;
+    border-top: 1px solid var(--bd, rgba(255, 255, 255, 0.1));
+    background: var(--s2, rgba(15, 23, 42, 0.6));
+    text-align: center;
+}
+
 /* Footer */
 .pv-footer {
     text-align: center;

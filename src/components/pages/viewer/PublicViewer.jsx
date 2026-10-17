@@ -710,7 +710,10 @@ export default function PublicViewer() {
                                                                     <h4 style={{ color: 'var(--acc)', marginTop: 0, marginBottom: '1rem', fontSize: '1.1rem' }}>{title}</h4>
                                                                     <div 
                                                                         className="pv-wiki-content"
-                                                                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }} 
+                                                                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content, {
+                                                                            ADD_TAGS: ['figure', 'figcaption'],
+                                                                            ADD_ATTR: ['data-type', 'data-diagram-type', 'data-diagram-title', 'data-diagram-source', 'data-svg', 'data-callout-type', 'data-callout-title', 'data-width', 'data-align', 'data-caption']
+                                                                        }) }} 
                                                                     />
                                                                 </div>
                                                             );
@@ -728,7 +731,10 @@ export default function PublicViewer() {
                                                         {isObj && title && <h3 style={{ color: 'var(--acc)', marginTop: 0, marginBottom: '1rem' }}>{title}</h3>}
                                                         <div 
                                                             className="pv-wiki-content"
-                                                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }} 
+                                                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content, {
+                                                                ADD_TAGS: ['figure', 'figcaption'],
+                                                                ADD_ATTR: ['data-type', 'data-diagram-type', 'data-diagram-title', 'data-diagram-source', 'data-svg', 'data-callout-type', 'data-callout-title', 'data-width', 'data-align', 'data-caption']
+                                                            }) }} 
                                                         />
                                                     </div>
                                                 );
