@@ -44,11 +44,48 @@
     margin-bottom: 20px;
 }
 
+.ep-prompt-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 32px;
+    width: 100%;
+    max-width: 650px;
+}
+
+.ep-prompt-container.is-listening {
+    margin-bottom: 36px;
+}
+
 .ep-prompt {
-    font-size: 2rem;
-    font-weight: bold;
-    margin-bottom: 40px;
+    font-size: 2.1rem;
+    font-weight: 700;
+    margin: 0;
     color: var(--tx);
+    line-height: 1.3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.ep-prompt.is-picture {
+    font-size: 4.8rem;
+    line-height: 1;
+}
+
+.ep-prompt-tf-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.ep-prompt-sub-trans {
+    font-size: 1.15rem;
+    color: var(--tx2);
+    font-weight: normal;
 }
 
 .ep-input-area {
@@ -154,33 +191,55 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 44px;
-    height: 44px;
-    margin-bottom: 20px;
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    margin: 0;
     border: 1px solid var(--bd);
     border-radius: 50%;
     background: var(--s2);
     color: var(--tx);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .ep-audio-chip:hover {
     border-color: var(--acc);
     color: var(--acc);
     background: var(--s3);
+    transform: scale(1.06);
+}
+
+.ep-audio-chip:active {
+    transform: scale(0.95);
 }
 
 .ep-audio-chip.playing {
     border-color: var(--acc);
     color: var(--acc);
-    background: var(--s3);
+    background: color-mix(in srgb, var(--acc) 18%, var(--s2));
+    animation: ep-pulse 1.2s infinite ease-in-out;
+}
+
+.ep-listening-btn {
+    width: 80px;
+    height: 80px;
+    border-radius: 50% !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+}
+
+.ep-listening-btn.playing {
     animation: ep-pulse 1.2s infinite ease-in-out;
 }
 
 @keyframes ep-pulse {
     0% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.08); opacity: 0.8; }
+    50% { transform: scale(1.08); opacity: 0.85; }
     100% { transform: scale(1); opacity: 1; }
 }
 
@@ -233,10 +292,23 @@
         margin-bottom: 16px;
     }
 
-    .ep-prompt {
-        font-size: 1.4rem;
+    .ep-prompt-container {
+        gap: 10px;
         margin-bottom: 20px;
+    }
+
+    .ep-prompt {
+        font-size: 1.5rem;
         word-break: break-word;
+    }
+
+    .ep-prompt.is-picture {
+        font-size: 3.5rem;
+    }
+
+    .ep-audio-chip {
+        width: 38px;
+        height: 38px;
     }
 
     .ep-instruction {

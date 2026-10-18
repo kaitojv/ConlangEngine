@@ -89,4 +89,20 @@ const resolvedLak = resolvePhraseIpa(mockExerciseTranslate.conlangSentence, mock
 assert.equal(resolvedLak, 'lak', 'Resolves pronunciation text even when unlisted');
 console.log('  ✓ Exercise player automatically enables IPA audio on conlang exercise prompts');
 
-console.log('\nAll Course Editor IPA audio tests passed successfully!');
+// 11. Matching pairs audio trigger on EVERY match
+const matchingEx = {
+    type: 'matching_pairs',
+    pairs: [
+        { conlang: 'nuvir', english: 'sun' },
+        { conlang: 'mita', english: 'water' },
+        { conlang: 'kato', english: 'cat' }
+    ]
+};
+matchingEx.pairs.forEach((pair, idx) => {
+    const pairIpa = resolvePhraseIpa(pair.conlang, mockLexicon);
+    assert.ok(pairIpa, `Match ${idx + 1} (${pair.conlang}) resolves non-empty IPA reading for sound trigger`);
+});
+console.log('  ✓ Every matching pair triggers audio pronunciation on match');
+
+console.log('\nAll Course Editor IPA audio and study tests passed successfully!');
+

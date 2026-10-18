@@ -16,6 +16,7 @@ import { getCourseAudioUrl, hasCourseAudio } from '@/utils/courseAudio.js';
 import { playAzureTTS } from '@/utils/azureTTS.js';
 import { resolvePhraseIpa } from '@/utils/ipaGenerator.js';
 import GlyphDrawCanvas from './GlyphDrawCanvas.jsx';
+import { playCorrect, playIncorrect } from '@/utils/soundEffects.js';
 import * as LucideIcons from 'lucide-react';
 import './exercisePlayer.css';
 
@@ -222,7 +223,8 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
         (currentEx.type !== 'teach' &&
          currentEx.type !== 'matching_pairs' &&
          currentEx.type !== 'listening' &&
-         (currentEx.type !== 'translate_to_conlang' || feedback) &&
+         currentEx.type !== 'glyph_drawing' &&
+         (currentEx.type !== 'translate_to_conlang' && currentEx.type !== 'word_bank' && currentEx.type !== 'sentence_reorder' || feedback) &&
          Boolean(currentEx.conlangSentence?.trim() || currentEx.targetText?.trim()))
     );
 
@@ -291,6 +293,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
         }
 
         if (isCorrect) {
+            playCorrect();
             const drawSuffix = currentEx.type === 'glyph_drawing' && grading
                 ? ` (${Math.round(grading.score * 100)}% match)`
                 : '';
@@ -302,6 +305,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                 setSessionStats(prev => ({ ...prev, correct: prev.correct + 1 }));
             }
         } else {
+            playIncorrect();
             const expectedDisplay = (currentEx.type === 'translate_to_conlang' || currentEx.type === 'listening' || currentEx.type === 'word_bank' || currentEx.type === 'sentence_reorder')
                 ? currentEx.conlangSentence
                 : currentEx.type === 'glyph_drawing' ? currentEx.targetText
@@ -346,9 +350,14 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
             const isPair = currentEx.pairs.find(p => p.conlang === newSelected.conlang && p.english === newSelected.english);
             if (isPair) {
                 setMatchedPairs(prev => [...prev, newSelected.conlang]);
+                playCorrect();
+                // Play audio for the conlang word on every successful match
+                handlePlayAudio(isPair.conlang);
+            } else {
+                playIncorrect();
             }
             // Reset selection after a short delay or immediately
-            setTimeout(() => setMatchingSelected({ conlang: null, english: null }), 300);
+            setTimeout(() => setMatchingSelected({ conlang: null, english: null }), 320);
         }
     };
 
@@ -459,7 +468,7 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
 
         return (
             <Card className="exercise-player finished-screen" style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
-                <Mascot state="correct" isSpeaking={false} />
+                <Mascot state="correct" isSpeaking={false} size="large" />
                 <h2 style={{ fontSize: '2.5rem', margin: '20px 0 10px 0', color: 'var(--acc)' }}>{t('exercisePlayer.lessonComplete')}</h2>
                 
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', margin: '15px 0' }}>
@@ -562,48 +571,47 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                 )}
 
                 {currentEx.type !== 'matching_pairs' && currentEx.type !== 'teach' && currentEx.type !== 'listening' && currentEx.type !== 'glyph_drawing' && (
-                    <div className={`ep-prompt ${currentEx.type === 'picture_match' ? '' : 'custom-font-text notranslate'}`} style={{ fontSize: currentEx.type === 'picture_match' ? '5rem' : currentEx.type === 'translate_to_conlang' ? '1.5rem' : '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                        {currentEx.type === 'translate_to_english' ? transliterate(currentEx.conlangSentence)
-                        : currentEx.type === 'multiple_choice' ? transliterate(currentEx.conlangSentence)
-                        : currentEx.type === 'picture_match' ? currentEx.conlangSentence
-                        : currentEx.type === 'fill_blank' ? transliterate(currentEx.conlangSentence)
-                        : currentEx.type === 'conjugation_drill' ? currentEx.conlangSentence
-                        : currentEx.type === 'true_false' ? (
-                            <>
-                                <span className="custom-font-text notranslate">{transliterate(currentEx.conlangSentence)}</span>
-                                <span className="custom-font-text notranslate" style={{ fontSize: '1.2rem', color: 'var(--tx2)' }}>"{currentEx.displayEnglish}"</span>
-                            </>
-                        )
-                        : currentEx.englishSentence}
+                    <div className="ep-prompt-container">
+                        {canPlayAudio && (
+                            <button
+                                type="button"
+                                className={`ep-audio-chip ${isAudioPlaying ? 'playing' : ''}`}
+                                onClick={() => handlePlayAudio()}
+                                title={t('exercisePlayer.playPronunciation')}
+                                aria-label={t('exercisePlayer.playPronunciation')}
+                            >
+                                <LucideIcons.Volume2 size={20} />
+                            </button>
+                        )}
+                        <div className={`ep-prompt ${currentEx.type === 'picture_match' ? 'is-picture' : 'custom-font-text notranslate'}`}>
+                            {currentEx.type === 'translate_to_english' ? transliterate(currentEx.conlangSentence)
+                            : currentEx.type === 'multiple_choice' ? transliterate(currentEx.conlangSentence)
+                            : currentEx.type === 'picture_match' ? currentEx.conlangSentence
+                            : currentEx.type === 'fill_blank' ? transliterate(currentEx.conlangSentence)
+                            : currentEx.type === 'conjugation_drill' ? currentEx.conlangSentence
+                            : currentEx.type === 'true_false' ? (
+                                <div className="ep-prompt-tf-group">
+                                    <span className="custom-font-text notranslate">{transliterate(currentEx.conlangSentence)}</span>
+                                    <span className="ep-prompt-sub-trans">"{currentEx.displayEnglish}"</span>
+                                </div>
+                            )
+                            : currentEx.englishSentence}
+                        </div>
                     </div>
                 )}
 
                 {currentEx.type === 'listening' && (
-                    <div className="ep-prompt" style={{ display: 'flex', justifyContent: 'center' }}>
+                    <div className="ep-prompt-container is-listening">
                          <Button
                              variant="imp"
-                             style={{ width: '80px', height: '80px', borderRadius: '50%' }}
-                             className={isAudioPlaying ? 'playing' : ''}
+                             className={`ep-listening-btn ${isAudioPlaying ? 'playing' : ''}`}
                              onClick={() => handlePlayAudio()}
                              title={t('exercisePlayer.playPronunciation')}
                              aria-label={t('exercisePlayer.playPronunciation')}
                          >
-                             <LucideIcons.Volume2 size={40} />
+                             <LucideIcons.Volume2 size={38} />
                          </Button>
                     </div>
-                )}
-
-                {/* Pronunciation audio: creator recording if attached, otherwise IPA synthesizer */}
-                {canPlayAudio && (
-                    <button
-                        type="button"
-                        className={`ep-audio-chip ${isAudioPlaying ? 'playing' : ''}`}
-                        onClick={() => handlePlayAudio()}
-                        title={t('exercisePlayer.playPronunciation')}
-                        aria-label={t('exercisePlayer.playPronunciation')}
-                    >
-                        <LucideIcons.Volume2 size={20} />
-                    </button>
                 )}
 
                 {currentEx.type === 'glyph_drawing' && (
@@ -688,7 +696,10 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                                         onClick={() => {
                                             if (!isMatched) {
                                                 handleMatchSelect('conlang', item.conlang);
-                                                handlePlayAudio(item.conlang);
+                                                // If this tap doesn't complete a pair match right now, pronounce immediately
+                                                if (!matchingSelected.english) {
+                                                    handlePlayAudio(item.conlang);
+                                                }
                                             }
                                         }}
                                         disabled={isMatched || !!feedback}

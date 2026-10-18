@@ -150,6 +150,7 @@ export const INITIAL_CONFIG = {
     kokoroSpeed: 1.0,
     kokoroSendIpa: true,
     kokoroEndpointType: 'browser',
+    kokoroDevice: 'auto', // 'auto' | 'wasm' | 'webgpu'
     openTtsUrl: 'http://localhost:5500',
     openTtsVoice: 'espeak:en',
     customTtsUrl: '',

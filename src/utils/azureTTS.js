@@ -196,6 +196,7 @@ export const speakWithKokoro = async ({
     voice = 'af_heart',
     speed = 1.0,
     sendIpa = true,
+    devicePreference = 'auto',
     onProgress
 } = {}) => {
     // If endpointType is 'browser' (or not explicitly 'remote' with a valid non-localhost URL):
@@ -207,6 +208,7 @@ export const speakWithKokoro = async ({
             voice,
             speed,
             sendIpa,
+            devicePreference,
             onProgress
         });
     }
@@ -462,7 +464,8 @@ export const playTTS = async ({ text, ipa, voice, useIpa = false, engine } = {})
                 url: state.kokoroUrl || '',
                 voice: state.kokoroVoice || 'af_heart',
                 speed: state.kokoroSpeed ?? state.ttsSpeed ?? 1.0,
-                sendIpa: state.kokoroSendIpa ?? true
+                sendIpa: state.kokoroSendIpa ?? true,
+                devicePreference: state.kokoroDevice || 'auto'
             });
             return;
         } catch (err) {

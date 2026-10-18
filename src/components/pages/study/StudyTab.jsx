@@ -1143,7 +1143,7 @@ export default function StudyTab() {
                 <Card className="quiz-area">
                     {hasFinished ? (
                         <div className="quiz-finished">
-                            <Mascot state="correct" isSpeaking={true} />
+                            <Mascot state="correct" isSpeaking={false} size="large" />
                             <h2 className="finished-title" style={{marginTop: '20px'}}>Level Complete!</h2>
                             <p className="finished-text">You've mastered these {pathLevel}s. Your streak has been updated!</p>
                             <Button variant="imp" onClick={() => setStudyMode('path')} style={{marginTop: '20px'}}>

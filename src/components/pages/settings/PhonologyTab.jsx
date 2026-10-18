@@ -12,11 +12,11 @@ import applySoundChanges from '../../../utils/applysoundchanges.jsx';
 import { VisualRuleBuilder } from './grammarMatrix/VisualRuleBuilder.jsx';
 import ProsodyRulesCard from './ProsodyRulesCard.jsx';
 import MultiSelectDropdown from '../../UI/MultiSelectDropdown/MultiSelectDropdown.jsx';
-import { Info, AudioLines, Headphones, Music, Hourglass, Wand2, BookCheck, Eye, Trash2, SquarePen, Volume2, Play } from 'lucide-react';
+import { Info, AudioLines, Headphones, Music, Hourglass, Wand2, BookCheck, Eye, Trash2, SquarePen, Volume2, Play, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../../UI/Modal/Modal.jsx';
 import { playTTS, speakWithKokoro } from '../../../utils/azureTTS.js';
-import { KOKORO_VOICES, getKokoroStatus, subscribeKokoroStatus, initKokoroModel } from '../../../utils/kokoroBrowserTTS.js';
+import { KOKORO_VOICES, getKokoroStatus, subscribeKokoroStatus, initKokoroModel, clearKokoroCache } from '../../../utils/kokoroBrowserTTS.js';
 import './phonologyTab.css';
 
 export default function PhonologyTab() {
@@ -43,6 +43,7 @@ export default function PhonologyTab() {
     const kokoroVoice = useConfigStore((state) => state.kokoroVoice) || 'af_heart';
     const kokoroSpeed = useConfigStore((state) => state.kokoroSpeed) ?? 1.0;
     const kokoroSendIpa = useConfigStore((state) => state.kokoroSendIpa) ?? true;
+    const kokoroDevice = useConfigStore((state) => state.kokoroDevice) || 'auto';
     const openTtsUrl = useConfigStore((state) => state.openTtsUrl) || 'http://localhost:5500';
     const openTtsVoice = useConfigStore((state) => state.openTtsVoice) || 'espeak:en';
     const customTtsUrl = useConfigStore((state) => state.customTtsUrl) || '';
@@ -56,6 +57,7 @@ export default function PhonologyTab() {
     const [kokoroEngineStatus, setKokoroEngineStatus] = useState(getKokoroStatus());
     const [isPreloadingKokoro, setIsPreloadingKokoro] = useState(false);
     const [isTestingKokoro, setIsTestingKokoro] = useState(false);
+    const [isClearingKokoroCache, setIsClearingKokoroCache] = useState(false);
 
     React.useEffect(() => {
         return subscribeKokoroStatus((status) => {
@@ -70,12 +72,24 @@ export default function PhonologyTab() {
         try {
             setIsPreloadingKokoro(true);
             toast.loading('Downloading Kokoro neural model weights (~80MB)...', { id: 'kokoro-preload' });
-            await initKokoroModel();
+            await initKokoroModel({ devicePreference: kokoroDevice });
             toast.success('Kokoro neural model is ready in browser!', { id: 'kokoro-preload' });
         } catch (err) {
             toast.error('Failed to load Kokoro: ' + (err.message || ''), { id: 'kokoro-preload' });
         } finally {
             setIsPreloadingKokoro(false);
+        }
+    };
+
+    const handleClearKokoroCache = async () => {
+        try {
+            setIsClearingKokoroCache(true);
+            await clearKokoroCache();
+            toast.success('Kokoro voice and model cache cleared! Voices will re-download cleanly.');
+        } catch (err) {
+            toast.error('Failed to clear cache: ' + (err.message || ''));
+        } finally {
+            setIsClearingKokoroCache(false);
         }
     };
 
@@ -98,7 +112,7 @@ export default function PhonologyTab() {
                     : isFr
                         ? { text: 'Bonjour! La synthèse vocale Kokoro fonctionne parfaitement.', ipa: '/bɔ̃ˈʒuʁ koˈkoʁo/' }
                         : isIt
-                            ? { text: 'Ciao! La sintesi vocale Kokoro funziona perfettamente.', ipa: '/ˈt͡ʃao koˈkoro/' }
+                            ? { text: 'Ciao! La sintesi vocale Kokoro funciona perfettamente.', ipa: '/ˈt͡ʃao koˈkoro/' }
                             : isJa
                                 ? { text: 'こんにちは！Kokoro音声合成が正常に動作しています。', ipa: '/koɴ.ni.t͡ɕi.wa/' }
                                 : isZh
@@ -116,7 +130,8 @@ export default function PhonologyTab() {
                 url: kokoroUrl,
                 voice: kokoroVoice,
                 speed: kokoroSpeed,
-                sendIpa: true
+                sendIpa: true,
+                devicePreference: kokoroDevice
             });
         } catch (err) {
             toast.error('Kokoro speech test failed: ' + (err.message || ''));
@@ -787,6 +802,17 @@ export default function PhonologyTab() {
                                                 <Volume2 size={14} style={{ marginRight: '4px' }} />
                                                 {isTestingKokoro ? 'Synthesizing...' : 'Test Voice'}
                                             </Button>
+                                            <Button
+                                                type="button"
+                                                variant="secondary"
+                                                size="small"
+                                                disabled={isClearingKokoroCache || isTestingKokoro}
+                                                onClick={handleClearKokoroCache}
+                                                title="Clear cached voices and model weights to fix corrupted downloads or glitchy audio"
+                                            >
+                                                <RotateCcw size={14} style={{ marginRight: '4px' }} />
+                                                {isClearingKokoroCache ? 'Clearing...' : 'Clear Cache'}
+                                            </Button>
                                         </div>
                                     </div>
 
@@ -802,6 +828,28 @@ export default function PhonologyTab() {
                                             />
                                         </div>
                                     )}
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '2px' }}>
+                                        <label style={{ fontSize: '0.78rem', color: 'var(--tx2)', fontWeight: 600 }}>
+                                            Hardware Backend:
+                                        </label>
+                                        <select
+                                            value={kokoroDevice}
+                                            onChange={(e) => updateConfig({ kokoroDevice: e.target.value })}
+                                            style={{
+                                                padding: '5px 8px',
+                                                fontSize: '0.8rem',
+                                                borderRadius: '4px',
+                                                background: 'var(--bg1)',
+                                                color: 'var(--tx1)',
+                                                border: '1px solid var(--border)'
+                                            }}
+                                        >
+                                            <option value="auto">Auto (WebGPU with WASM fallback)</option>
+                                            <option value="wasm">WebAssembly CPU (Safe Mode - Fixes sound distortion / cracks on Intel & AMD GPUs)</option>
+                                            <option value="webgpu">WebGPU (Hardware Accelerated - fp32)</option>
+                                        </select>
+                                    </div>
 
                                     <small style={{ color: 'var(--tx3)', fontSize: '0.8rem', lineHeight: 1.4 }}>
                                         Runs 100% inside your browser using WebAssembly / WebGPU and ONNX Runtime Web. Zero Docker, zero local server, zero external API keys needed.

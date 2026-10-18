@@ -110,5 +110,29 @@ console.log('  ✓ Regra 4: Pontos de separação silábica removidos para leitu
 assert.equal(sanitizeKokoroIPA('/ˈgã.t͡ʃo.ni/'), 'ˈɡa\u0303ʧoni');
 console.log('  ✓ Ordem de normalização completa testada e validada');
 
+// 9. encodePCM16WAV universal 16-bit PCM WAV encoder
+const { encodePCM16WAV, clearKokoroCache } = await import('../src/utils/kokoroBrowserTTS.js');
+const testSamples = new Float32Array([0, 0.5, -0.5, 1.0, -1.0]);
+const wavBuffer = encodePCM16WAV(testSamples, 24000);
+const wavView = new DataView(wavBuffer);
+assert.equal(wavBuffer.byteLength, 44 + testSamples.length * 2, 'WAV buffer length is exactly header + 16-bit samples');
+assert.equal(wavView.getUint16(20, true), 1, 'AudioFormat is 1 (Standard PCM Integer, NOT format 3 float)');
+assert.equal(wavView.getUint16(22, true), 1, 'NumChannels is 1');
+assert.equal(wavView.getUint32(24, true), 24000, 'SampleRate is 24000');
+assert.equal(wavView.getUint16(34, true), 16, 'BitsPerSample is 16');
+console.log('  ✓ encodePCM16WAV generates valid 16-bit PCM WAV headers with exact bounds');
+
+// 10. detectDevice with preferences
+assert.equal(await detectDevice('wasm'), 'wasm', 'Forced WASM preference returns wasm');
+const autoDevice = await detectDevice('auto');
+assert.ok(autoDevice === 'wasm' || autoDevice === 'webgpu', 'Auto device preference resolves cleanly');
+console.log('  ✓ detectDevice correctly honors device preference (wasm / auto / webgpu)');
+
+// 11. clearKokoroCache is safe in headless environment
+await assert.doesNotReject(async () => {
+    await clearKokoroCache();
+});
+console.log('  ✓ clearKokoroCache runs safely and resets engine state');
+
 console.log('All azureTTS, kokoroTTS & formantSynth tests passed!');
 

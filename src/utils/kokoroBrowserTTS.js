@@ -16,6 +16,9 @@ import { ipaToPhoneticText } from './azureTTS.js';
 let ttsInstance = null;
 let loadPromise = null;
 let currentAudio = null;
+let currentAudioContext = null;
+let currentSourceNode = null;
+let loadedDevicePreference = null;
 let modelStatus = 'unloaded'; // 'unloaded' | 'loading' | 'ready' | 'error'
 let loadProgress = 0;
 let statusMessage = '';
@@ -56,9 +59,18 @@ export const subscribeKokoroStatus = (listener) => {
 };
 
 /**
- * Detects whether WebGPU is supported and available in the current browser.
+ * Detects the execution device (webgpu or wasm) according to availability and preference.
+ *
+ * @param {'auto' | 'wasm' | 'webgpu'} preference
+ * - 'auto': Uses WebGPU if supported by browser/GPU, fallback to WASM
+ * - 'wasm': Forces CPU WebAssembly SIMD (Safe Mode - fixes GPU driver cracks/squishing)
+ * - 'webgpu': Forces WebGPU hardware acceleration
  */
-export const detectDevice = async () => {
+export const detectDevice = async (preference = 'auto') => {
+    if (preference === 'wasm') {
+        return 'wasm';
+    }
+
     if (typeof navigator !== 'undefined' && 'gpu' in navigator && navigator.gpu) {
         try {
             const adapter = await navigator.gpu.requestAdapter();
@@ -67,6 +79,7 @@ export const detectDevice = async () => {
             // WebGPU permission denied or unavailable
         }
     }
+
     return 'wasm';
 };
 
@@ -117,10 +130,155 @@ export const sanitizeKokoroIPA = (ipa) => {
 };
 
 /**
+ * Encodes audio samples to standard 16-bit PCM WAV (Format 1).
+ * Universally supported across all OS audio stacks and browsers without 32-bit float decoding artifacts.
+ */
+export function encodePCM16WAV(samples, sampleRate = 24000) {
+    const buffer = new ArrayBuffer(44 + samples.length * 2);
+    const view = new DataView(buffer);
+
+    const writeString = (offset, string) => {
+        for (let i = 0; i < string.length; i++) {
+            view.setUint8(offset + i, string.charCodeAt(i));
+        }
+    };
+
+    // RIFF chunk descriptor
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + samples.length * 2, true);
+    writeString(8, 'WAVE');
+
+    // "fmt " sub-chunk
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true); // Subchunk1Size (16 for PCM)
+    view.setUint16(20, 1, true); // AudioFormat 1 = PCM (Signed 16-bit)
+    view.setUint16(22, 1, true); // NumChannels = 1 (Mono)
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true); // ByteRate = sampleRate * numChannels * 2
+    view.setUint16(32, 2, true); // BlockAlign = numChannels * 2
+    view.setUint16(34, 16, true); // BitsPerSample = 16
+
+    // "data" sub-chunk
+    writeString(36, 'data');
+    view.setUint32(40, samples.length * 2, true);
+
+    // Write samples clamped and scaled to 16-bit signed integer [-32768, 32767]
+    let offset = 44;
+    for (let i = 0; i < samples.length; i++, offset += 2) {
+        const s = Math.max(-1, Math.min(1, samples[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+
+    return buffer;
+}
+
+/**
+ * High-fidelity audio player for Kokoro raw neural audio.
+ *
+ * Benefits:
+ * 1. Native Web Audio API (AudioContext) avoids buggy browser 32-bit float WAV decoders.
+ * 2. Peak normalization & limiter prevents DAC overflow clicks, squishing, and crackling.
+ * 3. Falls back to standard 16-bit PCM WAV if AudioContext is unsupported.
+ */
+export const playRawAudio = async (rawAudio) => {
+    stopKokoroAudio();
+
+    if (!rawAudio || !rawAudio.audio) return;
+
+    const sampleRate = rawAudio.sampling_rate || 24000;
+    const rawData = rawAudio.audio;
+
+    // 1. Sanitize NaNs/Infinities and compute peak amplitude
+    let maxVal = 0;
+    const cleanSamples = new Float32Array(rawData.length);
+    for (let i = 0; i < rawData.length; i++) {
+        let val = rawData[i];
+        if (!Number.isFinite(val)) {
+            val = 0;
+        }
+        cleanSamples[i] = val;
+        const abs = Math.abs(val);
+        if (abs > maxVal) maxVal = abs;
+    }
+
+    // 2. Anti-clipping peak limiter with safe headroom (0.98)
+    if (maxVal > 0.98) {
+        const factor = 0.98 / maxVal;
+        for (let i = 0; i < cleanSamples.length; i++) {
+            cleanSamples[i] *= factor;
+        }
+    }
+
+    // 3. Web Audio API playback: Direct Float32 channel feed without codec translation
+    if (typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)) {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            const ctx = new AudioCtx();
+            currentAudioContext = ctx;
+
+            if (ctx.state === 'suspended') {
+                await ctx.resume();
+            }
+
+            const buffer = ctx.createBuffer(1, cleanSamples.length, sampleRate);
+            buffer.copyToChannel(cleanSamples, 0);
+
+            const source = ctx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(ctx.destination);
+            currentSourceNode = source;
+
+            return new Promise((resolve) => {
+                source.onended = () => {
+                    if (currentSourceNode === source) currentSourceNode = null;
+                    if (currentAudioContext === ctx) {
+                        try { ctx.close(); } catch {}
+                        currentAudioContext = null;
+                    }
+                    resolve();
+                };
+                source.start(0);
+            });
+        } catch (audioCtxErr) {
+            console.warn('Web Audio API playback failed, falling back to 16-bit PCM WAV:', audioCtxErr);
+        }
+    }
+
+    // 4. Fallback: 16-bit PCM WAV through HTML5 Audio element
+    return new Promise((resolve, reject) => {
+        try {
+            const wavBuffer = encodePCM16WAV(cleanSamples, sampleRate);
+            const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+            const audioUrl = URL.createObjectURL(blob);
+            const audioEl = new Audio(audioUrl);
+            currentAudio = audioEl;
+
+            audioEl.onended = () => {
+                URL.revokeObjectURL(audioUrl);
+                if (currentAudio === audioEl) currentAudio = null;
+                resolve();
+            };
+            audioEl.onerror = (e) => {
+                URL.revokeObjectURL(audioUrl);
+                if (currentAudio === audioEl) currentAudio = null;
+                reject(e);
+            };
+            audioEl.play().catch(reject);
+        } catch (playErr) {
+            reject(playErr);
+        }
+    });
+};
+
+/**
  * Initializes and caches the in-browser KokoroTTS model.
  * Downloads model weights on first invocation (cached afterwards).
+ *
+ * @param {Object} options
+ * @param {Function} [options.onProgress]
+ * @param {'auto' | 'wasm' | 'webgpu'} [options.devicePreference='auto']
  */
-export const initKokoroModel = async ({ onProgress } = {}) => {
+export const initKokoroModel = async ({ onProgress, devicePreference = 'auto' } = {}) => {
     if (typeof window === 'undefined') {
         // Node / test environment safe mock
         modelStatus = 'ready';
@@ -128,8 +286,16 @@ export const initKokoroModel = async ({ onProgress } = {}) => {
         return null;
     }
 
-    if (ttsInstance) {
+    // If already loaded with the same device preference, reuse instance
+    if (ttsInstance && (!loadedDevicePreference || loadedDevicePreference === devicePreference)) {
         return ttsInstance;
+    }
+
+    // If user changed device preference (e.g. from WebGPU to WASM), reset instance to switch backend
+    if (ttsInstance && loadedDevicePreference && loadedDevicePreference !== devicePreference) {
+        stopKokoroAudio();
+        ttsInstance = null;
+        loadPromise = null;
     }
 
     if (loadPromise) {
@@ -144,8 +310,8 @@ export const initKokoroModel = async ({ onProgress } = {}) => {
     loadPromise = (async () => {
         try {
             const { KokoroTTS } = await import('kokoro-js');
-            const detected = await detectDevice();
-            activeDevice = detected;
+            const targetDevice = await detectDevice(devicePreference);
+            activeDevice = targetDevice;
 
             const handleProgress = (p) => {
                 if (p && typeof p.progress === 'number') {
@@ -158,23 +324,23 @@ export const initKokoroModel = async ({ onProgress } = {}) => {
                 if (onProgress) onProgress(p);
             };
 
-            // If WebGPU is supported, use fp32 for maximum precision.
-            // On WASM, use q8 quantization for fast CPU execution and small ~80MB footprint.
-            const preferredDtype = detected === 'webgpu' ? 'fp32' : 'q8';
+            // If WebGPU is selected/supported, use fp32 for maximum neural fidelity.
+            // On WASM, use q8 quantization for fast CPU execution and clean compatibility.
+            const preferredDtype = targetDevice === 'webgpu' ? 'fp32' : 'q8';
             const modelId = 'onnx-community/Kokoro-82M-v1.0-ONNX';
 
-            statusMessage = `Loading Kokoro neural weights (${detected.toUpperCase()})...`;
+            statusMessage = `Loading Kokoro neural weights (${targetDevice.toUpperCase()})...`;
             notifyListeners();
 
             let instance;
             try {
                 instance = await KokoroTTS.from_pretrained(modelId, {
                     dtype: preferredDtype,
-                    device: detected,
+                    device: targetDevice,
                     progress_callback: handleProgress
                 });
             } catch (initErr) {
-                if (detected === 'webgpu') {
+                if (targetDevice === 'webgpu') {
                     console.warn('WebGPU Kokoro load failed, falling back to WASM q8:', initErr);
                     activeDevice = 'wasm';
                     statusMessage = 'Falling back to WebAssembly (q8)...';
@@ -190,7 +356,6 @@ export const initKokoroModel = async ({ onProgress } = {}) => {
             }
 
             // Patch instance voice validator so it supports all accents & international voices
-            // (Portuguese pm_alex/pf_dora, Spanish ef_dora/em_alex, French ff_siwis, Italian if_sara, etc.)
             const allowedVoices = new Set(KOKORO_VOICES.map(v => v.value));
             instance._validate_voice = function(voice) {
                 if (allowedVoices.has(voice)) {
@@ -200,6 +365,7 @@ export const initKokoroModel = async ({ onProgress } = {}) => {
             };
 
             ttsInstance = instance;
+            loadedDevicePreference = devicePreference;
             modelStatus = 'ready';
             loadProgress = 100;
             statusMessage = `Ready (${activeDevice.toUpperCase()})`;
@@ -219,18 +385,62 @@ export const initKokoroModel = async ({ onProgress } = {}) => {
 };
 
 /**
- * Stops any currently playing Kokoro audio.
+ * Stops any currently playing Kokoro audio across all audio players.
  */
 export const stopKokoroAudio = () => {
+    if (currentSourceNode) {
+        try {
+            currentSourceNode.stop();
+            currentSourceNode.disconnect();
+        } catch {}
+        currentSourceNode = null;
+    }
+    if (currentAudioContext && currentAudioContext.state !== 'closed') {
+        try {
+            currentAudioContext.close();
+        } catch {}
+        currentAudioContext = null;
+    }
     if (currentAudio) {
         try {
             currentAudio.pause();
             currentAudio.currentTime = 0;
             currentAudio = null;
-        } catch {
-            // Ignore playback cleanup errors
+        } catch {}
+    }
+};
+
+/**
+ * Clears the Kokoro voice and model caches in CacheStorage
+ * to fix any corrupted voice downloads or broken model weights.
+ */
+export const clearKokoroCache = async () => {
+    stopKokoroAudio();
+    ttsInstance = null;
+    loadPromise = null;
+    loadedDevicePreference = null;
+    modelStatus = 'unloaded';
+    loadProgress = 0;
+    statusMessage = 'Cache cleared. Ready to reload.';
+    notifyListeners();
+
+    let clearedVoices = false;
+    let clearedModels = false;
+
+    if (typeof caches !== 'undefined') {
+        try {
+            clearedVoices = await caches.delete('kokoro-voices');
+        } catch (e) {
+            console.warn('Could not delete kokoro-voices cache:', e);
+        }
+        try {
+            clearedModels = await caches.delete('transformers-cache');
+        } catch (e) {
+            console.warn('Could not delete transformers-cache:', e);
         }
     }
+
+    return { clearedVoices, clearedModels };
 };
 
 /**
@@ -242,6 +452,7 @@ export const speakWithKokoroInBrowser = async ({
     voice = 'af_heart',
     speed = 1.0,
     sendIpa = true,
+    devicePreference = 'auto',
     onProgress
 } = {}) => {
     if (typeof window === 'undefined') {
@@ -251,7 +462,7 @@ export const speakWithKokoroInBrowser = async ({
 
     stopKokoroAudio();
 
-    const tts = await initKokoroModel({ onProgress });
+    const tts = await initKokoroModel({ onProgress, devicePreference });
     if (!tts) return;
 
     const cleanSpeed = Math.max(0.5, Math.min(2.0, Number(speed) || 1.0));
@@ -315,29 +526,8 @@ export const speakWithKokoroInBrowser = async ({
 
     if (!audio) return;
 
-    // 3. Play generated raw audio through browser Audio
-    return new Promise((resolve, reject) => {
-        try {
-            const blob = audio.toBlob();
-            const audioUrl = URL.createObjectURL(blob);
-            const audioEl = new Audio(audioUrl);
-            currentAudio = audioEl;
-
-            audioEl.onended = () => {
-                URL.revokeObjectURL(audioUrl);
-                if (currentAudio === audioEl) currentAudio = null;
-                resolve();
-            };
-            audioEl.onerror = (e) => {
-                URL.revokeObjectURL(audioUrl);
-                if (currentAudio === audioEl) currentAudio = null;
-                reject(e);
-            };
-            audioEl.play().catch(reject);
-        } catch (playErr) {
-            reject(playErr);
-        }
-    });
+    // 3. Play generated raw audio through Web Audio API with peak limiter & fallback
+    return playRawAudio(audio);
 };
 
 /**
