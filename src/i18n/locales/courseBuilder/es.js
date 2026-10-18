@@ -58,6 +58,9 @@ export default {
   audioAttached: "Audio adjunto",
   hidePronunciation: "Ocultar audio de pronunciación",
   addPronunciation: "Añadir audio de pronunciación",
+  listenIPA: "Escuchar pronunciación en AFI",
+  listen: "Escuchar",
+  ipaReference: "Referencia en AFI",
   types: {
     translate_to_english: "Escritura en Español",
     translate_to_conlang: "Escritura en Conlang",

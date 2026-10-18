@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import { supabase } from '@/utils/supabaseClient.js';
 import toast from 'react-hot-toast';
-import { Mic, Square, Trash2, Play, Pause, Upload } from 'lucide-react';
+import { Mic, Square, Trash2, Play, Pause, Upload, Volume2 } from 'lucide-react';
 import {
     uploadCourseAudio,
     deleteCourseAudio,
@@ -14,6 +14,11 @@ import {
     pickRecorderMime,
     MAX_RECORDING_SECONDS
 } from '@/utils/courseAudio.js';
+import { resolvePhraseIpa } from '@/utils/ipaGenerator.js';
+import { playAzureTTS } from '@/utils/azureTTS.js';
+import { useLexiconStore } from '@/store/useLexiconStore.jsx';
+import { useConfigStore } from '@/store/useConfigStore.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
 import './audioRecorder.css';
 
 /**
@@ -24,10 +29,17 @@ import './audioRecorder.css';
  * completely free from Supabase Storage bucket dependencies.
  */
 export default function AudioRecorder({ phrase, projectId, onChange }) {
+    const { t } = useTranslation();
+    const lexicon = useLexiconStore((state) => state.lexicon);
+    const azureTtsVoice = useConfigStore((state) => state.azureTtsVoice);
+    const azureTtsUseIpa = useConfigStore((state) => state.azureTtsUseIpa);
+    const ipaMappingRules = useConfigStore((state) => state.ipaMappingRules);
+
     const [isRecording, setIsRecording] = useState(false);
     const [elapsed, setElapsed] = useState(0);
     const [isBusy, setIsBusy] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [isIpaPlaying, setIsIpaPlaying] = useState(false);
     const [sessionUser, setSessionUser] = useState(null);
 
     const recorderRef = useRef(null);
@@ -37,6 +49,38 @@ export default function AudioRecorder({ phrase, projectId, onChange }) {
     const fileRef = useRef(null);
 
     const [audioUrl, setAudioUrl] = useState(() => getCourseAudioUrl(phrase));
+
+    // Determine target conlang text for pronunciation reference
+    const targetConlangText = React.useMemo(() => {
+        if (!phrase) return '';
+        if (phrase.type === 'conjugation_drill') return (phrase.english || '').trim();
+        if (phrase.type === 'matching_pairs') {
+            return (phrase.pairs || []).map(p => p?.conlang?.trim()).filter(Boolean).join(', ');
+        }
+        return (phrase.conlang || '').trim();
+    }, [phrase]);
+
+    const ipaReference = React.useMemo(() => {
+        if (!targetConlangText) return '';
+        return resolvePhraseIpa(targetConlangText, lexicon, ipaMappingRules);
+    }, [targetConlangText, lexicon, ipaMappingRules]);
+
+    const handlePlayIpaRef = async () => {
+        if (!targetConlangText) return;
+        setIsIpaPlaying(true);
+        try {
+            await playAzureTTS({
+                text: targetConlangText.replace(/_+/g, ' ').replace(/[.\-*]/g, '').trim(),
+                ipa: ipaReference,
+                voice: azureTtsVoice,
+                useIpa: azureTtsUseIpa ?? true
+            });
+        } catch (err) {
+            console.warn('AudioRecorder IPA reference playback error:', err);
+        } finally {
+            setIsIpaPlaying(false);
+        }
+    };
 
     useEffect(() => {
         let active = true;
@@ -200,6 +244,26 @@ export default function AudioRecorder({ phrase, projectId, onChange }) {
                 <span className="ar-label">Pronunciation Audio</span>
                 {hasAudio && <span className="ar-badge">Attached</span>}
             </div>
+
+            {targetConlangText && (
+                <div className="ar-ipa-row">
+                    <div className="ar-ipa-info">
+                        <span className="ar-ipa-label">{t('courseBuilder.ipaReference', 'IPA Reference')}:</span>
+                        <span className="ar-ipa-text custom-font-text notranslate">{ipaReference ? `/${ipaReference}/` : targetConlangText}</span>
+                    </div>
+                    <button
+                        type="button"
+                        className={`ar-ipa-btn ${isIpaPlaying ? 'playing' : ''}`}
+                        onClick={handlePlayIpaRef}
+                        disabled={isIpaPlaying}
+                        title={t('courseBuilder.listenIPA', 'Listen to IPA pronunciation')}
+                        aria-label={t('courseBuilder.listenIPA', 'Listen to IPA pronunciation')}
+                    >
+                        <Volume2 size={13} />
+                        <span>{t('courseBuilder.listen', 'Listen')}</span>
+                    </button>
+                </div>
+            )}
 
             {hasAudio ? (
                 <div className="ar-controls">

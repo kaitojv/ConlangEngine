@@ -298,6 +298,9 @@ export const INITIAL_CONFIG = {
     dailyChallengeDate: null,       // ISO date string of last completed daily challenge
     dailyChallengeCompleted: false, // Whether today's daily challenge is done
     studySoundEffects: true,        // Toggle sound effects on/off
+
+    // Vocab Checklist
+    hiddenVocabWords: [], // Array of English word strings occulted/hidden from the checklist
 };
 
 // IndexedDB Helper for handling massive data without breaking local storage quotas
@@ -953,6 +956,28 @@ export const useConfigStore = create(
             renameCustomTag: (oldName, newName) => set((state) => ({
                 customTags: (state.customTags || []).map(t => t === oldName ? newName.trim().toLowerCase() : t)
             })),
+
+            // ── Vocab Checklist Occult Actions ──────────────────────────
+            occultVocabWord: (word) => set((state) => {
+                const list = state.hiddenVocabWords || [];
+                if (!word || list.includes(word)) return {};
+                return { hiddenVocabWords: [...list, word] };
+            }),
+
+            restoreVocabWord: (word) => set((state) => ({
+                hiddenVocabWords: (state.hiddenVocabWords || []).filter(w => w !== word)
+            })),
+
+            occultVocabWords: (words) => set((state) => {
+                if (!Array.isArray(words) || words.length === 0) return {};
+                const setWords = new Set(state.hiddenVocabWords || []);
+                words.forEach(w => {
+                    if (w) setWords.add(w);
+                });
+                return { hiddenVocabWords: Array.from(setWords) };
+            }),
+
+            restoreAllVocabWords: () => set({ hiddenVocabWords: [] }),
 
             saveWikiPage: (pageId, content) => set((state) => {
                 const existing = state.wikiPages[pageId];

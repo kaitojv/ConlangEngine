@@ -838,6 +838,86 @@
     background: var(--ok);
 }
 
+/* Quick listen chip in phrase action header */
+.cb-listen-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: var(--rad-sm);
+    border: 1px solid var(--bd);
+    background: var(--bg);
+    color: var(--tx2);
+    font-family: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.cb-listen-chip:hover {
+    border-color: var(--acc);
+    color: var(--tx);
+}
+
+.cb-listen-chip.playing {
+    border-color: var(--acc);
+    color: var(--acc);
+}
+
+/* Input with inline action button (e.g. IPA speaker) */
+.cb-input-with-action {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.cb-input-with-action .input-wrapper {
+    margin-bottom: 0 !important;
+    width: 100%;
+}
+
+.cb-input-with-action .input-wrapper .fi {
+    padding-right: 38px;
+    margin: 0 !important;
+}
+
+.cb-listen-btn {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--rad-sm);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--tx2);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 2;
+}
+
+.cb-listen-btn:hover:not(:disabled) {
+    background: var(--s2);
+    color: var(--acc);
+    border-color: var(--bd);
+}
+
+.cb-listen-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.cb-listen-btn.playing {
+    color: var(--acc);
+    border-color: var(--acc);
+}
+
 .cb-phrase-body {
     border-top: 1px solid var(--bd);
     padding: 14px 12px;

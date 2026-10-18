@@ -81,6 +81,19 @@
     color: var(--acc);
 }
 
+.vc-stat-value.muted {
+    color: var(--tx3, #94a3b8);
+}
+
+.vc-stat-occulted {
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.vc-stat-occulted:hover {
+    opacity: 0.8;
+}
+
 .vc-stat-divider {
     width: 1px;
     height: 28px;
@@ -498,6 +511,12 @@
     opacity: 0.65;
 }
 
+.vc-row.occulted {
+    opacity: 0.65;
+    border-style: dashed;
+    background: color-mix(in srgb, var(--s1) 90%, transparent);
+}
+
 .vc-row-check {
     display: flex;
     align-items: center;
@@ -540,6 +559,20 @@
     color: var(--acc);
     background: color-mix(in srgb, var(--acc) 12%, var(--s2));
     border: 1px solid color-mix(in srgb, var(--acc) 30%, var(--bd));
+    border-radius: 3px;
+    padding: 1px 5px;
+}
+
+.vc-occulted-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--tx3, #94a3b8);
+    background: var(--s2);
+    border: 1px dashed var(--bd);
     border-radius: 3px;
     padding: 1px 5px;
 }
@@ -684,6 +717,42 @@
 .vc-icon-btn.vc-deriv-btn:hover:not(:disabled) {
     color: var(--acc);
     border-color: var(--acc);
+}
+
+.vc-icon-btn.vc-occult-btn:hover:not(:disabled) {
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.4);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.vc-icon-btn.vc-restore-btn {
+    color: var(--acc);
+    border-color: color-mix(in srgb, var(--acc) 40%, var(--bd));
+}
+
+.vc-icon-btn.vc-restore-btn:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--acc) 15%, var(--s2));
+    border-color: var(--acc);
+}
+
+.vc-restore-all-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--s1);
+    border: 1px dashed var(--bd);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 0.75rem;
+    color: var(--tx2);
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.vc-restore-all-btn:hover {
+    color: var(--tx);
+    border-color: var(--acc);
+    background: var(--s2);
 }
 
 .vc-def-input-wrapper {

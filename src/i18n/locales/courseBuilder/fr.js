@@ -58,6 +58,9 @@ export default {
   audioAttached: "Audio joint",
   hidePronunciation: "Masquer l'audio de prononciation",
   addPronunciation: "Ajouter un audio de prononciation",
+  listenIPA: "Écouter la prononciation API",
+  listen: "Écouter",
+  ipaReference: "Référence API",
   types: {
     translate_to_english: "Saisie en Français",
     translate_to_conlang: "Saisie en Conlang",

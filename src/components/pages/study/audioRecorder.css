@@ -76,3 +76,73 @@
     color: var(--tx2);
     opacity: 0.85;
 }
+
+.ar-ipa-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 10px;
+    background: var(--bg);
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    font-size: 0.82rem;
+}
+
+.ar-ipa-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.ar-ipa-label {
+    color: var(--tx2);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.ar-ipa-text {
+    color: var(--tx);
+    font-family: var(--font-mono, monospace);
+    font-weight: 500;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ar-ipa-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border-radius: var(--rad-sm);
+    border: 1px solid var(--bd);
+    background: var(--s2);
+    color: var(--tx);
+    font-size: 0.78rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.ar-ipa-btn:hover:not(:disabled) {
+    border-color: var(--acc);
+    color: var(--acc);
+}
+
+.ar-ipa-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.ar-ipa-btn.playing {
+    border-color: var(--acc);
+    color: var(--acc);
+}

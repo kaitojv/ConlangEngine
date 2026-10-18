@@ -58,6 +58,9 @@ export default {
   audioAttached: "Áudio anexado",
   hidePronunciation: "Ocultar áudio de pronúncia",
   addPronunciation: "Adicionar áudio de pronúncia",
+  listenIPA: "Ouvir pronúncia em AFI",
+  listen: "Ouvir",
+  ipaReference: "Referência em AFI",
   types: {
     translate_to_english: "Digitação em Português",
     translate_to_conlang: "Digitação no Conlang",

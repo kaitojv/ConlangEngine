@@ -58,6 +58,9 @@ export default {
   audioAttached: "音声添付あり",
   hidePronunciation: "発音音声を非表示",
   addPronunciation: "発音音声を追加",
+  listenIPA: "IPA発音を聞く",
+  listen: "聞く",
+  ipaReference: "IPA参考",
   types: {
     translate_to_english: "訳文入力",
     translate_to_conlang: "人工言語入力",

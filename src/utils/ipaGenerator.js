@@ -45,3 +45,50 @@ export const generateIpaFromWord = (word, mappingString) => {
 
     return { ipa: result, matched };
 };
+
+/**
+ * Resolves or constructs the IPA transcription for a conlang word or phrase.
+ * Checks the lexicon first (exact match, then word-by-word), and falls back
+ * to auto-generating from ipaMappingRules or clean orthography.
+ *
+ * @param {string} text - Conlang word or phrase
+ * @param {Array} [lexicon=[]] - Array of lexicon entries with { word, ipa }
+ * @param {string} [ipaMappingRules=''] - Comma-separated orthography->IPA rules
+ * @returns {string} IPA representation without enclosing slashes or brackets
+ */
+export const resolvePhraseIpa = (text, lexicon = [], ipaMappingRules = '') => {
+    if (!text || typeof text !== 'string') return '';
+
+    // Strip fill-in blanks (e.g., "____"), punctuation, and excess spaces
+    const clean = text
+        .replace(/_+/g, ' ')
+        .replace(/[.*~`!@#$%^&()+=<>?[\]{}|\\/:]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    if (!clean) return '';
+
+    const stripIpaDelimiters = (ipa) => String(ipa || '').replace(/[\][]/g, '').replace(/\//g, '').trim();
+
+    // 1. Direct whole-text match in lexicon
+    const exact = (lexicon || []).find(e => e?.word && e.word.trim().toLowerCase() === clean.toLowerCase());
+    if (exact?.ipa) {
+        return stripIpaDelimiters(exact.ipa);
+    }
+
+    // 2. Multi-word: lookup each word or convert via mapping rules
+    const words = clean.split(/\s+/).filter(Boolean);
+    const ipaParts = words.map(w => {
+        const found = (lexicon || []).find(e => e?.word && e.word.trim().toLowerCase() === w.toLowerCase());
+        if (found?.ipa) {
+            return stripIpaDelimiters(found.ipa);
+        }
+        if (ipaMappingRules && ipaMappingRules.trim()) {
+            const gen = generateIpaFromWord(w, ipaMappingRules);
+            if (gen?.ipa) return stripIpaDelimiters(gen.ipa);
+        }
+        return w;
+    });
+
+    return ipaParts.join(' ');
+};

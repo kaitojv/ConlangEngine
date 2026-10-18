@@ -58,6 +58,9 @@ export default {
   audioAttached: "Аудио прикреплено",
   hidePronunciation: "Скрыть аудио произношения",
   addPronunciation: "Добавить аудио произношения",
+  listenIPA: "Слушать произношение МФА",
+  listen: "Слушать",
+  ipaReference: "Справка МФА",
   types: {
     translate_to_english: "Ввод на Русском",
     translate_to_conlang: "Ввод на Конланге",

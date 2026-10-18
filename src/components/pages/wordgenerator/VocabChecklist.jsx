@@ -21,7 +21,7 @@ import {
     Wand2, Send, Check, Dice5, Globe, Star, List, BookOpen,
     Leaf, Bird, Heart, Users, Zap, Wheat, Hammer, Brain, Clock, Layers, Hash,
     Type, Landmark, Search, Sparkles, ArrowLeft, ChevronLeft, ChevronRight,
-    MessageSquare, Coins, ChevronDown, X, Filter, Dna
+    MessageSquare, Coins, ChevronDown, X, Filter, Dna, Eye, EyeOff, RotateCcw
 } from 'lucide-react';
 import './vocabChecklist.css';
 
@@ -42,7 +42,7 @@ export default function VocabChecklist({ onExit }) {
     const { normalizeToBase, transliterate } = useTransliterator();
     const navigate = useNavigate();
 
-    // Pull config store for derivations & morphological rules
+    // Pull config store for derivations & morphological rules & occulted words
     const rawGrammarRules = useConfigStore((state) => state.grammarRules);
     const grammarRules = useMemo(() => rawGrammarRules || [], [rawGrammarRules]);
     const vowels = useConfigStore((state) => state.vowels);
@@ -50,6 +50,15 @@ export default function VocabChecklist({ onExit }) {
     const otherPhonemes = useConfigStore((state) => state.otherPhonemes);
     const verbMarker = useConfigStore((state) => state.verbMarker);
     const cliticsRules = useConfigStore((state) => state.cliticsRules);
+
+    const rawHiddenWords = useConfigStore((state) => state.hiddenVocabWords);
+    const hiddenWords = useMemo(() => Array.isArray(rawHiddenWords) ? rawHiddenWords : [], [rawHiddenWords]);
+    const hiddenSet = useMemo(() => new Set(hiddenWords), [hiddenWords]);
+
+    const occultVocabWord = useConfigStore((state) => state.occultVocabWord);
+    const restoreVocabWord = useConfigStore((state) => state.restoreVocabWord);
+    const occultVocabWords = useConfigStore((state) => state.occultVocabWords);
+    const restoreAllVocabWords = useConfigStore((state) => state.restoreAllVocabWords);
 
     // Generation settings
     const [minSyllables, setMinSyllables] = useState(2);
@@ -62,6 +71,8 @@ export default function VocabChecklist({ onExit }) {
     const themeDropdownRef = useRef(null);
 
     const [onlyUncreated, setOnlyUncreated] = useState(true);
+    const [showOcculted, setShowOcculted] = useState(false);
+    const [onlyOcculted, setOnlyOcculted] = useState(false);
     const [posFilter, setPosFilter] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -110,25 +121,27 @@ export default function VocabChecklist({ onExit }) {
     // Build O(1) lexicon lookup index
     const lexiconIndex = useMemo(() => buildLexiconIndex(lexicon), [lexicon]);
 
-    // List progress stats map
+    // List progress stats map (excluding occulted words from active coverage calculation)
     const listStats = useMemo(() => {
         const stats = {};
         for (const l of VOCAB_LISTS) {
             const words = getWords(l.id, 'all');
-            stats[l.id] = getCategoryProgress(words, lexiconIndex);
+            const activeWords = words.filter(w => !hiddenSet.has(w.word));
+            stats[l.id] = getCategoryProgress(activeWords, lexiconIndex);
         }
         return stats;
-    }, [lexiconIndex]);
+    }, [lexiconIndex, hiddenSet]);
 
-    // Theme progress map (scoped to active list if one is selected)
+    // Theme progress map (scoped to active list, excluding occulted words)
     const themeStats = useMemo(() => {
         const stats = {};
         for (const t of VOCAB_THEMES) {
             const words = getWords(selectedList, t.id);
-            stats[t.id] = getCategoryProgress(words, lexiconIndex);
+            const activeWords = words.filter(w => !hiddenSet.has(w.word));
+            stats[t.id] = getCategoryProgress(activeWords, lexiconIndex);
         }
         return stats;
-    }, [selectedList, lexiconIndex]);
+    }, [selectedList, lexiconIndex, hiddenSet]);
 
     // Words in current scope (List + Theme)
     const scopedWords = useMemo(() => {
@@ -137,12 +150,27 @@ export default function VocabChecklist({ onExit }) {
 
     // Active scope progress stats for the progress bar & numbers
     const totalStats = useMemo(() => {
-        return getCategoryProgress(scopedWords, lexiconIndex);
-    }, [scopedWords, lexiconIndex]);
+        const activeWords = scopedWords.filter(w => !hiddenSet.has(w.word));
+        const progress = getCategoryProgress(activeWords, lexiconIndex);
+        const occultedCount = scopedWords.length - activeWords.length;
+        return {
+            ...progress,
+            occulted: occultedCount,
+        };
+    }, [scopedWords, lexiconIndex, hiddenSet]);
 
     // Filtered words
     const filteredWords = useMemo(() => {
         return scopedWords.filter(item => {
+            const isOcculted = hiddenSet.has(item.word);
+
+            // Filter: occulted logic
+            if (onlyOcculted) {
+                if (!isOcculted) return false;
+            } else if (!showOcculted && isOcculted) {
+                return false;
+            }
+
             const { isCreated } = checkWordInLexicon(item.word, lexiconIndex);
 
             // Filter: only uncreated
@@ -162,12 +190,29 @@ export default function VocabChecklist({ onExit }) {
 
             return true;
         });
-    }, [scopedWords, onlyUncreated, posFilter, searchTerm, lexiconIndex]);
+    }, [scopedWords, onlyUncreated, posFilter, searchTerm, lexiconIndex, hiddenSet, showOcculted, onlyOcculted]);
+
+    // Count of occulted words in current scope that match active filters (for hint in empty state)
+    const matchingOccultedCount = useMemo(() => {
+        if (showOcculted) return 0;
+        return scopedWords.filter(item => {
+            if (!hiddenSet.has(item.word)) return false;
+            if (posFilter !== 'all' && item.class !== posFilter) return false;
+            if (searchTerm.trim()) {
+                const q = searchTerm.toLowerCase().trim();
+                const matchesWord = item.word.toLowerCase().includes(q);
+                const matchesCategory = (item.category || '').toLowerCase().includes(q);
+                const matchesClass = (item.class || '').toLowerCase().includes(q);
+                if (!matchesWord && !matchesCategory && !matchesClass) return false;
+            }
+            return true;
+        }).length;
+    }, [scopedWords, hiddenSet, posFilter, searchTerm, showOcculted]);
 
     // Reset pagination when filter changes
     useEffect(() => {
         setPage(0);
-    }, [selectedList, selectedTheme, onlyUncreated, posFilter, searchTerm]);
+    }, [selectedList, selectedTheme, onlyUncreated, posFilter, searchTerm, showOcculted, onlyOcculted]);
 
     const totalPages = Math.max(1, Math.ceil(filteredWords.length / PAGE_SIZE));
     const paginatedWords = useMemo(() => {
@@ -203,18 +248,64 @@ export default function VocabChecklist({ onExit }) {
     };
 
     const handleSelectAllVisible = () => {
-        const visibleUncreated = paginatedWords.filter(w => !checkWordInLexicon(w.word, lexiconIndex).isCreated);
-        const allSelected = visibleUncreated.length > 0 && visibleUncreated.every(w => selectedEnglishWords.has(w.word));
+        const selectable = paginatedWords.filter(w => {
+            const isCreated = checkWordInLexicon(w.word, lexiconIndex).isCreated;
+            if (isCreated) return false;
+            if (!onlyOcculted && hiddenSet.has(w.word)) return false;
+            return true;
+        });
+        const allSelected = selectable.length > 0 && selectable.every(w => selectedEnglishWords.has(w.word));
 
         setSelectedEnglishWords(prev => {
             const next = new Set(prev);
             if (allSelected) {
-                visibleUncreated.forEach(w => next.delete(w.word));
+                selectable.forEach(w => next.delete(w.word));
             } else {
-                visibleUncreated.forEach(w => next.add(w.word));
+                selectable.forEach(w => next.add(w.word));
             }
             return next;
         });
+    };
+
+    // Occult actions
+    const handleOccultRow = (englishWord) => {
+        occultVocabWord(englishWord);
+        setSelectedEnglishWords(prev => {
+            const next = new Set(prev);
+            next.delete(englishWord);
+            return next;
+        });
+        toast.success(t('vocabChecklist.wordOcculted', `"${englishWord}" occulted from checklist`, { word: englishWord }));
+    };
+
+    const handleRestoreRow = (englishWord) => {
+        restoreVocabWord(englishWord);
+        toast.success(t('vocabChecklist.wordRestored', `"${englishWord}" restored to checklist`, { word: englishWord }));
+    };
+
+    const handleOccultSelected = () => {
+        const words = Array.from(selectedEnglishWords);
+        if (words.length === 0) return;
+        occultVocabWords(words);
+        setSelectedEnglishWords(new Set());
+        toast.success(t('vocabChecklist.occultedCount', `Occulted ${words.length} words from checklist`, { count: words.length }));
+    };
+
+    const handleRestoreSelected = () => {
+        const words = Array.from(selectedEnglishWords).filter(w => hiddenSet.has(w));
+        if (words.length === 0) return;
+        words.forEach(w => restoreVocabWord(w));
+        setSelectedEnglishWords(new Set());
+        toast.success(t('vocabChecklist.restoredCount', `Restored ${words.length} words to checklist`, { count: words.length }));
+    };
+
+    const handleRestoreAll = () => {
+        if (window.confirm(t('vocabChecklist.confirmRestoreAll', 'Are you sure you want to restore all occulted words to the checklist?'))) {
+            restoreAllVocabWords();
+            setSelectedEnglishWords(new Set());
+            setOnlyOcculted(false);
+            toast.success(t('vocabChecklist.allRestored', 'All occulted words restored!'));
+        }
     };
 
     // Roll single word for a row - strictly preserves the row's chosen part of speech!
@@ -239,6 +330,7 @@ export default function VocabChecklist({ onExit }) {
         const newSelected = new Set(selectedEnglishWords);
 
         paginatedWords.forEach(item => {
+            if (hiddenSet.has(item.word)) return; // Skip occulted rows
             const status = checkWordInLexicon(item.word, lexiconIndex);
             if (status.isCreated) return;
 
@@ -543,8 +635,18 @@ export default function VocabChecklist({ onExit }) {
         });
     };
 
-    const visibleUncreated = paginatedWords.filter(w => !checkWordInLexicon(w.word, lexiconIndex).isCreated);
-    const allVisibleSelected = visibleUncreated.length > 0 && visibleUncreated.every(w => selectedEnglishWords.has(w.word));
+    const visibleUncreated = useMemo(() => {
+        return paginatedWords.filter(w => {
+            const isCreated = checkWordInLexicon(w.word, lexiconIndex).isCreated;
+            if (isCreated) return false;
+            if (hiddenSet.has(w.word) && !onlyOcculted) return false;
+            return true;
+        });
+    }, [paginatedWords, lexiconIndex, hiddenSet, onlyOcculted]);
+
+    const allVisibleSelected = useMemo(() => {
+        return visibleUncreated.length > 0 && visibleUncreated.every(w => selectedEnglishWords.has(w.word));
+    }, [visibleUncreated, selectedEnglishWords]);
 
     const selectedThemeObj = useMemo(() => {
         return VOCAB_THEMES.find(t => t.id === selectedTheme) || VOCAB_THEMES[0];
@@ -595,6 +697,26 @@ export default function VocabChecklist({ onExit }) {
                             <span className="vc-stat-value accent">{totalStats.pct}%</span>
                             <span className="vc-stat-label">{t('vocabChecklist.coverage')}</span>
                         </div>
+                        {totalStats.occulted > 0 && (
+                            <>
+                                <div className="vc-stat-divider" />
+                                <div
+                                    className="vc-stat vc-stat-occulted"
+                                    onClick={() => setShowOcculted(prev => !prev)}
+                                    title={t('vocabChecklist.clickToToggleOcculted', 'Click to toggle showing occulted words')}
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            setShowOcculted(prev => !prev);
+                                        }
+                                    }}
+                                >
+                                    <span className="vc-stat-value muted">{totalStats.occulted}</span>
+                                    <span className="vc-stat-label">{t('vocabChecklist.occulted', 'Occulted')}</span>
+                                </div>
+                            </>
+                        )}
                     </div>
                     <div className="vc-progress-bar">
                         <div className="vc-progress-fill" style={{ width: `${totalStats.pct}%` }} />
@@ -763,6 +885,44 @@ export default function VocabChecklist({ onExit }) {
                         />
                         <span>{t('vocabChecklist.onlyUncreated')}</span>
                     </label>
+
+                    <label className="vc-toggle-label">
+                        <input
+                            type="checkbox"
+                            checked={showOcculted}
+                            onChange={(e) => {
+                                const nextVal = e.target.checked;
+                                setShowOcculted(nextVal);
+                                if (!nextVal) setOnlyOcculted(false);
+                            }}
+                        />
+                        <span>{t('vocabChecklist.showOcculted', 'Show occulted words')}</span>
+                        {hiddenWords.length > 0 && (
+                            <span className="vc-cat-badge">{hiddenWords.length}</span>
+                        )}
+                    </label>
+
+                    {showOcculted && hiddenWords.length > 0 && (
+                        <label className="vc-toggle-label">
+                            <input
+                                type="checkbox"
+                                checked={onlyOcculted}
+                                onChange={(e) => setOnlyOcculted(e.target.checked)}
+                            />
+                            <span>{t('vocabChecklist.onlyOcculted', 'Only occulted')}</span>
+                        </label>
+                    )}
+
+                    {hiddenWords.length > 0 && (
+                        <button
+                            type="button"
+                            className="vc-restore-all-btn"
+                            onClick={handleRestoreAll}
+                            title={t('vocabChecklist.restoreAllTitle', 'Restore all occulted words to the checklist')}
+                        >
+                            <RotateCcw size={12} /> {t('vocabChecklist.restoreAll', 'Restore All')} ({hiddenWords.length})
+                        </button>
+                    )}
                 </div>
 
                 {/* ── Batch Toolbar ── */}
@@ -779,7 +939,7 @@ export default function VocabChecklist({ onExit }) {
                         <Button
                             variant="secondary"
                             onClick={handleSelectAllVisible}
-                            disabled={visibleUncreated.length === 0}
+                            disabled={visibleUncreated.length === 0 && paginatedWords.length === 0}
                         >
                             {allVisibleSelected ? t('vocabChecklist.deselectAll') : t('vocabChecklist.selectAll')}
                         </Button>
@@ -790,6 +950,25 @@ export default function VocabChecklist({ onExit }) {
                     </div>
 
                     <div className="vc-toolbar-right">
+                        {selectedEnglishWords.size > 0 && (
+                            onlyOcculted ? (
+                                <Button
+                                    variant="secondary"
+                                    onClick={handleRestoreSelected}
+                                >
+                                    <RotateCcw size={15} /> {t('vocabChecklist.restoreSelected', `Restore Selected (${selectedEnglishWords.size})`, { count: selectedEnglishWords.size })}
+                                </Button>
+                            ) : (
+                                <Button
+                                    variant="secondary"
+                                    onClick={handleOccultSelected}
+                                    title={t('vocabChecklist.occultSelectedTitle', 'Occult / Remove selected words from checklist')}
+                                >
+                                    <EyeOff size={15} /> {t('vocabChecklist.occultSelected', `Occult Selected (${selectedEnglishWords.size})`, { count: selectedEnglishWords.size })}
+                                </Button>
+                            )
+                        )}
+
                         <Button
                             variant="save"
                             onClick={handleSaveSelected}
@@ -805,22 +984,33 @@ export default function VocabChecklist({ onExit }) {
                     <div className="vc-empty">
                         <p className="vc-empty-title">{t('vocabChecklist.noMatch')}</p>
                         <p className="vc-empty-desc">
-                            {onlyUncreated
-                                ? t('vocabChecklist.allPresent')
-                                : t('vocabChecklist.tryFilter')}
+                            {onlyOcculted
+                                ? t('vocabChecklist.noOccultedMatch', 'No occulted words found in this category.')
+                                : onlyUncreated
+                                    ? t('vocabChecklist.allPresent')
+                                    : t('vocabChecklist.tryFilter')}
                         </p>
+                        {matchingOccultedCount > 0 && !showOcculted && (
+                            <Button
+                                variant="secondary"
+                                onClick={() => setShowOcculted(true)}
+                            >
+                                <Eye size={15} /> {t('vocabChecklist.showMatchingOcculted', `Show ${matchingOccultedCount} occulted words matching this filter`, { count: matchingOccultedCount })}
+                            </Button>
+                        )}
                     </div>
                 ) : (
                     <div className="vc-rows">
                         {paginatedWords.map(item => {
                             const { isCreated, lexiconEntry } = checkWordInLexicon(item.word, lexiconIndex);
+                            const isOcculted = hiddenSet.has(item.word);
                             const edit = getRowEdit(item.word, item.class);
                             const isSelected = selectedEnglishWords.has(item.word);
 
                             return (
                                 <div
                                     key={item.word}
-                                    className={`vc-row ${isSelected ? 'selected' : ''} ${isCreated ? 'created' : ''}`}
+                                    className={`vc-row ${isSelected ? 'selected' : ''} ${isCreated ? 'created' : ''} ${isOcculted ? 'occulted' : ''}`}
                                 >
                                     {/* Checkbox */}
                                     <div className="vc-row-check">
@@ -839,6 +1029,12 @@ export default function VocabChecklist({ onExit }) {
                                             <span className="vc-pos-badge">
                                                 {t(`vocabChecklist.pos.${(edit.wordClass || item.class).toLowerCase()}`, edit.wordClass || item.class)}
                                             </span>
+                                            {isOcculted && (
+                                                <span className="vc-occulted-badge">
+                                                    <EyeOff size={10} style={{ marginRight: '3px', verticalAlign: 'middle' }} />
+                                                    {t('vocabChecklist.occulted', 'Occulted')}
+                                                </span>
+                                            )}
                                             {item.lists && item.lists.map(listId => (
                                                 <span key={listId} className="vc-list-badge">
                                                     {listId.replace('swadesh-', 'S-').replace('leipzig-jakarta', 'LJ')}
@@ -856,6 +1052,8 @@ export default function VocabChecklist({ onExit }) {
                                                         "{lexiconEntry?.word}"
                                                     </span>
                                                 </>
+                                            ) : isOcculted ? (
+                                                <span style={{ color: 'var(--tx3)' }}>{t('vocabChecklist.occulted', 'Occulted')}</span>
                                             ) : (
                                                 <span>{t('vocabChecklist.notInLexicon')}</span>
                                             )}
@@ -870,7 +1068,7 @@ export default function VocabChecklist({ onExit }) {
                                                 className={`vc-conlang-input custom-font-text notranslate ${edit.conlangWord ? 'has-value' : ''}`}
                                                 placeholder={isCreated ? t('vocabChecklist.existingPlaceholder', { word: lexiconEntry?.word }) : t('vocabChecklist.conlangPlaceholder')}
                                                 value={edit.conlangWord}
-                                                disabled={isCreated}
+                                                disabled={isCreated || isOcculted}
                                                 onChange={(e) => {
                                                     updateRowEdit(item.word, 'conlangWord', e.target.value);
                                                     if (e.target.value.trim() && !selectedEnglishWords.has(item.word)) {
@@ -882,7 +1080,7 @@ export default function VocabChecklist({ onExit }) {
                                             <select
                                                 className="vc-row-select"
                                                 value={edit.wordClass || item.class}
-                                                disabled={isCreated}
+                                                disabled={isCreated || isOcculted}
                                                 onChange={(e) => updateRowEdit(item.word, 'wordClass', e.target.value)}
                                             >
                                                 <option value="noun">{t('generator.noun')}</option>
@@ -901,7 +1099,7 @@ export default function VocabChecklist({ onExit }) {
                                                     type="button"
                                                     className="vc-icon-btn"
                                                     title={t('vocabChecklist.rollRandom')}
-                                                    disabled={isCreated}
+                                                    disabled={isCreated || isOcculted}
                                                     onClick={() => handleRollRow(item.word, edit.wordClass || item.class)}
                                                 >
                                                     <Dice5 size={15} />
@@ -911,7 +1109,7 @@ export default function VocabChecklist({ onExit }) {
                                                     type="button"
                                                     className="vc-icon-btn vc-save-btn"
                                                     title={t('vocabChecklist.saveDirect', 'Quick save to Lexicon')}
-                                                    disabled={isCreated || !edit.conlangWord?.trim()}
+                                                    disabled={isCreated || isOcculted || !edit.conlangWord?.trim()}
                                                     onClick={() => handleSaveSingleRow(item.word)}
                                                 >
                                                     <Check size={15} />
@@ -921,7 +1119,7 @@ export default function VocabChecklist({ onExit }) {
                                                     type="button"
                                                     className="vc-icon-btn vc-deriv-btn"
                                                     title={t('vocabChecklist.saveWithDerivations', 'Save with Derivations/Declensions')}
-                                                    disabled={isCreated || !edit.conlangWord?.trim()}
+                                                    disabled={isCreated || isOcculted || !edit.conlangWord?.trim()}
                                                     onClick={() => handleOpenDerivModal(item.word)}
                                                 >
                                                     <Dna size={15} />
@@ -931,10 +1129,31 @@ export default function VocabChecklist({ onExit }) {
                                                     type="button"
                                                     className="vc-icon-btn"
                                                     title={t('vocabChecklist.sendToCreate', 'Open in Word Creator')}
+                                                    disabled={isOcculted}
                                                     onClick={() => handleSendRowToCreate(item.word, edit.wordClass || item.class, edit.conlangWord, edit.description, edit.tags)}
                                                 >
                                                     <Send size={14} />
                                                 </button>
+
+                                                {isOcculted ? (
+                                                    <button
+                                                        type="button"
+                                                        className="vc-icon-btn vc-restore-btn"
+                                                        title={t('vocabChecklist.restoreWord', 'Restore word to checklist')}
+                                                        onClick={() => handleRestoreRow(item.word)}
+                                                    >
+                                                        <RotateCcw size={14} />
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        className="vc-icon-btn vc-occult-btn"
+                                                        title={t('vocabChecklist.occultWord', 'Occult / Remove word from checklist')}
+                                                        onClick={() => handleOccultRow(item.word)}
+                                                    >
+                                                        <EyeOff size={14} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
 
@@ -944,7 +1163,7 @@ export default function VocabChecklist({ onExit }) {
                                                 className="vc-meta-input"
                                                 placeholder={t('vocabChecklist.tagsPlaceholder')}
                                                 value={edit.tags}
-                                                disabled={isCreated}
+                                                disabled={isCreated || isOcculted}
                                                 onChange={(e) => updateRowEdit(item.word, 'tags', e.target.value)}
                                             />
                                             <div className="vc-def-input-wrapper">
@@ -953,14 +1172,14 @@ export default function VocabChecklist({ onExit }) {
                                                     className="vc-meta-input"
                                                     placeholder={t('vocabChecklist.descPlaceholder')}
                                                     value={edit.description}
-                                                    disabled={isCreated}
+                                                    disabled={isCreated || isOcculted}
                                                     onChange={(e) => updateRowEdit(item.word, 'description', e.target.value)}
                                                 />
                                                 <button
                                                     type="button"
                                                     className="vc-icon-btn"
                                                     title={t('vocabChecklist.autoFillDef')}
-                                                    disabled={isCreated || (isFetchingRowDef && activeDefWord === item.word)}
+                                                    disabled={isCreated || isOcculted || (isFetchingRowDef && activeDefWord === item.word)}
                                                     onClick={() => handleFetchRowDef(item.word, edit.wordClass || item.class)}
                                                 >
                                                     <Wand2 size={13} />

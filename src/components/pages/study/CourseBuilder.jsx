@@ -10,6 +10,8 @@ import { resolveWordStrokes } from '@/utils/strokeOrderResolver.js';
 import AudioRecorder from './AudioRecorder.jsx';
 import ExercisePlayer from './ExercisePlayer.jsx';
 import { hasCourseAudio } from '@/utils/courseAudio.js';
+import { playAzureTTS } from '@/utils/azureTTS.js';
+import { resolvePhraseIpa } from '@/utils/ipaGenerator.js';
 import { Plus, Trash2, Save, ArrowLeft, ArrowRight, ArrowUp, Wand2, X, Play, ChevronUp, ChevronDown, ChevronRight, Search, Mic, Volume2, AlertTriangle, Bold, Italic, Underline, Smile, Zap, Star, Crown, Book, Brain, Flame, Dumbbell, Sword, Shield, Check } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
@@ -272,6 +274,8 @@ const COURSE_BUILDER_CONFIG_KEYS = [
     'personRules', 'syntaxOrder', 'wordAssistConfig',
     // used directly in this component
     'customCourse', 'projectId', 'updateConfig',
+    // audio & IPA pronunciation
+    'azureTtsVoice', 'azureTtsUseIpa', 'ttsEngine', 'ipaMappingRules',
 ];
 
 export default function CourseBuilder({ onExit }) {
@@ -318,6 +322,56 @@ export default function CourseBuilder({ onExit }) {
     const [openPrereqs, setOpenPrereqs] = useState(() => new Set());
     const [search, setSearch] = useState('');
     const [isDirty, setIsDirty] = useState(false);
+    const [playingKey, setPlayingKey] = useState(null);
+
+    const handlePlayIpa = async (text, key) => {
+        if (!text || !text.trim()) return;
+        const cleanText = text.replace(/_+/g, ' ').replace(/[.\-*]/g, '').trim();
+        if (!cleanText) return;
+        const ipa = resolvePhraseIpa(cleanText, lexicon, config.ipaMappingRules);
+        setPlayingKey(key);
+        try {
+            await playAzureTTS({
+                text: cleanText,
+                ipa,
+                voice: config.azureTtsVoice,
+                useIpa: config.azureTtsUseIpa ?? true
+            });
+        } catch (err) {
+            console.warn('CourseBuilder IPA playback error:', err);
+        } finally {
+            setPlayingKey(null);
+        }
+    };
+
+    const canListenToPhrase = (phrase) => {
+        if (!phrase) return false;
+        if (phrase.type === 'teach') return false;
+        if (phrase.type === 'matching_pairs') {
+            return (phrase.pairs || []).some(p => p?.conlang?.trim());
+        }
+        if (phrase.type === 'conjugation_drill') {
+            return !!phrase.english?.trim();
+        }
+        if (phrase.type === 'picture_match') {
+            return false;
+        }
+        return !!phrase.conlang?.trim();
+    };
+
+    const handlePlayPhraseIpa = (phrase, key) => {
+        if (!phrase) return;
+        if (phrase.type === 'matching_pairs') {
+            const words = (phrase.pairs || []).map(p => p?.conlang?.trim()).filter(Boolean);
+            if (words.length > 0) handlePlayIpa(words.join(', '), key);
+            return;
+        }
+        if (phrase.type === 'conjugation_drill') {
+            handlePlayIpa(phrase.english, key);
+            return;
+        }
+        handlePlayIpa(phrase.conlang, key);
+    };
 
     const toggleInSet = (setter, id) => {
         setter(prev => {
@@ -996,6 +1050,22 @@ export default function CourseBuilder({ onExit }) {
                                             )}
                                         </button>
                                         <div className="cb-phrase-actions">
+                                            {canListenToPhrase(phrase) && (
+                                                <button
+                                                    type="button"
+                                                    className={`cb-listen-chip ${playingKey === `header-${phrase.id}` ? 'playing' : ''}`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handlePlayPhraseIpa(phrase, `header-${phrase.id}`);
+                                                    }}
+                                                    disabled={playingKey === `header-${phrase.id}`}
+                                                    title={t('courseBuilder.listenIPA', 'Listen to IPA pronunciation')}
+                                                    aria-label={t('courseBuilder.listenIPA', 'Listen to IPA pronunciation')}
+                                                >
+                                                    <Volume2 size={14} />
+                                                    <span>{t('courseBuilder.listen', 'Listen')}</span>
+                                                </button>
+                                            )}
                                             {supportsAudio(phrase) && (
                                                 <button
                                                     type="button"
@@ -1066,19 +1136,33 @@ export default function CourseBuilder({ onExit }) {
                                                          phrase.type === 'glyph_drawing' ? 'Glyph to Draw (word / syllable / letter)' :
                                                          t('courseBuilder.conlangSentence')}
                                                     </label>
-                                                    <Input 
-                                                        value={phrase.conlang || ''}
-                                                        onChange={(e) => updatePhrase(level.id, phrase.id, 'conlang', e.target.value)}
-                                                        placeholder={
-                                                            phrase.type === 'picture_match' ? "e.g. apple" :
-                                                            phrase.type === 'conjugation_drill' ? "e.g. Past tense of 'run'" :
-                                                            phrase.type === 'fill_blank' ? "e.g. The ____ pays" :
-                                                            phrase.type === 'glyph_drawing' ? "e.g. nuvir or ka or the glyph character itself" :
-                                                            "e.g. nuvir'lo zikrifi"
-                                                        }
-                                                        className={phrase.type !== 'picture_match' ? "custom-font-text notranslate" : ""}
-                                                        style={{ width: '100%' }}
-                                                    />
+                                                    <div className="cb-input-with-action">
+                                                        <Input 
+                                                            value={phrase.conlang || ''}
+                                                            onChange={(e) => updatePhrase(level.id, phrase.id, 'conlang', e.target.value)}
+                                                            placeholder={
+                                                                phrase.type === 'picture_match' ? "e.g. apple" :
+                                                                phrase.type === 'conjugation_drill' ? "e.g. Past tense of 'run'" :
+                                                                phrase.type === 'fill_blank' ? "e.g. The ____ pays" :
+                                                                phrase.type === 'glyph_drawing' ? "e.g. nuvir or ka or the glyph character itself" :
+                                                                "e.g. nuvir'lo zikrifi"
+                                                            }
+                                                            className={phrase.type !== 'picture_match' ? "custom-font-text notranslate" : ""}
+                                                            style={{ width: '100%' }}
+                                                        />
+                                                        {phrase.type !== 'picture_match' && phrase.type !== 'conjugation_drill' && (
+                                                            <button
+                                                                type="button"
+                                                                className={`cb-listen-btn ${playingKey === `p-${phrase.id}-conlang` ? 'playing' : ''}`}
+                                                                onClick={() => handlePlayIpa(phrase.conlang, `p-${phrase.id}-conlang`)}
+                                                                disabled={!phrase.conlang?.trim() || playingKey === `p-${phrase.id}-conlang`}
+                                                                title={t('courseBuilder.listenIPA', 'Listen to IPA pronunciation')}
+                                                                aria-label={t('courseBuilder.listenIPA', 'Listen to IPA pronunciation')}
+                                                            >
+                                                                <Volume2 size={15} />
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 {phrase.type !== 'glyph_drawing' && (
                                                     <div style={{ flex: 1 }}>
@@ -1090,18 +1174,32 @@ export default function CourseBuilder({ onExit }) {
                                                              phrase.type === 'listening' ? "Reference English (Optional)" :
                                                              t('courseBuilder.targetEnglishTranslation')}
                                                         </label>
-                                                        <Input 
-                                                            value={phrase.english || ''}
-                                                            onChange={(e) => updatePhrase(level.id, phrase.id, 'english', e.target.value)}
-                                                            placeholder={
-                                                                phrase.type === 'multiple_choice' ? "e.g. The garlic pays" : 
-                                                                phrase.type === 'fill_blank' ? "e.g. garlic" :
-                                                                phrase.type === 'conjugation_drill' ? "e.g. ran" :
-                                                                "e.g. Hi, Hello (comma separated)"
-                                                            }
-                                                            className="custom-font-text notranslate"
-                                                            style={{ width: '100%' }}
-                                                        />
+                                                        <div className="cb-input-with-action">
+                                                            <Input 
+                                                                value={phrase.english || ''}
+                                                                onChange={(e) => updatePhrase(level.id, phrase.id, 'english', e.target.value)}
+                                                                placeholder={
+                                                                    phrase.type === 'multiple_choice' ? "e.g. The garlic pays" : 
+                                                                    phrase.type === 'fill_blank' ? "e.g. garlic" :
+                                                                    phrase.type === 'conjugation_drill' ? "e.g. ran" :
+                                                                    "e.g. Hi, Hello (comma separated)"
+                                                                }
+                                                                className="custom-font-text notranslate"
+                                                                style={{ width: '100%' }}
+                                                            />
+                                                            {(phrase.type === 'fill_blank' || phrase.type === 'conjugation_drill') && (
+                                                                <button
+                                                                    type="button"
+                                                                    className={`cb-listen-btn ${playingKey === `p-${phrase.id}-english` ? 'playing' : ''}`}
+                                                                    onClick={() => handlePlayIpa(phrase.english, `p-${phrase.id}-english`)}
+                                                                    disabled={!phrase.english?.trim() || playingKey === `p-${phrase.id}-english`}
+                                                                    title={t('courseBuilder.listenIPA', 'Listen to IPA pronunciation')}
+                                                                    aria-label={t('courseBuilder.listenIPA', 'Listen to IPA pronunciation')}
+                                                                >
+                                                                    <Volume2 size={15} />
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
@@ -1146,13 +1244,25 @@ export default function CourseBuilder({ onExit }) {
                                         {phrase.type === 'word_bank' && (
                                             <div>
                                                 <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px' }}>{t('courseBuilder.extraDistractors')}</label>
-                                                <Input 
-                                                    value={phrase.distractors || ''}
-                                                    onChange={(e) => updatePhrase(level.id, phrase.id, 'distractors', e.target.value)}
-                                                    placeholder="e.g. dog, cat, run"
-                                                    className="custom-font-text notranslate"
-                                                    style={{ width: '100%' }}
-                                                />
+                                                <div className="cb-input-with-action">
+                                                    <Input 
+                                                        value={phrase.distractors || ''}
+                                                        onChange={(e) => updatePhrase(level.id, phrase.id, 'distractors', e.target.value)}
+                                                        placeholder="e.g. dog, cat, run"
+                                                        className="custom-font-text notranslate"
+                                                        style={{ width: '100%' }}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        className={`cb-listen-btn ${playingKey === `p-${phrase.id}-distractors` ? 'playing' : ''}`}
+                                                        onClick={() => handlePlayIpa(phrase.distractors, `p-${phrase.id}-distractors`)}
+                                                        disabled={!phrase.distractors?.trim() || playingKey === `p-${phrase.id}-distractors`}
+                                                        title={t('courseBuilder.listenIPA', 'Listen to IPA pronunciation')}
+                                                        aria-label={t('courseBuilder.listenIPA', 'Listen to IPA pronunciation')}
+                                                    >
+                                                        <Volume2 size={15} />
+                                                    </button>
+                                                </div>
                                             </div>
                                         )}
 
@@ -1165,17 +1275,29 @@ export default function CourseBuilder({ onExit }) {
                                                         return (
                                                             <div key={idx} className="cb-matching-pair">
                                                                 <span style={{ color: 'var(--tx2)', fontWeight: 'bold' }}>{idx + 1}.</span>
-                                                                <Input 
-                                                                    value={pair.conlang}
-                                                                    onChange={(e) => {
-                                                                        const newPairs = [...(phrase.pairs || [{conlang:'', english:''}, {conlang:'', english:''}, {conlang:'', english:''}, {conlang:'', english:''}])];
-                                                                        newPairs[idx] = { ...newPairs[idx], conlang: e.target.value };
-                                                                        updatePhrase(level.id, phrase.id, 'pairs', newPairs);
-                                                                    }}
-                                                                    placeholder={t('courseBuilder.conlangWord')}
-                                                                    className="custom-font-text notranslate"
-                                                                    style={{ flex: 1 }}
-                                                                />
+                                                                <div className="cb-input-with-action" style={{ flex: 1 }}>
+                                                                    <Input 
+                                                                        value={pair.conlang}
+                                                                        onChange={(e) => {
+                                                                            const newPairs = [...(phrase.pairs || [{conlang:'', english:''}, {conlang:'', english:''}, {conlang:'', english:''}, {conlang:'', english:''}])];
+                                                                            newPairs[idx] = { ...newPairs[idx], conlang: e.target.value };
+                                                                            updatePhrase(level.id, phrase.id, 'pairs', newPairs);
+                                                                        }}
+                                                                        placeholder={t('courseBuilder.conlangWord')}
+                                                                        className="custom-font-text notranslate"
+                                                                        style={{ width: '100%' }}
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        className={`cb-listen-btn ${playingKey === `pair-${phrase.id}-${idx}` ? 'playing' : ''}`}
+                                                                        onClick={() => handlePlayIpa(pair.conlang, `pair-${phrase.id}-${idx}`)}
+                                                                        disabled={!pair.conlang?.trim() || playingKey === `pair-${phrase.id}-${idx}`}
+                                                                        title={t('courseBuilder.listenIPA', 'Listen to IPA pronunciation')}
+                                                                        aria-label={t('courseBuilder.listenIPA', 'Listen to IPA pronunciation')}
+                                                                    >
+                                                                        <Volume2 size={14} />
+                                                                    </button>
+                                                                </div>
                                                                 <span style={{ color: 'var(--tx2)' }}>=</span>
                                                                 <Input 
                                                                     value={pair.english}

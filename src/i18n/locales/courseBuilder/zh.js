@@ -58,6 +58,9 @@ export default {
   audioAttached: "已附带音频",
   hidePronunciation: "隐藏发音音频",
   addPronunciation: "添加发音音频",
+  listenIPA: "收听国际音标读音",
+  listen: "收听",
+  ipaReference: "国际音标参考",
   types: {
     translate_to_english: "目标语言键入",
     translate_to_conlang: "造语文本键入",
