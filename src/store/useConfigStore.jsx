@@ -149,7 +149,7 @@ export const INITIAL_CONFIG = {
     kokoroVoice: 'af_heart',
     kokoroSpeed: 1.0,
     kokoroSendIpa: true,
-    kokoroEndpointType: 'local',
+    kokoroEndpointType: 'browser',
     openTtsUrl: 'http://localhost:5500',
     openTtsVoice: 'espeak:en',
     customTtsUrl: '',

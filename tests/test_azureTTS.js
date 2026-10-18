@@ -54,5 +54,61 @@ await assert.doesNotReject(async () => {
 });
 console.log('  ✓ speakWithWebSpeech is safe in headless environments');
 
-console.log('All azureTTS & formantSynth tests passed!');
+// 7. in-browser Kokoro neural engine
+const { getKokoroStatus, detectDevice, KOKORO_VOICES, speakWithKokoroInBrowser } = await import('../src/utils/kokoroBrowserTTS.js');
+assert.ok(Array.isArray(KOKORO_VOICES) && KOKORO_VOICES.length > 20, 'Kokoro voice catalog is populated');
+assert.ok(KOKORO_VOICES.some(v => v.value === 'af_heart'), 'af_heart default voice is available');
+const device = await detectDevice();
+assert.ok(device === 'wasm' || device === 'webgpu', 'detectDevice resolves to valid runtime device');
+const status = getKokoroStatus();
+assert.ok(status && typeof status.status === 'string', 'getKokoroStatus returns valid engine state');
+await assert.doesNotReject(async () => {
+    await speakWithKokoroInBrowser({ text: 'test', ipa: '/sǎtēwà/', voice: 'af_heart' });
+});
+console.log('  ✓ in-browser Kokoro neural synthesis module works and is safe in headless environments');
+
+// 8. As 4 Regras de Ouro de Normalização de IPA do Kokoro
+const { sanitizeKokoroIPA } = await import('../src/utils/kokoroBrowserTTS.js');
+
+// Regra 1: Trocar g ASCII (U+0067) por ɡ IPA (U+0261, ID 92)
+assert.equal(sanitizeKokoroIPA('/gato/'), 'ɡato');
+assert.equal(sanitizeKokoroIPA('mæ.gɪk'), 'mæɡɪk');
+assert.equal(sanitizeKokoroIPA('g').charCodeAt(0), 0x0261);
+console.log('  ✓ Regra 1: g ASCII é convertido para ɡ IPA (U+0261, ID 92)');
+
+// Regra 2: Converter africadas duplas em ligaduras únicas
+assert.equal(sanitizeKokoroIPA('t͡ʃaŋ'), 'ʧaŋ');
+assert.equal(sanitizeKokoroIPA('tʃaŋ'), 'ʧaŋ');
+assert.equal(sanitizeKokoroIPA('d͡ʒæz'), 'ʤæz');
+assert.equal(sanitizeKokoroIPA('dʒæz'), 'ʤæz');
+assert.equal(sanitizeKokoroIPA('t͡sa'), 'ʦa');
+assert.equal(sanitizeKokoroIPA('tsa'), 'ʦa');
+assert.equal(sanitizeKokoroIPA('d͡zo'), 'ʣo');
+assert.equal(sanitizeKokoroIPA('dzo'), 'ʣo');
+assert.equal(sanitizeKokoroIPA('t͡ɕi'), 'ʨi');
+assert.equal(sanitizeKokoroIPA('tɕi'), 'ʨi');
+assert.equal(sanitizeKokoroIPA('d͡ʑu'), 'ʥu');
+assert.equal(sanitizeKokoroIPA('dʑu'), 'ʥu');
+assert.equal(sanitizeKokoroIPA('t͡ʂe'), 'ꭧe');
+assert.equal(sanitizeKokoroIPA('tʂe'), 'ꭧe');
+console.log('  ✓ Regra 2: Africadas duplas convertidas em ligaduras únicas (ʧ, ʤ, ʦ, ʣ, ʨ, ʥ, ꭧ)');
+
+// Regra 3: Decompor vogais nasais (NFD) para liberar \u0303 (ID 17)
+const nasalA = sanitizeKokoroIPA('ã');
+assert.equal(nasalA, 'a\u0303');
+assert.equal(nasalA.length, 2);
+assert.equal(nasalA.charCodeAt(1), 0x0303);
+assert.equal(sanitizeKokoroIPA('mãõĩ'), 'ma\u0303o\u0303i\u0303');
+console.log('  ✓ Regra 3: Vogais nasais decompostas em NFD liberando o combining tilde \\u0303 (ID 17)');
+
+// Regra 4: Remover pontos de separação silábica (.)
+assert.equal(sanitizeKokoroIPA('/ˈma.ni/'), 'ˈmani');
+assert.equal(sanitizeKokoroIPA('/t͡ʃaŋ.ku.la/'), 'ʧaŋkula');
+console.log('  ✓ Regra 4: Pontos de separação silábica removidos para leitura contínua');
+
+// Composição: Todas as 4 regras combinadas em sequência
+assert.equal(sanitizeKokoroIPA('/ˈgã.t͡ʃo.ni/'), 'ˈɡa\u0303ʧoni');
+console.log('  ✓ Ordem de normalização completa testada e validada');
+
+console.log('All azureTTS, kokoroTTS & formantSynth tests passed!');
 

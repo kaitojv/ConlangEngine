@@ -8,6 +8,8 @@
 
 import { playFormantIPA } from './formantSynth.js';
 import { playHumanIpaAudio } from './humanIpaAudio.js';
+import { speakWithKokoroInBrowser, sanitizeKokoroIPA } from './kokoroBrowserTTS.js';
+export { sanitizeKokoroIPA };
 
 let cachedConfigStore = null;
 if (typeof window !== 'undefined') {
@@ -183,28 +185,43 @@ export const speakWithOpenTTS = async ({ text, ipa, url = 'http://localhost:5500
 
 /**
  * Provider 3: Kokoro-TTS (Open-Source 82M Neural Model)
- * Connects to Kokoro-FastAPI (ghcr.io/remsky/kokoro-fastapi) or any OpenAI-compatible Kokoro instance.
- * Supports direct phonetic/IPA inputs and high-fidelity neural voices.
+ * - Default: 100% In-Browser client-side synthesis via kokoro-js (WebGPU / WASM, 0 servers/Docker needed)
+ * - Remote: Connects to a remote OpenAI-compatible Kokoro endpoint if configured
  */
 export const speakWithKokoro = async ({
     text,
     ipa,
-    url = 'http://localhost:8880/v1/audio/speech',
+    endpointType = 'browser',
+    url = '',
     voice = 'af_heart',
     speed = 1.0,
-    sendIpa = true
+    sendIpa = true,
+    onProgress
 } = {}) => {
-    let targetUrl = (url || 'http://localhost:8880/v1/audio/speech').trim().replace(/\/+$/, '');
+    // If endpointType is 'browser' (or not explicitly 'remote' with a valid non-localhost URL):
+    const isRemote = endpointType === 'remote' && url && !url.includes('localhost:8880');
+    if (!isRemote) {
+        return speakWithKokoroInBrowser({
+            text,
+            ipa,
+            voice,
+            speed,
+            sendIpa,
+            onProgress
+        });
+    }
+
+    let targetUrl = url.trim().replace(/\/+$/, '');
     if (!targetUrl.includes('/speech') && !targetUrl.includes('/tts')) {
         targetUrl += '/v1/audio/speech';
     }
 
     let input = '';
     if (sendIpa && ipa) {
-        input = ipa.replace(/[\/\\\[\]]/g, '').trim();
+        input = sanitizeKokoroIPA(ipa);
     }
     if (!input) {
-        input = text || (ipa ? ipaToPhoneticText(ipa) : '');
+        input = text ? sanitizeKokoroIPA(text) : (ipa ? ipaToPhoneticText(ipa) : '');
     }
     if (!input) return;
 
@@ -435,20 +452,21 @@ export const playTTS = async ({ text, ipa, voice, useIpa = false, engine } = {})
         }
     }
 
-    // 3. Kokoro-TTS (Open-Source 82M Neural Model)
+    // 3. Kokoro-TTS (Open-Source 82M Neural Model - In-Browser by default)
     if (selectedEngine === 'kokoro') {
         try {
             await speakWithKokoro({
                 text,
                 ipa,
-                url: state.kokoroUrl || 'http://localhost:8880/v1/audio/speech',
+                endpointType: state.kokoroEndpointType || 'browser',
+                url: state.kokoroUrl || '',
                 voice: state.kokoroVoice || 'af_heart',
                 speed: state.kokoroSpeed ?? state.ttsSpeed ?? 1.0,
                 sendIpa: state.kokoroSendIpa ?? true
             });
             return;
         } catch (err) {
-            console.warn('Kokoro-TTS server request failed, falling back to Web Speech:', err);
+            console.warn('Kokoro-TTS request failed, falling back to Web Speech:', err);
             return speakWithWebSpeech({ text, ipa, voice, useIpa: true });
         }
     }

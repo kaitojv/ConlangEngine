@@ -15,7 +15,8 @@ import MultiSelectDropdown from '../../UI/MultiSelectDropdown/MultiSelectDropdow
 import { Info, AudioLines, Headphones, Music, Hourglass, Wand2, BookCheck, Eye, Trash2, SquarePen, Volume2, Play } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Modal from '../../UI/Modal/Modal.jsx';
-import { playTTS } from '../../../utils/azureTTS.js';
+import { playTTS, speakWithKokoro } from '../../../utils/azureTTS.js';
+import { KOKORO_VOICES, getKokoroStatus, subscribeKokoroStatus, initKokoroModel } from '../../../utils/kokoroBrowserTTS.js';
 import './phonologyTab.css';
 
 export default function PhonologyTab() {
@@ -37,7 +38,8 @@ export default function PhonologyTab() {
     const ttsVoice = useConfigStore((state) => state.ttsVoice) || '';
     const ttsSpeed = useConfigStore((state) => state.ttsSpeed) ?? 1.0;
     const formantF0 = useConfigStore((state) => state.formantF0) ?? 130;
-    const kokoroUrl = useConfigStore((state) => state.kokoroUrl) || 'http://localhost:8880/v1/audio/speech';
+    const kokoroEndpointType = useConfigStore((state) => state.kokoroEndpointType) || 'browser';
+    const kokoroUrl = useConfigStore((state) => state.kokoroUrl) || '';
     const kokoroVoice = useConfigStore((state) => state.kokoroVoice) || 'af_heart';
     const kokoroSpeed = useConfigStore((state) => state.kokoroSpeed) ?? 1.0;
     const kokoroSendIpa = useConfigStore((state) => state.kokoroSendIpa) ?? true;
@@ -49,6 +51,79 @@ export default function PhonologyTab() {
     const azureTtsVoice = useConfigStore((state) => state.azureTtsVoice) || 'ipa-default';
     const azureTtsKey = useConfigStore((state) => state.azureTtsKey) || '';
     const azureTtsRegion = useConfigStore((state) => state.azureTtsRegion) || 'brazilsouth';
+
+    // In-browser Kokoro neural engine status & preload controls
+    const [kokoroEngineStatus, setKokoroEngineStatus] = useState(getKokoroStatus());
+    const [isPreloadingKokoro, setIsPreloadingKokoro] = useState(false);
+    const [isTestingKokoro, setIsTestingKokoro] = useState(false);
+
+    React.useEffect(() => {
+        return subscribeKokoroStatus((status) => {
+            setKokoroEngineStatus(status);
+            if (status.status === 'ready' || status.status === 'error') {
+                setIsPreloadingKokoro(false);
+            }
+        });
+    }, []);
+
+    const handlePreloadKokoro = async () => {
+        try {
+            setIsPreloadingKokoro(true);
+            toast.loading('Downloading Kokoro neural model weights (~80MB)...', { id: 'kokoro-preload' });
+            await initKokoroModel();
+            toast.success('Kokoro neural model is ready in browser!', { id: 'kokoro-preload' });
+        } catch (err) {
+            toast.error('Failed to load Kokoro: ' + (err.message || ''), { id: 'kokoro-preload' });
+        } finally {
+            setIsPreloadingKokoro(false);
+        }
+    };
+
+    const handleTestKokoro = async () => {
+        try {
+            setIsTestingKokoro(true);
+            const isPt = kokoroVoice.startsWith('p');
+            const isEs = kokoroVoice.startsWith('e');
+            const isFr = kokoroVoice.startsWith('f');
+            const isIt = kokoroVoice.startsWith('i');
+            const isJa = kokoroVoice.startsWith('j');
+            const isZh = kokoroVoice.startsWith('z');
+            const isHi = kokoroVoice.startsWith('h');
+            const isGb = kokoroVoice.startsWith('b');
+
+            const testSample = isPt
+                ? { text: 'Olá! A síntese neural Kokoro está funcionando perfeitamente.', ipa: '/oˈla koˈkoɾu/' }
+                : isEs
+                    ? { text: '¡Hola! La síntesis neural Kokoro está funcionando perfectamente.', ipa: '/oˈla koˈkoɾo/' }
+                    : isFr
+                        ? { text: 'Bonjour! La synthèse vocale Kokoro fonctionne parfaitement.', ipa: '/bɔ̃ˈʒuʁ koˈkoʁo/' }
+                        : isIt
+                            ? { text: 'Ciao! La sintesi vocale Kokoro funziona perfettamente.', ipa: '/ˈt͡ʃao koˈkoro/' }
+                            : isJa
+                                ? { text: 'こんにちは！Kokoro音声合成が正常に動作しています。', ipa: '/koɴ.ni.t͡ɕi.wa/' }
+                                : isZh
+                                    ? { text: '你好！Kokoro语音合成在浏览器中运行良好。', ipa: '/ni haʊ/' }
+                                    : isHi
+                                        ? { text: 'नमस्ते! कोकोरो वाणी संश्लेषण सुचारू रूप से चल रहा है।', ipa: '/nəməsteː/' }
+                                        : isGb
+                                            ? { text: 'Hello! Kokoro neural synthesis is running smoothly in your browser.', ipa: '/hɛˈləʊ kəʊˈkɔː.ɹəʊ/' }
+                                            : { text: 'Hello! Kokoro neural synthesis is running smoothly in your browser.', ipa: '/hɛˈloʊ koʊˈkoʊ.ɹoʊ/' };
+
+            await speakWithKokoro({
+                text: testSample.text,
+                ipa: testSample.ipa,
+                endpointType: kokoroEndpointType,
+                url: kokoroUrl,
+                voice: kokoroVoice,
+                speed: kokoroSpeed,
+                sendIpa: true
+            });
+        } catch (err) {
+            toast.error('Kokoro speech test failed: ' + (err.message || ''));
+        } finally {
+            setIsTestingKokoro(false);
+        }
+    };
 
     // Interactive pronunciation test state
     const [testWord, setTestWord] = useState('satewa');
@@ -78,28 +153,6 @@ export default function PhonologyTab() {
     const vowelHarmonyOverrideTags = useConfigStore((state) => state.vowelHarmonyOverrideTags) || [];
     const updateConfig = useConfigStore((state) => state.updateConfig);
 
-    const KOKORO_VOICES = [
-        { value: 'af_heart', label: 'Heart (American Female - Warm & Expressive - Recommended)' },
-        { value: 'af_bella', label: 'Bella (American Female - Crisp)' },
-        { value: 'af_nicole', label: 'Nicole (American Female - Whispery)' },
-        { value: 'af_sarah', label: 'Sarah (American Female - Bright)' },
-        { value: 'af_sky', label: 'Sky (American Female - Soft)' },
-        { value: 'am_adam', label: 'Adam (American Male - Clear narrator)' },
-        { value: 'am_michael', label: 'Michael (American Male - Deep)' },
-        { value: 'bf_emma', label: 'Emma (British Female - Standard)' },
-        { value: 'bf_isabella', label: 'Isabella (British Female - Soft)' },
-        { value: 'bm_george', label: 'George (British Male - Warm)' },
-        { value: 'bm_lewis', label: 'Lewis (British Male - Resonant)' },
-        { value: 'ef_dora', label: 'Dora (Spanish Female)' },
-        { value: 'em_alex', label: 'Alex (Spanish Male)' },
-        { value: 'ff_siwis', label: 'Siwis (French Female)' },
-        { value: 'if_sara', label: 'Sara (Italian Female)' },
-        { value: 'jf_alpha', label: 'Alpha (Japanese Female)' },
-        { value: 'jm_kento', label: 'Kento (Japanese Male)' },
-        { value: 'pf_dora', label: 'Dora (Portuguese Female)' },
-        { value: 'pm_alex', label: 'Alex (Portuguese Male)' },
-        { value: 'zf_xiaobei', label: 'Xiaobei (Mandarin Female)' }
-    ];
 
     const AZURE_VOICES = [
         { value: 'ipa-default', label: 'IPA Reading (US Base - Fluid)' },
@@ -575,11 +628,11 @@ export default function PhonologyTab() {
                     >
                         <optgroup label={t('settings.phonology.ttsGroupInstant')}>
                             <option value="browser">{t('settings.phonology.ttsBrowser')}</option>
+                            <option value="kokoro">{t('settings.phonology.ttsKokoro')}</option>
                             <option value="formant">{t('settings.phonology.ttsFormant')}</option>
                             <option value="human">{t('settings.phonology.ttsHuman')}</option>
                         </optgroup>
                         <optgroup label={t('settings.phonology.ttsGroupSelfHosted')}>
-                            <option value="kokoro">{t('settings.phonology.ttsKokoro')}</option>
                             <option value="opentts">{t('settings.phonology.ttsOpenTts')}</option>
                             <option value="custom">{t('settings.phonology.ttsCustom')}</option>
                             <option value="azure">{t('settings.phonology.ttsAzure')}</option>
@@ -652,40 +705,123 @@ export default function PhonologyTab() {
                         <Infobox title={t('settings.phonology.ttsKokoroTitle')}>
                             {t('settings.phonology.ttsKokoroDesc')}
                         </Infobox>
+
                         <div className="settings-section-wrapper">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                <label className="form-label settings-label-block" style={{ margin: 0 }}>Kokoro Server Endpoint</label>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <label className="form-label settings-label-block" style={{ margin: 0 }}>Synthesis Mode</label>
                                 <div style={{ display: 'flex', gap: '6px' }}>
                                     <button
                                         type="button"
-                                        onClick={() => updateConfig({ kokoroUrl: 'http://localhost:8880/v1/audio/speech' })}
-                                        style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)', background: kokoroUrl === 'http://localhost:8880/v1/audio/speech' ? 'var(--primary)' : 'var(--bg2)', color: 'var(--tx1)', cursor: 'pointer' }}
+                                        onClick={() => updateConfig({ kokoroEndpointType: 'browser' })}
+                                        style={{
+                                            fontSize: '0.75rem',
+                                            padding: '3px 10px',
+                                            borderRadius: '4px',
+                                            border: '1px solid var(--border)',
+                                            background: kokoroEndpointType !== 'remote' ? 'var(--primary)' : 'var(--bg2)',
+                                            color: kokoroEndpointType !== 'remote' ? '#fff' : 'var(--tx1)',
+                                            cursor: 'pointer',
+                                            fontWeight: 500
+                                        }}
                                     >
-                                        Local Docker
+                                        In-Browser (Neural WebGPU / WASM)
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => {
-                                            if (kokoroUrl === 'http://localhost:8880/v1/audio/speech') {
-                                                updateConfig({ kokoroUrl: '' });
-                                            }
+                                        onClick={() => updateConfig({ kokoroEndpointType: 'remote' })}
+                                        style={{
+                                            fontSize: '0.75rem',
+                                            padding: '3px 10px',
+                                            borderRadius: '4px',
+                                            border: '1px solid var(--border)',
+                                            background: kokoroEndpointType === 'remote' ? 'var(--primary)' : 'var(--bg2)',
+                                            color: kokoroEndpointType === 'remote' ? '#fff' : 'var(--tx1)',
+                                            cursor: 'pointer',
+                                            fontWeight: 500
                                         }}
-                                        style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--border)', background: kokoroUrl !== 'http://localhost:8880/v1/audio/speech' ? 'var(--primary)' : 'var(--bg2)', color: 'var(--tx1)', cursor: 'pointer' }}
                                     >
-                                        Cloud / Remote URL
+                                        Remote Server URL
                                     </button>
                                 </div>
                             </div>
-                            <Input
-                                type="text"
-                                placeholder="http://localhost:8880/v1/audio/speech or https://my-kokoro-server/v1/audio/speech"
-                                value={kokoroUrl}
-                                onChange={(e) => updateConfig({ kokoroUrl: e.target.value })}
-                            />
-                            <small style={{ color: 'var(--tx3)', marginTop: '4px', display: 'block' }}>
-                                Use your local Docker instance (localhost:8880) or point to any OpenAI-compatible speech endpoint in the cloud.
-                            </small>
+
+                            {kokoroEndpointType !== 'remote' ? (
+                                <div style={{ background: 'var(--bg2)', padding: '12px', borderRadius: '6px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{
+                                                display: 'inline-block',
+                                                width: '10px',
+                                                height: '10px',
+                                                borderRadius: '50%',
+                                                background: kokoroEngineStatus.isLoaded ? '#10b981' : kokoroEngineStatus.status === 'loading' ? '#f59e0b' : '#6b7280'
+                                            }} />
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--tx1)' }}>
+                                                {kokoroEngineStatus.isLoaded
+                                                    ? `In-Browser Neural Engine Ready (${kokoroEngineStatus.device.toUpperCase()})`
+                                                    : kokoroEngineStatus.status === 'loading'
+                                                        ? `Downloading Weights: ${kokoroEngineStatus.progress}%`
+                                                        : 'In-Browser Engine (Loads automatically on speak)'}
+                                            </span>
+                                        </div>
+
+                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                            {!kokoroEngineStatus.isLoaded && (
+                                                <Button
+                                                    type="button"
+                                                    variant="secondary"
+                                                    size="small"
+                                                    disabled={isPreloadingKokoro || kokoroEngineStatus.status === 'loading'}
+                                                    onClick={handlePreloadKokoro}
+                                                >
+                                                    {isPreloadingKokoro || kokoroEngineStatus.status === 'loading' ? 'Downloading...' : 'Preload Model (~80MB)'}
+                                                </Button>
+                                            )}
+                                            <Button
+                                                type="button"
+                                                variant="secondary"
+                                                size="small"
+                                                disabled={isTestingKokoro}
+                                                onClick={handleTestKokoro}
+                                            >
+                                                <Volume2 size={14} style={{ marginRight: '4px' }} />
+                                                {isTestingKokoro ? 'Synthesizing...' : 'Test Voice'}
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {kokoroEngineStatus.status === 'loading' && (
+                                        <div style={{ width: '100%', background: 'var(--bg1)', height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
+                                            <div
+                                                style={{
+                                                    width: `${kokoroEngineStatus.progress}%`,
+                                                    background: 'var(--primary)',
+                                                    height: '100%',
+                                                    transition: 'width 0.2s ease'
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+
+                                    <small style={{ color: 'var(--tx3)', fontSize: '0.8rem', lineHeight: 1.4 }}>
+                                        Runs 100% inside your browser using WebAssembly / WebGPU and ONNX Runtime Web. Zero Docker, zero local server, zero external API keys needed.
+                                    </small>
+                                </div>
+                            ) : (
+                                <div>
+                                    <Input
+                                        type="text"
+                                        placeholder="https://my-kokoro-server/v1/audio/speech"
+                                        value={kokoroUrl}
+                                        onChange={(e) => updateConfig({ kokoroUrl: e.target.value })}
+                                    />
+                                    <small style={{ color: 'var(--tx3)', marginTop: '4px', display: 'block' }}>
+                                        Connect to an external OpenAI-compatible speech endpoint in the cloud.
+                                    </small>
+                                </div>
+                            )}
                         </div>
+
                         <div className="settings-section-wrapper">
                             <label className="form-label settings-label-block">Neural Voice</label>
                             <select
