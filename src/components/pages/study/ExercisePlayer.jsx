@@ -13,6 +13,8 @@ import { calculateStars, calculateXP } from '@/utils/xpSystem.js';
 import { resolveWordStrokes } from '@/utils/strokeOrderResolver.js';
 import { gradeDrawing } from '@/utils/glyphDrawMatch.js';
 import { getCourseAudioUrl, hasCourseAudio } from '@/utils/courseAudio.js';
+import { playAzureTTS } from '@/utils/azureTTS.js';
+import { resolvePhraseIpa } from '@/utils/ipaGenerator.js';
 import GlyphDrawCanvas from './GlyphDrawCanvas.jsx';
 import * as LucideIcons from 'lucide-react';
 import './exercisePlayer.css';
@@ -50,7 +52,7 @@ const EXERCISE_PLAYER_CONFIG_KEYS = [
     'consonants', 'customGlyphs', 'featuralComponents', 'otherPhonemes',
     'phonologyTypes', 'scriptDataById', 'scriptRules', 'syllabaryMap', 'vowels',
     // used directly in this component
-    'conlangName', 'azureTtsVoice', 'azureTtsUseIpa',
+    'conlangName', 'azureTtsVoice', 'azureTtsUseIpa', 'ttsEngine', 'ipaMappingRules',
 ];
 
 export default function ExercisePlayer({ levelNode, onComplete, onExit, customLexicon, customConfig }) {
@@ -182,6 +184,47 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
 
     const currentEx = exercises[currentIndex];
     const progressPercent = exercises.length > 0 ? (currentIndex / exercises.length) * 100 : 0;
+    const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+
+    const handlePlayAudio = (specificText) => {
+        if (!currentEx) return;
+
+        // 1. If creator recorded an audio clip and no individual sub-word was requested, play the clip
+        if (hasCourseAudio(currentEx) && !specificText) {
+            const url = getCourseAudioUrl(currentEx);
+            if (url) {
+                new Audio(url).play().catch(e => console.warn('Audio play error:', e));
+                return;
+            }
+        }
+
+        // 2. Otherwise synthesize pronunciation via IPA
+        const text = specificText || currentEx.conlangSentence || currentEx.targetText || '';
+        if (!text || !text.trim()) return;
+
+        const cleanText = text.replace(/_+/g, ' ').replace(/[.\-*]/g, '').trim();
+        if (!cleanText) return;
+
+        const ipa = resolvePhraseIpa(cleanText, lexicon, config.ipaMappingRules);
+        setIsAudioPlaying(true);
+        playAzureTTS({
+            text: cleanText,
+            ipa,
+            voice: config.azureTtsVoice,
+            useIpa: config.azureTtsUseIpa ?? true
+        }).finally(() => {
+            setIsAudioPlaying(false);
+        });
+    };
+
+    const canPlayAudio = currentEx && (
+        hasCourseAudio(currentEx) ||
+        (currentEx.type !== 'teach' &&
+         currentEx.type !== 'matching_pairs' &&
+         currentEx.type !== 'listening' &&
+         (currentEx.type !== 'translate_to_conlang' || feedback) &&
+         Boolean(currentEx.conlangSentence?.trim() || currentEx.targetText?.trim()))
+    );
 
     const advanceToNext = () => {
         const nextIdx = currentIndex + 1;
@@ -281,8 +324,8 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
             setFeedback({ status: 'incorrect', message: `Oops! Correct answer: ${expectedDisplay}${reason}` });
             
             // Add current exercise to end of array to force review
-            currentEx.failed = true;
-            setExercises(prev => [...prev, currentEx]);
+            const failedEx = { ...currentEx, failed: true };
+            setExercises(prev => [...prev, failedEx]);
         }
     };
 
@@ -537,41 +580,29 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
 
                 {currentEx.type === 'listening' && (
                     <div className="ep-prompt" style={{ display: 'flex', justifyContent: 'center' }}>
-                         <Button variant="imp" style={{ width: '80px', height: '80px', borderRadius: '50%' }} onClick={() => {
-                             // A creator-recorded clip is authoritative; only fall
-                             // back to TTS when no recording was attached.
-                             const clip = currentEx.audioData || currentEx.audioPath;
-                             if (clip) {
-                                 const url = getCourseAudioUrl(clip);
-                                 if (url) { new Audio(url).play(); return; }
-                             }
-                             const text = currentEx.conlangSentence.replace(/[.\-*]/g, '');
-                             if (config.azureTtsVoice) {
-                                 import('../../../utils/azureTTS.js').then(({playAzureTTS}) => {
-                                     playAzureTTS({text, voice: config.azureTtsVoice, useIpa: config.azureTtsUseIpa})
-                                 });
-                             } else if ('speechSynthesis' in window) {
-                                 window.speechSynthesis.cancel();
-                                 window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
-                             }
-                         }}>
+                         <Button
+                             variant="imp"
+                             style={{ width: '80px', height: '80px', borderRadius: '50%' }}
+                             className={isAudioPlaying ? 'playing' : ''}
+                             onClick={() => handlePlayAudio()}
+                             title={t('exercisePlayer.playPronunciation')}
+                             aria-label={t('exercisePlayer.playPronunciation')}
+                         >
                              <LucideIcons.Volume2 size={40} />
                          </Button>
                     </div>
                 )}
 
-                {/* Creator-recorded clip. Takes priority over Azure TTS, and is
-                    offered on every exercise type that has one attached. */}
-                {hasCourseAudio(currentEx) && (
+                {/* Pronunciation audio: creator recording if attached, otherwise IPA synthesizer */}
+                {canPlayAudio && (
                     <button
-                        className="ep-audio-chip"
-                        onClick={() => {
-                            const url = getCourseAudioUrl(currentEx);
-                            if (url) new Audio(url).play().catch(e => console.warn('Audio play error:', e));
-                        }}
+                        type="button"
+                        className={`ep-audio-chip ${isAudioPlaying ? 'playing' : ''}`}
+                        onClick={() => handlePlayAudio()}
                         title={t('exercisePlayer.playPronunciation')}
+                        aria-label={t('exercisePlayer.playPronunciation')}
                     >
-                        <LucideIcons.Volume2 size={18} />
+                        <LucideIcons.Volume2 size={20} />
                     </button>
                 )}
 
@@ -654,7 +685,12 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
                                     <Button 
                                         key={`c-${i}`} 
                                         variant={isMatched ? 'save' : isSelected ? 'imp' : 'default'}
-                                        onClick={() => !isMatched && handleMatchSelect('conlang', item.conlang)}
+                                        onClick={() => {
+                                            if (!isMatched) {
+                                                handleMatchSelect('conlang', item.conlang);
+                                                handlePlayAudio(item.conlang);
+                                            }
+                                        }}
                                         disabled={isMatched || !!feedback}
                                         className="custom-font-text notranslate"
                                         style={{ opacity: isMatched ? 0.5 : 1 }}

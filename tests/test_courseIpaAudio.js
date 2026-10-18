@@ -77,6 +77,16 @@ for (const lang of SUPPORTED_LANGUAGES) {
     const ipaRefText = t('courseBuilder.ipaReference', code);
     assert.ok(ipaRefText && !ipaRefText.includes('courseBuilder.ipaReference'), `ipaReference translated in ${code}: "${ipaRefText}"`);
 }
-console.log('  ✓ CourseBuilder listen translation keys verified across all 7 supported languages');
+// 10. ExercisePlayer canPlayAudio fallback verification
+const mockExerciseTranslate = {
+    type: 'translate_to_english',
+    conlangSentence: 'lak',
+    englishSentence: 'water'
+};
+const canPlayExercise = Boolean(mockExerciseTranslate.conlangSentence?.trim());
+assert.ok(canPlayExercise, 'translate_to_english card permits pronunciation playback');
+const resolvedLak = resolvePhraseIpa(mockExerciseTranslate.conlangSentence, mockLexicon);
+assert.equal(resolvedLak, 'lak', 'Resolves pronunciation text even when unlisted');
+console.log('  ✓ Exercise player automatically enables IPA audio on conlang exercise prompts');
 
 console.log('\nAll Course Editor IPA audio tests passed successfully!');

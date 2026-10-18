@@ -154,19 +154,34 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
     margin-bottom: 20px;
     border: 1px solid var(--bd);
     border-radius: 50%;
     background: var(--s2);
     color: var(--tx);
     cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 .ep-audio-chip:hover {
     border-color: var(--acc);
     color: var(--acc);
+    background: var(--s3);
+}
+
+.ep-audio-chip.playing {
+    border-color: var(--acc);
+    color: var(--acc);
+    background: var(--s3);
+    animation: ep-pulse 1.2s infinite ease-in-out;
+}
+
+@keyframes ep-pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
 }
 
 .ep-glyph-area {
