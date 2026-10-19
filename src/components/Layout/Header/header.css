@@ -109,6 +109,7 @@
     white-space: nowrap;
     flex-shrink: 0;
     line-height: 1.2;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .hdr-btn span {
@@ -131,6 +132,7 @@
     height: 16px;
     stroke-width: 1.8px;
     flex-shrink: 0;
+    display: block;
 }
 
 /* Export Menu Dropdown */
@@ -250,6 +252,12 @@
     font-size: 0.95rem;
     line-height: 1;
     margin-right: 2px;
+}
+
+.hdr-lang-code {
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
 }
 
 .lang-opt {

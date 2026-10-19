@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
-import { Menu, Home, Printer, Save, FolderUp, User, Cloud, FileText, Table, FileEdit, Download, Gamepad, Globe, Database, Search, Book, Swords, Layers } from 'lucide-react';
+import { Menu, Home, Printer, Save, FolderUp, User, Cloud, FileText, Table, FileEdit, Download, Gamepad, Globe, Database, Search, Book, Swords, Layers, Languages } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
 
 
@@ -417,8 +417,9 @@ export default function Header({ openMenu, onBackupNow }) {
                                 aria-haspopup="true"
                                 title={t('settings.language')}
                             >
+                                <Languages size={16} />
                                 <span className="hdr-lang-flag">{currentLangObj?.flag}</span>
-                                <span>{currentLang.toUpperCase()}</span>
+                                <span className="hdr-lang-code">{currentLang.toUpperCase()}</span>
                             </Button>
                             <div className="export-dropdown lang-dropdown">
                                 {languages.map((lang) => (

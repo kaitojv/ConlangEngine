@@ -981,8 +981,9 @@ export const useConfigStore = create(
             restoreAllVocabWords: () => set({ hiddenVocabWords: [] }),
 
             saveWikiPage: (pageId, content) => set((state) => {
-                const existing = state.wikiPages[pageId];
-                if (existing && typeof existing === 'object') {
+                const existing = state.wikiPages?.[pageId];
+                if (!existing) return {};
+                if (typeof existing === 'object') {
                     return { wikiPages: { ...state.wikiPages, [pageId]: { ...existing, content } } };
                 }
                 return { wikiPages: { ...state.wikiPages, [pageId]: content } };

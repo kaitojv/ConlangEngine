@@ -1847,11 +1847,15 @@ export default function WikiTab() {
     const updateWikiPageMetadata = useConfigStore((state) => state.updateWikiPageMetadata);
     const writingDirection = useConfigStore(state => state.writingDirection);
 
-    const [currentPageId, setCurrentPageId] = useState(() => {
+    const [selectedPageId, setSelectedPageId] = useState(() => {
         const keys = Object.keys(wikiPages);
         const firstDoc = keys.find(k => typeof wikiPages[k] !== 'object' || wikiPages[k].type !== 'notebook');
         return firstDoc || null;
     });
+    const setCurrentPageId = setSelectedPageId;
+    const currentPageId = (selectedPageId && wikiPages[selectedPageId])
+        ? selectedPageId
+        : (Object.keys(wikiPages).find(k => typeof wikiPages[k] !== 'object' || wikiPages[k].type !== 'notebook') || null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [newPageTitle, setNewPageTitle] = useState('');
     const [newPageType, setNewPageType] = useState('wiki'); // 'wiki', 'corpus', or 'notebook'
@@ -1938,14 +1942,17 @@ export default function WikiTab() {
             
         if (!window.confirm(msg)) return;
         
-        deleteWikiPage(pageId);
-        
-        // If the current page is deleted (or is a child of the deleted notebook), reset it
+        // If the current page is deleted (or is a child of the deleted notebook), reset it first
         if (currentPageId === pageId || (wikiPages[currentPageId] && wikiPages[currentPageId].parentId === pageId)) {
             const remainingPages = Object.keys(wikiPages).filter(id => id !== pageId && (!wikiPages[id].parentId || wikiPages[id].parentId !== pageId));
             const firstDoc = remainingPages.find(k => typeof wikiPages[k] !== 'object' || wikiPages[k].type !== 'notebook');
             setCurrentPageId(firstDoc || null);
+            if (firstDoc && wikiPages[firstDoc] && typeof wikiPages[firstDoc] === 'object' && wikiPages[firstDoc].parentId) {
+                setExpandedNotebooks(prev => ({ ...prev, [wikiPages[firstDoc].parentId]: true }));
+            }
         }
+
+        deleteWikiPage(pageId);
     };
 
     const handleOpenEdit = (pageId, e) => {
@@ -2082,19 +2089,27 @@ export default function WikiTab() {
             </Card>
 
             <Card style={{ flex: '3', minWidth: '300px' }}>
-                {currentPageId ? (
+                {currentPageId && wikiPages[currentPageId] ? (
                     isCorpus ? (
                         <CorpusEditor 
                             key={currentPageId}
                             content={content} 
                             writingDirection={writingDirection}
-                            onSave={(val) => saveWikiPage(currentPageId, val)} 
+                            onSave={(val) => {
+                                if (useConfigStore.getState().wikiPages?.[currentPageId]) {
+                                    saveWikiPage(currentPageId, val);
+                                }
+                            }} 
                         />
                     ) : (
                         <LegacyWikiEditor 
                             key={currentPageId}
                             content={content} 
-                            onSave={(val) => saveWikiPage(currentPageId, val)} 
+                            onSave={(val) => {
+                                if (useConfigStore.getState().wikiPages?.[currentPageId]) {
+                                    saveWikiPage(currentPageId, val);
+                                }
+                            }} 
                         />
                     )
                 ) : (
