@@ -11,6 +11,13 @@ import {
     exportFontArtifacts,
     buildFontFaceCss,
 } from '../src/utils/fontExporter.js';
+import {
+    buildGlyphPathAndMetrics,
+    buildOpenTypeFont,
+    buildSvgPathDFromStrokes,
+    fixOpenTypeChecksums,
+} from '../src/utils/fontCompiler.js';
+import { signedArea } from '../src/utils/polygonUnion.js';
 
 const squareStroke = (offset = 0) => [
     { isMeta: true, scale: 1, leftMargin: 80, rightMargin: 80, yOffset: 0, xOffset: 0 },
@@ -232,5 +239,107 @@ test('Custom Font Exporter', async (t) => {
 
         const css = buildFontFaceCss('My Font', [{ filename: 'My_Font.ttf' }]);
         assert.ok(css.includes("font-family: 'My Font'"));
+    });
+
+    await t.test('unions crossing/curved strokes into non-overlapping integer CCW contours with nib mode parity', () => {
+        const extractContours = (path) => {
+            const rings = [];
+            let curr = null;
+            for (const cmd of path.commands) {
+                if (cmd.type === 'M') {
+                    curr = [{ x: cmd.x, y: cmd.y }];
+                    rings.push(curr);
+                } else if (cmd.type === 'L' && curr) {
+                    curr.push({ x: cmd.x, y: cmd.y });
+                }
+            }
+            return rings;
+        };
+
+        // Crossing '+' strokes must merge into 1 single outer CCW contour with integer coords
+        const crossStrokes = [
+            { isMeta: true, scale: 1, leftMargin: 80, rightMargin: 80, yOffset: 0, xOffset: 0 },
+            [{ x: 150, y: 40 }, { x: 150, y: 260 }],
+            [{ x: 40, y: 150 }, { x: 260, y: 150 }],
+        ];
+        const crossResult = buildGlyphPathAndMetrics(crossStrokes, 20, 1.0);
+        const crossRings = extractContours(crossResult.path);
+        assert.equal(crossRings.length, 1);
+        assert.ok(signedArea(crossRings[0]) > 0, 'outer contour must be CCW');
+        for (const pt of crossRings[0]) {
+            assert.equal(pt.x, Math.round(pt.x));
+            assert.equal(pt.y, Math.round(pt.y));
+        }
+
+        // Closed loop 'O' must produce 1 outer CCW ring + 1 inner CW hole ring
+        const loopPts = [];
+        for (let i = 0; i <= 16; i++) {
+            const a = (i / 16) * Math.PI * 2;
+            loopPts.push({ x: 150 + Math.cos(a) * 80, y: 150 + Math.sin(a) * 80 });
+        }
+        const loopResult = buildGlyphPathAndMetrics([{ isMeta: true }, loopPts], 16, 1.0);
+        const loopRings = extractContours(loopResult.path);
+        assert.equal(loopRings.length, 2);
+        const loopAreas = loopRings.map(r => signedArea(r)).sort((a, b) => a - b);
+        assert.ok(loopAreas[0] < 0, 'inner hole contour must be CW');
+        assert.ok(loopAreas[1] > 0, 'outer loop contour must be CCW');
+
+        // Calligraphy, Chisel, PaintBrush, and Serif filled shapes compile cleanly with positive CCW area
+        const curvePts = [{ x: 40, y: 240 }, { x: 110, y: 180 }, { x: 190, y: 110 }, { x: 250, y: 40 }];
+        const chiselRes = buildGlyphPathAndMetrics([{ isMeta: true, isChisel: true, chiselAngle: 30 }, curvePts], 20, 1.0);
+        const chiselRings = extractContours(chiselRes.path);
+        assert.equal(chiselRings.length, 1);
+        assert.ok(signedArea(chiselRings[0]) > 0);
+
+        const serifFilled = Object.assign(
+            [{ x: 80, y: 40 }, { x: 220, y: 40 }, { x: 170, y: 90 }, { x: 130, y: 90 }],
+            { isFilled: true }
+        );
+        const paintSerifRes = buildGlyphPathAndMetrics(
+            [{ isMeta: true, isPaintBrush: true, isSerifPen: true }, [{ x: 150, y: 60 }, { x: 150, y: 240 }], serifFilled],
+            20,
+            1.0
+        );
+        const paintSerifRings = extractContours(paintSerifRes.path);
+        assert.equal(paintSerifRings.length, 1);
+        assert.ok(signedArea(paintSerifRings[0]) > 0);
+    });
+
+    await t.test('preserves non-ASCII/IPA characters in OpenType family name instead of replacing with spaces', async () => {
+        const glyphs = { [0xE000]: squareStroke(0) };
+        const { font } = await buildOpenTypeFont(glyphs, 30, 1.0, {
+            familyName: 'Mɑni Script 2',
+            designer: 'Zoë',
+        });
+        const buf = fixOpenTypeChecksums(font.toArrayBuffer());
+        const parsed = opentype.parse(buf);
+
+        assert.equal(parsed.names.fontFamily.en, 'Mɑni Script 2');
+        assert.equal(parsed.names.fullName.en, 'Mɑni Script 2 Regular');
+        assert.equal(parsed.names.designer.en, 'Zoë');
+        assert.equal(parsed.names.postScriptName.en, 'Mani_Script_2-Regular');
+    });
+
+    await t.test('generates filled SVG outlines honoring Calligraphy, Brush, Chisel, PaintBrush, and Dot modes', () => {
+        const line = [[{ x: 40, y: 150 }, { x: 100, y: 150 }, { x: 180, y: 150 }, { x: 260, y: 150 }]];
+        const plainD = buildSvgPathDFromStrokes(line, { strokeWidth: 12 });
+        const calligD = buildSvgPathDFromStrokes(line, { isCalligraphy: true, strokeWidth: 12 });
+        const brushD = buildSvgPathDFromStrokes(line, { isBrushPen: true, strokeWidth: 12 });
+        const chiselD = buildSvgPathDFromStrokes(line, { isChisel: true, chiselAngle: 0, strokeWidth: 12 });
+        const paintD = buildSvgPathDFromStrokes(line, { isPaintBrush: true, strokeWidth: 12 });
+
+        assert.ok(plainD.startsWith('M ') && plainD.endsWith(' Z'));
+        assert.notEqual(calligD, plainD, 'calligraphy SVG outline must differ from uniform stroke');
+        assert.notEqual(brushD, plainD, 'brush pen SVG outline must differ from uniform stroke');
+        assert.notEqual(paintD, plainD, 'paint brush SVG outline must differ from uniform stroke');
+        assert.notEqual(
+            chiselD,
+            buildSvgPathDFromStrokes(line, { isChisel: true, chiselAngle: 90, strokeWidth: 12 }),
+            'chisel SVG outline must respond to chiselAngle'
+        );
+
+        // Single-point dot produces non-empty closed outline instead of being dropped
+        const dotD = buildSvgPathDFromStrokes([[{ x: 150, y: 150 }]], { strokeWidth: 10 });
+        assert.ok(dotD.startsWith('M ') && dotD.endsWith(' Z'));
     });
 });

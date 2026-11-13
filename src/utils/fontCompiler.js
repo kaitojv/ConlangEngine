@@ -1,5 +1,6 @@
 // src/utils/fontCompiler.js
 import opentype from 'opentype.js';
+import { unionPolygons, ensureCCW, signedArea } from './polygonUnion.js';
 
 /**
  * Normalizes a stroke array entry (extracting leading metadata and actual drawable strokes).
@@ -13,7 +14,11 @@ export function extractStrokeMetaAndPoints(strokeArray) {
         xOffset: 0,
         consistentSize: undefined,
         isCalligraphy: false,
-        isBrushPen: false
+        isBrushPen: false,
+        isChisel: false,
+        isPaintBrush: false,
+        isSerifPen: false,
+        chiselAngle: 45,
     };
     let actualStrokes = Array.isArray(strokeArray) ? strokeArray : [];
 
@@ -22,12 +27,21 @@ export function extractStrokeMetaAndPoints(strokeArray) {
         if (!Array.isArray(firstStroke) && firstStroke && firstStroke.isMeta) {
             meta = { ...meta, ...firstStroke };
             actualStrokes = actualStrokes.slice(1);
-        } else if (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0]?.x === -999) {
-            meta.isCalligraphy = true;
-            actualStrokes = actualStrokes.slice(1);
-        } else if (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0]?.x === -998) {
-            meta.isBrushPen = true;
-            actualStrokes = actualStrokes.slice(1);
+        } else if (Array.isArray(firstStroke) && firstStroke.length === 1) {
+            const markerX = firstStroke[0]?.x;
+            if (markerX === -999) {
+                meta.isCalligraphy = true;
+                actualStrokes = actualStrokes.slice(1);
+            } else if (markerX === -998) {
+                meta.isBrushPen = true;
+                actualStrokes = actualStrokes.slice(1);
+            } else if (markerX === -997) {
+                meta.isPaintBrush = true;
+                actualStrokes = actualStrokes.slice(1);
+            } else if (markerX === -996) {
+                meta.isSerifPen = true;
+                actualStrokes = actualStrokes.slice(1);
+            }
         }
     }
 
@@ -95,6 +109,255 @@ function simplifyStrokeRDP(points, epsilon = 2.0) {
 }
 
 /**
+ * Builds a rotated CCW regular polygon approximating a circular cap or join disc.
+ * Rotation avoids vertices aligning tangentially with axis-aligned segment edges.
+ */
+function buildCapDisc(cx, cy, r, sides = 10, minHalfWidth = 1.5) {
+    const pts = [];
+    const safeR = Math.max(minHalfWidth, r);
+    for (let a = 0; a < sides; a++) {
+        const angle = ((a + 0.37) / sides) * Math.PI * 2;
+        pts.push({
+            x: cx + Math.cos(angle) * safeR,
+            y: cy + Math.sin(angle) * safeR,
+        });
+    }
+    return pts;
+}
+
+/**
+ * Computes the stroke half-width at point index `i` for tapered/textured nibs.
+ */
+function computePointHalfWidth(points, i, baseR, minHalfWidth, flags) {
+    const n = points.length;
+    if (flags.isCalligraphy) {
+        const taper = Math.sin((i / (n - 1 || 1)) * Math.PI);
+        return Math.max(minHalfWidth, baseR * (0.3 + 0.7 * taper));
+    }
+    if (flags.isBrushPen) {
+        const progress = i / (n - 1 || 1);
+        const widthMult = progress < 0.8 ? 1.0 : (1.0 - (progress - 0.8) * 5);
+        const startMult = progress < 0.1 ? (0.5 + progress * 5) : 1.0;
+        return Math.max(minHalfWidth, baseR * Math.max(0.1, widthMult * startMult));
+    }
+    if (flags.isPaintBrush) {
+        const pt = points[i];
+        const hash = Math.abs(pt.x * 13 + pt.y * 17) % 10;
+        return Math.max(minHalfWidth, baseR * (0.7 + (hash / 10) * 0.4));
+    }
+    return Math.max(minHalfWidth, baseR);
+}
+
+/**
+ * Converts Font Studio strokes into disjoint unioned polygon rings in an arbitrary
+ * target 2D coordinate space (`toX`, `toY`), applying nib modes consistently.
+ */
+export function buildStrokeUnionRings({
+    actualStrokes,
+    meta,
+    toX,
+    toY,
+    baseHalfWidth,
+    minHalfWidth = 1.5,
+    distFilterSq = 16,
+    rdpFillEps = 1.0,
+    rdpStrokeEps = 1.8,
+    flagOverrides = {},
+}) {
+    const hasCalligraphy = flagOverrides.isCalligraphy ?? Boolean(meta.isCalligraphy);
+    const hasBrushPen = flagOverrides.isBrushPen ?? Boolean(meta.isBrushPen);
+    const hasChisel = flagOverrides.isChisel ?? Boolean(meta.isChisel);
+    const hasPaintBrush = flagOverrides.isPaintBrush ?? Boolean(meta.isPaintBrush);
+    const defaultChiselAngle = Number.isFinite(flagOverrides.chiselAngle)
+        ? flagOverrides.chiselAngle
+        : (Number.isFinite(meta.chiselAngle) ? meta.chiselAngle : 45);
+
+    const rawPolygons = [];
+
+    (actualStrokes || []).forEach(strokeData => {
+        const rawPoints = Array.isArray(strokeData) ? strokeData : (strokeData?.points || []);
+        const points = rawPoints.filter(pt => pt && Number.isFinite(pt.x) && Number.isFinite(pt.y));
+        const isFilled = Boolean(strokeData?.isFilled);
+        const lineCap = strokeData?.lineCap || 'round';
+
+        if (points.length === 0) return;
+
+        const strokeFlags = {
+            isCalligraphy: strokeData?.isCalligraphy ?? hasCalligraphy,
+            isBrushPen: strokeData?.isBrushPen ?? hasBrushPen,
+            isChisel: strokeData?.isChisel ?? hasChisel,
+            isPaintBrush: strokeData?.isPaintBrush ?? hasPaintBrush,
+            chiselAngle: Number.isFinite(strokeData?.chiselAngle) ? strokeData.chiselAngle : defaultChiselAngle,
+        };
+
+        const distFiltered = [points[0]];
+        for (let i = 1; i < points.length; i++) {
+            const last = distFiltered[distFiltered.length - 1];
+            const curr = points[i];
+            const dx = curr.x - last.x;
+            const dy = curr.y - last.y;
+            if ((dx * dx + dy * dy) > distFilterSq || i === points.length - 1) {
+                distFiltered.push(curr);
+            }
+        }
+        const simplified = simplifyStrokeRDP(distFiltered, isFilled ? rdpFillEps : rdpStrokeEps);
+
+        if (isFilled && simplified.length >= 3) {
+            const ccw = ensureCCW(simplified.map(pt => ({ x: toX(pt.x), y: toY(pt.y) })));
+            if (ccw) rawPolygons.push(ccw);
+            return;
+        }
+
+        if (simplified.length === 1) {
+            const pt = simplified[0];
+            rawPolygons.push(buildCapDisc(toX(pt.x), toY(pt.y), baseHalfWidth, 12, minHalfWidth));
+            return;
+        }
+
+        const radChisel = (strokeFlags.chiselAngle * Math.PI) / 180;
+        const mapped = simplified.map((pt, i) => ({
+            cx: toX(pt.x),
+            cy: toY(pt.y),
+            origX: pt.x,
+            origY: pt.y,
+            r: computePointHalfWidth(simplified, i, baseHalfWidth, minHalfWidth, strokeFlags),
+        }));
+
+        for (let i = 0; i < mapped.length; i++) {
+            const p1 = mapped[i];
+
+            if (i < mapped.length - 1) {
+                const p2 = mapped[i + 1];
+                const dx = p2.cx - p1.cx;
+                const dy = p2.cy - p1.cy;
+                const len = Math.hypot(dx, dy);
+
+                if (len > 0.05) {
+                    let r1 = p1.r;
+                    let r2 = p2.r;
+                    if (strokeFlags.isChisel) {
+                        const strokeAngle = Math.atan2(p2.origY - p1.origY, p2.origX - p1.origX);
+                        const diff = Math.abs(Math.sin(strokeAngle - radChisel));
+                        const w = Math.max(minHalfWidth, baseHalfWidth * (0.2 + 0.8 * diff));
+                        r1 = w;
+                        r2 = w;
+                    }
+
+                    const px = dy / len;
+                    const py = -dx / len;
+                    rawPolygons.push([
+                        { x: p1.cx + px * r1, y: p1.cy + py * r1 },
+                        { x: p2.cx + px * r2, y: p2.cy + py * r2 },
+                        { x: p2.cx - px * r2, y: p2.cy - py * r2 },
+                        { x: p1.cx - px * r1, y: p1.cy - py * r1 },
+                    ]);
+
+                    if (strokeFlags.isChisel && (lineCap === 'round' || i > 0)) {
+                        rawPolygons.push(buildCapDisc(p1.cx, p1.cy, r1, 10, minHalfWidth));
+                    }
+                    if (strokeFlags.isChisel && (lineCap === 'round' || i + 1 < mapped.length - 1)) {
+                        rawPolygons.push(buildCapDisc(p2.cx, p2.cy, r2, 10, minHalfWidth));
+                    }
+                }
+            }
+
+            if (!strokeFlags.isChisel) {
+                const isEndpoint = i === 0 || i === mapped.length - 1;
+                if (isEndpoint) {
+                    if (lineCap === 'round') {
+                        rawPolygons.push(buildCapDisc(p1.cx, p1.cy, p1.r, 10, minHalfWidth));
+                    }
+                } else {
+                    rawPolygons.push(buildCapDisc(p1.cx, p1.cy, p1.r, 10, minHalfWidth));
+                }
+            }
+        }
+    });
+
+    if (rawPolygons.length === 0) return [];
+    const unioned = unionPolygons(rawPolygons);
+    return unioned.length > 0 ? unioned : rawPolygons;
+}
+
+/**
+ * Generates an SVG compound path `d` string matching Font Studio trace modes
+ * (normal, calligraphy, brush pen, chisel, paint brush, serif / filled shapes).
+ */
+export function buildSvgPathDFromStrokes(strokeArray, options = {}) {
+    const { meta, actualStrokes } = extractStrokeMetaAndPoints(strokeArray);
+    if (actualStrokes.length === 0) return '';
+
+    const xOffset = Number.isFinite(options.xOffset) ? options.xOffset : 0;
+    const strokeWidth = Number(options.strokeWidth) > 0 ? Number(options.strokeWidth) : 10;
+    const baseHalfWidth = Math.max(0.5, strokeWidth / 2);
+    const minHalfWidth = Math.min(1.5, baseHalfWidth * 0.15);
+
+    const rings = buildStrokeUnionRings({
+        actualStrokes,
+        meta,
+        toX: (x) => x + xOffset,
+        toY: (y) => y,
+        baseHalfWidth,
+        minHalfWidth,
+        distFilterSq: 0.25,
+        rdpFillEps: 0.2,
+        rdpStrokeEps: 0.35,
+        flagOverrides: options,
+    });
+
+    const round2 = (n) => Number(n.toFixed(2));
+    const parts = [];
+
+    for (let rIdx = 0; rIdx < rings.length; rIdx++) {
+        const ring = rings[rIdx];
+        if (!ring || ring.length < 3 || Math.abs(signedArea(ring)) < 0.05) continue;
+        let sub = `M ${round2(ring[0].x)} ${round2(ring[0].y)}`;
+        for (let i = 1; i < ring.length; i++) {
+            sub += ` L ${round2(ring[i].x)} ${round2(ring[i].y)}`;
+        }
+        parts.push(`${sub} Z`);
+    }
+
+    return parts.join(' ');
+}
+
+/**
+ * Appends integer-rounded, non-degenerate contour rings onto an opentype.Path.
+ */
+function emitRingsToPath(path, rings) {
+    for (let rIdx = 0; rIdx < rings.length; rIdx++) {
+        const ring = rings[rIdx];
+        if (!ring || ring.length < 3) continue;
+
+        const rounded = [];
+        for (let i = 0; i < ring.length; i++) {
+            const rx = Math.round(ring[i].x);
+            const ry = Math.round(ring[i].y);
+            const prev = rounded[rounded.length - 1];
+            if (!prev || prev.x !== rx || prev.y !== ry) {
+                rounded.push({ x: rx, y: ry });
+            }
+        }
+        while (rounded.length > 1) {
+            const first = rounded[0];
+            const last = rounded[rounded.length - 1];
+            if (first.x === last.x && first.y === last.y) {
+                rounded.pop();
+            } else {
+                break;
+            }
+        }
+        if (rounded.length < 3 || Math.abs(signedArea(rounded)) < 1) continue;
+
+        path.moveTo(rounded[0].x, rounded[0].y);
+        for (let i = 1; i < rounded.length; i++) {
+            path.lineTo(rounded[i].x, rounded[i].y);
+        }
+        path.close();
+    }
+}
+
+/**
  * Converts a Font Studio stroke array into an opentype.Path and advanceWidth.
  */
 export function buildGlyphPathAndMetrics(strokeArray, traceWidth = 30, fontScale = 1.0, options = {}) {
@@ -109,9 +372,6 @@ export function buildGlyphPathAndMetrics(strokeArray, traceWidth = 30, fontScale
     const r_base = traceWidth;
     const { meta, actualStrokes } = extractStrokeMetaAndPoints(strokeArray);
 
-    const hasCalligraphy = meta.isCalligraphy;
-    const hasBrushPen = meta.isBrushPen;
-
     let minX = Infinity, maxX = -Infinity;
     let minY = Infinity, maxY = -Infinity;
     let hasPoints = false;
@@ -119,7 +379,7 @@ export function buildGlyphPathAndMetrics(strokeArray, traceWidth = 30, fontScale
     actualStrokes.forEach(strokeData => {
         const points = Array.isArray(strokeData) ? strokeData : (strokeData?.points || []);
         points.forEach(pt => {
-            if (pt && typeof pt.x === 'number' && typeof pt.y === 'number') {
+            if (pt && Number.isFinite(pt.x) && Number.isFinite(pt.y)) {
                 if (pt.x < minX) minX = pt.x;
                 if (pt.x > maxX) maxX = pt.x;
                 if (pt.y < minY) minY = pt.y;
@@ -162,98 +422,17 @@ export function buildGlyphPathAndMetrics(strokeArray, traceWidth = 30, fontScale
         return 400 + ((800 - y * 2.85 - 400) * meta.scale) + meta.yOffset;
     };
 
-    actualStrokes.forEach(strokeData => {
-        const points = Array.isArray(strokeData) ? strokeData : (strokeData?.points || []);
-        const isFilled = strokeData?.isFilled || false;
-        const lineCap = strokeData?.lineCap || 'round';
-
-        if (points.length === 0) return;
-
-        // Simplify the stroke by dropping points that are too close, then RDP-pruning collinear points
-        const distFiltered = [points[0]];
-        for (let i = 1; i < points.length; i++) {
-            const last = distFiltered[distFiltered.length - 1];
-            const curr = points[i];
-            const dx = curr.x - last.x;
-            const dy = curr.y - last.y;
-            if ((dx * dx + dy * dy) > 16 || i === points.length - 1) {
-                distFiltered.push(curr);
-            }
-        }
-        const simplified = simplifyStrokeRDP(distFiltered, isFilled ? 1.0 : 1.8);
-
-        if (isFilled && simplified.length >= 3) {
-            path.moveTo(toX(simplified[0].x), toY(simplified[0].y));
-            for (let i = 1; i < simplified.length; i++) {
-                path.lineTo(toX(simplified[i].x), toY(simplified[i].y));
-            }
-            path.close();
-        } else {
-            for (let i = 0; i < simplified.length; i++) {
-                const pt1 = simplified[i];
-                const cx1 = toX(pt1.x);
-                const cy1 = toY(pt1.y);
-
-                let r = r_base * meta.scale;
-                if (hasCalligraphy) {
-                    const taper = Math.sin((i / (simplified.length - 1 || 1)) * Math.PI);
-                    r = (r_base * meta.scale) * (0.3 + 0.7 * taper);
-                } else if (hasBrushPen) {
-                    const progress = i / (simplified.length - 1 || 1);
-                    const widthMult = progress < 0.8 ? 1.0 : (1.0 - (progress - 0.8) * 5);
-                    const startMult = progress < 0.1 ? (0.5 + progress * 5) : 1.0;
-                    r = (r_base * meta.scale) * Math.max(0.1, widthMult * startMult);
-                }
-
-                if (lineCap === 'round') {
-                    const r707 = r * 0.707;
-                    path.moveTo(cx1 + r, cy1);
-                    path.lineTo(cx1 + r707, cy1 + r707);
-                    path.lineTo(cx1, cy1 + r);
-                    path.lineTo(cx1 - r707, cy1 + r707);
-                    path.lineTo(cx1 - r, cy1);
-                    path.lineTo(cx1 - r707, cy1 - r707);
-                    path.lineTo(cx1, cy1 - r);
-                    path.lineTo(cx1 + r707, cy1 - r707);
-                    path.close();
-                }
-
-                if (i < simplified.length - 1) {
-                    const pt2 = simplified[i + 1];
-                    const cx2 = toX(pt2.x);
-                    const cy2 = toY(pt2.y);
-
-                    let next_r = r_base * meta.scale;
-                    if (hasCalligraphy) {
-                        const next_taper = Math.sin(((i + 1) / (simplified.length - 1 || 1)) * Math.PI);
-                        next_r = (r_base * meta.scale) * (0.3 + 0.7 * next_taper);
-                    } else if (hasBrushPen) {
-                        const next_progress = (i + 1) / (simplified.length - 1 || 1);
-                        const next_widthMult = next_progress < 0.8 ? 1.0 : (1.0 - (next_progress - 0.8) * 5);
-                        const next_startMult = next_progress < 0.1 ? (0.5 + next_progress * 5) : 1.0;
-                        next_r = (r_base * meta.scale) * Math.max(0.1, next_widthMult * next_startMult);
-                    }
-
-                    const dx = cx2 - cx1;
-                    const dy = cy2 - cy1;
-                    const len = Math.sqrt(dx * dx + dy * dy);
-
-                    if (len > 0) {
-                        const nx1 = (dy / len) * r;
-                        const ny1 = -(dx / len) * r;
-                        const nx2 = (dy / len) * next_r;
-                        const ny2 = -(dx / len) * next_r;
-
-                        path.moveTo(cx1 + nx1, cy1 + ny1);
-                        path.lineTo(cx2 + nx2, cy2 + ny2);
-                        path.lineTo(cx2 - nx2, cy2 - ny2);
-                        path.lineTo(cx1 - nx1, cy1 - ny1);
-                        path.close();
-                    }
-                }
-            }
-        }
+    const rings = buildStrokeUnionRings({
+        actualStrokes,
+        meta,
+        toX,
+        toY,
+        baseHalfWidth: Math.max(1.5, r_base * meta.scale),
+        minHalfWidth: 1.5,
     });
+    if (rings.length > 0) {
+        emitRingsToPath(path, rings);
+    }
 
     return {
         path,
@@ -272,18 +451,72 @@ function cloneOpenTypePath(srcPath) {
     return cloned;
 }
 
+const UNICODE_TO_ASCII_MAP = {
+    'ɑ': 'a', 'ɐ': 'a', 'ɒ': 'a', 'æ': 'ae', 'ʌ': 'a', 'Æ': 'AE',
+    'ə': 'e', 'ɛ': 'e', 'ɜ': 'e', 'ɝ': 'e', 'ɘ': 'e', 'Ǝ': 'E', 'Ə': 'E',
+    'ɪ': 'i', 'ɨ': 'i', 'ı': 'i', 'İ': 'I',
+    'ɔ': 'o', 'ø': 'o', 'œ': 'oe', 'ɵ': 'o', 'Ø': 'O', 'Œ': 'OE',
+    'ʊ': 'u', 'ʉ': 'u', 'ɯ': 'u',
+    'ð': 'dh', 'Ð': 'Dh', 'þ': 'th', 'Þ': 'Th', 'θ': 'th',
+    'ʃ': 'sh', 'Ʃ': 'Sh', 'ʒ': 'zh', 'Ʒ': 'Zh',
+    'ŋ': 'ng', 'Ŋ': 'Ng', 'ɲ': 'ny', 'ɳ': 'n', 'ɴ': 'n',
+    'ɾ': 'r', 'ɹ': 'r', 'ʀ': 'r', 'ʁ': 'r',
+    'ʋ': 'v', 'ɣ': 'gh', 'χ': 'kh', 'ħ': 'h', 'ɦ': 'h',
+    'ʔ': '', 'ʕ': '',
+    'ɓ': 'b', 'ɗ': 'd', 'ɠ': 'g',
+    'ł': 'l', 'Ł': 'L', 'đ': 'd', 'Đ': 'D',
+    'ß': 'ss', 'ẞ': 'SS',
+    'ﬀ': 'ff', 'ﬁ': 'fi', 'ﬂ': 'fl', 'ﬃ': 'ffi', 'ﬄ': 'ffl',
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
+    'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+    'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+    'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+    'ы': 'y', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+    'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'E',
+    'Ж': 'Zh', 'З': 'Z', 'И': 'I', 'Й': 'Y', 'К': 'K', 'Л': 'L', 'М': 'M',
+    'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U',
+    'Ф': 'F', 'Х': 'Kh', 'Ц': 'Ts', 'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Shch',
+    'Ы': 'Y', 'Э': 'E', 'Ю': 'Yu', 'Я': 'Ya',
+    'α': 'a', 'β': 'b', 'γ': 'g', 'δ': 'd', 'ε': 'e', 'ζ': 'z', 'η': 'e',
+    'ι': 'i', 'κ': 'k', 'λ': 'l', 'μ': 'm', 'ν': 'n', 'ξ': 'x',
+    'ο': 'o', 'π': 'p', 'ρ': 'r', 'σ': 's', 'ς': 's', 'τ': 't', 'υ': 'y',
+    'φ': 'ph', 'ψ': 'ps', 'ω': 'o',
+    'Α': 'A', 'Β': 'B', 'Γ': 'G', 'Δ': 'D', 'Ε': 'E', 'Ζ': 'Z', 'Η': 'E',
+    'Θ': 'Th', 'Ι': 'I', 'Κ': 'K', 'Λ': 'L', 'Μ': 'M', 'Ν': 'N', 'Ξ': 'X',
+    'Ο': 'O', 'Π': 'P', 'Ρ': 'R', 'Σ': 'S', 'Τ': 'T', 'Υ': 'Y', 'Φ': 'Ph',
+    'Χ': 'Ch', 'Ψ': 'Ps', 'Ω': 'O',
+};
+
+function transliterateToAscii(val) {
+    let out = '';
+    for (const ch of String(val || '')) {
+        out += Object.prototype.hasOwnProperty.call(UNICODE_TO_ASCII_MAP, ch)
+            ? UNICODE_TO_ASCII_MAP[ch]
+            : ch;
+    }
+    return out
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '');
+}
+
 /**
- * Sanitizes a font name string for OpenType name table compatibility.
+ * Normalizes a Unicode font name string for OpenType UTF-16 `name` table records.
  */
+function normalizeUnicodeNameString(val, fallback) {
+    const clean = String(val || '')
+        .replace(/\p{Cc}+/gu, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    return clean || fallback;
+}
+
 /**
- * Sanitizes a font name string for OpenType `name` and `CFF ` table compatibility
+ * Sanitizes a font name string for OpenType `CFF ` table compatibility
  * (printable ASCII only, since opentype.js encodes CFF String INDEX as single bytes).
  */
 function sanitizeNameString(val, fallback) {
-    const clean = String(val || '')
-        .normalize('NFKD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^\x20-\x7E]+/g, ' ')
+    const clean = transliterateToAscii(val)
+        .replace(/[^\x20-\x7E]+/g, '')
         .replace(/\s+/g, ' ')
         .trim();
     return clean || fallback;
@@ -294,9 +527,7 @@ function sanitizeNameString(val, fallback) {
  * (ASCII printable, no spaces, max 63 characters).
  */
 function sanitizeGlyphName(val, fallback) {
-    const clean = String(val || '')
-        .normalize('NFKD')
-        .replace(/[\u0300-\u036f]/g, '')
+    const clean = transliterateToAscii(val)
         .replace(/[^A-Za-z0-9._-]/g, '_')
         .replace(/^_+|_+$/g, '')
         .slice(0, 63);
@@ -486,25 +717,81 @@ export async function buildOpenTypeFont(customGlyphs, traceWidth = 30, fontScale
         }
     }
 
-    const familyName = sanitizeNameString(options?.familyName, 'ConlangFont');
-    const styleName = sanitizeNameString(options?.styleName, 'Regular');
+    const asciiFamilyName = sanitizeNameString(options?.familyName, 'ConlangFont');
+    const asciiStyleName = sanitizeNameString(options?.styleName, 'Regular');
+    const unicodeFamilyName = normalizeUnicodeNameString(options?.familyName, asciiFamilyName);
+    const unicodeStyleName = normalizeUnicodeNameString(options?.styleName, asciiStyleName);
+
+    const asciiMeta = {
+        version: options?.version ? sanitizeNameString(options.version, 'Version 1.0') : undefined,
+        copyright: options?.copyright ? sanitizeNameString(options.copyright, '') : undefined,
+        designer: options?.designer ? sanitizeNameString(options.designer, '') : undefined,
+        description: options?.description ? sanitizeNameString(options.description, '') : undefined,
+        license: options?.license ? sanitizeNameString(options.license, '') : undefined,
+    };
+    const unicodeMeta = {
+        copyright: options?.copyright ? normalizeUnicodeNameString(options.copyright, '') : undefined,
+        designer: options?.designer ? normalizeUnicodeNameString(options.designer, '') : undefined,
+        description: options?.description ? normalizeUnicodeNameString(options.description, '') : undefined,
+        license: options?.license ? normalizeUnicodeNameString(options.license, '') : undefined,
+    };
+
     const fontOptions = {
-        familyName,
-        styleName,
-        postScriptName: sanitizeGlyphName(`${familyName}-${styleName}`, 'ConlangFont-Regular'),
+        familyName: asciiFamilyName,
+        styleName: asciiStyleName,
+        postScriptName: sanitizeGlyphName(`${asciiFamilyName}-${asciiStyleName}`, 'ConlangFont-Regular'),
         unitsPerEm: upe,
         ascender: asc,
         descender: desc,
         glyphs
     };
 
-    if (options?.version) fontOptions.version = sanitizeNameString(options.version, 'Version 1.0');
-    if (options?.copyright) fontOptions.copyright = sanitizeNameString(options.copyright, '');
-    if (options?.designer) fontOptions.designer = sanitizeNameString(options.designer, '');
-    if (options?.description) fontOptions.description = sanitizeNameString(options.description, '');
-    if (options?.license) fontOptions.license = sanitizeNameString(options.license, '');
+    if (asciiMeta.version) fontOptions.version = asciiMeta.version;
+    if (asciiMeta.copyright) fontOptions.copyright = asciiMeta.copyright;
+    if (asciiMeta.designer) fontOptions.designer = asciiMeta.designer;
+    if (asciiMeta.description) fontOptions.description = asciiMeta.description;
+    if (asciiMeta.license) fontOptions.license = asciiMeta.license;
 
     const font = new opentype.Font(fontOptions);
+
+    const hasUnicodeNameDiff =
+        unicodeFamilyName !== asciiFamilyName ||
+        unicodeStyleName !== asciiStyleName ||
+        (unicodeMeta.designer && unicodeMeta.designer !== asciiMeta.designer) ||
+        (unicodeMeta.description && unicodeMeta.description !== asciiMeta.description) ||
+        (unicodeMeta.copyright && unicodeMeta.copyright !== asciiMeta.copyright) ||
+        (unicodeMeta.license && unicodeMeta.license !== asciiMeta.license);
+
+    if (hasUnicodeNameDiff) {
+        font.names.fontFamily = { en: unicodeFamilyName };
+        font.names.fontSubfamily = { en: unicodeStyleName };
+        font.names.fullName = { en: `${unicodeFamilyName} ${unicodeStyleName}` };
+        if (unicodeMeta.copyright) font.names.copyright = { en: unicodeMeta.copyright };
+        if (unicodeMeta.designer) font.names.designer = { en: unicodeMeta.designer };
+        if (unicodeMeta.description) font.names.description = { en: unicodeMeta.description };
+        if (unicodeMeta.license) font.names.license = { en: unicodeMeta.license };
+
+        // sfnt.fontToTable reads font.names for the UTF-16 `name` table, and
+        // font.getEnglishName() for the single-byte ASCII `CFF ` table.
+        const cffAsciiNames = {
+            fontFamily: asciiFamilyName,
+            fontSubfamily: asciiStyleName,
+            fullName: `${asciiFamilyName} ${asciiStyleName}`,
+            postScriptName: fontOptions.postScriptName,
+            version: asciiMeta.version || 'Version 0.1',
+            manufacturer: ' ',
+        };
+        const origGetEnglishName = font.getEnglishName.bind(font);
+        const origToTables = font.toTables.bind(font);
+        font.toTables = () => {
+            font.getEnglishName = (nameKey) => cffAsciiNames[nameKey] ?? origGetEnglishName(nameKey);
+            try {
+                return origToTables();
+            } finally {
+                font.getEnglishName = origGetEnglishName;
+            }
+        };
+    }
 
     // Register GSUB ligatures
     let ligaturesApplied = 0;

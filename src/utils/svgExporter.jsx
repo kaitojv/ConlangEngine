@@ -1,35 +1,17 @@
 import { useConfigStore } from '../store/useConfigStore.jsx';
 import { blockLayoutMatrices } from './blockFontGenerator.jsx';
+import { buildSvgPathDFromStrokes, extractStrokeMetaAndPoints } from './fontCompiler.js';
 import { sanitizeFilename } from './sanitizeHtml.js';
-
-const ALLOWED_LINECAPS = new Set(['round', 'butt', 'square']);
-const safeNum = (n) => (Number.isFinite(Number(n)) ? Number(n) : 0);
 
 /**
  * Utility to export conlang text as a high-quality SVG file.
- * Handles standard glyphs (Logographic/Syllabic) and Featural Blocks.
+ * Handles standard glyphs (Logographic/Syllabic) and Featural Blocks,
+ * preserving Font Studio trace modes (calligraphy, brush, chisel, dry brush, serif/filled).
  */
-/**
- * Base logic to convert strokes to SVG path elements
- */
-const strokesToPaths = (strokes, xOffset = 0) => {
-    const cleanStrokes = (strokes || []).filter(s => Array.isArray(s) && !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)));
-    return cleanStrokes.map(stroke => {
-        if (stroke.length < 2) return '';
-        let pathD = `M ${safeNum(stroke[0].x) + xOffset} ${safeNum(stroke[0].y)}`;
-        for (let i = 1; i < stroke.length; i++) {
-            pathD += ` L ${safeNum(stroke[i].x) + xOffset} ${safeNum(stroke[i].y)}`;
-        }
-        
-        if (stroke.isFilled) {
-            pathD += ' Z';
-            return `  <path d="${pathD}" fill="currentColor" stroke="none" stroke-linejoin="round" />\n`;
-        } else {
-            const lineCap = ALLOWED_LINECAPS.has(stroke.lineCap) ? stroke.lineCap : 'round';
-            // Default thickness is roughly equivalent to a brushSize of 10.
-            return `  <path d="${pathD}" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="${lineCap}" stroke-linejoin="round" />\n`;
-        }
-    }).join('');
+const strokesToPaths = (strokes, xOffset = 0, options = {}) => {
+    const pathD = buildSvgPathDFromStrokes(strokes, { ...options, xOffset });
+    if (!pathD) return '';
+    return `  <path d="${pathD}" fill="currentColor" fill-rule="nonzero" />\n`;
 };
 
 export const exportTextAsSVG = (transliteratedText, fileName = 'conlang_script.svg') => {
@@ -82,13 +64,25 @@ export const exportTextAsSVG = (transliteratedText, fileName = 'conlang_script.s
                 const strokes = featuralComponents[radical];
                 const transform = matrix[i];
                 if (strokes && transform) {
-                    const cleanStrokes = strokes.filter(s => Array.isArray(s) && !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)));
-                    const transformed = cleanStrokes.map(stroke => 
-                        stroke.map(point => ({
-                            x: Number(((point.x * transform.scale) + transform.tx).toFixed(1)),
-                            y: Number(((point.y * transform.scale) + transform.ty).toFixed(1))
-                        }))
-                    );
+                    const { meta: radMeta, actualStrokes: cleanStrokes } = extractStrokeMetaAndPoints(strokes);
+                    const transformed = cleanStrokes
+                        .filter(s => Array.isArray(s))
+                        .map(stroke => {
+                            const mappedPts = stroke.map(point => ({
+                                x: Number(((point.x * transform.scale) + transform.tx).toFixed(1)),
+                                y: Number(((point.y * transform.scale) + transform.ty).toFixed(1))
+                            }));
+                            mappedPts.isFilled = Boolean(stroke.isFilled);
+                            if (stroke.lineCap) mappedPts.lineCap = stroke.lineCap;
+                            if (radMeta.isCalligraphy) mappedPts.isCalligraphy = true;
+                            if (radMeta.isBrushPen) mappedPts.isBrushPen = true;
+                            if (radMeta.isChisel) {
+                                mappedPts.isChisel = true;
+                                mappedPts.chiselAngle = radMeta.chiselAngle ?? 45;
+                            }
+                            if (radMeta.isPaintBrush) mappedPts.isPaintBrush = true;
+                            return mappedPts;
+                        });
                     combinedStrokes.push(...transformed);
                 }
             }
@@ -115,10 +109,10 @@ export const exportTextAsSVG = (transliteratedText, fileName = 'conlang_script.s
     downloadSVG(svgContent, fileName);
 };
 
-export const exportStrokesAsSVG = (strokes, fileName = 'glyph.svg') => {
+export const exportStrokesAsSVG = (strokes, fileName = 'glyph.svg', options = {}) => {
     const GLYPH_SIZE = 300;
     let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${GLYPH_SIZE}" height="${GLYPH_SIZE}" viewBox="0 0 ${GLYPH_SIZE} ${GLYPH_SIZE}">\n`;
-    svgContent += strokesToPaths(strokes);
+    svgContent += strokesToPaths(strokes, 0, options);
     svgContent += `</svg>`;
     downloadSVG(svgContent, fileName);
 };

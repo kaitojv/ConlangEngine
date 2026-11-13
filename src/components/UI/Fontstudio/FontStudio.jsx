@@ -116,7 +116,8 @@ const extractInitialGlyphData = (existingCharCode, customGlyphs) => {
         isBrushPen: false,
         isChisel: false,
         isPaintBrush: false,
-        isSerifPen: false
+        isSerifPen: false,
+        chiselAngle: 45
     };
 
     if (!Array.isArray(firstStroke) && firstStroke?.isMeta) {
@@ -131,6 +132,7 @@ const extractInitialGlyphData = (existingCharCode, customGlyphs) => {
         meta.isChisel = firstStroke.isChisel ?? false;
         meta.isPaintBrush = firstStroke.isPaintBrush ?? false;
         meta.isSerifPen = firstStroke.isSerifPen ?? false;
+        meta.chiselAngle = firstStroke.chiselAngle ?? 45;
         actualStrokes = existingStrokes.slice(1);
     } else if (Array.isArray(firstStroke) && firstStroke.length === 1 && firstStroke[0].x === -999) {
         meta.isCalligraphy = true;
@@ -279,7 +281,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     const [isChisel, setIsChisel] = useState(() => initialData?.meta?.isChisel ?? false);
     const [isPaintBrush, setIsPaintBrush] = useState(() => initialData?.meta?.isPaintBrush ?? false);
     const [isSerifPen, setIsSerifPen] = useState(() => initialData?.meta?.isSerifPen ?? false);
-    const [chiselAngle, setChiselAngle] = useState(45);
+    const [chiselAngle, setChiselAngle] = useState(() => initialData?.meta?.chiselAngle ?? 45);
     const [symmetryMode, setSymmetryMode] = useState('none'); // 'none', 'horizontal', 'vertical'
     const [isSnapToGrid, setIsSnapToGrid] = useState(false);
     const [isSnapToMetrics, setIsSnapToMetrics] = useState(false);
@@ -1473,7 +1475,8 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
             isBrushPen: isBrushPen,
             isChisel: isChisel,
             isPaintBrush: isPaintBrush,
-            isSerifPen: isSerifPen
+            isSerifPen: isSerifPen,
+            chiselAngle: chiselAngle
         };
 
         const strokesToSave = [metaObj, ...strokes];
@@ -2056,7 +2059,15 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                 <Button 
                     variant="default" 
                     className="fs-btn-full" 
-                    onClick={() => exportStrokesAsSVG(strokes, `${targetLabel || 'glyph'}.svg`)}
+                    onClick={() => exportStrokesAsSVG(strokes, `${targetLabel || 'glyph'}.svg`, {
+                        isCalligraphy,
+                        isBrushPen,
+                        isChisel,
+                        isPaintBrush,
+                        isSerifPen,
+                        chiselAngle,
+                        strokeWidth: brushSize,
+                    })}
                 >
                     <Download size={16} /> Export SVG
                 </Button>
