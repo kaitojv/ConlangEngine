@@ -13,6 +13,54 @@ const formatLetterSpacingCSS = (val) => {
         : 'normal';
 };
 
+// Module-level cache of compiled font buffers per script so slider tweaks
+// (traceWidth, customFontScale, consistentCharacterSize, fixedAdvanceWidth)
+// recompile cleanly in the background worker without repeating unchanged work.
+const _compiledFontCache = new Map();
+
+export function buildFontCompileSignature(glyphMap, typoSettings = {}) {
+    const trace = Number.isFinite(Number(typoSettings?.traceWidth)) ? Number(typoSettings.traceWidth) : 30;
+    const scale = Number.isFinite(Number(typoSettings?.customFontScale)) ? Number(typoSettings.customFontScale) : 1.0;
+    const consistent = typoSettings?.consistentCharacterSize ?? true;
+    const advance = Number.isFinite(Number(typoSettings?.fixedAdvanceWidth)) ? Number(typoSettings.fixedAdvanceWidth) : 1000;
+    const entries = Object.entries(glyphMap || {}).sort((a, b) => a[0].localeCompare(b[0]));
+    let hash = 2166136261;
+    for (let i = 0; i < entries.length; i++) {
+        const [k, strokes] = entries[i];
+        hash ^= k.length;
+        hash = Math.imul(hash, 16777619);
+        for (let c = 0; c < k.length; c++) {
+            hash ^= k.charCodeAt(c);
+            hash = Math.imul(hash, 16777619);
+        }
+        if (Array.isArray(strokes)) {
+            hash ^= strokes.length;
+            hash = Math.imul(hash, 16777619);
+            const first = strokes[0];
+            if (first && !Array.isArray(first) && first.isMeta) {
+                const metaTag = `${first.scale ?? 1}:${first.yOffset ?? 0}:${first.xOffset ?? 0}:${first.leftMargin ?? 100}:${first.rightMargin ?? 100}:${first.consistentSize ?? ''}:${first.isCalligraphy ? 1 : 0}${first.isBrushPen ? 1 : 0}${first.isChisel ? 1 : 0}${first.isPaintBrush ? 1 : 0}${first.isSerifPen ? 1 : 0}${first.chiselAngle ?? 45}`;
+                for (let m = 0; m < metaTag.length; m++) {
+                    hash ^= metaTag.charCodeAt(m);
+                    hash = Math.imul(hash, 16777619);
+                }
+            }
+            for (let s = 0; s < strokes.length; s++) {
+                const st = strokes[s];
+                if (!Array.isArray(st)) continue;
+                hash ^= st.length;
+                hash = Math.imul(hash, 16777619);
+                if (st.length > 0) {
+                    const p0 = st[0];
+                    const p1 = st[st.length - 1];
+                    hash ^= ((Math.round((p0?.x || 0) * 10) << 16) ^ Math.round((p1?.y || 0) * 10));
+                    hash = Math.imul(hash, 16777619);
+                }
+            }
+        }
+    }
+    return `v2:${trace}:${scale}:${consistent ? 1 : 0}:${advance}:${entries.length}:${(hash >>> 0).toString(36)}`;
+}
+
 
 export function useFontInjector(){
 
@@ -100,23 +148,30 @@ export function useFontInjector(){
                     }
                 }
 
-                // If no font exists yet for this script, but glyphs exist: compile!
-                if (!scriptFontMap[sId] && Object.keys(mergedGlyphs).length > 0) {
-                    try {
-                        const compiledBuffer = await compileFontBufferInWorker(
-                            mergedGlyphs,
-                            sTypo.traceWidth ?? 30,
-                            sTypo.customFontScale ?? 1.0,
-                            {
-                                consistentCharacterSize: sTypo.consistentCharacterSize ?? false,
-                                fixedAdvanceWidth: sTypo.fixedAdvanceWidth ?? 1000
+                // Compile if missing, stale pre-v2 font, or typography/glyphs changed since last compile
+                if (Object.keys(mergedGlyphs).length > 0) {
+                    const compileSig = buildFontCompileSignature(mergedGlyphs, sTypo);
+                    const cached = _compiledFontCache.get(sId);
+                    if (cached && cached.sig === compileSig && cached.buffer) {
+                        scriptFontMap[sId] = [cached.buffer];
+                    } else if (!scriptFontMap[sId] || sData?.compiledSignature !== compileSig) {
+                        try {
+                            const compiledBuffer = await compileFontBufferInWorker(
+                                mergedGlyphs,
+                                sTypo.traceWidth ?? 30,
+                                sTypo.customFontScale ?? 1.0,
+                                {
+                                    consistentCharacterSize: sTypo.consistentCharacterSize ?? true,
+                                    fixedAdvanceWidth: sTypo.fixedAdvanceWidth ?? 1000
+                                }
+                            );
+                            if (compiledBuffer && !isCancelled) {
+                                _compiledFontCache.set(sId, { sig: compileSig, buffer: compiledBuffer });
+                                scriptFontMap[sId] = [compiledBuffer];
                             }
-                        );
-                        if (compiledBuffer && !isCancelled) {
-                            scriptFontMap[sId] = [compiledBuffer];
+                        } catch (err) {
+                            console.warn(`Could not compile font for script ${sId}:`, err);
                         }
-                    } catch (err) {
-                        console.warn(`Could not compile font for script ${sId}:`, err);
                     }
                 }
             }
@@ -124,7 +179,7 @@ export function useFontInjector(){
             // If default script still has no font but root customGlyphs exists: compile default font!
             if (!scriptFontMap[defaultScriptId] && customGlyphs && Object.keys(customGlyphs).length > 0) {
                 try {
-                    const isConsistent = defaultTypo.consistentCharacterSize ?? false;
+                    const isConsistent = defaultTypo.consistentCharacterSize ?? true;
                     const fixedAdvance = defaultTypo.fixedAdvanceWidth ?? 1000;
                     const compiledBuffer = await compileFontBufferInWorker(customGlyphs, defaultTraceWidth, defaultFontScale, {
                         consistentCharacterSize: isConsistent,

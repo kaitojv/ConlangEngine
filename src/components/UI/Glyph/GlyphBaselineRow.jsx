@@ -6,8 +6,9 @@
 // Reading those settings straight from the store is what keeps a drawn run in
 // step with the rendered script at all times, which matters most for connected
 // scripts where a mismatched gap breaks the word apart.
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
+import { getScriptTypographySettings } from '../../../utils/scriptResolver.js';
 import { layoutRun } from './glyphRunLayout.js';
 import './glyphBaselineRow.css';
 
@@ -21,12 +22,25 @@ const GlyphBaselineRow = ({
     height = 96,
     showBaseline = true,
     className = '',
-    // Optional overrides; by default the Graphism settings are the source of truth.
+    scriptId = null,
+    // Optional overrides; by default the active script's Graphism settings are the source of truth.
     letterSpacing,
     fontScale,
     traceWidth
 }) => {
-    const settings = useConfigStore(state => state.typographySettings) || {};
+    const scriptSystems = useConfigStore(state => state.scriptSystems);
+    const scriptRules = useConfigStore(state => state.scriptRules);
+    const scriptDataById = useConfigStore(state => state.scriptDataById);
+    const typographySettings = useConfigStore(state => state.typographySettings);
+    const activeScriptSystemId = useConfigStore(state => state.activeScriptSystemId);
+
+    const resolvedScriptId = scriptId || activeScriptSystemId || scriptRules?.defaultScriptId || 'default';
+    const settings = useMemo(() => getScriptTypographySettings({
+        scriptSystems,
+        scriptRules,
+        scriptDataById,
+        typographySettings
+    }, resolvedScriptId), [scriptSystems, scriptRules, scriptDataById, typographySettings, resolvedScriptId]);
 
     const spacing = Number.isFinite(letterSpacing)
         ? letterSpacing
@@ -45,7 +59,7 @@ const GlyphBaselineRow = ({
         traceWidth: traceSetting,
         letterSpacing: spacing,
         fontScale: scaleSetting,
-        consistentCharacterSize: settings.consistentCharacterSize ?? false,
+        consistentCharacterSize: settings.consistentCharacterSize ?? true,
         fixedAdvanceWidth: settings.fixedAdvanceWidth ?? 1000
     });
     if (!box || box.width <= 0 || box.height <= 0) return null;
@@ -92,7 +106,7 @@ const GlyphBaselineRow = ({
                                     textAnchor="middle"
                                     fill="var(--tx)"
                                     fontSize={item.fontSize}
-                                    className="custom-font-text notranslate"
+                                    className={`custom-font-text conlang-script-${resolvedScriptId} notranslate`}
                                 >
                                     {item.part.char}
                                 </text>

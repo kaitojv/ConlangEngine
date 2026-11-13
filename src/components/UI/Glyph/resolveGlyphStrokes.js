@@ -1,4 +1,4 @@
-import { cleanStrokes } from '../../../utils/strokeOrderResolver.js';
+import { cleanStrokes } from '../../../utils/fontCompiler.js';
 
 /** Authoring canvas the glyph editor draws in (matches StrokeOrderViewer). */
 const GLYPH_SPACE = 300;
@@ -34,6 +34,12 @@ export function getGlyphMetrics(raw) {
         strokes = raw.slice(1);
     } else if (Array.isArray(first) && first.length === 1 && first[0]?.x === -998) {
         meta = { isBrushPen: true };
+        strokes = raw.slice(1);
+    } else if (Array.isArray(first) && first.length === 1 && first[0]?.x === -997) {
+        meta = { isPaintBrush: true };
+        strokes = raw.slice(1);
+    } else if (Array.isArray(first) && first.length === 1 && first[0]?.x === -996) {
+        meta = { isSerifPen: true };
         strokes = raw.slice(1);
     }
 

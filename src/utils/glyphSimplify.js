@@ -21,7 +21,7 @@
 const DEFAULT_PRECISION = 2;
 
 // Sentinel points Font Studio uses for metadata-only strokes.
-const SENTINEL_X = new Set([-999, -998]);
+const SENTINEL_X = new Set([-999, -998, -997, -996]);
 
 function isMetaEntry(entry) {
     return !Array.isArray(entry) && entry && entry.isMeta === true;

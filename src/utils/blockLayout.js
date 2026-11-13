@@ -143,7 +143,7 @@ export const compileBlockStrokes = (blockStr, activeTemplates, featuralComponent
         const strokes = featuralComponents[char];
         if (!strokes || strokes.length === 0) return null;
 
-        const cleanStrokes = strokes.filter(s => Array.isArray(s) && !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)));
+        const cleanStrokes = strokes.filter(s => Array.isArray(s) && !(s.length === 1 && [-999, -998, -997, -996].includes(s[0]?.x)));
 
         let minX = Infinity;
         let minY = Infinity;

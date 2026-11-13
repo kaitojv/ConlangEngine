@@ -2,6 +2,8 @@
 import assert from 'node:assert/strict';
 import { renderWordInScript } from '../src/utils/scriptRendering.js';
 import { resolveWordScriptId, buildScriptConfig, getScriptTypographySettings } from '../src/utils/scriptResolver.js';
+import { getGlyphMetrics } from '../src/components/UI/Glyph/resolveGlyphStrokes.js';
+import { cleanStrokes, buildGlyphPathAndMetrics, buildSvgPathDFromStrokes } from '../src/utils/fontCompiler.js';
 
 console.log('--- test_scriptFontInjection.js ---');
 
@@ -233,6 +235,37 @@ console.log('  ✓ getScriptTypographySettings and buildScriptConfig isolate spa
 
 const fontInjectorSource = fs.readFileSync(path.join(__dirname, '../src/utils/useFontInjector.jsx'), 'utf8');
 assert.ok(fontInjectorSource.includes('const sLetterSpacingCSS = formatLetterSpacingCSS(sTypo.letterSpacing);'), 'useFontInjector emits per-script letterSpacing CSS rules');
-console.log('  ✓ useFontInjector isolates per-script CSS letter-spacing and font compilation parameters');
+assert.ok(fontInjectorSource.includes('buildFontCompileSignature'), 'useFontInjector tracks per-script compile signature for live traceWidth/scale recompilation');
+console.log('  ✓ useFontInjector isolates per-script CSS letter-spacing and live compile signatures');
 
-console.log('9 passed, 0 failed\n');
+// 7. Sentinel stripping (-999/-998/-997/-996) & trace-width/contour integrity
+for (const markerX of [-999, -998, -997, -996]) {
+    const rawWithSentinel = [[{ x: markerX, y: 0 }], [{ x: 20, y: 30 }, { x: 200, y: 220 }]];
+    const cleaned = cleanStrokes(rawWithSentinel);
+    assert.equal(cleaned.length, 1, `cleanStrokes strips sentinel ${markerX}`);
+    const metrics = getGlyphMetrics(rawWithSentinel);
+    assert.ok(metrics && metrics.strokes.length === 1, `getGlyphMetrics handles sentinel ${markerX}`);
+}
+
+const diagStroke = [{ isMeta: true, isCalligraphy: true }, [{ x: 40, y: 40 }, { x: 140, y: 150 }, { x: 240, y: 260 }]];
+const svgThin = buildSvgPathDFromStrokes(diagStroke, { strokeWidth: 6 });
+const svgThick = buildSvgPathDFromStrokes(diagStroke, { strokeWidth: 28 });
+assert.ok(svgThin.startsWith('M ') && svgThin.includes(' Z'), 'buildSvgPathDFromStrokes outputs closed contour path');
+assert.notEqual(svgThin, svgThick, 'buildSvgPathDFromStrokes responds to traceWidth changes');
+
+const horizStroke = [[{ x: 40, y: 150 }, { x: 240, y: 150 }]];
+const { path: pathThin } = buildGlyphPathAndMetrics(horizStroke, 10, 1.0);
+const { path: pathThick } = buildGlyphPathAndMetrics(horizStroke, 45, 1.0);
+const ysThin = pathThin.commands.filter(c => c.y !== undefined).map(c => c.y);
+const ysThick = pathThick.commands.filter(c => c.y !== undefined).map(c => c.y);
+const spanThin = Math.max(...ysThin) - Math.min(...ysThin);
+const spanThick = Math.max(...ysThick) - Math.min(...ysThick);
+assert.ok(spanThick >= spanThin + 65, `buildGlyphPathAndMetrics contour expands cleanly with traceWidth (${spanThin} -> ${spanThick})`);
+const { path: calligThin } = buildGlyphPathAndMetrics(diagStroke, 10, 1.0);
+const { path: calligThick } = buildGlyphPathAndMetrics(diagStroke, 45, 1.0);
+const xsCalligThin = calligThin.commands.filter(c => c.x !== undefined).map(c => c.x);
+const xsCalligThick = calligThick.commands.filter(c => c.x !== undefined).map(c => c.x);
+assert.ok((Math.max(...xsCalligThick) - Math.min(...xsCalligThick)) > (Math.max(...xsCalligThin) - Math.min(...xsCalligThin)), 'calligraphy contour width expands cleanly with traceWidth');
+console.log('  ✓ cleanStrokes, getGlyphMetrics, SVG contour paths, and font compiler obey trace modes & traceWidth');
+
+console.log('10 passed, 0 failed\n');

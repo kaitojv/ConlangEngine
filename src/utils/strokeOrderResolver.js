@@ -4,14 +4,8 @@ import { transliterateText } from './transliteration.js';
 /**
  * Filter out metadata and invalid dummy markers from a stroke array.
  */
-export const cleanStrokes = (strokes) => {
-    if (!strokes || !Array.isArray(strokes)) return [];
-    let actual = strokes;
-    if (actual.length > 0 && !Array.isArray(actual[0]) && actual[0]?.isMeta) {
-        actual = actual.slice(1);
-    }
-    return actual.filter(s => Array.isArray(s) && !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)));
-};
+import { cleanStrokes } from './fontCompiler.js';
+export { cleanStrokes };
 
 /**
  * Computes arrow path and number coordinate for a stroke.

@@ -48,6 +48,21 @@ export function extractStrokeMetaAndPoints(strokeArray) {
     return { meta, actualStrokes };
 }
 
+const LEGACY_META_MARKER_X = new Set([-999, -998, -997, -996]);
+
+/**
+ * Strips leading metadata objects and legacy pen-mode marker strokes (-999..-996)
+ * so consumers receive only actual drawable strokes.
+ */
+export function cleanStrokes(strokes) {
+    if (!strokes || !Array.isArray(strokes)) return [];
+    let actual = strokes;
+    if (actual.length > 0 && !Array.isArray(actual[0]) && actual[0]?.isMeta) {
+        actual = actual.slice(1);
+    }
+    return actual.filter(s => Array.isArray(s) && !(s.length === 1 && LEGACY_META_MARKER_X.has(s[0]?.x)));
+}
+
 /**
  * Ramer-Douglas-Peucker polyline simplification to cut redundant collinear points
  * on large hand-drawn glyph inventories without altering visible stroke shape.
@@ -196,8 +211,16 @@ export function buildStrokeUnionRings({
             const curr = points[i];
             const dx = curr.x - last.x;
             const dy = curr.y - last.y;
-            if ((dx * dx + dy * dy) > distFilterSq || i === points.length - 1) {
+            const dSq = dx * dx + dy * dy;
+            if (dSq > distFilterSq) {
                 distFiltered.push(curr);
+            } else if (i === points.length - 1 && distFiltered.length > 1) {
+                if (dSq > 0.25) {
+                    distFiltered.push(curr);
+                } else {
+                    // Replace trailing near-duplicate point cleanly instead of emitting a sub-pixel stub segment
+                    distFiltered[distFiltered.length - 1] = curr;
+                }
             }
         }
         const simplified = simplifyStrokeRDP(distFiltered, isFilled ? rdpFillEps : rdpStrokeEps);
@@ -323,35 +346,62 @@ export function buildSvgPathDFromStrokes(strokeArray, options = {}) {
 
 /**
  * Appends integer-rounded, non-degenerate contour rings onto an opentype.Path.
+ * Strips collinear vertices and rounding-induced zero-width spike foldbacks so
+ * Windows GDI / PostScript CFF rasterizers never suffer small-size dropouts.
  */
 function emitRingsToPath(path, rings) {
     for (let rIdx = 0; rIdx < rings.length; rIdx++) {
         const ring = rings[rIdx];
         if (!ring || ring.length < 3) continue;
 
-        const rounded = [];
+        let pts = [];
         for (let i = 0; i < ring.length; i++) {
             const rx = Math.round(ring[i].x);
             const ry = Math.round(ring[i].y);
-            const prev = rounded[rounded.length - 1];
+            const prev = pts[pts.length - 1];
             if (!prev || prev.x !== rx || prev.y !== ry) {
-                rounded.push({ x: rx, y: ry });
+                pts.push({ x: rx, y: ry });
             }
         }
-        while (rounded.length > 1) {
-            const first = rounded[0];
-            const last = rounded[rounded.length - 1];
+        while (pts.length > 1) {
+            const first = pts[0];
+            const last = pts[pts.length - 1];
             if (first.x === last.x && first.y === last.y) {
-                rounded.pop();
+                pts.pop();
             } else {
                 break;
             }
         }
-        if (rounded.length < 3 || Math.abs(signedArea(rounded)) < 1) continue;
 
-        path.moveTo(rounded[0].x, rounded[0].y);
-        for (let i = 1; i < rounded.length; i++) {
-            path.lineTo(rounded[i].x, rounded[i].y);
+        // Remove collinear points and 180-degree spike foldbacks introduced by integer rounding
+        let changed = true;
+        while (changed && pts.length >= 3) {
+            changed = false;
+            const nextPts = [];
+            const n = pts.length;
+            for (let i = 0; i < n; i++) {
+                const prev = pts[(i - 1 + n) % n];
+                const curr = pts[i];
+                const next = pts[(i + 1) % n];
+                const dx1 = curr.x - prev.x;
+                const dy1 = curr.y - prev.y;
+                const dx2 = next.x - curr.x;
+                const dy2 = next.y - curr.y;
+                const cross = dx1 * dy2 - dy1 * dx2;
+                if (cross === 0) {
+                    changed = true;
+                    continue;
+                }
+                nextPts.push(curr);
+            }
+            pts = nextPts;
+        }
+
+        if (pts.length < 3 || Math.abs(signedArea(pts)) < 4) continue;
+
+        path.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) {
+            path.lineTo(pts[i].x, pts[i].y);
         }
         path.close();
     }

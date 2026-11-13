@@ -995,6 +995,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                             <GlyphBaselineRow
                                                 parts={testGlyphParts}
                                                 separator={testGlyphSeparator}
+                                                scriptId={activeScriptId}
                                                 height={110}
                                             />
                                         ) : (
@@ -1465,7 +1466,7 @@ const BlockShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
                                     scriptId: resolvedScriptId 
                                 })}
                             >
-                                <GlyphPreviewBadge strokes={featuralComponents[comp]} scriptId={resolvedScriptId} size={64} strokeWidth={10} plain className="showcase-block-svg" />
+                                <GlyphPreviewBadge strokes={featuralComponents[comp]} scriptId={resolvedScriptId} size={64} plain className="showcase-block-svg" />
                                 <div className="showcase-syl-label">{phonemeToChar[comp] || comp}</div>
                             </div>
                         ))}

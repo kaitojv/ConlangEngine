@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { getScriptTypographySettings } from '../../../utils/scriptResolver.js';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
+import { buildFontCompileSignature } from '../../../utils/useFontInjector.jsx';
 import Button from '../Buttons/Buttons.jsx';
 import { RotateCcw, RotateCw, Undo2, Redo2, Trash2, Download, Pencil, Minus, Spline, Eraser, Feather, FlipHorizontal, FlipVertical, Grid, Square, Circle, Triangle, SquareDashed, PenTool, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ZoomIn, ZoomOut, MousePointer, Maximize2, Sliders, Move, Crosshair, Brush, Type, Plus, Pointer, PaintBucket } from 'lucide-react';
 import { exportStrokesAsSVG } from '../../../utils/svgExporter.jsx';
@@ -401,8 +402,8 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
             const validStrokes = opt.strokes.filter(s => {
                 // Filter out new-format metadata objects
                 if (!Array.isArray(s) && s.isMeta) return false;
-                // Filter out legacy calligraphy/brush pen markers
-                if (s.length === 1 && (s[0].x === -999 || s[0].x === -998)) return false;
+                // Filter out legacy calligraphy/brush/paint/serif pen markers
+                if (s.length === 1 && [-999, -998, -997, -996].includes(s[0]?.x)) return false;
                 return true;
             });
             setBackgroundStrokes(validStrokes);
@@ -412,10 +413,10 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     const handleLoadToCanvas = () => {
         const opt = drawnGlyphsOptions.find(o => o.id == selectedReferenceId);
         if (opt) {
-            // Filter out meta objects and legacy calligraphy/brush pen markers
+            // Filter out meta objects and legacy calligraphy/brush/paint/serif pen markers
             const validStrokes = opt.strokes.filter(s => {
                 if (!Array.isArray(s) && s.isMeta) return false;
-                if (s.length === 1 && (s[0].x === -999 || s[0].x === -998)) return false;
+                if (s.length === 1 && [-999, -998, -997, -996].includes(s[0]?.x)) return false;
                 return true;
             });
             // Deep clone to prevent state mutation and bugging other characters
@@ -751,7 +752,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         strokesToFilter.forEach(strokeObj => {
             const points = Array.isArray(strokeObj) ? strokeObj : (strokeObj.points || []);
             
-            if (points.length === 1 && (points[0].x === -999 || points[0].x === -998)) {
+            if (points.length === 1 && [-999, -998, -997, -996].includes(points[0]?.x)) {
                 newStrokes.push(strokeObj);
                 return;
             }
@@ -1377,7 +1378,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
             return prev.map((stroke, idx) => {
                 if (selectedStrokeIndex !== null && idx !== selectedStrokeIndex) return stroke;
                 if (!Array.isArray(stroke) && stroke.isMeta) return stroke;
-                if (Array.isArray(stroke) && stroke.length === 1 && (stroke[0].x === -999 || stroke[0].x === -998)) return stroke;
+                if (Array.isArray(stroke) && stroke.length === 1 && [-999, -998, -997, -996].includes(stroke[0]?.x)) return stroke;
 
                 const newStroke = stroke.map(pt => {
                     const dx = pt.x - cx;
@@ -1398,7 +1399,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         setStrokes(prev => prev.map((stroke, idx) => {
             if (selectedStrokeIndex !== null && idx !== selectedStrokeIndex) return stroke;
             if (!Array.isArray(stroke) && stroke.isMeta) return stroke;
-            if (Array.isArray(stroke) && stroke.length === 1 && (stroke[0].x === -999 || stroke[0].x === -998)) return stroke;
+            if (Array.isArray(stroke) && stroke.length === 1 && [-999, -998, -997, -996].includes(stroke[0]?.x)) return stroke;
 
             const newStroke = stroke.map(pt => ({
                 x: pt.x + dx,
@@ -1416,7 +1417,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
             return prev.map((stroke, idx) => {
                 if (selectedStrokeIndex !== null && idx !== selectedStrokeIndex) return stroke;
                 if (!Array.isArray(stroke) && stroke.isMeta) return stroke;
-                if (Array.isArray(stroke) && stroke.length === 1 && (stroke[0].x === -999 || stroke[0].x === -998)) return stroke;
+                if (Array.isArray(stroke) && stroke.length === 1 && [-999, -998, -997, -996].includes(stroke[0]?.x)) return stroke;
 
                 const newStroke = stroke.map(pt => ({
                     x: cx + (pt.x - cx) * factor,
@@ -1437,7 +1438,21 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     // canvas until the user saves, so it is safe to try and compare.
     const handleSimplifyStrokes = () => {
         const beforePts = countGlyphPoints(strokes);
-        const withMeta = [{ isMeta: true, scale: glyphScale, leftMargin, rightMargin, yOffset, xOffset, consistentSize: isGlyphConsistent }, ...strokes];
+        const withMeta = [{
+            isMeta: true,
+            scale: glyphScale,
+            leftMargin,
+            rightMargin,
+            yOffset,
+            xOffset,
+            consistentSize: isGlyphConsistent,
+            isCalligraphy,
+            isBrushPen,
+            isChisel,
+            isPaintBrush,
+            isSerifPen,
+            chiselAngle
+        }, ...strokes];
         const simplified = simplifyGlyph(withMeta, {
             tolerance: simplifyTolerance,
             precision: 2,
@@ -1506,6 +1521,9 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         // 3. Save everything to Zustand
         if (base64Font) {
             addCustomGlyph(charCode, strokesToSave, base64Font, resolvedScriptId);
+            useConfigStore.getState().updateScriptData(resolvedScriptId, {
+                compiledSignature: buildFontCompileSignature(updatedGlyphDb, scriptTypo)
+            });
             
             // 4. Give the generated Unicode character and the strokes back to the parent component!
             const newChar = String.fromCodePoint(charCode);
@@ -2118,8 +2136,8 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                                         
                                     return allStrokes.map((stroke, i) => {
                                         if (stroke.length < 2) return null;
-                                        // Skip the calligraphy meta-point if present
-                                        if (stroke.length === 1 && (stroke[0].x === -999 || stroke[0].x === -998)) return null;
+                                        // Skip legacy pen mode meta-points if present
+                                        if (stroke.length === 1 && [-999, -998, -997, -996].includes(stroke[0]?.x)) return null;
                                         const d = `M ${stroke[0].x} ${stroke[0].y} ` + 
                                                   stroke.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ');
                                         return (

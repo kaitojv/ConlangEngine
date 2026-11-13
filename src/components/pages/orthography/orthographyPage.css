@@ -146,12 +146,8 @@
     box-shadow: 0 12px 28px -12px var(--glow);
 }
 
-.showcase-block-svg path {
-    stroke: var(--acc);
-    stroke-width: 10;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    fill: none;
+.showcase-block-svg {
+    color: var(--acc);
 }
 
 /* ─── Alphabet & Logographic Grids ─── */

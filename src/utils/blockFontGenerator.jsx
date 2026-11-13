@@ -162,7 +162,7 @@ export const generateBlockFontData = async (config) => {
             if (!strokes || strokes.length === 0) continue;
             if (newSyllabaryMap[char]) continue; // Already mapped (e.g. as a 1-char block from lexicon)
 
-            const cleanStrokes = strokes.filter(s => Array.isArray(s) && !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)));
+            const cleanStrokes = strokes.filter(s => Array.isArray(s) && !(s.length === 1 && [-999, -998, -997, -996].includes(s[0]?.x)));
 
             // Find the bounding box origin to auto-align standalone bases too
             let minX = Infinity;

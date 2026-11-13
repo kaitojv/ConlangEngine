@@ -14,6 +14,7 @@ import BlockManager from '../../UI/BlockManager/BlockManager.jsx';
 import KeyboardManager from '../../UI/KeyboardManager/KeyboardManager.jsx';
 import { Keyboard, RefreshCw, Wand2, Spline } from 'lucide-react';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
+import { buildFontCompileSignature } from '../../../utils/useFontInjector.jsx';
 import { previewSimplification, simplifyGlyphMap } from '../../../utils/glyphSimplify.js';
 import { buildWorkspaceSnapshot, downloadWorkspaceBackup } from '../../../utils/workspaceExport.js';
 import GlyphLightenBackupModal from '../../UI/GlyphLightenBackupModal/GlyphLightenBackupModal.jsx';
@@ -370,7 +371,8 @@ export default function TypographyStudio({ hideScriptSelector = false } = {}) {
             );
             
             updateScriptData(selectedScriptId, {
-                customFontBase64: base64Font
+                customFontBase64: base64Font,
+                compiledSignature: buildFontCompileSignature(currentCustomGlyphs, sTypo)
             });
             
             if (isDefaultSelected) {
@@ -403,7 +405,10 @@ export default function TypographyStudio({ hideScriptSelector = false } = {}) {
                 fixedAdvanceWidth: sTypo.fixedAdvanceWidth ?? 1000
             }
         );
-        updateScriptData(selectedScriptId, { customFontBase64: base64Font });
+        updateScriptData(selectedScriptId, {
+            customFontBase64: base64Font,
+            compiledSignature: buildFontCompileSignature(currentCustomGlyphs, { ...sTypo, consistentCharacterSize: enabled })
+        });
         if (isDefaultSelected) {
             updateConfig({ customFontBase64: base64Font, customFont: base64Font });
         }
@@ -500,7 +505,10 @@ export default function TypographyStudio({ hideScriptSelector = false } = {}) {
                 }
             );
 
-            updateScriptData(selectedScriptId, { customFontBase64: base64Font });
+            updateScriptData(selectedScriptId, {
+                customFontBase64: base64Font,
+                compiledSignature: buildFontCompileSignature(updatedGlyphs, { ...sTypo, consistentCharacterSize: true })
+            });
             if (isDefaultSelected) {
                 updateConfig({ customFontBase64: base64Font, customFont: base64Font });
             }
