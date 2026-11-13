@@ -1,0 +1,177 @@
+/* src/components/UI/FontExportModal/fontExportModal.css */
+.fe-modal-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    color: var(--tx);
+}
+
+.fe-modal-desc {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--tx2);
+    line-height: 1.5;
+}
+
+.fe-stats-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.fe-stats-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.7rem;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: var(--tx2);
+}
+
+.fe-stats-count {
+    color: var(--acc);
+    font-weight: 700;
+}
+
+.fe-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.85rem;
+}
+
+.fe-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.fe-form-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--tx);
+}
+
+.fe-select,
+.fe-input {
+    width: 100%;
+    padding: 0.55rem 0.8rem;
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    color: var(--tx);
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color 0.15s ease;
+    box-sizing: border-box;
+}
+
+.fe-select:focus,
+.fe-input:focus {
+    border-color: var(--acc);
+}
+
+.fe-options-card {
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.fe-checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 0.55rem;
+}
+
+.fe-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.84rem;
+    color: var(--tx2);
+    cursor: pointer;
+    user-select: none;
+}
+
+.fe-checkbox-label input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: var(--acc);
+}
+
+.fe-preview-box {
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.fe-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.fe-preview-input {
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    background: var(--s1);
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    color: var(--tx);
+    font-size: 1.5rem;
+    line-height: 1.4;
+    font-feature-settings: "liga" 1, "rlig" 1;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.fe-preview-input:focus {
+    border-color: var(--acc);
+}
+
+.fe-info-box {
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    border-left: 3px solid var(--acc);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    font-size: 0.82rem;
+    color: var(--tx2);
+    line-height: 1.45;
+}
+
+.fe-info-box strong {
+    color: var(--tx);
+}
+
+.fe-empty-state {
+    background: var(--s2);
+    border: 1px dashed var(--bd);
+    border-radius: 8px;
+    padding: 1.25rem;
+    text-align: center;
+    color: var(--tx2);
+    font-size: 0.88rem;
+}
+
+.fe-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.25rem;
+    border-top: 1px solid var(--bd);
+    padding-top: 1rem;
+}
+

@@ -1,177 +1,132 @@
 import { useState, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
+import { useLexiconStore } from '@/store/useLexiconStore.jsx';
+import { useTranslation } from '@/hooks/useTranslation.jsx';
+import { generateWordFromConfig } from '@/utils/wordGeneratorEngine.js';
 
 export function useWordGenerator() {
-    // 1. Pull the grammar and phonology settings directly from your Zustand store
+    const { t } = useTranslation();
+
     const phonologyTypes = useConfigStore((state) => state.phonologyTypes);
     const syllabaryMap = useConfigStore((state) => state.syllabaryMap);
     const consonants = useConfigStore((state) => state.consonants);
     const vowels = useConfigStore((state) => state.vowels);
+    const otherPhonemes = useConfigStore((state) => state.otherPhonemes);
+    const otherPhonemeMapping = useConfigStore((state) => state.otherPhonemeMapping);
     const syllablePattern = useConfigStore((state) => state.syllablePattern);
     const syllablePatternWeights = useConfigStore((state) => state.syllablePatternWeights) || {};
     const verbMarker = useConfigStore((state) => state.verbMarker);
     const generatorMarkers = useConfigStore((state) => state.generatorMarkers) || {};
+    const generatorRegexRules = useConfigStore((state) => state.generatorRegexRules) || [];
+    const generatorOptions = useConfigStore((state) => state.generatorOptions) || {};
+    const grammarRules = useConfigStore((state) => state.grammarRules) || [];
+    const vowelHarmonySets = useConfigStore((state) => state.vowelHarmonySets) || [];
+    const customWordClasses = useConfigStore((state) => state.customWordClasses) || [];
+    const lexicon = useLexiconStore((state) => state.lexicon) || [];
 
-    // 2. Local state to hold the currently generated word data
     const [generatedWord, setGeneratedWord] = useState('');
     const [generatedIpa, setGeneratedIpa] = useState('');
     const [generatedClass, setGeneratedClass] = useState('');
+    const [generatedStem, setGeneratedStem] = useState('');
 
-    // Weighted random pick: selects from items proportionally to their weight
-    const weightedPick = useCallback((items, weights) => {
-        const total = weights.reduce((sum, w) => sum + w, 0);
-        if (total <= 0) return items[Math.floor(Math.random() * items.length)];
-        let r = Math.random() * total;
-        for (let i = 0; i < items.length; i++) {
-            r -= weights[i];
-            if (r <= 0) return items[i];
-        }
-        return items[items.length - 1];
+    const setGeneratedPreview = useCallback((entry) => {
+        if (!entry) return;
+        setGeneratedWord(entry.word || '');
+        setGeneratedIpa(entry.ipa || '');
+        setGeneratedClass(entry.wordClass || '');
+        setGeneratedStem(entry.stem || entry.word || '');
     }, []);
 
-    // 3. The main generation function
+    // Supports positional signatures:
+    // (min, max, targetClass, extraOpts), (len, targetClass, extraOpts), (lengthsArray, targetClass, extraOpts)
     const generateWord = useCallback((...args) => {
         let lengths = [];
         let targetClass = 'random';
+        let extraOpts = {};
 
         if (args.length >= 3 && typeof args[0] === 'number' && typeof args[1] === 'number') {
             const min = Math.min(args[0], args[1]);
             const max = Math.max(args[0], args[1]);
             for (let i = min; i <= max; i++) lengths.push(i);
             if (typeof args[2] === 'string' && args[2]) targetClass = args[2];
+            if (args[3] && typeof args[3] === 'object') extraOpts = args[3];
         } else if (args.length >= 2 && typeof args[0] === 'number' && typeof args[1] === 'string') {
             lengths = [args[0]];
             targetClass = args[1];
+            if (args[2] && typeof args[2] === 'object') extraOpts = args[2];
         } else if (args.length >= 1 && typeof args[0] === 'number') {
             lengths = [args[0]];
+            if (args[1] && typeof args[1] === 'object') extraOpts = args[1];
         } else if (Array.isArray(args[0])) {
             lengths = args[0];
             if (typeof args[1] === 'string' && args[1]) targetClass = args[1];
+            if (args[2] && typeof args[2] === 'object') extraOpts = args[2];
         }
 
         if (lengths.length === 0) lengths = [2];
 
-        const numSyllables = lengths[Math.floor(Math.random() * lengths.length)];
-        const classFinal = (targetClass && targetClass !== 'random')
-            ? targetClass
-            : ['noun', 'verb', 'adjective'][Math.floor(Math.random() * 3)];
-        
-        let orthResult = '';
-        let ipaResult = '';
+        const avoidDuplicates = extraOpts.avoidDuplicates ?? Boolean(generatorOptions.avoidDuplicates);
+        const respectVowelHarmony = extraOpts.respectVowelHarmony ?? Boolean(generatorOptions.respectVowelHarmony);
 
-        // SYLLABIC MODE
-        if (phonologyTypes === 'syllabic') {
-            const validSyllables = Object.keys(syllabaryMap || {});
-            if (validSyllables.length === 0) {
-                alert("⚠️ Syllabary Grid is empty!");
-                return null;
-            }
-
-            for (let i = 0; i < numSyllables; i++) {
-                const s = validSyllables[Math.floor(Math.random() * validSyllables.length)];
-                orthResult += s;
-                ipaResult += s; 
-            }
-        } 
-        // ALPHABETIC MODE
-        else {
-            const parseP = (str) => str.split(',').map(s => s.trim()).filter(Boolean).map(item => item.includes('=') ? { ipa: item.split('=')[0].trim(), orth: item.split('=')[1].trim() } : { ipa: item, orth: item });
-            
-            const consList = parseP(consonants || '');
-            const vogsList = parseP(vowels || '');
-            
-            // Smart parsing: Split by commas AND/OR spaces to ensure each pattern is totally isolated!
-            const pads = (syllablePattern || '')
-                .toUpperCase()
-                .split(/[\s,]+/)
-                .filter(Boolean);
-            
-            if (pads.length === 0 || consList.length === 0 || vogsList.length === 0) {
-                 alert("⚠️ Missing consonants, vowels, or syllable patterns in Settings!");
-                 return null;
-            }
-
-            // Build weight array for each pattern (default = 1 if not configured)
-            const patternWeights = pads.map(p => {
-                const w = syllablePatternWeights[p] ?? syllablePatternWeights[p.toLowerCase()];
-                return (w !== undefined && w >= 0) ? w : 1;
-            });
-            
-            let currentVCount = 0;
-            let safetyCount = 0;
-            
-            while (currentVCount < numSyllables && safetyCount < 100) {
-                safetyCount++;
-                const padraoStr = weightedPick(pads, patternWeights); 
-                
-                // Dynamically resolve optional characters like (C) or (V)
-                let resolvedPattern = '';
-                for (let k = 0; k < padraoStr.length; k++) {
-                    if (padraoStr[k] === '(') {
-                        const end = padraoStr.indexOf(')', k);
-                        if (end !== -1) {
-                            const optionalPart = padraoStr.slice(k + 1, end);
-                            // 50% chance to include the optional part
-                            if (Math.random() > 0.5) resolvedPattern += optionalPart;
-                            k = end; // Skip over the closing parenthesis
-                        }
-                    } else if (padraoStr[k] === 'C' || padraoStr[k] === 'V') {
-                        resolvedPattern += padraoStr[k];
-                    }
-                }
-                
-                for (let j = 0; j < resolvedPattern.length; j++) {
-                    // If we've reached the target syllable count, do not start a new syllable (V).
-                    if (currentVCount >= numSyllables && resolvedPattern[j] === 'V') {
-                        break;
-                    }
-                    
-                    if (resolvedPattern[j] === 'C') { 
-                        const c = consList[Math.floor(Math.random() * consList.length)]; 
-                        orthResult += c.orth; 
-                        ipaResult += c.ipa; 
-                    } else if (resolvedPattern[j] === 'V') { 
-                        const v = vogsList[Math.floor(Math.random() * vogsList.length)]; 
-                        orthResult += v.orth; 
-                        ipaResult += v.ipa; 
-                        currentVCount++;
-                    }
-                }
-            }
+        let existingWords = extraOpts.existingWords;
+        if (avoidDuplicates && !existingWords) {
+            existingWords = new Set(
+                lexicon.map(w => (w.word || '').replace(/\*/g, '').trim().toLowerCase()).filter(Boolean)
+            );
         }
 
-        // Apply the per-class marker from generatorMarkers.
-        // For verbs, fall back to the legacy verbMarker if generatorMarkers.verb is not set.
-        const markerForClass = generatorMarkers[classFinal];
-        const resolvedMarker = (markerForClass !== undefined && markerForClass !== '')
-            ? markerForClass
-            : (classFinal === 'verb' ? verbMarker : '');
+        const result = generateWordFromConfig(
+            {
+                phonologyTypes,
+                syllabaryMap,
+                consonants,
+                vowels,
+                otherPhonemes,
+                otherPhonemeMapping,
+                syllablePattern,
+                syllablePatternWeights,
+                verbMarker,
+                generatorMarkers,
+                generatorRegexRules,
+                grammarRules,
+                vowelHarmonySets,
+                customWordClasses,
+            },
+            {
+                lengths,
+                targetClass,
+                respectVowelHarmony,
+                avoidDuplicates,
+                existingWords,
+                maxAttempts: extraOpts.maxAttempts || 25,
+            }
+        );
 
-        if (resolvedMarker) {
-            let cleanMarker = resolvedMarker.split(',')[0].trim();
-            if (cleanMarker.endsWith('-')) {
-                cleanMarker = cleanMarker.slice(0, -1);
-                if (cleanMarker && !orthResult.startsWith(cleanMarker)) {
-                    orthResult = cleanMarker + orthResult;
-                    ipaResult = cleanMarker + ipaResult;
-                }
-            } else {
-                cleanMarker = cleanMarker.replace(/^-/, '');
-                if (cleanMarker && !orthResult.endsWith(cleanMarker)) {
-                    orthResult += cleanMarker;
-                    ipaResult += cleanMarker;
+        if (!result || result.error) {
+            if (!extraOpts.silent) {
+                if (result?.error === 'empty_syllabary') {
+                    toast.error(t('generator.errorEmptySyllabary'));
+                } else {
+                    toast.error(t('generator.errorMissingPhonology'));
                 }
             }
+            return null;
         }
 
-        // Save to our hook's state
-        setGeneratedWord(orthResult);
-        setGeneratedIpa(ipaResult);
-        setGeneratedClass(classFinal);
+        if (!extraOpts.skipStateUpdate) {
+            setGeneratedWord(result.word);
+            setGeneratedIpa(result.ipa);
+            setGeneratedClass(result.wordClass);
+            setGeneratedStem(result.stem);
+        }
 
-        // Return the object in case the caller wants to use it immediately
-        return { word: orthResult, ipa: ipaResult, wordClass: classFinal };
-    }, [phonologyTypes, syllabaryMap, consonants, vowels, syllablePattern, syllablePatternWeights, verbMarker, generatorMarkers, weightedPick]);
+        return result;
+    }, [
+        phonologyTypes, syllabaryMap, consonants, vowels, otherPhonemes, otherPhonemeMapping,
+        syllablePattern, syllablePatternWeights, verbMarker, generatorMarkers, generatorRegexRules,
+        grammarRules, vowelHarmonySets, customWordClasses, generatorOptions, lexicon, t
+    ]);
 
-    return { generatedWord, generatedIpa, generatedClass, generateWord };
+    return { generatedWord, generatedIpa, generatedClass, generatedStem, setGeneratedPreview, generateWord };
 }

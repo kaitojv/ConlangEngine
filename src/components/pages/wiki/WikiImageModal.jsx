@@ -4,6 +4,7 @@ import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import { Upload, Link as LinkIcon, Image as ImageIcon, AlertCircle, CheckCircle2, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { compressAndValidateImage, formatBytes, DEFAULT_MAX_IMAGE_MB } from './imageCompressor.js';
+import { sanitizeUrl } from '@/utils/sanitizeHtml.js';
 
 export default function WikiImageModal({ isOpen, onClose, onInsert, t }) {
     const [tab, setTab] = useState('upload'); // 'upload' | 'url'
@@ -97,9 +98,10 @@ export default function WikiImageModal({ isOpen, onClose, onInsert, t }) {
     };
 
     const handleInsert = () => {
-        const imageSrc = tab === 'upload' ? (previewData && previewData.src) : url.trim();
+        const rawSrc = tab === 'upload' ? (previewData && previewData.src) : url.trim();
+        const imageSrc = sanitizeUrl(rawSrc, { allowDataImage: true, allowMailto: false, allowRelative: false });
         if (!imageSrc) {
-            setErrorMsg(tr('wiki.richText.selectImageError', 'Please select an image or provide a valid URL.'));
+            setErrorMsg(tr('wiki.richText.selectImageError', 'Please select an image or provide a valid HTTPS/HTTP image URL.'));
             return;
         }
 

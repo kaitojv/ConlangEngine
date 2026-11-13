@@ -65,19 +65,21 @@ export function useThemeInjector() {
         if (appUiFont) {
             // Extract font name from the string, which might be e.g. "'Noto Sans', sans-serif" or "Inter"
             let fontName = appUiFont.split(',')[0].replace(/['"]/g, '').trim();
-            
+            const isSafeFontName = /^[a-zA-Z0-9\s_-]+$/.test(fontName);
             const isSystem = ['Arial', 'Times New Roman', 'Courier New'].includes(fontName);
             const fontId = 'google-font-' + fontName.replace(/\s+/g, '-').toLowerCase();
 
-            if (!isSystem && !document.getElementById(fontId)) {
+            if (isSafeFontName && !isSystem && !document.getElementById(fontId)) {
                 const link = document.createElement('link');
                 link.id = fontId;
                 link.rel = 'stylesheet';
-                link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/\s+/g, '+')}&display=swap`;
+                link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName).replace(/%20/g, '+')}&display=swap`;
                 document.head.appendChild(link);
             }
 
-            document.documentElement.style.setProperty('--font-stack', appUiFont);
+            if (!/url\s*\(|expression\s*\(|@import|<\/?style|[;{}<>]/i.test(appUiFont)) {
+                document.documentElement.style.setProperty('--font-stack', appUiFont);
+            }
         }
     }, [appUiFont]);
 

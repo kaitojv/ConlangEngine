@@ -4,6 +4,7 @@
 
 import { renderWordInScript } from './scriptRendering.js';
 import { transliterateText } from './transliteration.js';
+import { escapeHtml } from './sanitizeHtml.js';
 
 /**
  * Escapes text for Anki TSV:
@@ -118,35 +119,35 @@ export function generateAnkiTSV(entries = [], options = {}) {
         // Notes (etymology, definition, example sentence)
         const notesParts = [];
         if (entry.definition && entry.definition !== translation) {
-            notesParts.push(`<b>Definition:</b> ${entry.definition}`);
+            notesParts.push(`<b>Definition:</b> ${escapeHtml(entry.definition)}`);
         }
         if (entry.etymology) {
-            notesParts.push(`<b>Etymology:</b> ${entry.etymology}`);
+            notesParts.push(`<b>Etymology:</b> ${escapeHtml(entry.etymology)}`);
         }
         if (entry.exampleSentence) {
-            notesParts.push(`<b>Example:</b> ${entry.exampleSentence}`);
+            notesParts.push(`<b>Example:</b> ${escapeHtml(entry.exampleSentence)}`);
         }
         const notes = notesParts.join('<br>');
 
         if (direction === 'toEnglish' || direction === 'bidirectional') {
             // Front: Conlang Word (and script) | Back: Translation
-            let frontHTML = `<div class="conlang-word" style="font-weight:600;font-size:1.25em;">${safeWord}</div>`;
+            let frontHTML = `<div class="conlang-word" style="font-weight:600;font-size:1.25em;">${escapeHtml(safeWord)}</div>`;
             if (scriptText && scriptText !== safeWord) {
-                frontHTML += `<div class="conlang-script" style="font-size:1.5em;margin-top:4px;">${scriptText}</div>`;
+                frontHTML += `<div class="conlang-script" style="font-size:1.5em;margin-top:4px;">${escapeHtml(scriptText)}</div>`;
             }
 
-            const backHTML = `<div class="translation" style="font-size:1.15em;">${translation}</div>`;
+            const backHTML = `<div class="translation" style="font-size:1.15em;">${escapeHtml(translation)}</div>`;
 
             lines.push(emitCard(frontHTML, backHTML, ipa, pos, scriptText, tagsList, notes));
         }
 
         if (direction === 'toConlang' || direction === 'bidirectional') {
             // Front: Translation | Back: Conlang Word
-            const frontHTML = `<div class="translation" style="font-weight:600;font-size:1.2em;">${translation}</div>`;
+            const frontHTML = `<div class="translation" style="font-weight:600;font-size:1.2em;">${escapeHtml(translation)}</div>`;
             
-            let backHTML = `<div class="conlang-word" style="font-weight:600;font-size:1.25em;">${safeWord}</div>`;
+            let backHTML = `<div class="conlang-word" style="font-weight:600;font-size:1.25em;">${escapeHtml(safeWord)}</div>`;
             if (scriptText && scriptText !== safeWord) {
-                backHTML += `<div class="conlang-script" style="font-size:1.5em;margin-top:4px;">${scriptText}</div>`;
+                backHTML += `<div class="conlang-script" style="font-size:1.5em;margin-top:4px;">${escapeHtml(scriptText)}</div>`;
             }
 
             lines.push(emitCard(frontHTML, backHTML, ipa, pos, scriptText, tagsList, notes));

@@ -15,7 +15,7 @@ export default function SemanticExplorer() {
     const [activeTab, setActiveTab] = useState('definitions');
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
-    const [taxonomyChain, setTaxonomyChain] = useState([]);
+    const [, setTaxonomyChain] = useState([]);
     const [wordFamily, setWordFamily] = useState([]);
     const [compareTerm, setCompareTerm] = useState('');
     const [compareResults, setCompareResults] = useState(null);
@@ -158,7 +158,7 @@ export default function SemanticExplorer() {
             };
             
             await handleSelectSynset(coreWord);
-        } catch (error) {
+        } catch {
             toast.error("Failed to fetch semantic data. Try another term.");
         } finally {
             setLoading(false);
@@ -249,7 +249,7 @@ export default function SemanticExplorer() {
             } else {
                 toast.error(t('semantic.compare.notFound'));
             }
-        } catch (error) {
+        } catch {
             toast.error(t('semantic.compare.failed'));
         } finally {
             setLoading(false);

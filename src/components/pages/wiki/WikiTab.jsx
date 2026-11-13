@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import DOMPurify from 'dompurify';
+import { sanitizeUrl } from '@/utils/sanitizeHtml.js';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { getUniqueParsings } from '@/utils/morphologyEngine.jsx';
@@ -1503,7 +1503,9 @@ function LegacyWikiEditor({ content, onSave }) {
 
     const setLink = () => {
         if (linkUrl) {
-            editor.chain().focus().extendMarkRange('link').setLink({ href: linkUrl }).run();
+            const safeHref = sanitizeUrl(linkUrl);
+            if (!safeHref) return;
+            editor.chain().focus().extendMarkRange('link').setLink({ href: safeHref }).run();
         }
         setLinkUrl('');
         setLinkModalOpen(false);

@@ -4,6 +4,12 @@
  * Exports the lexicon and full grammar reference as an Excel-compatible file.
  */
 import { generateParadigm } from './morphologyEngine.jsx';
+import { escapeHtml, sanitizeSpreadsheetCell, sanitizeFilename } from './sanitizeHtml.js';
+
+const cell = (val, fallback = '') => {
+    const raw = val != null && val !== '' ? String(val) : fallback;
+    return escapeHtml(sanitizeSpreadsheetCell(raw));
+};
 
 export const generateSheetsExport = (config, lexicon, options = {}) => {
     const { 
@@ -52,10 +58,10 @@ export const generateSheetsExport = (config, lexicon, options = {}) => {
                     if (paradigm.length === 0) {
                         return `
                             <tr>
-                                <td>${baseWord}</td>
-                                <td>${entry.wordClass || ''}</td>
-                                <td>${entry.translation || ''}</td>
-                                <td>${entry.ipa || ''}</td>
+                                <td>${cell(baseWord)}</td>
+                                <td>${cell(entry.wordClass)}</td>
+                                <td>${cell(entry.translation)}</td>
+                                <td>${cell(entry.ipa)}</td>
                                 <td colspan="3">—</td>
                             </tr>
                         `;
@@ -64,14 +70,14 @@ export const generateSheetsExport = (config, lexicon, options = {}) => {
                     return paradigm.map((p, idx) => `
                         <tr>
                             ${idx === 0 ? `
-                                <td rowspan="${paradigm.length}">${baseWord}</td>
-                                <td rowspan="${paradigm.length}">${entry.wordClass || ''}</td>
-                                <td rowspan="${paradigm.length}">${entry.translation || ''}</td>
-                                <td rowspan="${paradigm.length}">${entry.ipa || ''}</td>
+                                <td rowspan="${paradigm.length}">${cell(baseWord)}</td>
+                                <td rowspan="${paradigm.length}">${cell(entry.wordClass)}</td>
+                                <td rowspan="${paradigm.length}">${cell(entry.translation)}</td>
+                                <td rowspan="${paradigm.length}">${cell(entry.ipa)}</td>
                             ` : ''}
-                            <td>${p.result || '—'}</td>
-                            <td>${p.ruleName}</td>
-                            <td>${p.personName}</td>
+                            <td>${cell(p.result, '—')}</td>
+                            <td>${cell(p.ruleName)}</td>
+                            <td>${cell(p.personName)}</td>
                         </tr>
                     `).join('');
                 }).join('')}
@@ -90,12 +96,12 @@ export const generateSheetsExport = (config, lexicon, options = {}) => {
                 </tr>
                 ${grammarRules.map(r => `
                     <tr>
-                        <td>${r.name || r.category || 'General'}</td>
-                        <td>${r.affix || '—'}</td>
-                        <td>${Array.isArray(r.appliesTo) ? r.appliesTo.join(", ") : (r.appliesTo || 'Universal')}</td>
-                        <td>${r.condition || 'always'}</td>
+                        <td>${cell(r.name || r.category, 'General')}</td>
+                        <td>${cell(r.affix, '—')}</td>
+                        <td>${cell(Array.isArray(r.appliesTo) ? r.appliesTo.join(", ") : r.appliesTo, 'Universal')}</td>
+                        <td>${cell(r.condition, 'always')}</td>
                         <td>${r.standalone ? 'Particle' : 'Affix'}</td>
-                        <td>${r.dependency || 'None'}</td>
+                        <td>${cell(r.dependency, 'None')}</td>
                         <td>—</td>
                     </tr>
                 `).join('')}
@@ -113,14 +119,14 @@ export const generateSheetsExport = (config, lexicon, options = {}) => {
                 </tr>
                 ${Array.isArray(personRules) ? personRules.map(p => `
                     <tr>
-                        <td>${p.person || '—'}</td>
-                        <td>${p.affix || '—'}</td>
-                        <td>${p.freeForm || '—'}</td>
-                        <td>${p.number || '—'}</td>
-                        <td>${p.gender || '—'}</td>
+                        <td>${cell(p.person, '—')}</td>
+                        <td>${cell(p.affix, '—')}</td>
+                        <td>${cell(p.freeForm, '—')}</td>
+                        <td>${cell(p.number, '—')}</td>
+                        <td>${cell(p.gender, '—')}</td>
                         <td colspan="2">—</td>
                     </tr>
-                `).join('') : `<tr><td colspan="7">${personRules}</td></tr>`}
+                `).join('') : `<tr><td colspan="7">${cell(personRules)}</td></tr>`}
 
                 <!-- 4. WIKI & DOCUMENTATION SECTION -->
                 <tr><td colspan="7" style="height: 30px;"></td></tr>
@@ -131,8 +137,8 @@ export const generateSheetsExport = (config, lexicon, options = {}) => {
                     const cleanContent = content ? content.replace(/<\/?[^>]+(>|$)/g, "") : "";
                     return `
                         <tr>
-                            <td class="sub-section" colspan="2">${title}</td>
-                            <td colspan="5">${cleanContent}</td>
+                            <td class="sub-section" colspan="2">${cell(title)}</td>
+                            <td colspan="5">${cell(cleanContent)}</td>
                         </tr>
                     `;
                 }).join('')}
@@ -141,7 +147,7 @@ export const generateSheetsExport = (config, lexicon, options = {}) => {
                 <tr><td colspan="7" style="height: 30px;"></td></tr>
                 <tr><td colspan="7" class="section-header">HISTORICAL SOUND CHANGES</td></tr>
                 ${historicalRules ? historicalRules.split('\n').map(line => `
-                    <tr><td colspan="7">${line}</td></tr>
+                    <tr><td colspan="7">${cell(line)}</td></tr>
                 `).join('') : `<tr><td colspan="7">No rules defined.</td></tr>`}
             </table>
         </body>
@@ -153,7 +159,7 @@ export const generateSheetsExport = (config, lexicon, options = {}) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${conlangName.replace(/\s+/g, '_')}_Master_Reference.xls`;
+    a.download = `${sanitizeFilename(conlangName, 'MyConlang')}_Master_Reference.xls`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

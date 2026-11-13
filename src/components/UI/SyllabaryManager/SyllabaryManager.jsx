@@ -94,16 +94,7 @@ export default function SyllabaryManager({ scriptId } = {}) {
                     let vowel = '';
                     let final = '';
                     
-                    let vIdx = -1;
-                    for (let i = 0; i < syl.length; i++) {
-                        if (vowList.includes(syl.substring(i))) {
-                            vIdx = i;
-                            break; // Find longest matching vowel? Or just simple? Let's just use naive split since it's CV mostly
-                        }
-                    }
-                    
-                    // A better way to split CV for standard phonologies:
-                    // Try to match longest vowel in the middle
+                    // Try to find best vowel to split syllable (CV/CVC)
                     let bestVowel = '';
                     for (const v of vowList) {
                         if (v && syl.includes(v) && v.length > bestVowel.length) {

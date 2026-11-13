@@ -336,7 +336,7 @@ export default function LexiconTab() {
 
             setIsAutoDefining(false);
             setAutoDefineProgress(0);
-            const skipMsg = skippedCount > 0 ? ` (${skippedCount} skipped Ã¢â‚¬â€ already had definitions)` : '';
+            const skipMsg = skippedCount > 0 ? ` (${skippedCount} skipped — already had definitions)` : '';
             toast.success(`Auto-define complete! Generated definitions for ${updatedCount} words.${skipMsg}`);
         };
 

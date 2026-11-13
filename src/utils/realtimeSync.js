@@ -93,13 +93,13 @@ export function subscribeAccountLive(userId, { onProjectUpdate, onToggleAutoSync
     const channel = getAccountChannel(userId);
     if (!channel) return () => {};
 
-    const projectUpdateSub = channel.on('broadcast', { event: 'project_updated' }, (payload) => {
+    channel.on('broadcast', { event: 'project_updated' }, (payload) => {
         if (onProjectUpdate && payload?.payload) {
             onProjectUpdate(payload.payload);
         }
     });
 
-    const toggleSub = channel.on('broadcast', { event: 'toggle_auto_sync' }, (payload) => {
+    channel.on('broadcast', { event: 'toggle_auto_sync' }, (payload) => {
         if (onToggleAutoSync && payload?.payload) {
             onToggleAutoSync(payload.payload);
         }

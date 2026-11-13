@@ -123,6 +123,12 @@ export const INITIAL_CONFIG = {
     autoReturnToLexicon: false,
     // Per-pattern weight for the word generator (e.g. { 'CV': 60, 'CVC': 30, 'V': 10 })
     syllablePatternWeights: {},
+    // Post-generation regex rules and options for the Word Generator
+    generatorRegexRules: [],
+    generatorOptions: {
+        respectVowelHarmony: false,
+        avoidDuplicates: false,
+    },
     suppressDuplicateWarnings: false,
     alphabetNames: {},
     numberSystem: {
@@ -178,6 +184,9 @@ export const INITIAL_CONFIG = {
     calendarSystem: {
         daysOfWeek: ['', '', '', '', '', '', ''],
         months: ['', '', '', '', '', '', '', '', '', '', '', ''],
+        daysPerWeek: 7,
+        weeksPerMonth: 4,
+        monthsPerYear: 12,
         dateFormat: 'DD/MM/YYYY',
         yearOffset: 0
     },

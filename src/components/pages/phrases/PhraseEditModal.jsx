@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Modal from '@/components/UI/Modal/Modal.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
@@ -8,30 +8,30 @@ import toast from 'react-hot-toast';
 
 export default function PhraseEditModal({ isOpen, onClose, editingPhrase = null }) {
     const { t } = useTranslation();
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={editingPhrase ? t('phrases.editPhrase') : t('phrases.newPhrase')}>
+            {isOpen && (
+                <PhraseEditForm
+                    key={editingPhrase?.id || 'new'}
+                    onClose={onClose}
+                    editingPhrase={editingPhrase}
+                />
+            )}
+        </Modal>
+    );
+}
+
+function PhraseEditForm({ onClose, editingPhrase }) {
+    const { t } = useTranslation();
     const addPhrase = useLexiconStore(state => state.addPhrase);
     const updatePhrase = useLexiconStore(state => state.updatePhrase);
 
-    const [phrase, setPhrase] = useState('');
-    const [literalTranslation, setLiteralTranslation] = useState('');
-    const [idiomaticTranslation, setIdiomaticTranslation] = useState('');
-    const [register, setRegister] = useState('casual');
-    const [category, setCategory] = useState('general');
-
-    useEffect(() => {
-        if (editingPhrase && isOpen) {
-            setPhrase(editingPhrase.phrase || '');
-            setLiteralTranslation(editingPhrase.literalTranslation || '');
-            setIdiomaticTranslation(editingPhrase.idiomaticTranslation || '');
-            setRegister(editingPhrase.register || 'casual');
-            setCategory(editingPhrase.category || 'general');
-        } else if (isOpen) {
-            setPhrase('');
-            setLiteralTranslation('');
-            setIdiomaticTranslation('');
-            setRegister('casual');
-            setCategory('general');
-        }
-    }, [editingPhrase, isOpen]);
+    const [phrase, setPhrase] = useState(() => editingPhrase?.phrase || '');
+    const [literalTranslation, setLiteralTranslation] = useState(() => editingPhrase?.literalTranslation || '');
+    const [idiomaticTranslation, setIdiomaticTranslation] = useState(() => editingPhrase?.idiomaticTranslation || '');
+    const [register, setRegister] = useState(() => editingPhrase?.register || 'casual');
+    const [category, setCategory] = useState(() => editingPhrase?.category || 'general');
 
     const handleSave = () => {
         if (!phrase.trim() || !idiomaticTranslation.trim()) {
@@ -58,8 +58,7 @@ export default function PhraseEditModal({ isOpen, onClose, editingPhrase = null 
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={editingPhrase ? t('phrases.editPhrase') : t('phrases.newPhrase')}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 <div>
                     <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: 'var(--tx)' }}>{t('phrases.phraseLabel')}</label>
                     <Input 
@@ -125,6 +124,5 @@ export default function PhraseEditModal({ isOpen, onClose, editingPhrase = null 
                     <Button variant="imp" onClick={handleSave}>{t('common.save')}</Button>
                 </div>
             </div>
-        </Modal>
     );
 }

@@ -14,8 +14,7 @@ import {
 import { MERGE_MODES } from '@/utils/syncMerge.js';
 import {
     getAccountChannel,
-    fetchLatestCloudProject,
-    broadcastProjectUpdate
+    fetchLatestCloudProject
 } from '@/utils/realtimeSync.js';
 
 const LAST_VERSION_SAVE_KEY = 'ce_last_version_save_ts';
@@ -239,7 +238,7 @@ export function useAutoSync() {
                         remote.remoteState.lexicon,
                         remote.remoteState.phrases
                     );
-                } catch (e) {
+                } catch {
                     // Ignore local storage error
                 }
                 return;
@@ -269,7 +268,7 @@ export function useAutoSync() {
                             mergeRes.merged.lexicon,
                             mergeRes.merged.phrases
                         );
-                    } catch (e) {
+                    } catch {
                         // Ignore local storage error
                     }
                 } else {

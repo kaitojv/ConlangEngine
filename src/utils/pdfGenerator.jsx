@@ -4,12 +4,16 @@
  * Generates a beautiful PDF reference document with premium template support.
  */
 import { generateParadigm } from './morphologyEngine.jsx';
+import { escapeHtml, sanitizeWikiHtml, sanitizeCssFontUrl } from './sanitizeHtml.js';
 
 export const generateConlangPDF = (config, lexicon, template = 'academic', options = {}) => {
     const printWindow = window.open('', '', 'height=900,width=800');
     if (!printWindow) {
         return alert("Please allow pop-ups to generate the PDF.");
     }
+    try {
+        printWindow.opener = null;
+    } catch { /* ignore read-only opener */ }
 
     const {
         conlangName = "My Conlang",
@@ -28,6 +32,7 @@ export const generateConlangPDF = (config, lexicon, template = 'academic', optio
     } = config;
 
     const { includeInflections = true, inflectionMode = 'compact' } = options;
+    const safeFontUrl = sanitizeCssFontUrl(customFont || customFontBase64);
 
     const stylesMap = {
         academic: {
@@ -82,14 +87,14 @@ export const generateConlangPDF = (config, lexicon, template = 'academic', optio
         <!DOCTYPE html>
         <html>
         <head>
-            <title>${conlangName} - Reference Document</title>
+            <title>${escapeHtml(conlangName)} - Reference Document</title>
             <style>
                 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;700&family=Lora:ital,wght@0,400;0,700;1,400&family=Special+Elite&display=swap');
                 
-                ${(customFont || customFontBase64) ? `
+                ${safeFontUrl ? `
                 @font-face {
                     font-family: 'ConlangCustomFont';
-                    src: url('${customFont || customFontBase64}') format('truetype');
+                    src: url('${safeFontUrl}') format('truetype');
                 }
                 .custom-font { font-family: 'ConlangCustomFont', ${styles.font}; }
                 ` : ''}
@@ -235,9 +240,9 @@ export const generateConlangPDF = (config, lexicon, template = 'academic', optio
             </style>
         </head>
         <body>
-            <h1>${conlangName}</h1>
+            <h1>${escapeHtml(conlangName)}</h1>
             <div class="subtitle">
-                A Reference Grammar by ${authorName}
+                A Reference Grammar by ${escapeHtml(authorName)}
             </div>
 
             <p style="text-align: center; font-size: 10pt; margin-bottom: 50px;">
@@ -245,24 +250,24 @@ export const generateConlangPDF = (config, lexicon, template = 'academic', optio
             </p>
 
             <h2>I. Phonology</h2>
-            <p>The phonological system of <strong>${conlangName}</strong> is classified as <em>${phonologyTypes}</em>. The following inventory represents the standard phonemes used in the language.</p>
+            <p>The phonological system of <strong>${escapeHtml(conlangName)}</strong> is classified as <em>${escapeHtml(phonologyTypes)}</em>. The following inventory represents the standard phonemes used in the language.</p>
             
             <table>
                 <tr><th>Category</th><th>Inventory</th></tr>
-                <tr><td>Consonants</td><td class="custom-font">${consonants || '—'}</td></tr>
-                <tr><td>Vowels</td><td class="custom-font">${vowels || '—'}</td></tr>
-                <tr><td>Syllable Structure</td><td><code>${syllablePattern || '—'}</code></td></tr>
+                <tr><td>Consonants</td><td class="custom-font">${escapeHtml(consonants) || '—'}</td></tr>
+                <tr><td>Vowels</td><td class="custom-font">${escapeHtml(vowels) || '—'}</td></tr>
+                <tr><td>Syllable Structure</td><td><code>${escapeHtml(syllablePattern) || '—'}</code></td></tr>
             </table>
 
             ${historicalRules ? `
                 <h3>Historical Sound Changes</h3>
-                <div class="code-block">${typeof historicalRules === 'string' ? historicalRules : JSON.stringify(historicalRules, null, 2)}</div>
+                <div class="code-block">${escapeHtml(typeof historicalRules === 'string' ? historicalRules : JSON.stringify(historicalRules, null, 2))}</div>
             ` : ''}
 
             <div class="page-break"></div>
 
             <h2>II. Morphology & Syntax</h2>
-            <p><strong>${conlangName}</strong> adheres to a <strong>${syntaxOrder}</strong> constituent order. The language exhibits ${grammarRules.length} primary morphological processes.</p>
+            <p><strong>${escapeHtml(conlangName)}</strong> adheres to a <strong>${escapeHtml(syntaxOrder)}</strong> constituent order. The language exhibits ${grammarRules.length} primary morphological processes.</p>
 
             ${Array.isArray(personRules) && personRules.length > 0 ? `
                 <h3>Person & Number Alignment</h3>
@@ -270,10 +275,10 @@ export const generateConlangPDF = (config, lexicon, template = 'academic', optio
                     <tr><th>Person</th><th>Number</th><th>Marker</th><th>Free Form</th></tr>
                     ${personRules.map(p => `
                         <tr>
-                            <td>${p.person || '—'}</td>
-                            <td>${p.number || '—'}</td>
-                            <td><code>${p.affix || '—'}</code></td>
-                            <td>${p.freeForm || '—'}</td>
+                            <td>${escapeHtml(p.person) || '—'}</td>
+                            <td>${escapeHtml(p.number) || '—'}</td>
+                            <td><code>${escapeHtml(p.affix) || '—'}</code></td>
+                            <td>${escapeHtml(p.freeForm) || '—'}</td>
                         </tr>
                     `).join('')}
                 </table>
@@ -285,12 +290,12 @@ export const generateConlangPDF = (config, lexicon, template = 'academic', optio
                     <tr><th>Rule Name / Cat</th><th>Affix</th><th>Applies To</th><th>Condition</th><th>Type</th><th>Dep.</th></tr>
                     ${grammarRules.map(r => `
                         <tr>
-                            <td><strong>${r.name || r.category || 'General'}</strong></td>
-                            <td><code>${r.affix || '—'}</code></td>
-                            <td>${Array.isArray(r.appliesTo) ? r.appliesTo.join(", ") : (r.appliesTo || 'Universal')}</td>
-                            <td>${r.condition || 'always'}</td>
+                            <td><strong>${escapeHtml(r.name || r.category || 'General')}</strong></td>
+                            <td><code>${escapeHtml(r.affix) || '—'}</code></td>
+                            <td>${escapeHtml(Array.isArray(r.appliesTo) ? r.appliesTo.join(", ") : (r.appliesTo || 'Universal'))}</td>
+                            <td>${escapeHtml(r.condition || 'always')}</td>
                             <td>${r.standalone ? 'Particle' : 'Affix'}</td>
-                            <td>${r.dependency || 'None'}</td>
+                            <td>${escapeHtml(r.dependency || 'None')}</td>
                         </tr>
                     `).join('')}
                 </table>
@@ -317,23 +322,23 @@ export const generateConlangPDF = (config, lexicon, template = 'academic', optio
 
                     return `
                         <div class="dictionary-entry">
-                            <span class="word-head custom-font">${w.displayWord || w.word.replace(/\*/g, '')}</span>
-                            <span class="ipa-label">${w.ipa ? `[${w.ipa}]` : ''}</span>
-                            <span class="pos-label">${w.wordClass || ''}</span>
-                            <span class="definition">${w.translation || ''}</span>
+                            <span class="word-head custom-font">${escapeHtml(w.displayWord || w.word.replace(/\*/g, ''))}</span>
+                            <span class="ipa-label">${w.ipa ? `[${escapeHtml(w.ipa)}]` : ''}</span>
+                            <span class="pos-label">${escapeHtml(w.wordClass || '')}</span>
+                            <span class="definition">${escapeHtml(w.translation || '')}</span>
                             
                             ${includeInflections && paradigm.length > 0 ? `
                                 <table class="inflection-table">
                                     ${inflectionMode === 'compact' ? `
                                         <tr><th>Form</th><th>Result</th></tr>
-                                        ${paradigm.map(p => `<tr><td>${p.ruleName}</td><td class="custom-font">${p.result || '—'}</td></tr>`).join('')}
+                                        ${paradigm.map(p => `<tr><td>${escapeHtml(p.ruleName)}</td><td class="custom-font">${escapeHtml(p.result) || '—'}</td></tr>`).join('')}
                                     ` : `
                                         <tr><th>Rule</th><th>Person/Class</th><th>Result</th></tr>
                                         ${paradigm.map(p => `
                                             <tr>
-                                                <td>${p.ruleName}</td>
-                                                <td>${p.personName}</td>
-                                                <td class="custom-font">${p.result || '—'}</td>
+                                                <td>${escapeHtml(p.ruleName)}</td>
+                                                <td>${escapeHtml(p.personName)}</td>
+                                                <td class="custom-font">${escapeHtml(p.result) || '—'}</td>
                                             </tr>
                                         `).join('')}
                                     `}
@@ -351,7 +356,7 @@ export const generateConlangPDF = (config, lexicon, template = 'academic', optio
                     if (id === 'phonology') return '';
                     const title = typeof page === 'object' ? page.title : id.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                     const content = typeof page === 'object' ? page.content : page;
-                    return `<h3>${title}</h3><div style="font-size: 10pt;">${content}</div>`;
+                    return `<h3>${escapeHtml(title)}</h3><div style="font-size: 10pt;">${sanitizeWikiHtml(content)}</div>`;
                 }).join('')}
             ` : ''}
 

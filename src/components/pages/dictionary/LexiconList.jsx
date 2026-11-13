@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
-import { renderWordInScript, renderWordStringInScript } from '../../../utils/scriptRendering.js';
+import { renderWordInScript } from '../../../utils/scriptRendering.js';
 import { getScriptSystem, resolveWordScriptId, getDefaultScriptId } from '../../../utils/scriptResolver.js';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import Card from '../../UI/Card/Card.jsx';

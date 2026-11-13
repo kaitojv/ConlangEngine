@@ -5,6 +5,7 @@
  * Includes Phonology, Grammar, Wiki, Inflections, and Lexicon.
  */
 import { generateParadigm } from './morphologyEngine.jsx';
+import { sanitizeFilename } from './sanitizeHtml.js';
 
 export const generateObsidianMarkdown = (config, lexicon, options = {}) => {
     const { 
@@ -152,7 +153,7 @@ export const generateObsidianMarkdown = (config, lexicon, options = {}) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${conlangName.replace(/\s+/g, '_')}_Master_Wiki.md`;
+    a.download = `${sanitizeFilename(conlangName, 'MyConlang')}_Master_Wiki.md`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

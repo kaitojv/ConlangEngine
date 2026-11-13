@@ -19,13 +19,19 @@ const extractInventory = (configString) => {
 const validateSyllabic = (word, syllabaryMap) => {
     if (!syllabaryMap || Object.keys(syllabaryMap).length === 0) return { valid: true };
 
-    const validSyllables = Object.keys(syllabaryMap).sort((a, b) => b.length - a.length);
+    const validSyllables = Object.keys(syllabaryMap)
+        .filter(Boolean)
+        .sort((a, b) => b.length - a.length)
+        .map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
     if (validSyllables.length === 0) return { valid: true };
 
-    const regex = new RegExp(`^(${validSyllables.join('|')})+$`, 'i');
-
-    if (!regex.test(word)) {
-        return { valid: false, reason: "Contains syllables not defined in your Syllabary Grid." };
+    try {
+        const regex = new RegExp(`^(${validSyllables.join('|')})+$`, 'i');
+        if (!regex.test(word)) {
+            return { valid: false, reason: "Contains syllables not defined in your Syllabary Grid." };
+        }
+    } catch {
+        return { valid: true };
     }
     return { valid: true };
 };
@@ -119,16 +125,20 @@ const validateAlphabetic = (word, consonants, vowels, syllablePattern, otherPhon
     // Parse user's pattern (e.g., "CVC, CV" -> /^(CVC|CV)+$/i )
     const patterns = syllablePattern.split(',').map(p => p.trim().toUpperCase()).filter(Boolean);
     if (patterns.length > 0) {
-        const regexStr = `^(${patterns.join('|')})+$`;
-        const patternRegex = new RegExp(regexStr, 'i');
-
-        if (!patternRegex.test(cvString)) {
-            return {
-                valid: false,
-                reason: `Does not match your Syllable Pattern (${syllablePattern}). Detected structure: [${cvString}]`,
-                type: 'invalid_pattern',
-                detectedPattern: cvString
-            };
+        const escapedPatterns = patterns.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+        const regexStr = `^(${escapedPatterns.join('|')})+$`;
+        try {
+            const patternRegex = new RegExp(regexStr, 'i');
+            if (!patternRegex.test(cvString)) {
+                return {
+                    valid: false,
+                    reason: `Does not match your Syllable Pattern (${syllablePattern}). Detected structure: [${cvString}]`,
+                    type: 'invalid_pattern',
+                    detectedPattern: cvString
+                };
+            }
+        } catch {
+            // Invalid custom syllable pattern syntax fallback
         }
     }
 

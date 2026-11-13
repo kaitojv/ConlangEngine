@@ -35,7 +35,7 @@ const VOWEL_FORMANTS = {
 export const tokenizeIPA = (ipa) => {
     if (!ipa) return [];
     const clean = String(ipa)
-        .replace(/[\/\\\[\]]/g, '')
+        .replace(/[/\\[\]]/g, '')
         .replace(/[ˈˌːˑ]/g, '')
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
@@ -304,6 +304,11 @@ export const playFormantIPA = async (ipa, { f0 = 130, speed = 1.0 } = {}) => {
                 else if (token === 'j') { f1 = 280; f2 = 2200; }
                 else if (token === 'l') { f1 = 360; f2 = 1300; }
 
+                const bp1 = ctx.createBiquadFilter();
+                bp1.type = 'bandpass';
+                bp1.frequency.setValueAtTime(f1, currentTime);
+                bp1.Q.setValueAtTime(5.0, currentTime);
+
                 const bp = ctx.createBiquadFilter();
                 bp.type = 'bandpass';
                 bp.frequency.setValueAtTime(f2, currentTime);
@@ -315,7 +320,9 @@ export const playFormantIPA = async (ipa, { f0 = 130, speed = 1.0 } = {}) => {
                 oscGain.gain.setValueAtTime(0.2, currentTime + duration - 0.02);
                 oscGain.gain.exponentialRampToValueAtTime(0.001, currentTime + duration);
 
+                osc.connect(bp1);
                 osc.connect(bp);
+                bp1.connect(oscGain);
                 bp.connect(oscGain);
                 oscGain.connect(masterGain);
 

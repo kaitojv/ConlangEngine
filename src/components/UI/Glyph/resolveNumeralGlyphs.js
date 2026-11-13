@@ -661,9 +661,10 @@ export function findNumeralGlyphCandidates(key, name, value, opts = {}) {
         const eTrans = (entry.translation || '').toLowerCase();
         const eTags = Array.isArray(entry.tags) ? entry.tags.map(t => String(t).toLowerCase()) : [];
 
+        const escapeReg = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const isExactName = Boolean(cleanName && eWord === cleanName);
-        const isValMatch = Boolean(valStr && (eTrans === valStr || new RegExp(`\\b${valStr}\\b`).test(eTrans)));
-        const isWordMatch = Boolean(targetWord && (eTrans === targetWord || new RegExp(`\\b${targetWord}\\b`).test(eTrans)));
+        const isValMatch = Boolean(valStr && (eTrans === valStr || new RegExp(`\\b${escapeReg(valStr)}\\b`).test(eTrans)));
+        const isWordMatch = Boolean(targetWord && (eTrans === targetWord || new RegExp(`\\b${escapeReg(targetWord)}\\b`).test(eTrans)));
         const isNumberTagged = eTags.includes('number') || eTags.includes('numeral') || eTags.includes('math') || eTags.includes('digit');
 
         if (isExactName || isValMatch || isWordMatch || isNumberTagged) {

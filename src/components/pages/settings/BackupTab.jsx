@@ -42,8 +42,9 @@ export default function BackupTab() {
     const status = useBackupStore((s) => s.status);
     const [testing, setTesting] = useState(false);
     const [browserOpen, setBrowserOpen] = useState(false);
-    // null = not yet checked, true = reachable, false = offline.
-    const [serverOnline, setServerOnline] = useState(null);
+    // { endpoint, online }: matches null until the check for settings.endpoint completes.
+    const [healthState, setHealthState] = useState({ endpoint: null, online: null });
+    const serverOnline = healthState.endpoint === settings.endpoint ? healthState.online : null;
 
     // Patch a single backupSettings field while preserving the rest.
     const patch = (changes) =>
@@ -56,9 +57,8 @@ export default function BackupTab() {
         let cancelled = false;
         const ping = async () => {
             const ok = await checkHealth(settings.endpoint);
-            if (!cancelled) setServerOnline(ok);
+            if (!cancelled) setHealthState({ endpoint: settings.endpoint, online: ok });
         };
-        setServerOnline(null);
         ping();
         const id = setInterval(ping, 20000);
         return () => { cancelled = true; clearInterval(id); };
@@ -68,7 +68,7 @@ export default function BackupTab() {
         setTesting(true);
         const ok = await checkHealth(settings.endpoint);
         setTesting(false);
-        setServerOnline(ok);
+        setHealthState({ endpoint: settings.endpoint, online: ok });
         if (ok) toast.success(t('settings.backup.connected'));
         else toast.error(t('settings.backup.unreachable'));
     };

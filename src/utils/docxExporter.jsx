@@ -5,6 +5,7 @@
  * Optimized for textbook aesthetics.
  */
 import { generateParadigm } from './morphologyEngine.jsx';
+import { escapeHtml, sanitizeWikiHtml, sanitizeCssFontUrl, sanitizeFilename } from './sanitizeHtml.js';
 
 export const generateDocxExport = (config, lexicon, template = 'academic', options = {}) => {
     const { 
@@ -14,7 +15,6 @@ export const generateDocxExport = (config, lexicon, template = 'academic', optio
         personRules = [],
         consonants = "", 
         vowels = "", 
-        syntaxOrder = "SVO",
         wikiPages = {},
         historicalRules = ""
     } = config;
@@ -56,6 +56,7 @@ export const generateDocxExport = (config, lexicon, template = 'academic', optio
         }
     };
     const styles = stylesMap[template] || stylesMap.academic;
+    const safeFontUrl = sanitizeCssFontUrl(config.customFont || config.customFontBase64);
 
     let html = `
         <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
@@ -141,18 +142,18 @@ export const generateDocxExport = (config, lexicon, template = 'academic', optio
                     font-family: 'Courier New', monospace; 
                     white-space: pre-wrap; 
                 }
-                ${(config.customFont || config.customFontBase64) ? `
+                ${safeFontUrl ? `
                 @font-face {
                     font-family: 'ConlangCustomFont';
-                    src: url('${config.customFont || config.customFontBase64}') format('truetype');
+                    src: url('${safeFontUrl}') format('truetype');
                 }
                 .custom-font { font-family: 'ConlangCustomFont', ${styles.font}; }
                 ` : ''}
             </style>
         </head>
         <body>
-            <h1>${conlangName}</h1>
-            <div class="subtitle">A Comprehensive Reference Grammar by ${authorName}</div>
+            <h1>${escapeHtml(conlangName)}</h1>
+            <div class="subtitle">A Comprehensive Reference Grammar by ${escapeHtml(authorName)}</div>
             
             <p style="text-align: center;">Exported on ${new Date().toLocaleDateString()}</p>
 
@@ -160,13 +161,13 @@ export const generateDocxExport = (config, lexicon, template = 'academic', optio
             <p><strong>Inventory:</strong></p>
             <table>
                 <tr><th>Category</th><th>Graphemes / Phonemes</th></tr>
-                <tr><td>Consonants</td><td class="custom-font">${consonants || '—'}</td></tr>
-                <tr><td>Vowels</td><td class="custom-font">${vowels || '—'}</td></tr>
+                <tr><td>Consonants</td><td class="custom-font">${escapeHtml(consonants) || '—'}</td></tr>
+                <tr><td>Vowels</td><td class="custom-font">${escapeHtml(vowels) || '—'}</td></tr>
             </table>
             
             ${historicalRules ? `
                 <h3>Historical Sound Changes</h3>
-                <div class="code-block">${typeof historicalRules === 'string' ? historicalRules : JSON.stringify(historicalRules)}</div>
+                <div class="code-block">${escapeHtml(typeof historicalRules === 'string' ? historicalRules : JSON.stringify(historicalRules))}</div>
             ` : ''}
 
             <h2>II. Grammar Documentation</h2>
@@ -174,7 +175,7 @@ export const generateDocxExport = (config, lexicon, template = 'academic', optio
                 if (id === 'phonology') return '';
                 const title = id.charAt(0).toUpperCase() + id.slice(1);
                 const cleanContent = typeof content === 'string' ? content : content?.content || "";
-                return `<h3>${title}</h3><div>${cleanContent}</div>`;
+                return `<h3>${escapeHtml(title)}</h3><div>${sanitizeWikiHtml(cleanContent)}</div>`;
             }).join('')}
 
             ${grammarRules && grammarRules.length > 0 ? `
@@ -183,12 +184,12 @@ export const generateDocxExport = (config, lexicon, template = 'academic', optio
                     <tr><th>Rule Name / Category</th><th>Affix</th><th>Applies To</th><th>Condition</th><th>Type</th><th>Dep.</th></tr>
                     ${grammarRules.map(r => `
                         <tr>
-                            <td><strong>${r.name || r.category || 'General'}</strong></td>
-                            <td><code>${r.affix || '—'}</code></td>
-                            <td>${Array.isArray(r.appliesTo) ? r.appliesTo.join(", ") : (r.appliesTo || 'Universal')}</td>
-                            <td>${r.condition || 'always'}</td>
+                            <td><strong>${escapeHtml(r.name || r.category || 'General')}</strong></td>
+                            <td><code>${escapeHtml(r.affix) || '—'}</code></td>
+                            <td>${escapeHtml(Array.isArray(r.appliesTo) ? r.appliesTo.join(", ") : (r.appliesTo || 'Universal'))}</td>
+                            <td>${escapeHtml(r.condition || 'always')}</td>
                             <td>${r.standalone ? 'Particle' : 'Affix'}</td>
-                            <td>${r.dependency || 'None'}</td>
+                            <td>${escapeHtml(r.dependency || 'None')}</td>
                         </tr>
                     `).join('')}
                 </table>
@@ -200,11 +201,11 @@ export const generateDocxExport = (config, lexicon, template = 'academic', optio
                     <tr><th>Person</th><th>Marker</th><th>Free Form</th><th>Number</th><th>Class</th></tr>
                     ${personRules.map(p => `
                         <tr>
-                            <td>${p.person || '—'}</td>
-                            <td><code>${p.affix || '—'}</code></td>
-                            <td>${p.freeForm || '—'}</td>
-                            <td>${p.number || '—'}</td>
-                            <td>${p.gender || '—'}</td>
+                            <td>${escapeHtml(p.person) || '—'}</td>
+                            <td><code>${escapeHtml(p.affix) || '—'}</code></td>
+                            <td>${escapeHtml(p.freeForm) || '—'}</td>
+                            <td>${escapeHtml(p.number) || '—'}</td>
+                            <td>${escapeHtml(p.gender) || '—'}</td>
                         </tr>
                     `).join('')}
                 </table>
@@ -220,23 +221,23 @@ export const generateDocxExport = (config, lexicon, template = 'academic', optio
 
                 return `
                     <div class="dictionary-entry">
-                        <span class="word-head custom-font">${baseWord}</span> 
-                        <span style="color: #666;">[${e.ipa || '—'}]</span>
-                        <span style="font-style: italic; margin-left: 10pt;">${e.wordClass || '—'}</span>
-                        <p style="margin: 5pt 0;">${e.translation || '—'}</p>
+                        <span class="word-head custom-font">${escapeHtml(baseWord)}</span> 
+                        <span style="color: #666;">[${escapeHtml(e.ipa) || '—'}]</span>
+                        <span style="font-style: italic; margin-left: 10pt;">${escapeHtml(e.wordClass) || '—'}</span>
+                        <p style="margin: 5pt 0;">${escapeHtml(e.translation) || '—'}</p>
                         
                         ${includeInflections && paradigm.length > 0 ? `
                             <table class="inflection-table">
                                 ${inflectionMode === 'compact' ? `
                                     <tr style="background: #fafafa;"><th style="background: #eee; color: #444;">Form</th><th style="background: #eee; color: #444;">Result</th></tr>
-                                    ${paradigm.map(p => `<tr><td>${p.ruleName}</td><td class="custom-font">${p.result || '—'}</td></tr>`).join('')}
+                                    ${paradigm.map(p => `<tr><td>${escapeHtml(p.ruleName)}</td><td class="custom-font">${escapeHtml(p.result) || '—'}</td></tr>`).join('')}
                                 ` : `
                                     <tr style="background: #fafafa;"><th style="background: #eee; color: #444;">Rule</th><th style="background: #eee; color: #444;">Person</th><th style="background: #eee; color: #444;">Result</th></tr>
                                     ${paradigm.map(p => `
                                         <tr>
-                                            <td>${p.ruleName}</td>
-                                            <td>${p.personName}</td>
-                                            <td class="custom-font">${p.result || '—'}</td>
+                                            <td>${escapeHtml(p.ruleName)}</td>
+                                            <td>${escapeHtml(p.personName)}</td>
+                                            <td class="custom-font">${escapeHtml(p.result) || '—'}</td>
                                         </tr>
                                     `).join('')}
                                 `}
@@ -257,7 +258,7 @@ export const generateDocxExport = (config, lexicon, template = 'academic', optio
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${conlangName.replace(/\s+/g, '_')}_Master_Reference.doc`;
+    a.download = `${sanitizeFilename(conlangName, 'MyConlang')}_Master_Reference.doc`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

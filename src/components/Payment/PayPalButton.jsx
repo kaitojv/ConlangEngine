@@ -15,7 +15,7 @@ const PayPalButton = () => {
         updateConfig: state.updateConfig
     })));
 
-    const handleSuccess = async (data) => {
+    const handleSuccess = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session?.user) {
             toast.error("You must be logged in to sync your LIVE status.");

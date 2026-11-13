@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
-import { Menu, Home, Printer, Save, FolderUp, User, Cloud, FileText, Table, FileEdit, Download, Gamepad, Globe, Database, Search, Book, Swords, Layers, Languages } from 'lucide-react';
+import { Menu, Home, Printer, Save, FolderUp, User, Cloud, FileText, Table, FileEdit, Download, Gamepad, Globe, Database, Search, Book, Swords, Layers, Languages, Type } from 'lucide-react';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
 
 
@@ -24,6 +24,7 @@ import { exportTerrariaLocalizationPack } from '../../../utils/terrariaExporter.
 import { ExportModal } from './ExportModal.jsx';
 import { CsvImportModal } from './CsvImportModal.jsx';
 import AnkiExportModal from '../../UI/AnkiExportModal/AnkiExportModal.jsx';
+import FontExportModal from '../../UI/FontExportModal/FontExportModal.jsx';
 import BackupStatus from '../BackupStatus/BackupStatus.jsx';
 import { sanitizeBackup } from '../../../utils/schemaValidator.jsx';
 import { useBackupStore } from '../../../store/useBackupStore.jsx';
@@ -46,6 +47,7 @@ export default function Header({ openMenu, onBackupNow }) {
     const [exportType, setExportType] = useState(null); // 'pdf', 'docx', 'obsidian', 'sheets'
     const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
     const [isAnkiModalOpen, setIsAnkiModalOpen] = useState(false);
+    const [isFontExportModalOpen, setIsFontExportModalOpen] = useState(false);
     const [activeDropdown, setActiveDropdown] = useState(null); // 'export' | 'save' | 'load' | 'lang' | null
 
     // Close open header dropdowns on outside tap/click or Escape
@@ -360,6 +362,9 @@ export default function Header({ openMenu, onBackupNow }) {
                                 <button className="export-opt" onClick={() => { closeDropdown(); setIsAnkiModalOpen(true); }}>
                                     <Layers size={14} /> {t('header.exportAnki')}
                                 </button>
+                                <button className="export-opt" onClick={() => { closeDropdown(); setIsFontExportModalOpen(true); }}>
+                                    <Type size={14} /> {t('header.exportFont')}
+                                </button>
                                 <button className="export-opt" onClick={() => { closeDropdown(); setExportType('minecraft'); }}>
                                     <Gamepad size={14} /> {t('header.exportMinecraft')}
                                 </button>
@@ -477,6 +482,10 @@ export default function Header({ openMenu, onBackupNow }) {
         <AnkiExportModal 
             isOpen={isAnkiModalOpen}
             onClose={() => setIsAnkiModalOpen(false)}
+        />
+        <FontExportModal
+            isOpen={isFontExportModalOpen}
+            onClose={() => setIsFontExportModalOpen(false)}
         />
         </>
     );

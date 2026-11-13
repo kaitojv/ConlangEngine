@@ -1,5 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { compileFont } from '../utils/fontCompiler.jsx';
+import { sanitizeCssFontUrl, sanitizeCssValue } from '../utils/sanitizeHtml.js';
+
+const safePublicFamily = (instanceId, scriptId) =>
+    `PublicScript_${instanceId}_${String(scriptId || 'default').replace(/[^a-zA-Z0-9_-]/g, '_')}`;
 
 /**
  * Safely injects the theme colors into the document body for the Public Viewer,
@@ -14,8 +18,10 @@ export function usePublicThemeInjector(config) {
         // Save original styles to restore them later if needed (mostly important if they navigate back to local workspace)
         const originalStyles = {};
         const applyStyle = (varName, val) => {
+            const safeVal = sanitizeCssValue(val);
+            if (!safeVal) return;
             originalStyles[varName] = root.style.getPropertyValue(varName);
-            root.style.setProperty(varName, val);
+            root.style.setProperty(varName, safeVal);
         };
 
         if (colors.bg) applyStyle('--bg', colors.bg);
@@ -128,11 +134,12 @@ export function usePublicFontInjector(config) {
             const loadedByScript = {};
 
             for (const scriptId of scriptIds) {
-                const fontFamily = `PublicScript_${instanceId}_${scriptId}`;
+                const fontFamily = safePublicFamily(instanceId, scriptId);
                 const fontStrings = scriptFontMap[scriptId];
 
                 const scriptPromises = fontStrings.map(fontStr => {
-                    const safeFontUrl = fontStr.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,');
+                    const safeFontUrl = sanitizeCssFontUrl(fontStr);
+                    if (!safeFontUrl) return Promise.reject(new Error('Invalid font URL'));
                     const face = new FontFace(fontFamily, `url('${safeFontUrl}')`);
                     return face.load();
                 });
@@ -163,12 +170,12 @@ export function usePublicFontInjector(config) {
                 loadedFontsRef.current = allFaces;
 
                 // The default script's font family
-                const defaultFontFamily = `PublicScript_${instanceId}_${defaultScriptId}`;
+                const defaultFontFamily = safePublicFamily(instanceId, defaultScriptId);
 
                 // Build per-script CSS classes
                 let perScriptCSS = '';
                 for (const scriptId of Object.keys(loadedByScript)) {
-                    const family = `PublicScript_${instanceId}_${scriptId}`;
+                    const family = safePublicFamily(instanceId, scriptId);
                     perScriptCSS += `
                     .conlang-script-${CSS.escape(scriptId)} {
                         font-family: '${family}', 'Inter', sans-serif !important;
@@ -176,7 +183,7 @@ export function usePublicFontInjector(config) {
                     `;
                 }
 
-                styleNode.innerHTML = `
+                styleNode.textContent = `
                     .custom-font-text, .conlang-word, .dict-ipa {
                         font-family: '${defaultFontFamily}', 'Inter', sans-serif !important;
                     }

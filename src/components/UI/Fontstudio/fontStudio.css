@@ -137,9 +137,10 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: center;
-    gap: 16px;
+    gap: 12px;
     width: 100%;
-    padding: 16px;
+    box-sizing: border-box;
+    padding: 12px 14px;
     background: var(--s2);
     border-radius: 8px;
     border: 1px solid var(--bd);
@@ -323,7 +324,10 @@
 
 .fs-controls-group {
     display: flex;
-    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    max-width: 100%;
 }
 
 .fs-undo-btn {

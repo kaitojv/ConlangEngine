@@ -19,7 +19,13 @@ import { useTranslationGrid } from './useTranslationGrid.js';
 import TranslationGridControls from './TranslationGridControls.jsx';
 import './exportModal.css';
 
-export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
+export const ExportModal = (props) => {
+    if (!props.isOpen) return null;
+    const confName = useConfigStore.getState().conlangName || 'My Conlang';
+    return <ExportModalInner key={`${props.type || 'export'}-${confName}`} {...props} />;
+};
+
+const ExportModalInner = ({ isOpen, type, onClose, onExport }) => {
     const { t } = useTranslation();
 
     // Standard Exporter States
@@ -30,67 +36,31 @@ export const ExportModal = ({ isOpen, type, onClose, onExport }) => {
     // Global Store States
     const config = useConfigStore(state => state);
     const lexicon = useLexiconStore(state => state.lexicon || []);
+    const confName = config.conlangName || 'My Conlang';
 
     // Minecraft Exporter States
-    const [langName, setLangName] = useState('');
-    const [langCode, setLangCode] = useState('');
+    const [langName, setLangName] = useState(() => `${confName} Pack`);
+    const [langCode, setLangCode] = useState(() =>
+        confName.trim().toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) + '_res'
+    );
     const [regionName, setRegionName] = useState('Conlangia');
     const [bidirectional, setBidirectional] = useState(false);
     const [mcVersion, setMcVersion] = useState(DEFAULT_MINECRAFT_VERSION);
-    const [customTranslations, setCustomTranslations] = useState({});
+    const [customTranslations, setCustomTranslations] = useState(() =>
+        type === 'minecraft' ? autoMatchAll(MINECRAFT_KEYS, lexicon) : {}
+    );
 
     // Terraria Exporter States
-    const [trModName, setTrModName] = useState('');
+    const [trModName, setTrModName] = useState(() =>
+        confName.trim().replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '') || 'MyConlangMod'
+    );
     const [trLangCode, setTrLangCode] = useState('en-US');
     const [trModVersion, setTrModVersion] = useState('1.0.0');
     const [trGameVersion, setTrGameVersion] = useState(DEFAULT_TERRARIA_VERSION);
-    const [trModAuthor, setTrModAuthor] = useState('');
-    const [trCustomTranslations, setTrCustomTranslations] = useState({});
-
-
-    // Reset and initialize Minecraft configurations reactively on mount/open
-    useEffect(() => {
-        if (isOpen && type === 'minecraft') {
-            const confName = config.conlangName || 'My Conlang';
-            setLangName(`${confName} Pack`);
-            
-            const generatedCode = confName
-                .trim()
-                .toLowerCase()
-                .replace(/[^a-z0-9]/g, '_')
-                .slice(0, 8) + '_res';
-            setLangCode(generatedCode);
-            setRegionName('Conlangia');
-            setBidirectional(false);
-            setMcVersion(DEFAULT_MINECRAFT_VERSION);
-
-
-            // Automatically scan lexicon for matching keys. Done in one indexed
-            // pass; per-key autoMatchLexicon is O(keys x lexicon) and froze the
-            // modal for seconds once the vocabulary reached a few thousand keys.
-            setCustomTranslations(autoMatchAll(MINECRAFT_KEYS, lexicon));
-        }
-    }, [isOpen, type, config.conlangName, lexicon]);
-
-    // Reset and initialize Terraria configurations reactively on mount/open
-    useEffect(() => {
-        if (isOpen && type === 'terraria') {
-            const confName = config.conlangName || 'My Conlang';
-            const generatedModName = confName
-                .trim()
-                .replace(/\s+/g, '')
-                .replace(/[^a-zA-Z0-9]/g, '')
-                || 'MyConlangMod';
-            setTrModName(generatedModName);
-            setTrLangCode('en-US');
-            setTrModVersion('1.0.0');
-            setTrGameVersion(DEFAULT_TERRARIA_VERSION);
-            setTrModAuthor(confName);
-
-            // Same single indexed pass for the Terraria mapper.
-            setTrCustomTranslations(autoMatchAll(TERRARIA_KEYS, lexicon));
-        }
-    }, [isOpen, type, config.conlangName, lexicon]);
+    const [trModAuthor, setTrModAuthor] = useState(() => confName);
+    const [trCustomTranslations, setTrCustomTranslations] = useState(() =>
+        type === 'terraria' ? autoMatchAll(TERRARIA_KEYS, lexicon) : {}
+    );
 
     // The modal can only be dismissed by clicking the backdrop, which is not
     // reachable by keyboard. Allow Escape to close it.

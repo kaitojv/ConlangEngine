@@ -50,7 +50,7 @@ export const stripAffix = (word, affixRule, normalizeToBase) => {
     const normClean = normalizeToBase ? normalizeToBase(clean.toLowerCase()) : clean.toLowerCase();
 
     // Secondary normalization for common separators if they aren't in the orthography
-    const cleanSep = (s) => s.replace(/[â€™â€˜]/g, "'");
+    const cleanSep = (s) => s.replace(/[\u2018\u2019]/g, "'");
     const finalWord = cleanSep(normWord);
     const finalClean = cleanSep(normClean);
 
@@ -65,6 +65,114 @@ export const stripAffix = (word, affixRule, normalizeToBase) => {
         }
     }
     return null;
+};
+
+const escapeRegexLiteral = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Collect both IPA and mapped orthography forms from a phoneme config string (e.g. "ʃ=sh, a")
+const extractPhonemeTokens = (configStr, fallbackTokens = []) => {
+    const tokens = new Set();
+    if (configStr && typeof configStr === 'string') {
+        configStr.split(',').forEach(entry => {
+            const trimmed = entry.trim();
+            if (!trimmed) return;
+            const eqIdx = trimmed.indexOf('=');
+            if (eqIdx !== -1) {
+                const ipa = trimmed.slice(0, eqIdx).trim();
+                const orth = trimmed.slice(eqIdx + 1).trim();
+                if (ipa) tokens.add(ipa);
+                if (orth) tokens.add(orth);
+            } else {
+                tokens.add(trimmed);
+            }
+        });
+    }
+    const list = tokens.size > 0 ? [...tokens] : fallbackTokens;
+    return list.filter(Boolean).sort((a, b) => b.length - a.length);
+};
+
+// Expand @V, @C, @O phoneme-class macros inside regex patterns (non-capturing outside [...], char list inside [...]).
+export const expandPhonemeMacros = (pattern, phonemeConfig = {}) => {
+    if (!pattern || !/@[VCO]\b/.test(pattern)) return pattern;
+    const { vowels = '', consonants = '', otherPhonemes = '' } = phonemeConfig;
+
+    const vList = extractPhonemeTokens(vowels, ['a', 'e', 'i', 'o', 'u']);
+    const cList = extractPhonemeTokens(consonants, ['b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'v', 'w', 'x', 'y', 'z']);
+    const oList = extractPhonemeTokens(otherPhonemes, []);
+
+    const toGroup = (list) => list.length > 0 ? `(?:${list.map(escapeRegexLiteral).join('|')})` : '(?!)';
+    const toClassChars = (list) => list.map(t => t.replace(/[\\\]^-]/g, '\\$&')).join('');
+
+    let out = '';
+    let inCharClass = false;
+    for (let i = 0; i < pattern.length; i++) {
+        const ch = pattern[i];
+        if (ch === '\\' && i + 1 < pattern.length) {
+            out += ch + pattern[i + 1];
+            i++;
+            continue;
+        }
+        if (ch === '[' && !inCharClass) {
+            inCharClass = true;
+            out += ch;
+            continue;
+        }
+        if (ch === ']' && inCharClass) {
+            inCharClass = false;
+            out += ch;
+            continue;
+        }
+        if (ch === '@' && i + 1 < pattern.length && 'VCO'.includes(pattern[i + 1])) {
+            const macro = pattern[i + 1];
+            const prevWordBoundary = i + 2 >= pattern.length || !/[A-Za-z0-9_]/.test(pattern[i + 2]);
+            if (prevWordBoundary) {
+                const list = macro === 'V' ? vList : macro === 'C' ? cList : oList;
+                out += inCharClass ? toClassChars(list) : toGroup(list);
+                i++;
+                continue;
+            }
+        }
+        out += ch;
+    }
+    return out;
+};
+
+// Split chained "pattern => replacement" steps separated by newlines or ';' before another '=>' step.
+export const parseRegexSteps = (affixStr) => {
+    if (!affixStr || !affixStr.includes('=>')) return [];
+    const rawSegments = affixStr.split(/(?:\r?\n|;(?=\s*[^;\r\n]*=>))/);
+    const steps = [];
+    for (const seg of rawSegments) {
+        const trimmed = seg.trim();
+        if (!trimmed || !trimmed.includes('=>')) continue;
+        const arrowIdx = trimmed.indexOf('=>');
+        const pattern = trimmed.slice(0, arrowIdx).trim();
+        const replacement = trimmed.slice(arrowIdx + 2).trim();
+        steps.push({ pattern, replacement });
+    }
+    return steps;
+};
+
+export const validateRegexRule = (affixStr, phonemeConfig = {}) => {
+    if (!affixStr || !affixStr.includes('=>')) {
+        return { valid: true, steps: [] };
+    }
+    const steps = parseRegexSteps(affixStr);
+    if (steps.length === 0) {
+        return { valid: false, error: 'Missing pattern => replacement syntax', pattern: affixStr };
+    }
+    for (const step of steps) {
+        if (!step.pattern) {
+            return { valid: false, error: 'Empty regex pattern before =>', pattern: step.pattern };
+        }
+        try {
+            const expanded = expandPhonemeMacros(step.pattern, phonemeConfig);
+            new RegExp(expanded, 'gi');
+        } catch (err) {
+            return { valid: false, error: err?.message || 'Invalid regular expression', pattern: step.pattern };
+        }
+    }
+    return { valid: true, steps };
 };
 
 // Placeholder for applyRuleToWord - actual implementation would be more complex
@@ -116,19 +224,23 @@ export const applyRuleToWord = (baseWord, rule, grammarRules, vowels, consonants
         if (rule.condition === 'other' && !isOther) return null;
     }
 
-    // 1. Check for Regex replacement patterns (e.g. "n(?=[pb]) => m")
+    // 1. Check for Regex replacement patterns (supports @V/@C/@O macros and chained ';' or newline rules)
     if (rule.affix.includes('=>')) {
-        const parts = rule.affix.split('=>');
-        if (parts.length === 2) {
-            const pattern = parts[0].trim();
-            const replacement = parts[1].trim();
-            try {
-                const regex = new RegExp(pattern, 'gi');
-                return currentBase.replace(regex, replacement);
-            } catch {
-                console.error("Invalid Regex rule:", pattern);
-                return currentBase;
+        const steps = parseRegexSteps(rule.affix);
+        if (steps.length > 0) {
+            let resultWord = currentBase;
+            for (const { pattern, replacement } of steps) {
+                if (!pattern) continue;
+                try {
+                    const expandedPattern = expandPhonemeMacros(pattern, { vowels, consonants, otherPhonemes });
+                    const regex = new RegExp(expandedPattern, 'gi');
+                    resultWord = resultWord.replace(regex, replacement);
+                } catch {
+                    console.error("Invalid Regex rule:", pattern);
+                    return resultWord;
+                }
             }
+            return resultWord;
         }
     }
 
@@ -271,8 +383,8 @@ export const findAllParsings = (surface, lexicon, config, normalizeToBase, depth
         // Flexible match for affixes: allow matching even if apostrophes are "shared" or slightly different
         const isAffixMatch = normAffix && (
             normAffix === safeSurface || 
-            normAffix.replace(/^['â€™â€˜]/, '') === safeSurface ||
-            normAffix === safeSurface.replace(/^['â€™â€˜]/, '')
+            normAffix.replace(/^['\u2018\u2019]/, '') === safeSurface ||
+            normAffix === safeSurface.replace(/^['\u2018\u2019]/, '')
         );
 
         if (isFreeMatch || isAffixMatch) {
@@ -383,7 +495,7 @@ export const segmentToken = (token, lexicon, config, normalizeToBase, getUniqueP
             remaining = remaining.slice(match.length);
         } else {
             // Handle separators and glottal stops that might be in the middle
-            if (remaining.startsWith("'") || remaining.startsWith("-") || remaining.startsWith("â€™") || remaining.startsWith("â€˜")) {
+            if (remaining.startsWith("'") || remaining.startsWith("-") || remaining.startsWith("\u2019") || remaining.startsWith("\u2018")) {
                 remaining = remaining.slice(1);
                 continue;
             }

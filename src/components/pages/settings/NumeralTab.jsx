@@ -5,6 +5,8 @@ import Card from '@/components/UI/Card/Card.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Infobox from '@/components/UI/Infobox/Infobox.jsx';
+import CalendarCountsBar from '@/components/UI/CalendarCountsBar.jsx';
+import { resolveCalendarCounts } from '@/utils/calendarHelpers.js';
 import { Hash, Calculator, ArrowRight, Lightbulb, RefreshCw, CalendarDays } from 'lucide-react';
 import './numeralTab.css';
 
@@ -12,12 +14,8 @@ export default function NumeralTab() {
     const { t } = useTranslation();
     const updateConfig = useConfigStore(s => s.updateConfig);
     const numeralBase = useConfigStore(s => s.numeralBase) || 10;
-    const calendarSystem = useConfigStore(s => s.calendarSystem) || {
-        daysOfWeek: ['', '', '', '', '', '', ''],
-        months: ['', '', '', '', '', '', '', '', '', '', '', ''],
-        dateFormat: 'DD/MM/YYYY',
-        yearOffset: 0
-    };
+    const rawCalendarSystem = useConfigStore(s => s.calendarSystem);
+    const { cal: calendarSystem, daysPerWeek, weeksPerMonth, monthsPerYear } = resolveCalendarCounts(rawCalendarSystem);
 
     const [customBaseInput, setCustomBaseInput] = React.useState(numeralBase.toString());
     
@@ -118,14 +116,30 @@ export default function NumeralTab() {
         weekdayIndex = weekdayIndex === 0 ? 6 : weekdayIndex - 1;
         
         const conlangYear = year + (parseInt(calendarSystem.yearOffset) || 0);
-        
+
+        const isStandardEarth = daysPerWeek === 7 && weeksPerMonth === 4 && monthsPerYear === 12;
+        let effectiveDay = day;
+        let safeMonthIdx = (month - 1) % monthsPerYear;
+        let safeWeekIdx = weekdayIndex % daysPerWeek;
+
+        if (!isStandardEarth) {
+            const startOfYear = new Date(year, 0, 1);
+            const dayOfYear = Math.max(0, Math.floor((dateObj - startOfYear) / 86400000));
+            const daysPerMonth = daysPerWeek * weeksPerMonth;
+            const daysPerYear = daysPerMonth * monthsPerYear;
+            const calDay = dayOfYear % daysPerYear;
+            safeWeekIdx = calDay % daysPerWeek;
+            safeMonthIdx = Math.floor(calDay / daysPerMonth) % monthsPerYear;
+            effectiveDay = (calDay % daysPerMonth) + 1;
+        }
+
         // Convert numbers to conlang base
-        const dStr = day.toString(numeralBase).toUpperCase();
+        const dStr = effectiveDay.toString(numeralBase).toUpperCase();
         const yStr = conlangYear.toString(numeralBase).toUpperCase();
-        
+
         // Get month and weekday names
-        const mName = calendarSystem.months[month - 1] || `[Month ${month}]`;
-        const wName = calendarSystem.daysOfWeek[weekdayIndex] || `[Weekday ${weekdayIndex + 1}]`;
+        const mName = (calendarSystem.months || [])[safeMonthIdx] || `[Month ${safeMonthIdx + 1}]`;
+        const wName = (calendarSystem.daysOfWeek || [])[safeWeekIdx] || `[Weekday ${safeWeekIdx + 1}]`;
         
         // Format
         let result = calendarSystem.dateFormat;
@@ -135,7 +149,7 @@ export default function NumeralTab() {
         result = result.replace('WW', wName);
         
         return result;
-    }, [realDateStr, calendarSystem, numeralBase]);
+    }, [realDateStr, calendarSystem, numeralBase, daysPerWeek, weeksPerMonth, monthsPerYear]);
 
     // --- REFERENCE TABLE ---
     const referenceNumbers = useMemo(() => {
@@ -297,27 +311,37 @@ export default function NumeralTab() {
                     <span dangerouslySetInnerHTML={{ __html: t('settings.numerals.dateTranslatorDesc', { base: numeralBase }) }} />
                 </Infobox>
 
+                <CalendarCountsBar
+                    calendarSystem={calendarSystem}
+                    onChangeCalendarSystem={(nextCal) => updateConfig({ calendarSystem: nextCal })}
+                    marginBottom="1.25rem"
+                />
+
                 <div className="calendar-config-grid">
                     <div className="cal-section">
                         <h3>{t('settings.numerals.daysOfWeek')}</h3>
                         <p className="cal-desc">{t('settings.numerals.startFromMonday')}</p>
                         <div className="cal-inputs">
-                            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((dayName, idx) => (
-                                <div key={`day-${idx}`} className="cal-input-row">
-                                    <span className="cal-label">{dayName.slice(0, 3)}</span>
-                                    <input 
-                                        type="text" 
-                                        className="fi custom-font-text notranslate" 
-                                        placeholder={t('settings.numerals.conlangWordPlaceholder')}
-                                        value={calendarSystem.daysOfWeek[idx] || ''}
-                                        onChange={(e) => {
-                                            const newDays = [...calendarSystem.daysOfWeek];
-                                            newDays[idx] = e.target.value;
-                                            updateConfig({ calendarSystem: { ...calendarSystem, daysOfWeek: newDays }});
-                                        }}
-                                    />
-                                </div>
-                            ))}
+                            {Array.from({ length: daysPerWeek }, (_, idx) => {
+                                const defaultLabels = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+                                const label = daysPerWeek === 7 ? defaultLabels[idx] : `D${idx + 1}`;
+                                return (
+                                    <div key={`day-${idx}`} className="cal-input-row">
+                                        <span className="cal-label">{label}</span>
+                                        <input 
+                                            type="text" 
+                                            className="fi custom-font-text notranslate" 
+                                            placeholder={t('settings.numerals.conlangWordPlaceholder')}
+                                            value={(calendarSystem.daysOfWeek || [])[idx] || ''}
+                                            onChange={(e) => {
+                                                const newDays = [...(calendarSystem.daysOfWeek || [])];
+                                                newDays[idx] = e.target.value;
+                                                updateConfig({ calendarSystem: { ...calendarSystem, daysOfWeek: newDays }});
+                                            }}
+                                        />
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
 
@@ -325,22 +349,26 @@ export default function NumeralTab() {
                         <h3>{t('settings.numerals.months')}</h3>
                         <p className="cal-desc">{t('settings.numerals.janToDec')}</p>
                         <div className="cal-inputs months-grid">
-                            {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((monthName, idx) => (
-                                <div key={`month-${idx}`} className="cal-input-row">
-                                    <span className="cal-label">{monthName}</span>
-                                    <input 
-                                        type="text" 
-                                        className="fi custom-font-text notranslate" 
-                                        placeholder={t('settings.numerals.conlangWordPlaceholder')}
-                                        value={calendarSystem.months[idx] || ''}
-                                        onChange={(e) => {
-                                            const newMonths = [...calendarSystem.months];
-                                            newMonths[idx] = e.target.value;
-                                            updateConfig({ calendarSystem: { ...calendarSystem, months: newMonths }});
-                                        }}
-                                    />
-                                </div>
-                            ))}
+                            {Array.from({ length: monthsPerYear }, (_, idx) => {
+                                const defaultMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                                const label = monthsPerYear === 12 ? defaultMonths[idx] : `M${idx + 1}`;
+                                return (
+                                    <div key={`month-${idx}`} className="cal-input-row">
+                                        <span className="cal-label">{label}</span>
+                                        <input 
+                                            type="text" 
+                                            className="fi custom-font-text notranslate" 
+                                            placeholder={t('settings.numerals.conlangWordPlaceholder')}
+                                            value={(calendarSystem.months || [])[idx] || ''}
+                                            onChange={(e) => {
+                                                const newMonths = [...(calendarSystem.months || [])];
+                                                newMonths[idx] = e.target.value;
+                                                updateConfig({ calendarSystem: { ...calendarSystem, months: newMonths }});
+                                            }}
+                                        />
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>

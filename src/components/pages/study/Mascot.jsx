@@ -17,18 +17,14 @@ export default function Mascot({
     size = 'medium',
     className = ''
 }) {
-    const [displayState, setDisplayState] = useState(state);
+    const [settled, setSettled] = useState({ forState: null, value: null });
+    const displayState = settled.forState === state && settled.value ? settled.value : state;
 
     useEffect(() => {
-        setDisplayState(state);
-
         if (state === 'correct' || state === 'celebrate' || state === 'incorrect') {
             const timer = setTimeout(() => {
-                setDisplayState((curr) => {
-                    if (curr === 'correct' || curr === 'celebrate') return 'happy-idle';
-                    if (curr === 'incorrect') return 'encourage-idle';
-                    return curr;
-                });
+                const next = (state === 'correct' || state === 'celebrate') ? 'happy-idle' : 'encourage-idle';
+                setSettled({ forState: state, value: next });
             }, 1800);
             return () => clearTimeout(timer);
         }

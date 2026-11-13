@@ -5,6 +5,8 @@ import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
+import CalendarCountsBar from '../../UI/CalendarCountsBar.jsx';
+import { resolveCalendarCounts } from '../../../utils/calendarHelpers.js';
 import { Languages, Hash, Plus, Trash2, Calculator, Settings, Edit2, Check, Table2, BookA, Type, Mic2, PenTool, ListChecks, Rows, Eye, EyeOff, FileX as FileXIcon, Sparkles } from 'lucide-react';
 import IpaReferencePage from './IpaReferencePage.jsx';
 import './orthographyPage.css';
@@ -69,6 +71,8 @@ const NumberDerivationView = ({ generateNumberName }) => {
     const numberMatrix = useConfigStore(state => state.numberMatrix) || {};
     const numberDerivedRules = useConfigStore(state => state.numberDerivedRules) || { ordinal: '', fractional: '', multiplier: '' };
     const timeSystemVocab = useConfigStore(state => state.timeSystemVocab) || { second: '', minute: '', hour: '', day: '', week: '', month: '', year: '' };
+    const rawCalendarSystem = useConfigStore(state => state.calendarSystem);
+    const { cal: calendarSystem, daysPerWeek, monthsPerYear } = resolveCalendarCounts(rawCalendarSystem);
     const updateConfig = useConfigStore(state => state.updateConfig);
     const addWord = useLexiconStore(state => state.addWord);
     const { transliterate } = useTransliterator();
@@ -110,8 +114,8 @@ const NumberDerivationView = ({ generateNumberName }) => {
             }
         });
 
-        // Save Specific Days (1-7)
-        for (let i = 1; i <= 7; i++) {
+        // Save Specific Days (1..daysPerWeek)
+        for (let i = 1; i <= daysPerWeek; i++) {
             const val = numberMatrix[i]?.day;
             if (val?.trim()) {
                 addWord({ word: val.trim(), wordClass: 'Noun', translation: `Day ${i}` });
@@ -119,8 +123,8 @@ const NumberDerivationView = ({ generateNumberName }) => {
             }
         }
 
-        // Save Specific Months (1-12)
-        for (let i = 1; i <= 12; i++) {
+        // Save Specific Months (1..monthsPerYear)
+        for (let i = 1; i <= monthsPerYear; i++) {
             const val = numberMatrix[i]?.month;
             if (val?.trim()) {
                 addWord({ word: val.trim(), wordClass: 'Noun', translation: `Month ${i}` });
@@ -232,7 +236,13 @@ const NumberDerivationView = ({ generateNumberName }) => {
                 <div style={{ width: '100%', height: '1px', background: 'var(--bd)', marginBottom: '2.5rem' }}></div>
 
                 <h3 className="sg-title" style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: 'var(--acc)' }}>{t('orthography.numerals.specificCalendarNames')}</h3>
-                <p style={{ color: 'var(--tx2)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>{t('orthography.numerals.specificCalendarDesc')}</p>
+                <p style={{ color: 'var(--tx2)', fontSize: '0.9rem', marginBottom: '1rem' }}>{t('orthography.numerals.specificCalendarDesc')}</p>
+
+                <CalendarCountsBar
+                    calendarSystem={calendarSystem}
+                    onChangeCalendarSystem={(nextCal) => updateConfig({ calendarSystem: nextCal })}
+                    marginBottom="1.5rem"
+                />
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
                     <div className="matrix-table-wrapper">
@@ -244,7 +254,7 @@ const NumberDerivationView = ({ generateNumberName }) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {[1,2,3,4,5,6,7].map(day => (
+                                {Array.from({ length: daysPerWeek }, (_, idx) => idx + 1).map(day => (
                                     <tr key={day}>
                                         <td className="matrix-num-cell" style={{ color: 'var(--tx2)' }}>{t('orthography.numerals.dayN', { num: day })}</td>
                                         <td>
@@ -270,7 +280,7 @@ const NumberDerivationView = ({ generateNumberName }) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {[1,2,3,4,5,6,7,8,9,10,11,12].map(month => (
+                                {Array.from({ length: monthsPerYear }, (_, idx) => idx + 1).map(month => (
                                     <tr key={month}>
                                         <td className="matrix-num-cell" style={{ color: 'var(--tx2)' }}>{t('orthography.numerals.monthN', { num: month })}</td>
                                         <td>

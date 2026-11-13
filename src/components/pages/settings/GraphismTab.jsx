@@ -4,7 +4,8 @@ import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import Modal from '../../UI/Modal/Modal.jsx';
 import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
-import { Type, Brush, Trash2, Plus, Monitor, Maximize2, Grid, Check } from 'lucide-react';
+import FontExportModal from '../../UI/FontExportModal/FontExportModal.jsx';
+import { Type, Brush, Trash2, Plus, Monitor, Maximize2, Grid, Check, Download, ChevronDown } from 'lucide-react';
 import Card from '../../UI/Card/Card.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import SyllabaryManager from '../../UI/SyllabaryManager/SyllabaryManager.jsx';
@@ -62,6 +63,7 @@ export default function TypographyStudio() {
     // Shared by the per-glyph Lighten button in Font Studio and the bulk
     // "Lighten all glyphs" action below, so both use the same fidelity knob.
     const [glyphLightenTolerance, setGlyphLightenTolerance] = useState(0.5);
+    const [showDisplaySettings, setShowDisplaySettings] = useState(false);
 
     // Repair stale selection if scripts change underneath us.
     const selectedScript = useMemo(() => {
@@ -97,6 +99,7 @@ export default function TypographyStudio() {
     const [editingMode, setEditingMode] = useState('Base');
     const [editingCharName, setEditingCharName] = useState(null);
     const [showKeyboardManager, setShowKeyboardManager] = useState(false);
+    const [showFontExportModal, setShowFontExportModal] = useState(false);
 
     const parseChars = (str) => {
         if (!str) return [];
@@ -680,6 +683,12 @@ export default function TypographyStudio() {
                 />
             </Modal>
 
+            <FontExportModal
+                isOpen={showFontExportModal}
+                onClose={() => setShowFontExportModal(false)}
+                initialScriptId={selectedScriptId}
+            />
+
             <Infobox title={t('settings.graphism.title')}>
                 <span dangerouslySetInnerHTML={{ __html: t('settings.graphism.guideDesc') }} />
             </Infobox>
@@ -743,8 +752,8 @@ export default function TypographyStudio() {
 
                 <div style={{ width: '100%', height: '1px', background: 'var(--bd)', marginBottom: '1.5rem' }}></div>
 
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', justifyContent: 'space-between' }}>
-                    <div style={{ flex: '1 1 300px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    <div style={{ width: '100%' }}>
                         <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>{t('settings.graphism.typographyModes')}</h3>
                         <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '1rem' }}>{t('settings.graphism.typographyModesDesc')}</p>
                         
@@ -777,10 +786,39 @@ export default function TypographyStudio() {
                         </div>
                     </div>
                     
-                    <div style={{ flex: '1 1 300px', background: 'var(--s2)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid var(--bd)' }}>
-                        <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Monitor size={16} className="text-accent" /> {t('settings.graphism.activeDisplayMode')}
-                        </h3>
+                    <div style={{ width: '100%', background: 'var(--s2)', padding: '1rem', borderRadius: '0.5rem', border: '1px solid var(--bd)' }}>
+                        <button
+                            type="button"
+                            onClick={() => setShowDisplaySettings(prev => !prev)}
+                            aria-expanded={showDisplaySettings}
+                            style={{
+                                width: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                background: 'transparent',
+                                border: 'none',
+                                padding: 0,
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                            }}
+                        >
+                            <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <Monitor size={16} className="text-accent" /> {t('settings.graphism.activeDisplayMode')}
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--tx2)', fontSize: '0.85rem' }}>
+                                <span>{typographySettings.activeDisplayMode || t('settings.graphism.modeBase')}</span>
+                                <ChevronDown
+                                    size={18}
+                                    style={{
+                                        transition: 'transform 0.2s ease',
+                                        transform: showDisplaySettings ? 'rotate(180deg)' : 'rotate(0deg)',
+                                    }}
+                                />
+                            </span>
+                        </button>
+                        {showDisplaySettings && (
+                        <div style={{ marginTop: '1rem' }}>
                         <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '1rem' }}>
                             {t('settings.graphism.activeDisplayModeDesc')}
                         </p>
@@ -979,9 +1017,12 @@ export default function TypographyStudio() {
                             </div>
                         </div>
 
-                        <div style={{ marginTop: '2rem' }}>
+                        <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             <Button variant="imp" onClick={handleRecompileFont} style={{ width: '100%' }}>
                                 <RefreshCw size={16} /> {t('settings.graphism.applySettingsRecompile')}
+                            </Button>
+                            <Button variant="sec" onClick={() => setShowFontExportModal(true)} style={{ width: '100%' }}>
+                                <Download size={16} /> {t('fontExport.openExporterBtn')}
                             </Button>
                         </div>
 
@@ -1040,6 +1081,8 @@ export default function TypographyStudio() {
                             </Button>
                             </div>
                         </div>
+                        )}
+                    </div>
                     </div>
                 </Card>
 

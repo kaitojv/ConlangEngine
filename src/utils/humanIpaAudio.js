@@ -13,7 +13,7 @@ let currentAudio = null;
 export function extractIpaPhonemes(ipaStr) {
     if (!ipaStr) return [];
     const cleaned = String(ipaStr)
-        .replace(/[\/\\\[\]ˈˌːˑ˥˦˧˨˩¹²³⁴⁵\.]/g, '')
+        .replace(/[/\\[\]ˈˌːˑ˥˦˧˨˩¹²³⁴⁵.]/g, '')
         .trim();
 
     const phonemes = [];

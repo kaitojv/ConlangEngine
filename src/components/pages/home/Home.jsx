@@ -399,7 +399,7 @@ export default function Home() {
                     </h3>
                     <p>{t('home.supportDesc')}</p>
                     <div className="support-card-actions">
-                        <button onClick={() => window.open('https://ko-fi.com/kaitosz', '_blank')} className="support-link-btn">
+                        <button onClick={() => window.open('https://ko-fi.com/kaitosz', '_blank', 'noopener,noreferrer')} className="support-link-btn">
                             <Coffee size={14} /> {t('home.kofi')}
                         </button>
                     </div>

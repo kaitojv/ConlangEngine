@@ -1,5 +1,9 @@
 import { useConfigStore } from '../store/useConfigStore.jsx';
 import { blockLayoutMatrices } from './blockFontGenerator.jsx';
+import { sanitizeFilename } from './sanitizeHtml.js';
+
+const ALLOWED_LINECAPS = new Set(['round', 'butt', 'square']);
+const safeNum = (n) => (Number.isFinite(Number(n)) ? Number(n) : 0);
 
 /**
  * Utility to export conlang text as a high-quality SVG file.
@@ -12,16 +16,16 @@ const strokesToPaths = (strokes, xOffset = 0) => {
     const cleanStrokes = (strokes || []).filter(s => Array.isArray(s) && !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)));
     return cleanStrokes.map(stroke => {
         if (stroke.length < 2) return '';
-        let pathD = `M ${stroke[0].x + xOffset} ${stroke[0].y}`;
+        let pathD = `M ${safeNum(stroke[0].x) + xOffset} ${safeNum(stroke[0].y)}`;
         for (let i = 1; i < stroke.length; i++) {
-            pathD += ` L ${stroke[i].x + xOffset} ${stroke[i].y}`;
+            pathD += ` L ${safeNum(stroke[i].x) + xOffset} ${safeNum(stroke[i].y)}`;
         }
         
         if (stroke.isFilled) {
             pathD += ' Z';
             return `  <path d="${pathD}" fill="currentColor" stroke="none" stroke-linejoin="round" />\n`;
         } else {
-            const lineCap = stroke.lineCap || 'round';
+            const lineCap = ALLOWED_LINECAPS.has(stroke.lineCap) ? stroke.lineCap : 'round';
             // Default thickness is roughly equivalent to a brushSize of 10.
             return `  <path d="${pathD}" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="${lineCap}" stroke-linejoin="round" />\n`;
         }
@@ -124,7 +128,7 @@ const downloadSVG = (content, fileName) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = fileName;
+    link.download = sanitizeFilename(fileName, 'glyph.svg');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

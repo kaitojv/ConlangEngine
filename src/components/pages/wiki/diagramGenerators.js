@@ -26,7 +26,7 @@ function escapeXml(unsafe) {
  * @param {Object} options
  * @returns {string} SVG markup
  */
-export function generateMorphologySvg(slots = [], options = {}) {
+export function generateMorphologySvg(slots = []) {
     if (!slots || slots.length === 0) {
         slots = [
             { slot: 'Slot -2', label: 'Negation Prefix', type: 'prefix', optional: true },
@@ -40,7 +40,6 @@ export function generateMorphologySvg(slots = [], options = {}) {
     const boxWidth = 140;
     const boxHeight = 76;
     const gap = 34;
-    const arrowWidth = gap;
     const paddingX = 30;
     const paddingY = 30;
     const totalWidth = paddingX * 2 + slots.length * boxWidth + (slots.length - 1) * gap;
@@ -351,15 +350,15 @@ export function parseIndentedDialectTree(text) {
         let content = line.trim();
 
         let extinct = false;
-        if (/[\(\[]extinct[\)\]]/i.test(content)) {
+        if (/[([]extinct[)\]]/i.test(content)) {
             extinct = true;
-            content = content.replace(/[\(\[]extinct[\)\]]/gi, '').trim();
+            content = content.replace(/[([]extinct[)\]]/gi, '').trim();
         }
 
         let name = content;
         let period = '';
 
-        const parenMatch = content.match(/^(.*?)\s*[\(\[]([^\)\]]+)[\)\]]$/);
+        const parenMatch = content.match(/^(.*?)\s*[([]\s*([^)\]]+)\s*[)\]]$/);
         if (parenMatch) {
             name = parenMatch[1].trim();
             period = parenMatch[2].trim();
@@ -555,9 +554,13 @@ export function generateDecisionFlowchartSvg(nodesOrConfig = [], connectionsPara
     
     const nodeMap = new Map();
     nodes.forEach(n => {
-        const w = n.w || Math.max(140, Math.min(220, (n.label || '').length * 8 + 36));
-        const h = n.h || (n.type === 'decision' ? 56 : 46);
-        nodeMap.set(n.id, { ...n, w, h });
+        const rawW = Number(n.w);
+        const rawH = Number(n.h);
+        const w = Number.isFinite(rawW) && rawW > 0 ? rawW : Math.max(140, Math.min(220, (n.label || '').length * 8 + 36));
+        const h = Number.isFinite(rawH) && rawH > 0 ? rawH : (n.type === 'decision' ? 56 : 46);
+        const x = Number.isFinite(Number(n.x)) ? Number(n.x) : 0;
+        const y = Number.isFinite(Number(n.y)) ? Number(n.y) : 0;
+        nodeMap.set(n.id, { ...n, x, y, w, h });
     });
 
     if (needsAutoLayout) {
@@ -630,7 +633,7 @@ export function generateDecisionFlowchartSvg(nodesOrConfig = [], connectionsPara
         });
     }
 
-    let minX = 0, minY = 0, maxX = 600, maxY = 380;
+    let maxX = 600, maxY = 380;
     nodeMap.forEach(n => {
         if (n.x + n.w + 40 > maxX) maxX = n.x + n.w + 40;
         if (n.y + n.h + 40 > maxY) maxY = n.y + n.h + 40;

@@ -3,6 +3,7 @@
 // Only allows known keys to be merged into stores,
 // preventing injection of arbitrary keys or XSS payloads.
 import LZString from 'lz-string';
+import { stripDangerousKeys } from './sanitizeHtml.js';
 
 // Static allowlist of valid config keys (mirrors INITIAL_CONFIG in useConfigStore).
 // Kept as a flat set to avoid importing the store and bloating the bundle.
@@ -15,7 +16,7 @@ export const VALID_CONFIG_KEYS = new Set([
     'wikiPages', 'streak', 'unlockedBadges', 'activity',
     'isProActive', 'lastStudyDate', 'customFont', 'theme',
     'colors', 'customGlyphs', 'puaCounter', 'customFontBase64', 'numeralBase', 'sentenceMaps',
-    'generatorMarkers', 'customCourse',
+    'generatorMarkers', 'generatorRegexRules', 'generatorOptions', 'customCourse',
     'customWordClasses', 'customTags',
     'otherPhonemes', 'otherPhonemeMapping', 'skipSyllableValidation', 'customAlphabet',
     'syllabificationAlgorithm', 'blockTemplates',
@@ -63,7 +64,7 @@ export function sanitizeConfig(rawConfig, isSave = false) {
         // Skip functions entirely (they shouldn't be in serialized data)
         if (typeof rawConfig[key] === 'function') continue;
 
-        clean[key] = rawConfig[key];
+        clean[key] = stripDangerousKeys(rawConfig[key]);
     }
 
     // Default hasCompletedOnboarding to true for older projects that lack this key
@@ -89,7 +90,7 @@ export function sanitizeConfig(rawConfig, isSave = false) {
         delete clean.customFontBase64;
     }
 
-    // Strip account and runtime-sync state when saving/exporting backups or building cloud payloads
+    // Strip account, runtime-sync state, and secret API keys when saving/exporting backups or building cloud payloads
     if (isSave) {
         delete clean.lastCloudSync;
         delete clean.syncConflictStatus;
@@ -97,6 +98,8 @@ export function sanitizeConfig(rawConfig, isSave = false) {
         delete clean.isProActive;
         delete clean.devicesOnlineCount;
         delete clean.isRehydrating;
+        delete clean.azureTtsKey;
+        delete clean.customTtsKey;
     }
 
     return clean;
@@ -205,7 +208,7 @@ export function sanitizeBackup(data) {
         config: cleanConfig,
         lexicon: data.lexicon ? sanitizeLexicon(data.lexicon) : null,
         phrases: rawPhrases ? sanitizePhrases(rawPhrases) : null,
-        project: data.project && typeof data.project === 'object' ? data.project : null
+        project: data.project && typeof data.project === 'object' ? stripDangerousKeys(data.project) : null
     };
 }
 

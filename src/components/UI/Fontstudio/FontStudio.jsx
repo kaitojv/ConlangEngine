@@ -1,13 +1,14 @@
 // src/components/UI/Modal/FontStudioModal.jsx
-import React, { useRef, useState, useEffect, useMemo } from 'react';
+import React, { useRef, useState, useEffect, useMemo, useCallback, useReducer } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
 import Button from '../Buttons/Buttons.jsx';
-import { RotateCcw, RotateCw, Trash2, Download, Pencil, Minus, Spline, Eraser, Feather, FlipHorizontal, FlipVertical, Grid, Square, Circle, Triangle, SquareDashed, PenTool, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ZoomIn, ZoomOut, MousePointer, Maximize2, Sliders, Move, Crosshair, Brush, Type, Plus, Pointer } from 'lucide-react';
+import { RotateCcw, RotateCw, Undo2, Redo2, Trash2, Download, Pencil, Minus, Spline, Eraser, Feather, FlipHorizontal, FlipVertical, Grid, Square, Circle, Triangle, SquareDashed, PenTool, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ZoomIn, ZoomOut, MousePointer, Maximize2, Sliders, Move, Crosshair, Brush, Type, Plus, Pointer, PaintBucket } from 'lucide-react';
 import { exportStrokesAsSVG } from '../../../utils/svgExporter.jsx';
 import { parseSVGToStrokes } from '../../../utils/svgImporter.jsx';
 import { simplifyGlyph, countGlyphPoints } from '../../../utils/glyphSimplify.js';
+import FontExportModal from '../FontExportModal/FontExportModal.jsx';
 import toast from 'react-hot-toast';
 import './fontStudio.css';
 
@@ -214,8 +215,62 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
 
     const initialStrokesJson = useMemo(() => JSON.stringify(initialData?.actualStrokes || []), [initialData]);
 
+    const MAX_UNDO_HISTORY = 60;
+
+    function strokeHistoryReducer(state, action) {
+        switch (action.type) {
+            case 'SET_DIRECT': {
+                const next = typeof action.updater === 'function' ? action.updater(state.present) : action.updater;
+                return next === state.present ? state : { ...state, present: next };
+            }
+            case 'PUSH_SNAPSHOT': {
+                return {
+                    ...state,
+                    past: [...state.past.slice(-(MAX_UNDO_HISTORY - 1)), state.present],
+                    future: [],
+                };
+            }
+            case 'COMMIT': {
+                const next = typeof action.updater === 'function' ? action.updater(state.present) : action.updater;
+                if (next === state.present) return state;
+                return {
+                    past: [...state.past.slice(-(MAX_UNDO_HISTORY - 1)), state.present],
+                    present: next,
+                    future: [],
+                };
+            }
+            case 'UNDO': {
+                if (state.past.length === 0) return state;
+                return {
+                    past: state.past.slice(0, -1),
+                    present: state.past[state.past.length - 1],
+                    future: [state.present, ...state.future.slice(0, MAX_UNDO_HISTORY - 1)],
+                };
+            }
+            case 'REDO': {
+                if (state.future.length === 0) return state;
+                return {
+                    past: [...state.past.slice(-(MAX_UNDO_HISTORY - 1)), state.present],
+                    present: state.future[0],
+                    future: state.future.slice(1),
+                };
+            }
+            default:
+                return state;
+        }
+    }
+
     const [isDrawing, setIsDrawing] = useState(false);
-    const [strokes, setStrokes] = useState(() => initialData?.actualStrokes || []);
+    const [historyState, dispatchHistory] = useReducer(strokeHistoryReducer, initialData, (init) => ({
+        past: [],
+        present: init?.actualStrokes || [],
+        future: [],
+    }));
+    const strokes = historyState.present;
+    const setStrokes = useCallback((updater) => {
+        dispatchHistory({ type: 'COMMIT', updater });
+    }, []);
+    const dragHistoryPushedRef = useRef(false);
     const [currentStroke, setCurrentStroke] = useState([]);
     const [brushSize, setBrushSize] = useState(5);
     const [activeTool, setActiveTool] = useState('brush'); // 'brush', 'line', 'curve', 'rect', 'circle', 'select_erase'
@@ -224,7 +279,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     const [isChisel, setIsChisel] = useState(() => initialData?.meta?.isChisel ?? false);
     const [isPaintBrush, setIsPaintBrush] = useState(() => initialData?.meta?.isPaintBrush ?? false);
     const [isSerifPen, setIsSerifPen] = useState(() => initialData?.meta?.isSerifPen ?? false);
-    const [chiselAngle, _setChiselAngle] = useState(45);
+    const [chiselAngle, setChiselAngle] = useState(45);
     const [symmetryMode, setSymmetryMode] = useState('none'); // 'none', 'horizontal', 'vertical'
     const [isSnapToGrid, setIsSnapToGrid] = useState(false);
     const [isSnapToMetrics, setIsSnapToMetrics] = useState(false);
@@ -239,6 +294,10 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     // Node Editing States
     const [selectedNode, setSelectedNode] = useState(null); // { strokeIndex, pointIndex }
     const [selectedStrokeIndex, setSelectedStrokeIndex] = useState(null); // select tool: whole-stroke index
+    const [softNodeDrag, setSoftNodeDrag] = useState(true);
+    const nodeDragStartRef = useRef(null);
+    const [showRefPanel, setShowRefPanel] = useState(false);
+    const [showMetricsPanel, setShowMetricsPanel] = useState(false);
 
     // Metadata States
     const [glyphScale, setGlyphScale] = useState(() => initialData?.meta?.scale ?? 1.0);
@@ -248,6 +307,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     const [xOffset, setXOffset] = useState(() => initialData?.meta?.xOffset ?? 0);
     const [isGlyphConsistent, setIsGlyphConsistent] = useState(() => initialData?.meta?.consistentSize);
     const [simplifyTolerance, setSimplifyTolerance] = useState(0.5);
+    const [isFontExportOpen, setIsFontExportOpen] = useState(false);
 
     const scriptConsistent = useConfigStore(state => {
         const sData = resolvedScriptId ? state.scriptDataById?.[resolvedScriptId] : null;
@@ -579,15 +639,18 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
             ctx.setLineDash([]);
         }
 
-        // Render Nodes if in node_edit mode
+        // Render Nodes if in node_edit mode (clean circular handles)
         if (activeTool === 'node_edit') {
+            const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--acc').trim() || '#3b82f6';
             strokes.forEach((stroke, sIdx) => {
-                if (!Array.isArray(stroke) || stroke.isMeta) return;
-                
-                // Draw connecting segments
-                ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--acc').trim() || '#3b82f6';
+                if (!Array.isArray(stroke) || stroke.isMeta || stroke.length === 0) return;
+
+                // Draw subtle dashed spine connecting nodes
+                ctx.save();
+                ctx.strokeStyle = accentColor;
+                ctx.globalAlpha = 0.65;
                 ctx.lineWidth = 1;
-                ctx.setLineDash([2, 2]);
+                ctx.setLineDash([3, 3]);
                 ctx.beginPath();
                 ctx.moveTo(stroke[0].x, stroke[0].y);
                 for (let i = 1; i < stroke.length; i++) {
@@ -595,17 +658,28 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                 }
                 ctx.stroke();
                 ctx.setLineDash([]);
-                
-                // Draw anchor points
+                ctx.restore();
+
+                const isDense = stroke.length > 14;
                 stroke.forEach((pt, pIdx) => {
                     const isSelected = selectedNode && selectedNode.strokeIndex === sIdx && selectedNode.pointIndex === pIdx;
-                    
+                    const isEndpoint = pIdx === 0 || pIdx === stroke.length - 1;
+                    const radius = isSelected ? 5.5 : (isEndpoint ? 4.5 : (isDense ? 2.5 : 3.5));
+
+                    ctx.beginPath();
+                    ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2);
                     if (isSelected) {
-                        ctx.fillStyle = '#ef4444'; // Red for selected
-                        ctx.fillRect(pt.x - 4, pt.y - 4, 8, 8);
+                        ctx.fillStyle = '#ef4444';
+                        ctx.fill();
+                        ctx.lineWidth = 2;
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.stroke();
                     } else {
-                        ctx.fillStyle = '#3b82f6'; // Blue for default
-                        ctx.fillRect(pt.x - 3, pt.y - 3, 6, 6);
+                        ctx.fillStyle = isEndpoint ? accentColor : '#ffffff';
+                        ctx.fill();
+                        ctx.lineWidth = 1.5;
+                        ctx.strokeStyle = accentColor;
+                        ctx.stroke();
                     }
                 });
             });
@@ -715,11 +789,18 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     };
 
     const eraseStrokesAt = (coords) => {
-        setStrokes(prev => splitStrokes(prev, (pt) => {
-            const dx = pt.x - coords.x;
-            const dy = pt.y - coords.y;
-            return Math.sqrt(dx*dx + dy*dy) < (brushSize + 10);
-        }));
+        if (!dragHistoryPushedRef.current) {
+            dragHistoryPushedRef.current = true;
+            dispatchHistory({ type: 'PUSH_SNAPSHOT' });
+        }
+        dispatchHistory({
+            type: 'SET_DIRECT',
+            updater: prev => splitStrokes(prev, (pt) => {
+                const dx = pt.x - coords.x;
+                const dy = pt.y - coords.y;
+                return Math.sqrt(dx * dx + dy * dy) < (brushSize + 10);
+            }),
+        });
     };
 
     const handlePointerDown = (e) => {
@@ -763,9 +844,18 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                 if (foundNode) break;
             }
             if (foundNode) {
+                dragHistoryPushedRef.current = false;
                 setSelectedNode(foundNode);
+                const targetStroke = strokes[foundNode.strokeIndex];
+                nodeDragStartRef.current = {
+                    ...foundNode,
+                    startX: coords.x,
+                    startY: coords.y,
+                    originalStroke: Array.isArray(targetStroke) ? targetStroke.map(p => ({ ...p })) : []
+                };
                 setIsDrawing(true);
             } else {
+                nodeDragStartRef.current = null;
                 setSelectedNode(null);
             }
         } else if (activeTool === 'brush') {
@@ -813,9 +903,10 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                 setCurrentStroke([]);
             }
         } else if (activeTool === 'eraser') {
+            dragHistoryPushedRef.current = false;
             setIsDrawing(true);
             eraseStrokesAt(coords);
-        } else if (activeTool === 'rect' || activeTool === 'circle' || activeTool === 'triangle' || activeTool === 'select_erase') {
+        } else if (['rect', 'circle', 'triangle', 'arc_half', 'arc_three_quarter', 'arc_quarter', 'diamond', 'select_erase'].includes(activeTool)) {
             setIsDrawing(true);
             setInteractionPoints([coords]);
         }
@@ -825,12 +916,53 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         const coords = getCoords(e);
 
         if (activeTool === 'node_edit' && isDrawing && selectedNode) {
-            setStrokes(prev => {
+            if (!dragHistoryPushedRef.current) {
+                dragHistoryPushedRef.current = true;
+                dispatchHistory({ type: 'PUSH_SNAPSHOT' });
+            }
+            const dragInfo = nodeDragStartRef.current;
+            dispatchHistory({
+                type: 'SET_DIRECT',
+                updater: prev => {
                 const newStrokes = [...prev];
-                const stroke = [...newStrokes[selectedNode.strokeIndex]];
-                stroke[selectedNode.pointIndex] = { ...stroke[selectedNode.pointIndex], x: coords.x, y: coords.y };
-                newStrokes[selectedNode.strokeIndex] = stroke;
+                const orig = dragInfo?.originalStroke;
+                if (!orig || orig.length === 0) {
+                    const stroke = [...newStrokes[selectedNode.strokeIndex]];
+                    stroke[selectedNode.pointIndex] = { ...stroke[selectedNode.pointIndex], x: coords.x, y: coords.y };
+                    newStrokes[selectedNode.strokeIndex] = stroke;
+                    return newStrokes;
+                }
+                const dx = coords.x - dragInfo.startX;
+                const dy = coords.y - dragInfo.startY;
+                const pIdx = selectedNode.pointIndex;
+                const useSoft = softNodeDrag && !e.shiftKey && orig.length > 3;
+                const radius = useSoft ? Math.min(5, Math.max(2, Math.floor(orig.length / 4))) : 0;
+
+                const updated = orig.map((pt, idx) => {
+                    const dist = Math.abs(idx - pIdx);
+                    if (dist === 0) {
+                        return { ...pt, x: coords.x, y: coords.y };
+                    }
+                    if (useSoft && dist <= radius) {
+                        const weight = 0.5 * (1 + Math.cos((Math.PI * dist) / (radius + 1)));
+                        return { ...pt, x: pt.x + dx * weight, y: pt.y + dy * weight };
+                    }
+                    return pt;
+                });
+                // Preserve stroke metadata properties (lineCap, isFilled, etc.)
+                const prevStroke = newStrokes[selectedNode.strokeIndex];
+                if (prevStroke) {
+                    updated.lineCap = prevStroke.lineCap;
+                    updated.isFilled = prevStroke.isFilled;
+                    updated.isCalligraphy = prevStroke.isCalligraphy;
+                    updated.isBrushPen = prevStroke.isBrushPen;
+                    updated.isChisel = prevStroke.isChisel;
+                    updated.chiselAngle = prevStroke.chiselAngle;
+                    updated.isPaintBrush = prevStroke.isPaintBrush;
+                }
+                newStrokes[selectedNode.strokeIndex] = updated;
                 return newStrokes;
+                },
             });
         } else if (activeTool === 'brush' && isDrawing) {
             const lastPoint = currentStroke[currentStroke.length - 1];
@@ -886,6 +1018,41 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                 {x: maxX, y: maxY},
                 {x: minX, y: maxY},
                 {x: midX, y: minY}
+            ]);
+        } else if ((activeTool === 'arc_half' || activeTool === 'arc_three_quarter' || activeTool === 'arc_quarter') && isDrawing) {
+            const p0 = interactionPoints[0];
+            const p1 = coords;
+            const dx = p1.x - p0.x;
+            const dy = p1.y - p0.y;
+            const r = Math.hypot(dx, dy);
+            const startAngle = Math.atan2(dy, dx);
+            const span = activeTool === 'arc_half'
+                ? Math.PI
+                : activeTool === 'arc_three_quarter'
+                    ? Math.PI * 1.5
+                    : Math.PI * 0.5;
+            const steps = activeTool === 'arc_quarter' ? 12 : activeTool === 'arc_half' ? 20 : 28;
+            const pts = [];
+            for (let i = 0; i <= steps; i++) {
+                const a = startAngle + (i / steps) * span;
+                pts.push({ x: p0.x + Math.cos(a) * r, y: p0.y + Math.sin(a) * r });
+            }
+            setCurrentStroke(pts);
+        } else if (activeTool === 'diamond' && isDrawing) {
+            const p0 = interactionPoints[0];
+            const p1 = coords;
+            const minX = Math.min(p0.x, p1.x);
+            const maxX = Math.max(p0.x, p1.x);
+            const minY = Math.min(p0.y, p1.y);
+            const maxY = Math.max(p0.y, p1.y);
+            const midX = (minX + maxX) / 2;
+            const midY = (minY + maxY) / 2;
+            setCurrentStroke([
+                { x: midX, y: minY },
+                { x: maxX, y: midY },
+                { x: midX, y: maxY },
+                { x: minX, y: midY },
+                { x: midX, y: minY }
             ]);
         } else if (activeTool === 'select_erase' && isDrawing) {
             const p0 = interactionPoints[0];
@@ -976,7 +1143,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         } else if (activeTool === 'eraser' && isDrawing) {
             setIsDrawing(false);
             setCurrentStroke([]);
-        } else if ((activeTool === 'rect' || activeTool === 'circle' || activeTool === 'triangle') && isDrawing) {
+        } else if (['rect', 'circle', 'triangle', 'arc_half', 'arc_three_quarter', 'arc_quarter', 'diamond'].includes(activeTool) && isDrawing) {
             setIsDrawing(false);
             if (currentStroke.length > 0) {
                 const finalStroke = [...currentStroke];
@@ -1017,8 +1184,53 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     };
 
     const handleUndo = () => {
-        setStrokes(prev => prev.slice(0, -1));
+        dispatchHistory({ type: 'UNDO' });
+        setSelectedNode(null);
+        setSelectedStrokeIndex(null);
     };
+
+    const handleRedo = () => {
+        dispatchHistory({ type: 'REDO' });
+        setSelectedNode(null);
+        setSelectedStrokeIndex(null);
+    };
+
+    useEffect(() => {
+        const onKeyDown = (e) => {
+            const tag = e.target?.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target?.isContentEditable) {
+                return;
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    dispatchHistory({ type: 'REDO' });
+                } else {
+                    dispatchHistory({ type: 'UNDO' });
+                }
+                setSelectedNode(null);
+                setSelectedStrokeIndex(null);
+                return;
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+                e.preventDefault();
+                dispatchHistory({ type: 'REDO' });
+                setSelectedNode(null);
+                setSelectedStrokeIndex(null);
+                return;
+            }
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            const k = e.key.toLowerCase();
+            if (k === 'b') setActiveTool('brush');
+            else if (k === 'v') setActiveTool('node_edit');
+            else if (k === 's') setActiveTool('select');
+            else if (k === 'l') setActiveTool('line');
+            else if (k === 'c') setActiveTool('curve');
+            else if (k === 'e') setActiveTool('eraser');
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, []);
 
     const handleDeleteSelectedNode = () => {
         if (!selectedNode) return;
@@ -1131,25 +1343,50 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         onCancel();
     };
 
-    const handleRotate = () => {
-        const cx = 150;
-        const cy = 150;
-        setStrokes(prev => prev.map(stroke => {
-            if (!Array.isArray(stroke) && stroke.isMeta) return stroke;
-            if (Array.isArray(stroke) && stroke.length === 1 && (stroke[0].x === -999 || stroke[0].x === -998)) return stroke;
+    const getTransformCenter = (prevStrokes) => {
+        if (selectedStrokeIndex !== null && Array.isArray(prevStrokes[selectedStrokeIndex])) {
+            const s = prevStrokes[selectedStrokeIndex];
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            s.forEach(p => {
+                if (p.x < minX) minX = p.x;
+                if (p.x > maxX) maxX = p.x;
+                if (p.y < minY) minY = p.y;
+                if (p.y > maxY) maxY = p.y;
+            });
+            if (Number.isFinite(minX)) return { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2 };
+        }
+        return { cx: 150, cy: 150 };
+    };
 
-            const newStroke = stroke.map(pt => ({
-                x: cx - (pt.y - cy),
-                y: cy + (pt.x - cx)
-            }));
-            newStroke.lineCap = stroke.lineCap;
-            newStroke.isFilled = stroke.isFilled;
-            return newStroke;
-        }));
+    const handleRotate = (deg = 90) => {
+        const rad = (deg * Math.PI) / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+        setStrokes(prev => {
+            const { cx, cy } = getTransformCenter(prev);
+            return prev.map((stroke, idx) => {
+                if (selectedStrokeIndex !== null && idx !== selectedStrokeIndex) return stroke;
+                if (!Array.isArray(stroke) && stroke.isMeta) return stroke;
+                if (Array.isArray(stroke) && stroke.length === 1 && (stroke[0].x === -999 || stroke[0].x === -998)) return stroke;
+
+                const newStroke = stroke.map(pt => {
+                    const dx = pt.x - cx;
+                    const dy = pt.y - cy;
+                    return {
+                        x: cx + dx * cos - dy * sin,
+                        y: cy + dx * sin + dy * cos
+                    };
+                });
+                newStroke.lineCap = stroke.lineCap;
+                newStroke.isFilled = stroke.isFilled;
+                return newStroke;
+            });
+        });
     };
 
     const handleMove = (dx, dy) => {
-        setStrokes(prev => prev.map(stroke => {
+        setStrokes(prev => prev.map((stroke, idx) => {
+            if (selectedStrokeIndex !== null && idx !== selectedStrokeIndex) return stroke;
             if (!Array.isArray(stroke) && stroke.isMeta) return stroke;
             if (Array.isArray(stroke) && stroke.length === 1 && (stroke[0].x === -999 || stroke[0].x === -998)) return stroke;
 
@@ -1163,21 +1400,23 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         }));
     };
 
-    const _handleScaleStrokes = (factor) => {
-        const cx = 150;
-        const cy = 150;
-        setStrokes(prev => prev.map(stroke => {
-            if (!Array.isArray(stroke) && stroke.isMeta) return stroke;
-            if (Array.isArray(stroke) && stroke.length === 1 && (stroke[0].x === -999 || stroke[0].x === -998)) return stroke;
+    const handleScaleStrokes = (factor) => {
+        setStrokes(prev => {
+            const { cx, cy } = getTransformCenter(prev);
+            return prev.map((stroke, idx) => {
+                if (selectedStrokeIndex !== null && idx !== selectedStrokeIndex) return stroke;
+                if (!Array.isArray(stroke) && stroke.isMeta) return stroke;
+                if (Array.isArray(stroke) && stroke.length === 1 && (stroke[0].x === -999 || stroke[0].x === -998)) return stroke;
 
-            const newStroke = stroke.map(pt => ({
-                x: cx + (pt.x - cx) * factor,
-                y: cy + (pt.y - cy) * factor
-            }));
-            newStroke.lineCap = stroke.lineCap;
-            newStroke.isFilled = stroke.isFilled;
-            return newStroke;
-        }));
+                const newStroke = stroke.map(pt => ({
+                    x: cx + (pt.x - cx) * factor,
+                    y: cy + (pt.y - cy) * factor
+                }));
+                newStroke.lineCap = stroke.lineCap;
+                newStroke.isFilled = stroke.isFilled;
+                return newStroke;
+            });
+        });
     };
 
     // Reduce the point count of the glyph currently on the canvas.
@@ -1266,8 +1505,34 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     return (
         <div className="fs-container">
             <div className="fs-header">
-                <h3 className="fs-title">Drawing: <span className="custom-font-text">{targetLabel}</span></h3>
-                <p className="fs-subtitle">Draw your custom ideogram below or use a reference.</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', width: '100%' }}>
+                    <div style={{ textAlign: 'left' }}>
+                        <h3 className="fs-title">Drawing: <span className="custom-font-text">{targetLabel}</span></h3>
+                        <p className="fs-subtitle">Draw your custom ideogram below or use a reference.</p>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        {canvasPointCount > 0 && (
+                            <span className="fs-simplify-count" title="Points in the current drawing">
+                                {canvasPointCount.toLocaleString()} pts
+                            </span>
+                        )}
+                        <button
+                            type="button"
+                            className={`fs-mode-chip ${showRefPanel ? 'active' : ''}`}
+                            onClick={() => setShowRefPanel(prev => !prev)}
+                        >
+                            Reference &amp; SVG {showRefPanel ? '▲' : '▼'}
+                        </button>
+                        <button
+                            type="button"
+                            className={`fs-mode-chip ${showMetricsPanel ? 'active' : ''}`}
+                            onClick={() => setShowMetricsPanel(prev => !prev)}
+                        >
+                            Metrics &amp; Scale {showMetricsPanel ? '▲' : '▼'}
+                        </button>
+                    </div>
+                </div>
+                {showRefPanel && (
                 <div className="fs-reference-tools">
                     <div className="fs-ref-group">
                         <select 
@@ -1347,7 +1612,9 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                         )}
                     </div>
                 </div>
+                )}
 
+                {showMetricsPanel && (
                 <div className="fs-metadata-tools">
                     <div className="fs-metadata-group">
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '2px' }}>
@@ -1400,6 +1667,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                         </>
                     )}
                 </div>
+                )}
             </div>
 
             <div className="fs-workspace">
@@ -1409,7 +1677,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                             <button 
                                 className={`fs-tool-btn ${activeTool === 'brush' ? 'active' : ''}`}
                                 onClick={() => setActiveTool('brush')}
-                                title="Brush Tool"
+                                title="Brush Tool (B)"
                             >
                                 <Pencil size={18} />
                             </button>
@@ -1421,28 +1689,28 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                         <button 
                             className={`fs-tool-btn ${activeTool === 'node_edit' ? 'active' : ''}`}
                             onClick={() => setActiveTool('node_edit')}
-                            title="Vector Node Edit Tool (Select & Drag Anchor Points)"
+                            title="Vector Node Edit Tool (V)"
                         >
                             <MousePointer size={18} />
                         </button>
                         <button 
                             className={`fs-tool-btn ${activeTool === 'select' ? 'active' : ''}`}
                             onClick={() => setActiveTool('select')}
-                            title="Select Stroke Tool (Click a stroke to isolate & delete it)"
+                            title="Select Stroke Tool (S)"
                         >
                             <Pointer size={18} />
                         </button>
                         <button 
                             className={`fs-tool-btn ${activeTool === 'line' ? 'active' : ''}`}
                             onClick={() => setActiveTool('line')}
-                            title="Line"
+                            title="Line (L)"
                         >
                             <Minus size={18} />
                         </button>
                         <button 
                             className={`fs-tool-btn ${activeTool === 'curve' ? 'active' : ''}`}
                             onClick={() => setActiveTool('curve')}
-                            title="Curve"
+                            title="Curve (C)"
                         >
                             <Spline size={18} />
                         </button>
@@ -1467,11 +1735,47 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                         >
                             <Triangle size={18} />
                         </button>
+                        <button 
+                            className={`fs-tool-btn ${activeTool === 'arc_half' ? 'active' : ''}`}
+                            onClick={() => setActiveTool('arc_half')}
+                            title="Half Circle (180° Arc)"
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                <path d="M4 15 A8 8 0 0 1 20 15" />
+                            </svg>
+                        </button>
+                        <button 
+                            className={`fs-tool-btn ${activeTool === 'arc_three_quarter' ? 'active' : ''}`}
+                            onClick={() => setActiveTool('arc_three_quarter')}
+                            title="3/4 Circle (270° Arc)"
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                <path d="M12 4 A8 8 0 1 0 20 12" />
+                            </svg>
+                        </button>
+                        <button 
+                            className={`fs-tool-btn ${activeTool === 'arc_quarter' ? 'active' : ''}`}
+                            onClick={() => setActiveTool('arc_quarter')}
+                            title="Quarter Arc (90° Curve)"
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                <path d="M6 18 A12 12 0 0 1 18 6" />
+                            </svg>
+                        </button>
+                        <button 
+                            className={`fs-tool-btn ${activeTool === 'diamond' ? 'active' : ''}`}
+                            onClick={() => setActiveTool('diamond')}
+                            title="Diamond / Rhombus"
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+                                <polygon points="12,3 21,12 12,21 3,12" />
+                            </svg>
+                        </button>
                         <div className="fs-tool-separator horizontal" />
                         <button 
                             className={`fs-tool-btn ${activeTool === 'eraser' ? 'active' : ''}`}
                             onClick={() => setActiveTool('eraser')}
-                            title="Eraser (Point)"
+                            title="Eraser (E)"
                         >
                             <Eraser size={18} />
                         </button>
@@ -1488,7 +1792,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                             onClick={() => setIsFillMode(!isFillMode)}
                             title="Fill Mode (Closes & fills path)"
                         >
-                            <Download size={18} style={{ transform: 'rotate(180deg)' }} />
+                            <PaintBucket size={18} />
                         </button>
                         <div className="fs-tool-separator horizontal" />
                         <button 
@@ -1568,9 +1872,34 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                                 title="Number of Grid Blocks"
                             />
                         </div>
+                        {isChisel && (
+                            <div className="fs-brush-control">
+                                <span className="fs-brush-label">Angle ({chiselAngle}°):</span>
+                                <input 
+                                    type="range" 
+                                    min="0" max="180" step="5"
+                                    value={chiselAngle} 
+                                    onChange={(e) => setChiselAngle(parseInt(e.target.value, 10))} 
+                                    className="fs-brush-slider"
+                                    title="Broad Nib Chisel Angle"
+                                />
+                            </div>
+                        )}
                         <div className="fs-controls-group">
-                            <Button variant="default" className="btn-sm" onClick={handleRotate} title="Rotate 90° Clockwise">
+                            <Button variant="default" className="btn-sm" onClick={() => handleRotate(-15)} title={selectedStrokeIndex !== null ? 'Rotate Selected Stroke -15°' : 'Rotate Glyph -15°'}>
+                                <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>-15°</span>
+                            </Button>
+                            <Button variant="default" className="btn-sm" onClick={() => handleRotate(15)} title={selectedStrokeIndex !== null ? 'Rotate Selected Stroke +15°' : 'Rotate Glyph +15°'}>
+                                <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>+15°</span>
+                            </Button>
+                            <Button variant="default" className="btn-sm" onClick={() => handleRotate(90)} title={selectedStrokeIndex !== null ? 'Rotate Selected Stroke 90°' : 'Rotate Glyph 90°'}>
                                 <RotateCw size={16} />
+                            </Button>
+                            <Button variant="default" className="btn-sm" onClick={() => handleScaleStrokes(0.9)} title={selectedStrokeIndex !== null ? 'Shrink Selected Stroke (-10%)' : 'Shrink Glyph (-10%)'}>
+                                <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>90%</span>
+                            </Button>
+                            <Button variant="default" className="btn-sm" onClick={() => handleScaleStrokes(1.1)} title={selectedStrokeIndex !== null ? 'Grow Selected Stroke (+10%)' : 'Grow Glyph (+10%)'}>
+                                <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>110%</span>
                             </Button>
                             <Button variant="default" className="btn-sm" onClick={() => handleMove(0, -gridSize)} title="Move Up"><ArrowUp size={16} /></Button>
                             <Button variant="default" className="btn-sm" onClick={() => handleMove(0, gridSize)} title="Move Down"><ArrowDown size={16} /></Button>
@@ -1578,14 +1907,55 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                             <Button variant="default" className="btn-sm" onClick={() => handleMove(gridSize, 0)} title="Move Right"><ArrowRight size={16} /></Button>
                             <Button variant="default" className="btn-sm" onClick={() => setZoom(prev => Math.min(3.0, prev + 0.25))} title="Zoom Viewport In"><ZoomIn size={16} /></Button>
                             <Button variant="default" className="btn-sm" onClick={() => setZoom(prev => Math.max(1.0, prev - 0.25))} title="Zoom Viewport Out"><ZoomOut size={16} /></Button>
-                            <Button variant="default" className="btn-sm" onClick={handleUndo} title="Undo">
-                                <RotateCcw size={16} />
+                            <Button variant="default" className="btn-sm" onClick={handleUndo} disabled={historyState.past.length === 0} title="Undo (Ctrl+Z)">
+                                <Undo2 size={16} />
+                            </Button>
+                            <Button variant="default" className="btn-sm" onClick={handleRedo} disabled={historyState.future.length === 0} title="Redo (Ctrl+Y / Ctrl+Shift+Z)">
+                                <Redo2 size={16} />
                             </Button>
                             <Button variant="default" className="btn-sm fs-clear-btn" onClick={handleClear} title="Clear Canvas">
                                 <Trash2 size={16} />
                             </Button>
                         </div>
                     </div>
+
+                    {activeTool === 'node_edit' && (
+                        <div className="fs-vector-bar" style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: '8px',
+                            padding: '6px 10px',
+                            borderRadius: '8px',
+                            background: 'var(--s2)',
+                            border: '1px solid var(--bd)',
+                            fontSize: '0.78rem',
+                            color: 'var(--tx2)'
+                        }}>
+                            <span>Vector Edit: drag handles (hold Shift for single point)</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <button
+                                    type="button"
+                                    className={`fs-mode-chip ${softNodeDrag ? 'active' : ''}`}
+                                    onClick={() => setSoftNodeDrag(prev => !prev)}
+                                    title="Smoothly bend neighboring points when dragging a node"
+                                >
+                                    {softNodeDrag ? 'Smooth Bend: ON' : 'Pinpoint Drag'}
+                                </button>
+                                <button
+                                    type="button"
+                                    className="fs-mode-chip"
+                                    onClick={handleSimplifyStrokes}
+                                    disabled={strokes.length === 0}
+                                    title="Reduce dense nodes into fewer clean vector handles"
+                                >
+                                    Simplify Nodes
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     <div 
                         className="fs-canvas-wrapper"
@@ -1690,8 +2060,22 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
                 >
                     <Download size={16} /> Export SVG
                 </Button>
+                <Button 
+                    variant="default" 
+                    className="fs-btn-full" 
+                    onClick={() => setIsFontExportOpen(true)}
+                    title="Export your entire script font (.ttf / Font Pack)"
+                >
+                    <Type size={16} /> Export Font (.ttf)
+                </Button>
                 <Button variant="edit" className="fs-btn-full fs-btn-save" onClick={handleSave}>Save Glyph</Button>
             </div>
+
+            <FontExportModal
+                isOpen={isFontExportOpen}
+                onClose={() => setIsFontExportOpen(false)}
+                initialScriptId={resolvedScriptId}
+            />
 
             <div className="fs-preview-section">
                 <span className="fs-preview-label">Live Context Preview (Updates on stroke finish):</span>

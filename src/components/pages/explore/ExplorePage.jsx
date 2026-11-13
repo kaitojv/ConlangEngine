@@ -15,10 +15,54 @@ import { useSharing } from '../../../hooks/useSharing.jsx';
 import CommentsModal from './CommentsModal.jsx';
 import './explorePage.css';
 
+const EXPLORE_CACHE_KEY = 'explore_conlangs_base_v1';
+
+function buildExploreCardSummary(item) {
+    const pd = item?.project_data || {};
+    const cfg = pd.config || {};
+    const wikiPages = pd.wiki || cfg.wikiPages || {};
+    const customCourse = pd.customCourse || cfg.customCourse || [];
+    return {
+        project_id: item.project_id,
+        user_id: item.user_id,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        project_data: {
+            last_updated: pd.last_updated,
+            wordCount: pd.wordCount || (Array.isArray(pd.dictionary) ? pd.dictionary.length : 0),
+            wikiCount: pd.wikiCount ?? Object.keys(wikiPages).length,
+            courseCount: pd.courseCount ?? customCourse.length,
+            config: {
+                isPublic: true,
+                conlangName: cfg.conlangName,
+                conlangIcon: cfg.conlangIcon,
+                authorName: cfg.authorName,
+                description: cfg.description,
+                phonologyTypes: cfg.phonologyTypes,
+                colors: { accent: cfg.colors?.accent },
+            },
+        },
+    };
+}
+
+function loadCachedExploreBase() {
+    try {
+        const raw = sessionStorage.getItem(EXPLORE_CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
+    } catch {
+        return null;
+    }
+}
+
 export default function ExplorePage() {
     const navigate = useNavigate();
-    const [conlangs, setConlangs] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const initialCachedBase = React.useMemo(() => loadCachedExploreBase(), []);
+    const [conlangs, setConlangs] = useState(() => initialCachedBase || []);
+    const [loading, setLoading] = useState(() => !initialCachedBase);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const fontCompileRunIdRef = React.useRef(0);
     const [error, setError] = useState(null);
     const [likesData, setLikesData] = useState({}); // { projectId: count }
     const [userLikes, setUserLikes] = useState(new Set()); // Set of projectIds liked by user
@@ -69,127 +113,166 @@ export default function ExplorePage() {
                     })
                 );
 
-                const validConlangs = processedList.filter(item => 
-                    item.project_data?.config?.isPublic === true
-                );
+                const validConlangs = processedList
+                    .filter(item => item.project_data?.config?.isPublic === true)
+                    .slice(0, 50);
 
-                // Pre-compile fonts for valid public conlangs if customFontBase64 is missing
-                const enrichedConlangs = await Promise.all(
-                    validConlangs.slice(0, 50).map(async (item) => {
-                        const cfg = item.project_data?.config;
-                        if (!cfg) return item;
-                        const defaultScriptId = cfg.scriptRules?.defaultScriptId || 'default';
-                        const scriptData = cfg.scriptDataById?.[defaultScriptId] || {};
-                        const merged = { ...cfg, ...scriptData };
+                // Show the Explore base immediately without blocking on font compilation or secondary counts
+                setConlangs(validConlangs);
+                setLoading(false);
+                setIsRefreshing(false);
 
-                        if (!merged.customFontBase64) {
+                try {
+                    sessionStorage.setItem(
+                        EXPLORE_CACHE_KEY,
+                        JSON.stringify(validConlangs.map(buildExploreCardSummary))
+                    );
+                } catch {
+                    // Ignore sessionStorage quota errors
+                }
+
+                // Fetch likes and comments in parallel without blocking initial cards
+                const projectIds = validConlangs.map(c => c.project_id);
+                if (projectIds.length > 0) {
+                    Promise.all([
+                        supabase
+                            .from('conlang_likes')
+                            .select('project_id, user_id')
+                            .in('project_id', projectIds),
+                        supabase
+                            .from('conlang_comments')
+                            .select('project_id')
+                            .in('project_id', projectIds),
+                    ]).then(([likesRes, commentsRes]) => {
+                        if (!likesRes.error && likesRes.data) {
+                            const counts = {};
+                            const userSet = new Set();
+                            likesRes.data.forEach(like => {
+                                counts[like.project_id] = (counts[like.project_id] || 0) + 1;
+                                if (like.user_id === session.user.id) {
+                                    userSet.add(like.project_id);
+                                }
+                            });
+                            setLikesData(counts);
+                            setUserLikes(userSet);
+                        }
+                        if (!commentsRes.error && commentsRes.data) {
+                            const cCounts = {};
+                            commentsRes.data.forEach(c => {
+                                cCounts[c.project_id] = (cCounts[c.project_id] || 0) + 1;
+                            });
+                            setCommentsCountData(cCounts);
+                        }
+                    }).catch((metaErr) => {
+                        console.warn("Could not fetch likes/comments:", metaErr);
+                    });
+                }
+
+                // Lazily compile missing card preview fonts in small background batches
+                const runId = ++fontCompileRunIdRef.current;
+                const compileBatchSize = 2;
+                const needsFont = validConlangs.filter((item) => {
+                    const cfg = item.project_data?.config;
+                    if (!cfg) return false;
+                    const defaultScriptId = cfg.scriptRules?.defaultScriptId || 'default';
+                    const scriptData = cfg.scriptDataById?.[defaultScriptId] || {};
+                    const merged = { ...cfg, ...scriptData };
+                    if (merged.customFontBase64) return false;
+                    return (
+                        (merged.phonologyTypes === 'featural_block' && merged.featuralComponents) ||
+                        (merged.customGlyphs && Object.keys(merged.customGlyphs).length > 0)
+                    );
+                });
+
+                (async () => {
+                    for (let i = 0; i < needsFont.length; i += compileBatchSize) {
+                        if (fontCompileRunIdRef.current !== runId) return;
+                        const batch = needsFont.slice(i, i + compileBatchSize);
+                        const updates = new Map();
+
+                        await Promise.all(batch.map(async (item) => {
+                            if (fontCompileRunIdRef.current !== runId) return;
+                            const cfg = item.project_data?.config;
+                            const defaultScriptId = cfg.scriptRules?.defaultScriptId || 'default';
+                            const scriptData = cfg.scriptDataById?.[defaultScriptId] || {};
+                            const merged = { ...cfg, ...scriptData };
+                            let compiledFont = null;
+                            let nextSyllabaryMap = null;
+
                             if (merged.phonologyTypes === 'featural_block' && merged.featuralComponents) {
                                 try {
                                     const newData = await generateBlockFontData({ ...merged, lexicon: item.project_data?.dictionary || [] });
-                                    if (newData?.customFontBase64) {
-                                        return {
-                                            ...item,
-                                            project_data: {
-                                                ...item.project_data,
-                                                config: {
-                                                    ...cfg,
-                                                    customFontBase64: newData.customFontBase64,
-                                                    syllabaryMap: newData.syllabaryMap
-                                                }
-                                            }
-                                        };
-                                    }
+                                    compiledFont = newData?.customFontBase64 || null;
+                                    nextSyllabaryMap = newData?.syllabaryMap || null;
                                 } catch (e) {
                                     console.warn("Could not generate block font for explore item", item.project_id, e);
                                 }
                             } else if (merged.customGlyphs && Object.keys(merged.customGlyphs).length > 0) {
                                 try {
                                     const typographySettings = merged.typographySettings || {};
-                                    const compiled = await compileFont(
+                                    compiledFont = await compileFont(
                                         merged.customGlyphs,
                                         typographySettings.traceWidth ?? merged.traceWidth ?? 30,
                                         typographySettings.customFontScale ?? merged.customFontScale ?? 1.0
                                     );
-                                    if (compiled) {
-                                        const updatedScriptData = cfg.scriptDataById ? { ...cfg.scriptDataById } : {};
-                                        if (updatedScriptData[defaultScriptId]) {
-                                            updatedScriptData[defaultScriptId] = {
-                                                ...updatedScriptData[defaultScriptId],
-                                                customFontBase64: compiled
-                                            };
-                                        }
-                                        return {
-                                            ...item,
-                                            project_data: {
-                                                ...item.project_data,
-                                                config: {
-                                                    ...cfg,
-                                                    customFontBase64: compiled,
-                                                    scriptDataById: updatedScriptData
-                                                }
-                                            }
-                                        };
-                                    }
                                 } catch (e) {
                                     console.warn("Could not compile font for explore item", item.project_id, e);
                                 }
                             }
-                        }
-                        return item;
-                    })
-                );
 
-                setConlangs(enrichedConlangs);
-
-                // Fetch likes for these projects
-                const projectIds = validConlangs.slice(0, 50).map(c => c.project_id);
-                if (projectIds.length > 0) {
-                    const { data: likesResult, error: likesError } = await supabase
-                        .from('conlang_likes')
-                        .select('project_id, user_id')
-                        .in('project_id', projectIds);
-
-                    if (!likesError && likesResult) {
-                        const counts = {};
-                        const userSet = new Set();
-                        likesResult.forEach(like => {
-                            counts[like.project_id] = (counts[like.project_id] || 0) + 1;
-                            if (like.user_id === session.user.id) {
-                                userSet.add(like.project_id);
+                            if (compiledFont) {
+                                updates.set(item.project_id, { compiledFont, nextSyllabaryMap, defaultScriptId });
                             }
-                        });
-                        setLikesData(counts);
-                        setUserLikes(userSet);
-                    }
+                        }));
 
-                    // Fetch comments count for these projects
-                    try {
-                        const { data: commentsResult, error: commentsError } = await supabase
-                            .from('conlang_comments')
-                            .select('project_id')
-                            .in('project_id', projectIds);
-
-                        if (!commentsError && commentsResult) {
-                            const cCounts = {};
-                            commentsResult.forEach(c => {
-                                cCounts[c.project_id] = (cCounts[c.project_id] || 0) + 1;
-                            });
-                            setCommentsCountData(cCounts);
+                        if (fontCompileRunIdRef.current !== runId) return;
+                        if (updates.size > 0) {
+                            setConlangs((prev) => prev.map((item) => {
+                                const upd = updates.get(item.project_id);
+                                if (!upd) return item;
+                                const cfg = item.project_data.config;
+                                const updatedScriptData = cfg.scriptDataById ? { ...cfg.scriptDataById } : {};
+                                if (updatedScriptData[upd.defaultScriptId]) {
+                                    updatedScriptData[upd.defaultScriptId] = {
+                                        ...updatedScriptData[upd.defaultScriptId],
+                                        customFontBase64: upd.compiledFont,
+                                        ...(upd.nextSyllabaryMap ? { syllabaryMap: upd.nextSyllabaryMap } : {}),
+                                    };
+                                }
+                                return {
+                                    ...item,
+                                    project_data: {
+                                        ...item.project_data,
+                                        config: {
+                                            ...cfg,
+                                            customFontBase64: upd.compiledFont,
+                                            ...(upd.nextSyllabaryMap ? { syllabaryMap: upd.nextSyllabaryMap } : {}),
+                                            scriptDataById: updatedScriptData
+                                        }
+                                    }
+                                };
+                            }));
                         }
-                    } catch (cErr) {
-                        console.warn("Could not fetch comments count:", cErr);
+
+                        // Yield to main thread between batches so scrolling & clicks stay responsive
+                        await new Promise((resolve) => setTimeout(resolve, 60));
                     }
-                }
+                })();
             } catch (err) {
                 console.error("Error fetching public conlangs:", err);
                 setError(err.message);
             } finally {
                 setLoading(false);
+                setIsRefreshing(false);
             }
     }, [navigate]);
 
     useEffect(() => {
+        setIsRefreshing(true);
         fetchPublicConlangs();
+        return () => {
+            fontCompileRunIdRef.current += 1;
+        };
     }, [fetchPublicConlangs]);
 
     const handleTogglePublish = async () => {
@@ -246,9 +329,19 @@ export default function ExplorePage() {
         }
     };
 
-    const handleCardClick = (projectId) => {
-        // Open the public viewer in the same tab
-        navigate(`/view/${projectId}`);
+    const handleCardClick = (lang) => {
+        const cfg = lang?.project_data?.config || {};
+        // Open the public viewer in the same tab with preview metadata for the loading screen
+        navigate(`/view/${lang.project_id}`, {
+            state: {
+                previewMeta: {
+                    name: cfg.conlangName || 'Unnamed Conlang',
+                    icon: cfg.conlangIcon || '🌐',
+                    author: cfg.authorName || 'Unknown Author',
+                    accent: cfg.colors?.accent || 'var(--acc)',
+                },
+            },
+        });
     };
 
     const toggleLike = async (e, projectId) => {
@@ -338,7 +431,18 @@ export default function ExplorePage() {
                 }).eq('project_id', projectId);
             }
 
-            setConlangs(prev => prev.filter(c => c.project_id !== projectId));
+            setConlangs(prev => {
+                const next = prev.filter(c => c.project_id !== projectId);
+                try {
+                    sessionStorage.setItem(
+                        EXPLORE_CACHE_KEY,
+                        JSON.stringify(next.map(buildExploreCardSummary))
+                    );
+                } catch {
+                    // Ignore sessionStorage quota errors
+                }
+                return next;
+            });
             toast.success("Conlang removed from Explore", { id: toastId });
 
             // If this is the active project, update the local public flag to false
@@ -529,9 +633,9 @@ export default function ExplorePage() {
         const wordCount = lang.project_data.wordCount || (dictionary ? dictionary.length : 0);
         
         const wikiPages = wiki || config?.wikiPages || {};
-        const wikiCount = Object.keys(wikiPages).length;
+        const wikiCount = lang.project_data?.wikiCount ?? Object.keys(wikiPages).length;
         const customCourse = topCourse || config?.customCourse || [];
-        const courseCount = customCourse.length;
+        const courseCount = lang.project_data?.courseCount ?? customCourse.length;
         
         const defaultScriptId = config?.scriptRules?.defaultScriptId || 'default';
         const scriptData = config?.scriptDataById?.[defaultScriptId] || config || {};
@@ -567,7 +671,7 @@ export default function ExplorePage() {
                 key={lang.project_id} 
                 className="conlang-explore-card"
                 style={{ '--card-theme': themeColor }}
-                onClick={() => handleCardClick(lang.project_id)}
+                onClick={() => handleCardClick(lang)}
             >
                 {customFont && (
                     <style>{`
@@ -662,7 +766,14 @@ export default function ExplorePage() {
             <div className="explore-header">
                 <div>
                     <h1>Explore</h1>
-                    <p>Discover public conlangs created by the community.</p>
+                    <p style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span>Discover public conlangs created by the community.</span>
+                        {isRefreshing && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.78rem', opacity: 0.75 }}>
+                                <Loader2 size={13} className="animate-spin" /> Updating...
+                            </span>
+                        )}
+                    </p>
                 </div>
                 <div className="explore-header-actions">
                     <div className="explore-search-wrapper">

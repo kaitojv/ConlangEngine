@@ -65,15 +65,15 @@ const buildTree = (tokens, syntaxOrder = 'SVO') => {
     for (let i = 0; i < chunks.length; i++) {
         const c = chunks[i];
         if (c.pos === 'V') {
-            // Check adjacent chunks for objects (N or NP) based on word order
-            if (syntaxOrder === 'SVO' || syntaxOrder === 'VSO') {
+            // Check adjacent chunks for objects (N, NP, or Pron) based on word order
+            if (syntaxOrder === 'SVO' || syntaxOrder === 'VSO' || syntaxOrder === 'VOS') {
                 // Verb looks forward for object
                 if (i + 1 < chunks.length && (chunks[i+1].pos === 'N' || chunks[i+1].pos === 'NP' || chunks[i+1].pos === 'Pron')) {
                     finalChunks.push({ type: 'node', pos: 'VP', children: [c, chunks[i+1]] });
                     i++; // Skip the object
                     continue;
                 }
-            } else if (syntaxOrder === 'SOV' || syntaxOrder === 'OSV') {
+            } else if (syntaxOrder === 'SOV' || syntaxOrder === 'OSV' || syntaxOrder === 'OVS') {
                 // Verb looks backward for object
                 if (finalChunks.length > 0) {
                     const prev = finalChunks[finalChunks.length - 1];
@@ -137,8 +137,14 @@ export default function SyntaxTreeRenderer({ processedWords }) {
 
     if (!treeData) return <p style={{ color: 'var(--tx3)', textAlign: 'center', padding: '20px' }}>Not enough words to build a syntax tree.</p>;
 
+    const getMaxY = (node) => {
+        if (!node) return 0;
+        if (!node.children || node.children.length === 0) return node.y;
+        return Math.max(node.y, ...node.children.map(getMaxY));
+    };
+
     const totalWidth = Math.max(treeData.width, 600);
-    const totalHeight = 400; // Can dynamically calculate based on max depth
+    const totalHeight = Math.max(320, getMaxY(treeData) + 60);
 
     const renderNodes = (node) => {
         if (!node) return null;
@@ -214,6 +220,7 @@ export default function SyntaxTreeRenderer({ processedWords }) {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     };
 
     return (

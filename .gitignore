@@ -28,3 +28,8 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# Local scratch, patches, and workspace JSON exports
+scratch/
+*.patch
+*Workspace*.json

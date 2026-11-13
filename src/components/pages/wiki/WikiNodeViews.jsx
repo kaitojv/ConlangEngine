@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { NodeViewWrapper } from '@tiptap/react';
+import { sanitizeUrl } from '@/utils/sanitizeHtml.js';
 import { 
     AlignLeft, 
     AlignCenter, 
@@ -117,7 +118,7 @@ export function WikiImageComponent({ node, updateAttributes, deleteNode, selecte
                 )}
 
                 <img 
-                    src={src} 
+                    src={sanitizeUrl(src, { allowDataImage: true, allowMailto: false }) || ''} 
                     alt={alt || caption || 'Conlang illustration'} 
                     className="wiki-image-element" 
                     style={{ width: '100%', height: 'auto', display: 'block' }}

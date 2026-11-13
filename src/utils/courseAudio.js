@@ -20,6 +20,22 @@ const AUDIO_STORE = 'audio';
 // In-memory cache: maps phraseId -> dataUrl or objectUrl
 export const localAudioCache = new Map();
 
+const setCachedAudioUrl = (phraseId, url) => {
+    const prev = localAudioCache.get(phraseId);
+    if (prev && prev !== url && prev.startsWith('blob:')) {
+        try { URL.revokeObjectURL(prev); } catch { /* ignore */ }
+    }
+    localAudioCache.set(phraseId, url);
+};
+
+const clearCachedAudioUrl = (phraseId) => {
+    const prev = localAudioCache.get(phraseId);
+    if (prev && prev.startsWith('blob:')) {
+        try { URL.revokeObjectURL(prev); } catch { /* ignore */ }
+    }
+    localAudioCache.delete(phraseId);
+};
+
 /** Opens or initializes the local IndexedDB audio store */
 const openAudioDB = () => new Promise((resolve) => {
     if (typeof indexedDB === 'undefined') return resolve(null);
@@ -42,11 +58,11 @@ const openAudioDB = () => new Promise((resolve) => {
 export const saveAudioToBrowser = async (phraseId, blob, dataUrl) => {
     if (!phraseId) return;
     if (dataUrl) {
-        localAudioCache.set(phraseId, dataUrl);
+        setCachedAudioUrl(phraseId, dataUrl);
     } else if (blob) {
         try {
             const url = URL.createObjectURL(blob);
-            localAudioCache.set(phraseId, url);
+            setCachedAudioUrl(phraseId, url);
         } catch {
             // Non-fatal
         }
@@ -89,7 +105,7 @@ export const loadAudioFromBrowser = async (phraseId) => {
             req.onsuccess = () => {
                 const res = req.result;
                 if (res?.dataUrl) {
-                    localAudioCache.set(phraseId, res.dataUrl);
+                    setCachedAudioUrl(phraseId, res.dataUrl);
                 }
                 resolve(res || null);
             };
@@ -103,7 +119,7 @@ export const loadAudioFromBrowser = async (phraseId) => {
 /** Deletes an audio clip from browser IndexedDB and memory cache */
 export const deleteAudioFromBrowser = async (phraseId) => {
     if (!phraseId) return;
-    localAudioCache.delete(phraseId);
+    clearCachedAudioUrl(phraseId);
     const db = await openAudioDB();
     if (!db) return;
     return new Promise((resolve) => {

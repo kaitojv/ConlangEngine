@@ -1,4 +1,5 @@
 // src/utils/themePresets.js
+import { stripDangerousKeys } from './sanitizeHtml.js';
 
 export const DARK_THEMES = [
     {
@@ -1497,13 +1498,14 @@ export function decodeThemeCode(code) {
         throw new Error('Theme code does not contain a valid colors definition.');
     }
 
+    const clean = stripDangerousKeys(parsed);
     return {
-        name: parsed.name || 'Imported Theme',
-        colors: parsed.colors,
-        appUiFont: parsed.appUiFont || undefined,
-        uiDensity: parsed.uiDensity || undefined,
-        uiRadius: parsed.uiRadius || undefined,
-        uiPattern: parsed.uiPattern || undefined
+        name: typeof clean.name === 'string' ? clean.name : 'Imported Theme',
+        colors: clean.colors,
+        appUiFont: typeof clean.appUiFont === 'string' ? clean.appUiFont : undefined,
+        uiDensity: typeof clean.uiDensity === 'string' ? clean.uiDensity : undefined,
+        uiRadius: typeof clean.uiRadius === 'string' ? clean.uiRadius : undefined,
+        uiPattern: typeof clean.uiPattern === 'string' ? clean.uiPattern : undefined
     };
 }
 
@@ -1546,13 +1548,15 @@ export function parseThemeJSON(jsonString) {
     if (!colors || typeof colors !== 'object') {
         throw new Error('File does not contain a valid colors definition');
     }
+    const clean = stripDangerousKeys(data);
+    const cleanColors = stripDangerousKeys(colors);
     return {
-        name: data.name || 'Imported Theme',
-        colors: colors,
-        appUiFont: data.appUiFont || (data.config && data.config.appUiFont),
-        uiDensity: data.uiDensity || (data.config && data.config.uiDensity),
-        uiRadius: data.uiRadius || (data.config && data.config.uiRadius),
-        uiPattern: data.uiPattern || (data.config && data.config.uiPattern)
+        name: typeof clean.name === 'string' ? clean.name : 'Imported Theme',
+        colors: cleanColors,
+        appUiFont: clean.appUiFont || (clean.config && clean.config.appUiFont),
+        uiDensity: clean.uiDensity || (clean.config && clean.config.uiDensity),
+        uiRadius: clean.uiRadius || (clean.config && clean.config.uiRadius),
+        uiPattern: clean.uiPattern || (clean.config && clean.config.uiPattern)
     };
 }
 

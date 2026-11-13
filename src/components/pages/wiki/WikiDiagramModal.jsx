@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import Modal from '@/components/UI/Modal/Modal.jsx';
+import { sanitizeSvgMarkup } from '@/utils/sanitizeHtml.js';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import { 
@@ -169,108 +170,124 @@ function DialectBranchItem({ node, isRoot = false, onUpdate, onAddChild, onAddSi
     );
 }
 
+function parseInitialDiagramPayload(initialData) {
+    if (!initialData?.sourceData) return null;
+    try {
+        return typeof initialData.sourceData === 'string'
+            ? JSON.parse(initialData.sourceData)
+            : initialData.sourceData;
+    } catch (e) {
+        console.warn('Could not parse initial diagram source data:', e);
+        return null;
+    }
+}
+
 export default function WikiDiagramModal({ isOpen, onClose, onInsert, initialData = null, t }) {
+    if (!isOpen) return null;
+    const initKey = initialData
+        ? `${initialData.diagramType || ''}-${initialData.title || ''}-${typeof initialData.sourceData === 'string' ? initialData.sourceData.length : 'obj'}`
+        : 'new';
+    return (
+        <WikiDiagramModalInner
+            key={initKey}
+            isOpen={isOpen}
+            onClose={onClose}
+            onInsert={onInsert}
+            initialData={initialData}
+            t={t}
+        />
+    );
+}
+
+function WikiDiagramModalInner({ isOpen, onClose, onInsert, initialData = null, t }) {
     const tr = (key, fallback) => {
         if (!t) return fallback;
         const val = t(key);
         return (val && val !== key) ? val : fallback;
     };
-    const [diagramType, setDiagramType] = useState('morphology'); // 'morphology' | 'syntax' | 'dialect' | 'flowchart'
-    const [title, setTitle] = useState('');
-    const [width, setWidth] = useState('100%');
-    const [alignment, setAlignment] = useState('center');
+    const parsedInitial = useMemo(() => parseInitialDiagramPayload(initialData), [initialData]);
+    const [diagramType, setDiagramType] = useState(() => initialData?.diagramType || 'morphology'); // 'morphology' | 'syntax' | 'dialect' | 'flowchart'
+    const [title, setTitle] = useState(() => initialData?.title || '');
+    const [width, setWidth] = useState(() => initialData?.width || '100%');
+    const [alignment, setAlignment] = useState(() => initialData?.align || 'center');
 
     // 1. Morphology state
-    const [morphologySlots, setMorphologySlots] = useState([
-        { slot: 'Slot -2', label: 'Negation (nu-)', type: 'prefix', optional: true },
-        { slot: 'Slot -1', label: 'Tense (al-)', type: 'prefix', optional: false },
-        { slot: 'Slot 0', label: 'Verb Stem', type: 'root', optional: false },
-        { slot: 'Slot +1', label: 'Aspect (-ik)', type: 'suffix', optional: true },
-        { slot: 'Slot +2', label: 'Agreement (-am)', type: 'suffix', optional: false }
-    ]);
+    const [morphologySlots, setMorphologySlots] = useState(() =>
+        (parsedInitial?.type === 'morphology' && Array.isArray(parsedInitial.data))
+            ? parsedInitial.data
+            : [
+                { slot: 'Slot -2', label: 'Negation (nu-)', type: 'prefix', optional: true },
+                { slot: 'Slot -1', label: 'Tense (al-)', type: 'prefix', optional: false },
+                { slot: 'Slot 0', label: 'Verb Stem', type: 'root', optional: false },
+                { slot: 'Slot +1', label: 'Aspect (-ik)', type: 'suffix', optional: true },
+                { slot: 'Slot +2', label: 'Agreement (-am)', type: 'suffix', optional: false }
+            ]
+    );
 
     // 2. Syntax tree state
-    const [syntaxText, setSyntaxText] = useState(
-        `[S\n  [NP [Det The] [Adj golden] [N dragon]]\n  [VP [V guarded] [NP [Det the] [N shrine]]]\n]`
+    const [syntaxText, setSyntaxText] = useState(() =>
+        (parsedInitial?.type === 'syntax' && typeof parsedInitial.data === 'string')
+            ? parsedInitial.data
+            : `[S\n  [NP [Det The] [Adj golden] [N dragon]]\n  [VP [V guarded] [NP [Det the] [N shrine]]]\n]`
     );
 
     // 3. Dialect tree state
     const [dialectMode, setDialectMode] = useState('visual'); // 'visual' | 'text'
-    const [dialectData, setDialectData] = useState(() => ensureDialectIds({
-        name: 'Proto-Solar',
-        period: 'c. 1200 BCE',
-        extinct: false,
-        children: [
-            {
-                name: 'Western Solar',
-                period: 'c. 600 BCE',
-                extinct: false,
-                children: [
-                    { name: 'Coast Solar', period: 'Modern', extinct: false, children: [] },
-                    { name: 'Valley Solar', period: 'Modern', extinct: false, children: [] }
-                ]
-            },
-            {
-                name: 'Eastern Solar',
-                period: 'c. 500 BCE',
-                extinct: false,
-                children: [
-                    { name: 'Highland Solar', period: 'Modern', extinct: false, children: [] },
-                    { name: 'Island Dialect', period: 'Extinct', extinct: true, children: [] }
-                ]
-            }
-        ]
-    }));
+    const [dialectData, setDialectData] = useState(() => {
+        if (parsedInitial?.type === 'dialect' && parsedInitial.data) {
+            return ensureDialectIds(parsedInitial.data);
+        }
+        return ensureDialectIds({
+            name: 'Proto-Solar',
+            period: 'c. 1200 BCE',
+            extinct: false,
+            children: [
+                {
+                    name: 'Western Solar',
+                    period: 'c. 600 BCE',
+                    extinct: false,
+                    children: [
+                        { name: 'Coast Solar', period: 'Modern', extinct: false, children: [] },
+                        { name: 'Valley Solar', period: 'Modern', extinct: false, children: [] }
+                    ]
+                },
+                {
+                    name: 'Eastern Solar',
+                    period: 'c. 500 BCE',
+                    extinct: false,
+                    children: [
+                        { name: 'Highland Solar', period: 'Modern', extinct: false, children: [] },
+                        { name: 'Island Dialect', period: 'Extinct', extinct: true, children: [] }
+                    ]
+                }
+            ]
+        });
+    });
     const [dialectText, setDialectText] = useState(() => formatDialectTreeToText(dialectData));
 
     // 4. Decision flowchart state
-    const [flowchartNodes, setFlowchartNodes] = useState([
-        { id: 'start', label: 'Noun Stem', type: 'start' },
-        { id: 'harmony', label: 'Last vowel front?', type: 'decision' },
-        { id: 'front', label: 'Add Suffix: -in', type: 'process' },
-        { id: 'back', label: 'Add Suffix: -on', type: 'process' },
-        { id: 'end', label: 'Surface Word', type: 'end' }
-    ]);
-    const [flowchartConns, setFlowchartConns] = useState([
-        { from: 'start', to: 'harmony', label: '' },
-        { from: 'harmony', to: 'front', label: 'Front (i, e, ä)' },
-        { from: 'harmony', to: 'back', label: 'Back (a, o, u)' },
-        { from: 'front', to: 'end', label: '' },
-        { from: 'back', to: 'end', label: '' }
-    ]);
-
-    // Handle initialData (when editing an existing diagram in the document)
-    useEffect(() => {
-        if (!isOpen) return;
-        if (initialData) {
-            if (initialData.diagramType) setDiagramType(initialData.diagramType);
-            if (initialData.title) setTitle(initialData.title);
-            if (initialData.width) setWidth(initialData.width);
-            if (initialData.align) setAlignment(initialData.align);
-
-            if (initialData.sourceData) {
-                try {
-                    const parsed = typeof initialData.sourceData === 'string' ? JSON.parse(initialData.sourceData) : initialData.sourceData;
-                    if (parsed.data) {
-                        if (parsed.type === 'morphology' && Array.isArray(parsed.data)) {
-                            setMorphologySlots(parsed.data);
-                        } else if (parsed.type === 'syntax' && typeof parsed.data === 'string') {
-                            setSyntaxText(parsed.data);
-                        } else if (parsed.type === 'dialect' && parsed.data) {
-                            const tree = ensureDialectIds(parsed.data);
-                            setDialectData(tree);
-                            setDialectText(formatDialectTreeToText(tree));
-                        } else if (parsed.type === 'flowchart' && parsed.data) {
-                            if (parsed.data.nodes) setFlowchartNodes(parsed.data.nodes);
-                            if (parsed.data.conns) setFlowchartConns(parsed.data.conns);
-                        }
-                    }
-                } catch (e) {
-                    console.warn('Could not parse initial diagram source data:', e);
-                }
-            }
-        }
-    }, [isOpen, initialData]);
+    const [flowchartNodes, setFlowchartNodes] = useState(() =>
+        (parsedInitial?.type === 'flowchart' && parsedInitial.data?.nodes)
+            ? parsedInitial.data.nodes
+            : [
+                { id: 'start', label: 'Noun Stem', type: 'start' },
+                { id: 'harmony', label: 'Last vowel front?', type: 'decision' },
+                { id: 'front', label: 'Add Suffix: -in', type: 'process' },
+                { id: 'back', label: 'Add Suffix: -on', type: 'process' },
+                { id: 'end', label: 'Surface Word', type: 'end' }
+            ]
+    );
+    const [flowchartConns, setFlowchartConns] = useState(() =>
+        (parsedInitial?.type === 'flowchart' && parsedInitial.data?.conns)
+            ? parsedInitial.data.conns
+            : [
+                { from: 'start', to: 'harmony', label: '' },
+                { from: 'harmony', to: 'front', label: 'Front (i, e, ä)' },
+                { from: 'harmony', to: 'back', label: 'Back (a, o, u)' },
+                { from: 'front', to: 'end', label: '' },
+                { from: 'back', to: 'end', label: '' }
+            ]
+    );
 
     // Live preview generation
     const previewSvg = useMemo(() => {
@@ -697,7 +714,7 @@ export default function WikiDiagramModal({ isOpen, onClose, onInsert, initialDat
                     </div>
                     <div 
                         className="wiki-diagram-svg-container"
-                        dangerouslySetInnerHTML={{ __html: previewSvg }} 
+                        dangerouslySetInnerHTML={{ __html: sanitizeSvgMarkup(previewSvg) }} 
                     />
                 </div>
 

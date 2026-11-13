@@ -35,8 +35,6 @@ export default function PhonologyTab() {
     // Multi-engine TTS & IPA Reader settings
     const rawTtsEngine = useConfigStore((state) => state.ttsEngine) || 'browser';
     const ttsEngine = ['browser', 'formant', 'human', 'kokoro', 'opentts', 'custom', 'azure'].includes(rawTtsEngine) ? rawTtsEngine : 'browser';
-    const ttsVoice = useConfigStore((state) => state.ttsVoice) || '';
-    const ttsSpeed = useConfigStore((state) => state.ttsSpeed) ?? 1.0;
     const formantF0 = useConfigStore((state) => state.formantF0) ?? 130;
     const kokoroEndpointType = useConfigStore((state) => state.kokoroEndpointType) || 'browser';
     const kokoroUrl = useConfigStore((state) => state.kokoroUrl) || '';

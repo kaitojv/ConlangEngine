@@ -13,7 +13,7 @@
  * datalist of lexicon suggestions, is slow enough to stall the modal; and the
  * auto-match scan on open is O(keys x lexicon).
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 /** Rows per page. Small enough that typing stays responsive. */
 export const PAGE_SIZE = 100;
@@ -43,16 +43,14 @@ export function useTranslationGrid(keys, translations, defaultCategory) {
 
     // A category that no longer exists (or a vocab regenerated between renders)
     // must not leave the grid blank.
-    useEffect(() => {
-        if (!categories.includes(activeCategory)) {
-            setActiveCategory(categories[0] ?? defaultCategory);
-        }
-    }, [categories, activeCategory, defaultCategory]);
+    const resolvedCategory = categories.includes(activeCategory)
+        ? activeCategory
+        : (categories[0] ?? defaultCategory);
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
         return keys.filter((item) => {
-            if (item.category !== activeCategory) return false;
+            if (item.category !== resolvedCategory) return false;
             if (onlyMissing) {
                 const v = translations[item.key];
                 if (v && String(v).trim() !== '') return false;
@@ -63,7 +61,7 @@ export function useTranslationGrid(keys, translations, defaultCategory) {
                 item.key.toLowerCase().includes(q)
             );
         });
-    }, [keys, translations, activeCategory, query, onlyMissing]);
+    }, [keys, translations, resolvedCategory, query, onlyMissing]);
 
     const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     const safePage = Math.min(page, pageCount - 1);
@@ -79,7 +77,7 @@ export function useTranslationGrid(keys, translations, defaultCategory) {
 
     return {
         categories,
-        activeCategory,
+        activeCategory: resolvedCategory,
         selectCategory,
         query,
         setSearch,
@@ -90,6 +88,6 @@ export function useTranslationGrid(keys, translations, defaultCategory) {
         page: safePage,
         setPage,
         pageCount,
-        categoryCount: keys.filter((k) => k.category === activeCategory).length,
+        categoryCount: keys.filter((k) => k.category === resolvedCategory).length,
     };
 }

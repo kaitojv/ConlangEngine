@@ -189,7 +189,7 @@ export default function CommandPalette() {
         });
 
         return matches;
-    }, [query, lexicon, wikiPages, localProjects, navigate, QUICK_ACTIONS, t]);
+    }, [query, lexicon, wikiPages, localProjects, navigate, QUICK_ACTIONS, t, appRoutes]);
 
     // Defined before the keyboard effect below, which captures it in a closure.
     const executeResult = React.useCallback((result) => {

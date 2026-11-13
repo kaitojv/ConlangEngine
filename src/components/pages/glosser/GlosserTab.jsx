@@ -85,7 +85,7 @@ export default function GlosserTab() {
             }
 
             // Perform Lexicon-Aware Segmentation
-            const cleanToken = token.replace(/[.,!?]/g, '').replace(/[â€˜â€™]/g, "'");
+            const cleanToken = token.replace(/[.,!?]/g, '').replace(/[\u2018\u2019]/g, "'");
             const segments = segmentToken(cleanToken, lexicon, morphologyConfig, normalizeToBase, (t) => getUniqueParsings(t, lexicon, morphologyConfig, normalizeToBase));
 
             segments.forEach(seg => {

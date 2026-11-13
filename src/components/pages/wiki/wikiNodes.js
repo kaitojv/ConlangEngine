@@ -1,4 +1,4 @@
-import { Node, mergeAttributes } from '@tiptap/core';
+import { Node } from '@tiptap/core';
 import { ReactNodeViewRenderer } from '@tiptap/react';
 
 let _imageComponent = null;

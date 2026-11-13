@@ -199,7 +199,8 @@ export default function CommentsModal({
             const { error } = await supabase
                 .from('conlang_comments')
                 .delete()
-                .eq('id', commentId);
+                .eq('id', commentId)
+                .eq('user_id', sessionUser.id);
 
             if (error) throw error;
 

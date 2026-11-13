@@ -1,7 +1,10 @@
 import { useEffect } from "react";
 import { useConfigStore } from "../store/useConfigStore.jsx";
 import { getDefaultScriptId } from "./scriptResolver.js";
-import { compileFont } from "./fontCompiler.jsx";
+import { compileFontBufferInWorker } from "./fontCompiler.jsx";
+import { sanitizeCssFontUrl } from "./sanitizeHtml.js";
+
+const safeScriptFamily = (scriptId) => `ConlangScript_${String(scriptId || 'default').replace(/[^a-zA-Z0-9_-]/g, '_')}`;
 
 
 export function useFontInjector(){
@@ -16,6 +19,7 @@ export function useFontInjector(){
     const scriptSystems = useConfigStore((state) => state.scriptSystems);
 
     useEffect(() => {
+        if (isRehydrating) return;
         let isCancelled = false;
         let styleNode = document.getElementById('custom-font');
 
@@ -96,12 +100,12 @@ export function useFontInjector(){
                         const fixedAdvance = sData?.fixedAdvanceWidth !== undefined
                             ? sData.fixedAdvanceWidth
                             : (typographySettings?.fixedAdvanceWidth ?? 1000);
-                        const compiled = await compileFont(mergedGlyphs, traceWidth, fontScale, {
+                        const compiledBuffer = await compileFontBufferInWorker(mergedGlyphs, traceWidth, fontScale, {
                             consistentCharacterSize: isConsistent,
                             fixedAdvanceWidth: fixedAdvance
                         });
-                        if (compiled && !isCancelled) {
-                            scriptFontMap[sId] = [compiled];
+                        if (compiledBuffer && !isCancelled) {
+                            scriptFontMap[sId] = [compiledBuffer];
                         }
                     } catch (err) {
                         console.warn(`Could not compile font for script ${sId}:`, err);
@@ -114,12 +118,12 @@ export function useFontInjector(){
                 try {
                     const isConsistent = typographySettings?.consistentCharacterSize ?? false;
                     const fixedAdvance = typographySettings?.fixedAdvanceWidth ?? 1000;
-                    const compiled = await compileFont(customGlyphs, traceWidth, fontScale, {
+                    const compiledBuffer = await compileFontBufferInWorker(customGlyphs, traceWidth, fontScale, {
                         consistentCharacterSize: isConsistent,
                         fixedAdvanceWidth: fixedAdvance
                     });
-                    if (compiled && !isCancelled) {
-                        scriptFontMap[defaultScriptId] = [compiled];
+                    if (compiledBuffer && !isCancelled) {
+                        scriptFontMap[defaultScriptId] = [compiledBuffer];
                     }
                 } catch (err) {
                     console.warn("Could not compile default custom font:", err);
@@ -144,13 +148,18 @@ export function useFontInjector(){
             const newFontFaces = new Set();
 
             for (const scriptId of scriptIds) {
-                const fontFamily = `ConlangScript_${scriptId}`;
+                const fontFamily = safeScriptFamily(scriptId);
                 const fontStrings = scriptFontMap[scriptId];
 
                 try {
-                    const scriptFaces = await Promise.all(fontStrings.map(fontStr => {
-                        const safeFontStr = typeof fontStr === 'string' ? fontStr : String(fontStr);
-                        const safeFontUrl = safeFontStr.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,');
+                    const scriptFaces = await Promise.all(fontStrings.map(fontSource => {
+                        if (fontSource instanceof ArrayBuffer) {
+                            const newFont = new FontFace(fontFamily, fontSource);
+                            return newFont.load();
+                        }
+                        const safeFontStr = typeof fontSource === 'string' ? fontSource : String(fontSource);
+                        const safeFontUrl = sanitizeCssFontUrl(safeFontStr);
+                        if (!safeFontUrl) return Promise.reject(new Error('Invalid font URL'));
                         const newFont = new FontFace(fontFamily, `url('${safeFontUrl}')`);
                         return newFont.load();
                     }));
@@ -188,21 +197,23 @@ export function useFontInjector(){
                 });
             }
 
-            const letterSpacingCSS = typographySettings?.letterSpacing
-                ? typographySettings.letterSpacing + 'em'
+            const parsedSpacing = Number(typographySettings?.letterSpacing);
+            const letterSpacingCSS = typographySettings?.letterSpacing && Number.isFinite(parsedSpacing)
+                ? parsedSpacing + 'em'
                 : 'normal';
 
-            const verticalLetterSpacingCSS = typographySettings?.verticalLetterSpacing !== undefined
-                ? typographySettings.verticalLetterSpacing + 'em'
+            const parsedVerticalSpacing = Number(typographySettings?.verticalLetterSpacing);
+            const verticalLetterSpacingCSS = typographySettings?.verticalLetterSpacing !== undefined && Number.isFinite(parsedVerticalSpacing)
+                ? parsedVerticalSpacing + 'em'
                 : 'normal';
 
-            const defaultFontFamily = `ConlangScript_${defaultScriptId}`;
+            const defaultFontFamily = safeScriptFamily(defaultScriptId);
 
             // Build per-script CSS classes: .conlang-script-{scriptId}
             // Always fall back to defaultFontFamily so glyphs defined in the primary script/root render cleanly
             let perScriptCSS = '';
             for (const scriptId of allTargetScriptIds) {
-                const family = loadedByScript[scriptId] ? `ConlangScript_${scriptId}` : defaultFontFamily;
+                const family = loadedByScript[scriptId] ? safeScriptFamily(scriptId) : defaultFontFamily;
                 perScriptCSS += `
                 .conlang-script-${CSS.escape(scriptId)} {
                     font-family: '${family}', '${defaultFontFamily}', 'Inter', sans-serif !important;
@@ -222,7 +233,7 @@ export function useFontInjector(){
                 document.head.appendChild(styleNode);
             }
 
-            styleNode.innerHTML = `
+            styleNode.textContent = `
                 .custom-font-text,
                 .conlang-word,
                 .word-text,
@@ -279,10 +290,15 @@ export function useFontInjector(){
             `;
         };
 
-        buildAndInjectFonts();
+        const timer = setTimeout(() => {
+            if (!isCancelled) {
+                buildAndInjectFonts();
+            }
+        }, 250);
 
         return () => {
             isCancelled = true;
+            clearTimeout(timer);
         };
     }, [customFont, customGlyphs, scriptDataById, isRehydrating, projectId, typographySettings, scriptRules, scriptSystems]);    
 }

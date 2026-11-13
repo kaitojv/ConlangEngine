@@ -144,7 +144,7 @@ export default function ScriptManager() {
         setDraggingId(null);
     };
 
-    const renderCard = (script, isDefaultSlot) => {
+    const renderCard = (script) => {
         const isDefault = script.id === defaultScriptId;
         const isEditing = editingId === script.id;
         const ruleCount = getRuleCount(script.id);

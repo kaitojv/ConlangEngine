@@ -11,8 +11,6 @@
  * - Hardware acceleration via WebGPU with automatic fallback to quantized WASM (q8)
  */
 
-import { ipaToPhoneticText } from './azureTTS.js';
-
 let ttsInstance = null;
 let loadPromise = null;
 let currentAudio = null;
@@ -97,7 +95,7 @@ export const sanitizeKokoroIPA = (ipa) => {
     if (!ipa) return '';
 
     // Remove delimitações de transcrição (/.../ ou [...])
-    let s = String(ipa).replace(/[\/\\\[\]]/g, '').trim();
+    let s = String(ipa).replace(/[/\\[\]]/g, '').trim();
 
     // Regra 3: Decompor vogais nasais (NFD) para liberar o combining tilde \u0303 (ID 17)
     // Ex: ã -> a + \u0303, õ -> o + \u0303
@@ -232,7 +230,7 @@ export const playRawAudio = async (rawAudio) => {
                 source.onended = () => {
                     if (currentSourceNode === source) currentSourceNode = null;
                     if (currentAudioContext === ctx) {
-                        try { ctx.close(); } catch {}
+                        try { ctx.close(); } catch { /* ignore close error */ }
                         currentAudioContext = null;
                     }
                     resolve();
@@ -392,13 +390,13 @@ export const stopKokoroAudio = () => {
         try {
             currentSourceNode.stop();
             currentSourceNode.disconnect();
-        } catch {}
+        } catch { /* ignore already-stopped node */ }
         currentSourceNode = null;
     }
     if (currentAudioContext && currentAudioContext.state !== 'closed') {
         try {
             currentAudioContext.close();
-        } catch {}
+        } catch { /* ignore already-closed context */ }
         currentAudioContext = null;
     }
     if (currentAudio) {
@@ -406,7 +404,7 @@ export const stopKokoroAudio = () => {
             currentAudio.pause();
             currentAudio.currentTime = 0;
             currentAudio = null;
-        } catch {}
+        } catch { /* ignore audio cleanup error */ }
     }
 };
 

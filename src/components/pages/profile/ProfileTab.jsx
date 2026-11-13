@@ -735,10 +735,10 @@ export default function ProfileTab() {
 
                                 <div className="alt-support-divider">{t('profile.altSupport')}</div>
                                 <div className="alt-support-row">
-                                    <Button variant="default" className="support-btn" onClick={() => window.open('https://patreon.com/kaitosz', '_blank')}>
+                                    <Button variant="default" className="support-btn" onClick={() => window.open('https://patreon.com/kaitosz', '_blank', 'noopener,noreferrer')}>
                                         <div className="btn-content"><Heart size={14}/> Patreon</div>
                                     </Button>
-                                    <Button variant="default" className="support-alt" onClick={() => window.open('https://ko-fi.com/kaitosz', '_blank')}>
+                                    <Button variant="default" className="support-alt" onClick={() => window.open('https://ko-fi.com/kaitosz', '_blank', 'noopener,noreferrer')}>
                                         <div className="btn-content"><Coffee size={14}/> Ko-fi</div>
                                     </Button>
                                 </div>

@@ -148,7 +148,7 @@ export default function IpaChart({ consonants = '', setConsonants, vowels = '', 
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {PULMONIC.map((rowData, i) => (
+                                        {PULMONIC.map((rowData) => (
                                             <tr key={rowData.row}>
                                                 <th>{rowData.row}</th>
                                                 {rowData.cells.map((cell, j) => (

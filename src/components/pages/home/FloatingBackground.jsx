@@ -50,20 +50,21 @@ export default function FloatingBackground() {
     const [lexiconWords, setLexiconWords] = useState([]);
 
     useEffect(() => {
-        if (config.type !== 'lexicon_words' || lexicon.length === 0) {
-            // Guard the write: when the array is already empty this would
-            // otherwise schedule a redundant re-render on every lexicon change.
-            setLexiconWords((prev) => (prev.length === 0 ? prev : []));
-            return;
-        }
-        // Pick up to 15 distinct random words.
-        const count = Math.min(15, lexicon.length);
-        const pool = [...lexicon];
-        for (let i = pool.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [pool[i], pool[j]] = [pool[j], pool[i]];
-        }
-        setLexiconWords(pool.slice(0, count).map((e) => e.word.replace(/\*/g, '')));
+        const rafId = requestAnimationFrame(() => {
+            if (config.type !== 'lexicon_words' || lexicon.length === 0) {
+                setLexiconWords((prev) => (prev.length === 0 ? prev : []));
+                return;
+            }
+            // Pick up to 15 distinct random words.
+            const count = Math.min(15, lexicon.length);
+            const pool = [...lexicon];
+            for (let i = pool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pool[i], pool[j]] = [pool[j], pool[i]];
+            }
+            setLexiconWords(pool.slice(0, count).map((e) => e.word.replace(/\*/g, '')));
+        });
+        return () => cancelAnimationFrame(rafId);
     }, [config.type, lexicon]);
 
     const bgElements = useMemo(() => {

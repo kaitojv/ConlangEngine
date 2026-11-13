@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/utils/supabaseClient.js';
 import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit, FileText, Map as MapIcon, Zap, ArrowLeft, Loader2, Calendar, Clock, Library, Star, Crown, Book, Brain, Flame, Dumbbell, Sword, Shield, Lock, Check, CheckCircle } from 'lucide-react';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import { playAzureTTS } from '@/utils/azureTTS.js';
-import DOMPurify from 'dompurify';
+import { sanitizeWikiHtml } from '../../../utils/sanitizeHtml.js';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import { usePublicThemeInjector, usePublicFontInjector } from '../../../hooks/usePublicInjectors.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
@@ -26,6 +26,8 @@ const LABEL_SPACE = 90;
 
 export default function PublicViewer() {
     const { projectId } = useParams();
+    const location = useLocation();
+    const previewMeta = location.state?.previewMeta || null;
     const [projectData, setProjectData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -310,6 +312,30 @@ export default function PublicViewer() {
     if (loading) {
         return (
             <div className="pv-page">
+                <div style={{
+                    maxWidth: '960px',
+                    margin: '1.5rem auto 0',
+                    padding: '1.25rem 1.5rem',
+                    borderRadius: '12px',
+                    background: 'var(--bg-elevated, rgba(255,255,255,0.04))',
+                    border: '1px solid var(--border, rgba(255,255,255,0.1))',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                }}>
+                    <div style={{ color: previewMeta?.accent || 'var(--acc)', display: 'flex', alignItems: 'center' }}>
+                        {previewMeta ? getConlangIcon(previewMeta.icon, 32) : <Globe size={28} />}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span>{previewMeta ? `Loading ${previewMeta.name}...` : 'Loading language...'}</span>
+                            <Loader2 size={16} className="animate-spin" />
+                        </div>
+                        <div style={{ fontSize: '0.85rem', opacity: 0.72, marginTop: '0.2rem' }}>
+                            {previewMeta?.author ? `By ${previewMeta.author} — ` : ''}Fetching dictionary, grammar, and custom script...
+                        </div>
+                    </div>
+                </div>
                 <PageSkeleton type="lexicon" />
             </div>
         );
@@ -710,10 +736,7 @@ export default function PublicViewer() {
                                                                     <h4 style={{ color: 'var(--acc)', marginTop: 0, marginBottom: '1rem', fontSize: '1.1rem' }}>{title}</h4>
                                                                     <div 
                                                                         className="pv-wiki-content"
-                                                                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content, {
-                                                                            ADD_TAGS: ['figure', 'figcaption'],
-                                                                            ADD_ATTR: ['data-type', 'data-diagram-type', 'data-diagram-title', 'data-diagram-source', 'data-svg', 'data-callout-type', 'data-callout-title', 'data-width', 'data-align', 'data-caption']
-                                                                        }) }} 
+                                                                        dangerouslySetInnerHTML={{ __html: sanitizeWikiHtml(content) }} 
                                                                     />
                                                                 </div>
                                                             );
@@ -731,10 +754,7 @@ export default function PublicViewer() {
                                                         {isObj && title && <h3 style={{ color: 'var(--acc)', marginTop: 0, marginBottom: '1rem' }}>{title}</h3>}
                                                         <div 
                                                             className="pv-wiki-content"
-                                                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content, {
-                                                                ADD_TAGS: ['figure', 'figcaption'],
-                                                                ADD_ATTR: ['data-type', 'data-diagram-type', 'data-diagram-title', 'data-diagram-source', 'data-svg', 'data-callout-type', 'data-callout-title', 'data-width', 'data-align', 'data-caption']
-                                                            }) }} 
+                                                            dangerouslySetInnerHTML={{ __html: sanitizeWikiHtml(content) }} 
                                                         />
                                                     </div>
                                                 );

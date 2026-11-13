@@ -26,7 +26,7 @@ export const ipaToPhoneticText = (ipa) => {
     if (!ipa) return '';
 
     let s = String(ipa)
-        .replace(/[\/\\\[\]]/g, '')     // remove brackets and slashes
+        .replace(/[/\\[\]]/g, '')     // remove brackets and slashes
         .replace(/[ˈˌ]/g, '')         // stress marks
         .replace(/[ːˑ]/g, '')         // length marks
         .replace(/[˥˦˧˨˩¹²³⁴⁵]/g, '') // tone bars and tone numbers
@@ -347,7 +347,7 @@ export const speakWithAzure = async ({ text, ipa, voice, useIpa = false }) => {
         <voice name="${actualVoice}">`;
 
     if (ipa && actualUseIpa) {
-        const rawIpa = ipa.replace(/[\/\\\[\]]/g, '').trim();
+        const rawIpa = ipa.replace(/[/\\[\]]/g, '').trim();
         if (rawIpa) {
             ssml += `<phoneme alphabet="ipa" ph="${escapeXml(rawIpa)}">${escapeXml(text || rawIpa)}</phoneme>`;
         } else {
