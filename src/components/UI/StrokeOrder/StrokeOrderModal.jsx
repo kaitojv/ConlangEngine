@@ -15,6 +15,7 @@ export default function StrokeOrderModal({
     char,
     name,
     scriptType,
+    scriptId = null,
     translation
 }) {
     const { t } = useTranslation();
@@ -78,7 +79,7 @@ export default function StrokeOrderModal({
                     gap: '0.75rem'
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <span className="custom-font-text notranslate" style={{ fontSize: '1.75rem', color: 'var(--acc)', lineHeight: 1 }}>
+                        <span className={`custom-font-text notranslate ${scriptId ? `conlang-script-${scriptId}` : ''}`} style={{ fontSize: '1.75rem', color: 'var(--acc)', lineHeight: 1 }}>
                             {char || word}
                         </span>
                         <div>
@@ -117,7 +118,7 @@ export default function StrokeOrderModal({
                 </div>
 
                 {/* Stroke Order Visualizer */}
-                <StrokeOrderViewer word={word} char={char} scriptType={scriptType} onDirtyChange={setIsDirty} />
+                <StrokeOrderViewer word={word} char={char} scriptType={scriptType} scriptId={scriptId} onDirtyChange={setIsDirty} />
             </div>
         </Modal>
     );

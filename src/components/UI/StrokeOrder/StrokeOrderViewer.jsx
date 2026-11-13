@@ -55,7 +55,7 @@ const RenderStroke = ({ stroke, color = 'var(--tx)', strokeWidth = 12 }) => {
     );
 };
 
-export default function StrokeOrderViewer({ word, char, scriptType: explicitScriptType, rawStrokes, onStrokesChange, onDirtyChange }) {
+export default function StrokeOrderViewer({ word, char, scriptType: explicitScriptType, scriptId: explicitScriptId = null, rawStrokes, onStrokesChange, onDirtyChange }) {
     const phonologyTypes = useConfigStore(state => state.phonologyTypes);
     const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
     const scriptDataById = useConfigStore(state => state.scriptDataById) || {};
@@ -78,7 +78,7 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
     // script codepoints, so it must be fed the active script's mapping — the root config
     // fields are empty for non-default scripts. buildScriptConfig is the canonical
     // resolver and guarantees every field the resolver reads is populated.
-    const activeScriptId = activeScriptSystemId || scriptRules?.defaultScriptId || 'default';
+    const activeScriptId = explicitScriptId || activeScriptSystemId || scriptRules?.defaultScriptId || 'default';
     const activeConfig = useMemo(() => {
         const base = {
             ...useConfigStore.getState(),
@@ -94,7 +94,7 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
         // An explicit scriptType prop (e.g. opening a specific writing system) wins over
         // whatever the active script says, since the caller told us what to render.
         return explicitScriptType
-            ? { ...resolved, phonologyTypes: explicitScriptType, customGlyphs }
+            ? { ...resolved, phonologyTypes: explicitScriptType }
             : resolved;
     }, [explicitScriptType, phonologyTypes, customGlyphs, scriptDataById, scriptRules, scriptSystems, activeScriptId, typographySettings]);
 
@@ -279,12 +279,17 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
 
         const state = useConfigStore.getState();
         const defaultScriptId = state.scriptRules?.defaultScriptId || 'default';
-        const activeScriptId = state.activeScriptSystemId || defaultScriptId;
-        let targetScriptId = defaultScriptId;
-        let existing = state.customGlyphs?.[charCode] || state.customGlyphs?.[String(charCode)];
+        const resolvedScriptId = explicitScriptId || state.activeScriptSystemId || defaultScriptId;
+        let targetScriptId = resolvedScriptId;
+        let existing = state.scriptDataById?.[resolvedScriptId]?.customGlyphs?.[charCode]
+            || state.scriptDataById?.[resolvedScriptId]?.customGlyphs?.[String(charCode)];
+
+        if (!existing && resolvedScriptId === defaultScriptId) {
+            existing = state.customGlyphs?.[charCode] || state.customGlyphs?.[String(charCode)];
+        }
 
         if (!existing && state.scriptDataById) {
-            const searchOrder = [activeScriptId, defaultScriptId, ...Object.keys(state.scriptDataById)];
+            const searchOrder = [resolvedScriptId, defaultScriptId, ...Object.keys(state.scriptDataById)];
             for (const sId of searchOrder) {
                 const sg = state.scriptDataById[sId]?.customGlyphs;
                 if (sg && (sg[charCode] || sg[String(charCode)])) {
@@ -309,7 +314,7 @@ export default function StrokeOrderViewer({ word, char, scriptType: explicitScri
             onStrokesChange(draft);
         }
         toast.success('Stroke changes saved.');
-    }, [customStrokesOverride, baseCharData, onStrokesChange, addCustomGlyph]);
+    }, [customStrokesOverride, baseCharData, onStrokesChange, addCustomGlyph, explicitScriptId]);
 
     // Throw away the draft and fall back to what is stored (the recovery path).
     const discardChanges = useCallback(() => {

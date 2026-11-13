@@ -6,6 +6,7 @@ import Card from '../Card/Card.jsx';
 import Button from '../Buttons/Buttons.jsx';
 import Modal from '../Modal/Modal.jsx';
 import FontStudioModal from '../Fontstudio/FontStudio.jsx';
+import GlyphPreviewBadge from '../Glyph/GlyphPreviewBadge.jsx';
 import Infobox from '../Infobox/Infobox.jsx';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { Brush, Grid3X3, Settings2, Info, Layers, Trash2, Eraser } from 'lucide-react';
@@ -349,7 +350,7 @@ export default function BlockManager({ scriptId } = {}) {
                             <div className="bm-input-group">
                                 <label className="form-label">Toned Vowel (e.g. ō)</label>
                                 <input 
-                                    className="bm-slot-input custom-font-text notranslate"
+                                    className={`bm-slot-input custom-font-text conlang-script-${targetScriptId} notranslate`}
                                     placeholder="ō"
                                     value={mapping.toned || ''}
                                     onChange={(e) => handleUpdateToneMapping(index, 'toned', e.target.value)}
@@ -389,18 +390,17 @@ export default function BlockManager({ scriptId } = {}) {
                 <div className="bm-components-list">
                     {allComponents.map(comp => (
                         <div key={comp} className="bm-component-card">
-                            <div className="bm-component-key custom-font-text">{comp}</div>
+                            <div className={`bm-component-key custom-font-text conlang-script-${targetScriptId}`}>{comp}</div>
                             <div className="bm-component-symbol">
                                 {/* Preview drawn strokes if available, else placeholder */}
                                 {featuralComponents[comp] ? (
-                                    <svg viewBox="0 0 300 300" width="40" height="40" className="bm-svg-preview">
-                                        {featuralComponents[comp]
-                                            .filter(s => Array.isArray(s) && !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)))
-                                            .map((stroke, i) => (
-                                                <path key={i} d={`M ${stroke.map(p => `${p.x} ${p.y}`).join(' L ')}`} />
-                                            ))
-                                        }
-                                    </svg>
+                                    <GlyphPreviewBadge
+                                        strokes={featuralComponents[comp]}
+                                        scriptId={targetScriptId}
+                                        size={40}
+                                        strokeWidth={14}
+                                        plain
+                                    />
                                 ) : '∅'}
                             </div>
                             <Button variant="edit" className="btn-icon" onClick={() => setDrawingForComp(comp)}>

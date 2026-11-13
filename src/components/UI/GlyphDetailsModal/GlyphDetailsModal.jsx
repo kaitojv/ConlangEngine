@@ -172,7 +172,7 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                 )}
 
                 {activeTab === 'stroke_order' && isConscript ? (
-                    <StrokeOrderViewer word={char} char={char} scriptType={type} rawStrokes={strokes} />
+                    <StrokeOrderViewer word={char} char={char} scriptType={type} scriptId={scriptId} rawStrokes={strokes} />
                 ) : (
                     <>
                         <div className="glyph-display-card glass">
@@ -231,14 +231,14 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                                             <ArrowLeft size={16} className="context-icon" />
                                             <div className="context-content">
                                                 <div className="context-label">{t('glyphDetails.mostCommonPreceding')}</div>
-                                                <div className="context-value custom-font-text">{stats.topPredecessor}</div>
+                                                <div className={`context-value custom-font-text ${scriptId ? `conlang-script-${scriptId}` : ''}`}>{stats.topPredecessor}</div>
                                             </div>
                                         </div>
                                         <div className="stat-context-card glass">
                                             <ArrowRight size={16} className="context-icon" />
                                             <div className="context-content">
                                                 <div className="context-label">{t('glyphDetails.mostCommonFollowing')}</div>
-                                                <div className="context-value custom-font-text">{stats.topSuccessor}</div>
+                                                <div className={`context-value custom-font-text ${scriptId ? `conlang-script-${scriptId}` : ''}`}>{stats.topSuccessor}</div>
                                             </div>
                                         </div>
                                     </>
@@ -252,7 +252,7 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                                 <div className="words-grid">
                                     {stats.containingWords.map(word => (
                                         <div key={word.id} className="word-pill">
-                                            <span className="word-text custom-font-text">{type === 'logographic' ? word.ideogram : word.word}</span>
+                                            <span className={`word-text custom-font-text ${scriptId ? `conlang-script-${scriptId}` : ''}`}>{type === 'logographic' ? (word.scriptForms?.[scriptId] || word.ideogram) : word.word}</span>
                                             <span className="word-translation">{word.translation}</span>
                                         </div>
                                     ))}

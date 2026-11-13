@@ -7,16 +7,17 @@ import Button from '../../UI/Buttons/Buttons.jsx';
 import Infobox from '../../UI/Infobox/Infobox.jsx';
 import CalendarCountsBar from '../../UI/CalendarCountsBar.jsx';
 import { resolveCalendarCounts } from '../../../utils/calendarHelpers.js';
-import { Languages, Hash, Plus, Trash2, Calculator, Settings, Edit2, Check, Table2, BookA, Type, Mic2, PenTool, ListChecks, Rows, Eye, EyeOff, FileX as FileXIcon, Sparkles } from 'lucide-react';
+import { Languages, Hash, Plus, Trash2, Calculator, Settings, Edit2, Check, Table2, BookA, Type, Mic2, PenTool, ListChecks, Rows, Eye, EyeOff, FileX as FileXIcon, Sparkles, Brush } from 'lucide-react';
 import IpaReferencePage from './IpaReferencePage.jsx';
 import './orthographyPage.css';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
-import { getScriptSystem, getDefaultScriptId, buildScriptConfig } from '../../../utils/scriptResolver.js';
+import { getScriptSystem, getDefaultScriptId, buildScriptConfig, resolveWordScriptId } from '../../../utils/scriptResolver.js';
 import { transliterateText } from '../../../utils/transliteration.js';
 import { useShallow } from 'zustand/react/shallow';
 import ScriptManager from '../../UI/ScriptManager/ScriptManager.jsx';
 import ScriptRulesEditor from '../../UI/ScriptRulesEditor/ScriptRulesEditor.jsx';
+import GraphismTab from '../settings/GraphismTab.jsx';
 import GlyphDetailsModal from '../../UI/GlyphDetailsModal/GlyphDetailsModal.jsx';
 import GlyphPreviewBadge from '../../UI/Glyph/GlyphPreviewBadge.jsx';
 import { getGlyphMetrics } from '../../UI/Glyph/resolveGlyphStrokes.js';
@@ -51,22 +52,31 @@ const SCRIPT_CONFIG_KEYS = [
 // inheriting every custom glyph from the default script. See FIX.md.
 const useScriptScopedData = (scriptId) => {
     const scriptDataById = useConfigStore(state => state.scriptDataById);
+    const scriptSystems = useConfigStore(state => state.scriptSystems) || [];
     const defaultScriptId = useConfigStore(state => state.scriptRules?.defaultScriptId) || 'default';
     const customGlyphsG = useConfigStore(state => state.customGlyphs);
     const syllabaryMapG = useConfigStore(state => state.syllabaryMap);
     const featuralComponentsG = useConfigStore(state => state.featuralComponents);
     const alphabetGlyphsG = useConfigStore(state => state.alphabetGlyphs);
-    const sd = scriptId ? scriptDataById?.[scriptId] : null;
-    const isDefault = !scriptId || scriptId === defaultScriptId;
+    const alphabetNamesG = useConfigStore(state => state.alphabetNames);
+    const resolvedScriptId = scriptId || defaultScriptId;
+    const sd = resolvedScriptId ? scriptDataById?.[resolvedScriptId] : null;
+    const sys = scriptSystems.find(s => s.id === resolvedScriptId);
+    const isDefault = resolvedScriptId === defaultScriptId;
     return {
+        resolvedScriptId,
+        isDefault,
         customGlyphs: sd?.customGlyphs || (isDefault ? customGlyphsG : {}) || {},
         syllabaryMap: sd?.syllabaryMap || (isDefault ? syllabaryMapG : {}) || {},
         featuralComponents: sd?.featuralComponents || (isDefault ? featuralComponentsG : {}) || {},
         alphabetGlyphs: sd?.alphabetGlyphs || (isDefault ? alphabetGlyphsG : {}) || {},
+        alphabetNames: (sys?.alphabetNames && Object.keys(sys.alphabetNames).length > 0)
+            ? sys.alphabetNames
+            : (isDefault ? alphabetNamesG : {}) || {},
     };
 };
 
-const NumberDerivationView = ({ generateNumberName }) => {
+const NumberDerivationView = ({ generateNumberName, activeScriptId = 'default', activeScriptConfig = null }) => {
     const { t } = useTranslation();
     const numberMatrix = useConfigStore(state => state.numberMatrix) || {};
     const numberDerivedRules = useConfigStore(state => state.numberDerivedRules) || { ordinal: '', fractional: '', multiplier: '' };
@@ -75,7 +85,11 @@ const NumberDerivationView = ({ generateNumberName }) => {
     const { cal: calendarSystem, daysPerWeek, monthsPerYear } = resolveCalendarCounts(rawCalendarSystem);
     const updateConfig = useConfigStore(state => state.updateConfig);
     const addWord = useLexiconStore(state => state.addWord);
-    const { transliterate } = useTransliterator();
+    const { transliterate: legacyTransliterate } = useTransliterator();
+    const transliterateInActiveScript = useCallback((txt) => {
+        if (activeScriptConfig) return transliterateText(txt || '', activeScriptConfig, []);
+        return legacyTransliterate(txt || '');
+    }, [activeScriptConfig, legacyTransliterate]);
 
     const [testNum, setTestNum] = useState(1);
 
@@ -186,19 +200,19 @@ const NumberDerivationView = ({ generateNumberName }) => {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
                         <div style={{ background: 'var(--s4)', padding: '1rem', borderRadius: '0.75rem', border: '1px dashed var(--acc)' }}>
                             <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 700 }}>{t('orthography.numerals.baseLabel')}</div>
-                            <div className="custom-font-text" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{transliterate(testBaseForm || '') || '-'}</div>
+                            <div className={`custom-font-text conlang-script-${activeScriptId}`} style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{transliterateInActiveScript(testBaseForm || '') || '-'}</div>
                         </div>
                         <div style={{ background: 'var(--s4)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--bd)' }}>
                             <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 700 }}>{t('orthography.numerals.ordinalLabel')}</div>
-                            <div className="custom-font-text" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{transliterate(testOrdinal || '') || '-'}</div>
+                            <div className={`custom-font-text conlang-script-${activeScriptId}`} style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{transliterateInActiveScript(testOrdinal || '') || '-'}</div>
                         </div>
                         <div style={{ background: 'var(--s4)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--bd)' }}>
                             <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 700 }}>{t('orthography.numerals.fractionalLabel')}</div>
-                            <div className="custom-font-text" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{transliterate(testFractional || '') || '-'}</div>
+                            <div className={`custom-font-text conlang-script-${activeScriptId}`} style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{transliterateInActiveScript(testFractional || '') || '-'}</div>
                         </div>
                         <div style={{ background: 'var(--s4)', padding: '1rem', borderRadius: '0.75rem', border: '1px solid var(--bd)' }}>
                             <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 700 }}>{t('orthography.numerals.multiplierLabel')}</div>
-                            <div className="custom-font-text" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{transliterate(testMultiplier || '') || '-'}</div>
+                            <div className={`custom-font-text conlang-script-${activeScriptId}`} style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--tx)' }}>{transliterateInActiveScript(testMultiplier || '') || '-'}</div>
                         </div>
                     </div>
                 </div>
@@ -401,10 +415,6 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
     };
     const updateConfig = useConfigStore(state => state.updateConfig);
     const phonologyTypes = useConfigStore(state => state.phonologyTypes);
-    const { transliterate } = useTransliterator();
-    // Required by transliterate()'s logographic branch: it resolves a word to its
-    // drawn glyph via the lexicon entry's `ideogram`. Without it the call falls
-    // through to `return cleanWord`, i.e. the romanized name instead of the glyph.
     const lexicon = useLexiconStore(state => state.lexicon) || [];
 
     // Numeral glyphs are resolved through the ACTIVE script only. Every script
@@ -617,7 +627,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                 </span>
                             ) : (
                                 <span 
-                                    className="custom-font-text notranslate digit-glyphs-inline" 
+                                    className={`custom-font-text conlang-script-${activeScriptId} notranslate digit-glyphs-inline`} 
                                     style={{ fontSize: '0.9rem', color: 'var(--tx2)', cursor: 'pointer' }}
                                     onClick={openPicker}
                                     title={t('orthography.numerals.clickToChooseGlyph')}
@@ -807,7 +817,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                                 onClick={() => setSelectedNumberForStroke({ word: name, name: `${val} (${name})` })}
                                                 title={t('orthography.numerals.viewStroke')}
                                             >
-                                                <span className="custom-font-text notranslate">{transliterate(name)}</span>
+                                                <span className={`custom-font-text conlang-script-${activeScriptId} notranslate`}>{transliterateText(name, scriptConfig, [])}</span>
                                                 <PenTool size={12} />
                                             </button>
                                         )}
@@ -995,7 +1005,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                                         )
                                     ) : (
                                         <div
-                                            className="result-value custom-font-text notranslate result-value-clickable"
+                                            className={`result-value custom-font-text conlang-script-${activeScriptId} notranslate result-value-clickable`}
                                             onClick={() => setSelectedNumberForStroke({
                                                 word: testResult,
                                                 name: `${testNumber || 'Result'}: ${testResult}`,
@@ -1018,7 +1028,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
             </div>
                 </>
             ) : viewMode === 'matrix' ? (
-                <NumberDerivationView generateNumberName={generateNumberName} numeralBase={numeralBase} />
+                <NumberDerivationView generateNumberName={generateNumberName} numeralBase={numeralBase} activeScriptId={activeScriptId} activeScriptConfig={scriptConfig} />
             ) : (
                 <MeasurementSystemView />
             )}
@@ -1030,6 +1040,7 @@ const NumbersTab = ({ activeScriptDropdown = null } = {}) => {
                     word={selectedNumberForStroke.word}
                     name={selectedNumberForStroke.name}
                     scriptType={selectedNumberForStroke.scriptType || activeScriptType}
+                    scriptId={activeScriptId}
                 />
             )}
 
@@ -1062,8 +1073,7 @@ const AlphabeticShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
     const consonants = useConfigStore(state => state.consonants) || '';
     const vowels = useConfigStore(state => state.vowels) || '';
     const otherPhonemes = useConfigStore(state => state.otherPhonemes) || '';
-    const alphabetNames = useConfigStore(state => state.alphabetNames) || {};
-    const { alphabetGlyphs } = useScriptScopedData(scriptId);
+    const { alphabetGlyphs, alphabetNames, resolvedScriptId } = useScriptScopedData(scriptId);
 
     const parseChars = (str) => {
         if (!str) return [];
@@ -1103,10 +1113,17 @@ const AlphabeticShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
                             <div 
                                 key={char} 
                                 className="char-card glass interactive-card" 
-                                onClick={() => onGlyphClick && onGlyphClick({ char, glyph: customGlyph || char, type: 'alphabetic', name: charName, scriptId })}
+                                onClick={() => onGlyphClick && onGlyphClick({ char, glyph: customGlyph || char, type: 'alphabetic', name: charName, scriptId: resolvedScriptId })}
                             >
-                                <div className="char-display custom-font-text" style={{ fontSize: customGlyph ? '3rem' : '2rem', marginBottom: customGlyph ? '0' : '0.5rem' }}>
-                                    {customGlyph || char}
+                                <div className={`char-display custom-font-text conlang-script-${resolvedScriptId}`} style={{ fontSize: customGlyph ? '3rem' : '2rem', marginBottom: customGlyph ? '0' : '0.5rem' }}>
+                                    {customGlyph ? (
+                                        <GlyphPreviewBadge
+                                            glyph={customGlyph}
+                                            scriptId={resolvedScriptId}
+                                            size={56}
+                                            plain
+                                        />
+                                    ) : char}
                                 </div>
                                 {customGlyph && (
                                     <div style={{ fontSize: '0.9rem', color: 'var(--tx2)', marginBottom: '12px' }}>
@@ -1137,7 +1154,7 @@ const AlphabeticShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
 
 const SyllabaryShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
     const { t } = useTranslation();
-    const { syllabaryMap, customGlyphs } = useScriptScopedData(scriptId);
+    const { syllabaryMap, customGlyphs, resolvedScriptId } = useScriptScopedData(scriptId);
     const consonants   = useConfigStore(state => state.consonants) || '';
     const vowels       = useConfigStore(state => state.vowels) || '';
 
@@ -1180,30 +1197,15 @@ const SyllabaryShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
         return grid;
     }, [syllabaryMap, consonants, vowels, phonemeToChar]);
 
-    // Render as crisp SVG strokes if available, else font char, else dash
+    // Render as crisp SVG strokes if available, else font char in active script
     const renderSymbol = (symbol) => {
         if (!symbol) return <span style={{ color: 'var(--tx2)', fontSize: '1.5rem', opacity: 0.3 }}>—</span>;
         const codePoint = symbol.codePointAt(0);
-        const strokes = customGlyphs[codePoint];
+        const strokes = customGlyphs[codePoint] || customGlyphs[String(codePoint)];
         if (strokes && strokes.length > 0) {
-            const cleanStrokes = strokes.filter(s => Array.isArray(s) && !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)));
-            return (
-                <svg viewBox="0 0 300 300" width="52" height="52">
-                    {cleanStrokes.map((stroke, i) => (
-                        <path
-                            key={i}
-                            d={`M ${stroke.map(p => `${p.x} ${p.y}`).join(' L ')}`}
-                            stroke="var(--acc)"
-                            strokeWidth="14"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            fill="none"
-                        />
-                    ))}
-                </svg>
-            );
+            return <GlyphPreviewBadge glyph={symbol} strokes={strokes} scriptId={resolvedScriptId} size={52} plain />;
         }
-        return <span className="custom-font-text" style={{ fontSize: '2.2rem', color: 'var(--acc)', lineHeight: 1 }}>{symbol}</span>;
+        return <span className={`custom-font-text conlang-script-${resolvedScriptId}`} style={{ fontSize: '2.2rem', color: 'var(--acc)', lineHeight: 1 }}>{symbol}</span>;
     };
 
     return (
@@ -1222,7 +1224,7 @@ const SyllabaryShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
                         <div 
                             key={key} 
                             className="showcase-syl-card glass interactive-card"
-                            onClick={() => onGlyphClick && onGlyphClick({ char: displayLabel, glyph: symbol || displayLabel, type: 'syllabic', name: displayLabel, scriptId })}
+                            onClick={() => onGlyphClick && onGlyphClick({ char: displayLabel, glyph: symbol || displayLabel, type: 'syllabic', name: displayLabel, scriptId: resolvedScriptId })}
                         >
                             <div className="showcase-syl-symbol">{renderSymbol(symbol)}</div>
                             <div className="showcase-syl-label">{displayLabel}</div>
@@ -1239,69 +1241,81 @@ const SyllabaryShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
 const LogographicShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
     const { t } = useTranslation();
     const lexicon = useLexiconStore(state => state.lexicon) || [];
-    const { customGlyphs } = useScriptScopedData(scriptId);
+    const scriptSystems = useConfigStore(state => state.scriptSystems) || [];
+    const scriptRules = useConfigStore(state => state.scriptRules) || {};
+    const { customGlyphs, resolvedScriptId, isDefault } = useScriptScopedData(scriptId);
 
     const logographicWords = useMemo(() => {
         const charMap = new Map();
+        const cfg = { scriptSystems, scriptRules };
         
         // Sort lexicon by ideogram length ascending, so that "singular" words claim characters 
         // before words that use "multiple" characters.
         const sortedLexicon = [...lexicon].sort((a, b) => {
-            const lenA = (a.ideogram && a.ideogram.trim() !== '') ? Array.from(a.ideogram.trim()).length : 999;
-            const lenB = (b.ideogram && b.ideogram.trim() !== '') ? Array.from(b.ideogram.trim()).length : 999;
+            const rawA = a.scriptForms?.[resolvedScriptId] || a.ideogram || '';
+            const rawB = b.scriptForms?.[resolvedScriptId] || b.ideogram || '';
+            const lenA = rawA.trim() !== '' ? Array.from(rawA.trim()).length : 999;
+            const lenB = rawB.trim() !== '' ? Array.from(rawB.trim()).length : 999;
             return lenA - lenB;
         });
 
         for (const w of sortedLexicon) {
-            if (w.ideogram && w.ideogram.trim() !== '') {
-                const chars = Array.from(w.ideogram.trim());
+            const directForm = w.scriptForms?.[resolvedScriptId];
+            const wordResolvedId = resolveWordScriptId(w, cfg);
+            const belongsToScript = Boolean(directForm)
+                || w.scriptOverride === resolvedScriptId
+                || (!w.scriptOverride && (wordResolvedId === resolvedScriptId || isDefault));
+            const ideogramText = directForm || (belongsToScript ? w.ideogram : '');
+            if (ideogramText && ideogramText.trim() !== '') {
+                const chars = Array.from(ideogramText.trim());
                 for (const char of chars) {
                     if (char.trim() === '') continue;
                     if (!charMap.has(char)) {
+                        const cp = char.codePointAt(0);
                         charMap.set(char, {
                             id: `${w.id}-${char}`,
                             ideogram: char,
                             word: w.word,
-                            translation: w.translation
+                            translation: w.translation,
+                            strokes: customGlyphs[cp] || customGlyphs[String(cp)] || null,
                         });
                     }
                 }
             }
         }
-        return Array.from(charMap.values());
-    }, [lexicon]);
 
-    // Render strokes as crisp inline SVG instead of font character
-    const renderGlyph = (ideogram) => {
-        const codePoint = ideogram.codePointAt(0);
-        const strokes = customGlyphs[codePoint];
-        if (strokes && strokes.length > 0) {
-            const cleanStrokes = strokes.filter(s => Array.isArray(s) && !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)));
-            return (
-                <svg viewBox="0 0 300 300" width="80" height="80">
-                    {cleanStrokes.map((stroke, i) => (
-                        <path
-                            key={i}
-                            d={`M ${stroke.map(p => `${p.x} ${p.y}`).join(' L ')}`}
-                            stroke="var(--acc)"
-                            strokeWidth="12"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            fill="none"
-                        />
-                    ))}
-                </svg>
-            );
+        // Also include standalone custom glyphs drawn directly on this script
+        Object.entries(customGlyphs).forEach(([codeKey, strokes]) => {
+            const cp = Number(codeKey);
+            if (!Number.isFinite(cp) || cp <= 0) return;
+            const char = String.fromCodePoint(cp);
+            if (!charMap.has(char)) {
+                charMap.set(char, {
+                    id: `custom-${codeKey}`,
+                    ideogram: char,
+                    word: `U+${cp.toString(16).toUpperCase().padStart(4, '0')}`,
+                    translation: '',
+                    strokes,
+                });
+            }
+        });
+
+        return Array.from(charMap.values());
+    }, [lexicon, customGlyphs, resolvedScriptId, isDefault, scriptSystems, scriptRules]);
+
+    // Render strokes as crisp SVG via GlyphPreviewBadge, else scoped font character
+    const renderGlyph = (item) => {
+        if (item.strokes && item.strokes.length > 0) {
+            return <GlyphPreviewBadge glyph={item.ideogram} strokes={item.strokes} scriptId={resolvedScriptId} size={80} plain />;
         }
-        // Fallback: render the character itself at large size with smoothing
         return (
-            <span className="custom-font-text" style={{
+            <span className={`custom-font-text conlang-script-${resolvedScriptId}`} style={{
                 fontSize: '4rem',
                 lineHeight: 1,
                 display: 'block',
                 textRendering: 'geometricPrecision',
                 WebkitFontSmoothing: 'antialiased',
-            }}>{ideogram}</span>
+            }}>{item.ideogram}</span>
         );
     };
 
@@ -1321,14 +1335,14 @@ const LogographicShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
                         <div 
                             key={word.id} 
                             className="char-card glass interactive-card"
-                            onClick={() => onGlyphClick && onGlyphClick({ char: word.ideogram, glyph: word.ideogram, type: 'logographic', name: word.translation || word.word, scriptId })}
+                            onClick={() => onGlyphClick && onGlyphClick({ char: word.ideogram, glyph: word.ideogram, strokes: word.strokes, type: 'logographic', name: word.translation || word.word, scriptId: resolvedScriptId })}
                         >
                             <div className="char-display" style={{ height: 'auto', marginBottom: '0.5rem' }}>
-                                {renderGlyph(word.ideogram)}
+                                {renderGlyph(word)}
                             </div>
                             <div className="char-name-display" style={{ flexDirection: 'column', gap: '2px', textAlign: 'center' }}>
                                 <span style={{ fontWeight: 700, color: 'var(--acc)' }}>{word.word}</span>
-                                <span style={{ fontSize: '0.8rem', color: 'var(--tx2)' }}>{word.translation}</span>
+                                {word.translation && <span style={{ fontSize: '0.8rem', color: 'var(--tx2)' }}>{word.translation}</span>}
                             </div>
                         </div>
                     ))}
@@ -1342,7 +1356,7 @@ const LogographicShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
 
 const BlockShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
     const { t } = useTranslation();
-    const { syllabaryMap, featuralComponents, customGlyphs } = useScriptScopedData(scriptId);
+    const { syllabaryMap, featuralComponents, customGlyphs, resolvedScriptId } = useScriptScopedData(scriptId);
     const consonants         = useConfigStore(state => state.consonants) || '';
     const vowels             = useConfigStore(state => state.vowels) || '';
     const otherPhonemes      = useConfigStore(state => state.otherPhonemes) || '';
@@ -1402,25 +1416,11 @@ const BlockShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
     const renderBlockSymbol = (val) => {
         if (!val) return <span style={{ opacity: 0.3 }}>—</span>;
         const codePoint = val.codePointAt(0);
-        const strokes = customGlyphs[codePoint];
+        const strokes = customGlyphs[codePoint] || customGlyphs[String(codePoint)];
         if (strokes && strokes.length > 0) {
-            return (
-                <svg viewBox="0 0 300 300" width="52" height="52">
-                    {strokes.map((stroke, i) => (
-                        <path
-                            key={i}
-                            d={`M ${stroke.map(p => `${p.x} ${p.y}`).join(' L ')}`}
-                            stroke="var(--acc)"
-                            strokeWidth="14"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            fill="none"
-                        />
-                    ))}
-                </svg>
-            );
+            return <GlyphPreviewBadge glyph={val} strokes={strokes} scriptId={resolvedScriptId} size={52} plain />;
         }
-        return <span className="custom-font-text" style={{ fontSize: '2.2rem', color: 'var(--acc)', lineHeight: 1 }}>{val}</span>;
+        return <span className={`custom-font-text conlang-script-${resolvedScriptId}`} style={{ fontSize: '2.2rem', color: 'var(--acc)', lineHeight: 1 }}>{val}</span>;
     };
 
     // ── Nothing at all ──────────────────────────────────────────────────────────
@@ -1462,25 +1462,10 @@ const BlockShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
                                     strokes: featuralComponents[comp], 
                                     type: 'featural_block', 
                                     name: phonemeToChar[comp] || comp, 
-                                    scriptId 
+                                    scriptId: resolvedScriptId 
                                 })}
                             >
-                                <svg viewBox="0 0 300 300" width="64" height="64" className="showcase-block-svg">
-                                    {featuralComponents[comp]
-                                        .filter(s => Array.isArray(s) && !(s.length === 1 && (s[0].x === -999 || s[0].x === -998)))
-                                        .map((stroke, i) => (
-                                            <path
-                                                key={i}
-                                                d={`M ${stroke.map(p => `${p.x} ${p.y}`).join(' L ')}`}
-                                                stroke="var(--acc)"
-                                                strokeWidth="10"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                fill="none"
-                                            />
-                                        ))
-                                    }
-                                </svg>
+                                <GlyphPreviewBadge strokes={featuralComponents[comp]} scriptId={resolvedScriptId} size={64} strokeWidth={10} plain className="showcase-block-svg" />
                                 <div className="showcase-syl-label">{phonemeToChar[comp] || comp}</div>
                             </div>
                         ))}
@@ -1504,7 +1489,7 @@ const BlockShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
                                     glyph: val || toMorphemeLabel(key), 
                                     type: 'featural_block', 
                                     name: toMorphemeLabel(key), 
-                                    scriptId 
+                                    scriptId: resolvedScriptId 
                                 })}
                             >
                                 <div className="showcase-syl-symbol">{renderBlockSymbol(val)}</div>
@@ -1539,11 +1524,12 @@ export default function OrthographyPage() {
     const [registerCols, setRegisterCols] = useState(0); // 0 = Auto
 
     const defaultScriptId = scriptRules.defaultScriptId || getDefaultScriptId({ scriptSystems, scriptRules });
-    const activeScript = getScriptSystem({ scriptSystems, scriptRules, phonologyTypes }, activeScriptSystemId || defaultScriptId);
+    const effectiveScriptId = activeScriptSystemId || defaultScriptId;
+    const activeScript = getScriptSystem({ scriptSystems, scriptRules, phonologyTypes }, effectiveScriptId);
     const scriptType = activeScript?.type || phonologyTypes || 'alphabetic';
 
-    // Active script selector bar (shown on script-editing tabs and numbers tab)
-    const showScriptPicker = scriptSystems.length > 1 && (activeTab === 'script' || activeTab === 'rules' || activeTab === 'numbers');
+    // Active script selector bar (shown on script, studio, rules, and numbers tabs)
+    const showScriptPicker = scriptSystems.length > 1 && (activeTab === 'script' || activeTab === 'studio' || activeTab === 'rules' || activeTab === 'numbers');
 
     const renderActiveScriptDropdown = () => {
         if (!showScriptPicker) return null;
@@ -1552,7 +1538,7 @@ export default function OrthographyPage() {
                 <label className="script-active-dropdown-label">{t('orthography.editingScript')}</label>
                 <select
                     className="script-active-dropdown"
-                    value={activeScriptSystemId || defaultScriptId}
+                    value={effectiveScriptId}
                     onChange={e => setActiveScriptSystem(e.target.value)}
                 >
                     {scriptSystems.map(s => (
@@ -1565,12 +1551,12 @@ export default function OrthographyPage() {
 
     const renderScriptShowcase = () => {
         switch (scriptType) {
-            case 'syllabic':      return <SyllabaryShowcase scriptId={activeScriptSystemId} onGlyphClick={setSelectedGlyphDetails} registerCols={registerCols} />;
-            case 'logographic':   return <LogographicShowcase scriptId={activeScriptSystemId} onGlyphClick={setSelectedGlyphDetails} registerCols={registerCols} />;
+            case 'syllabic':      return <SyllabaryShowcase scriptId={effectiveScriptId} onGlyphClick={setSelectedGlyphDetails} registerCols={registerCols} />;
+            case 'logographic':   return <LogographicShowcase scriptId={effectiveScriptId} onGlyphClick={setSelectedGlyphDetails} registerCols={registerCols} />;
             case 'featural_block':
             case 'featural':
-            case 'block':         return <BlockShowcase scriptId={activeScriptSystemId} onGlyphClick={setSelectedGlyphDetails} registerCols={registerCols} />;
-            default:              return <AlphabeticShowcase scriptId={activeScriptSystemId} onGlyphClick={setSelectedGlyphDetails} registerCols={registerCols} />;
+            case 'block':         return <BlockShowcase scriptId={effectiveScriptId} onGlyphClick={setSelectedGlyphDetails} registerCols={registerCols} />;
+            default:              return <AlphabeticShowcase scriptId={effectiveScriptId} onGlyphClick={setSelectedGlyphDetails} registerCols={registerCols} />;
         }
     };
 
@@ -1603,6 +1589,12 @@ export default function OrthographyPage() {
                         <PenTool size={18} /> {t('orthography.tabs.scripts')}
                     </button>
                     <button 
+                        className={`tab ${activeTab === 'studio' ? 'tab-active' : ''}`}
+                        onClick={() => setActiveTab('studio')}
+                    >
+                        <Brush size={18} /> {t('settings.graphism.title')}
+                    </button>
+                    <button 
                         className={`tab ${activeTab === 'script' ? 'tab-active' : ''}`}
                         onClick={() => setActiveTab('script')}
                     >
@@ -1632,14 +1624,32 @@ export default function OrthographyPage() {
             <main className="page-main-content">
                 {activeTab === 'scripts'  && (
                     <div className="tab-pane-container">
-                        <ScriptManager />
+                        <ScriptManager
+                            onEditScript={(id) => {
+                                setActiveScriptSystem(id);
+                                setActiveTab('studio');
+                            }}
+                        />
+                    </div>
+                )}
+                {activeTab === 'studio' && (
+                    <div className="tab-pane-container">
+                        {scriptSystems.length > 1 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', background: 'var(--s2)', padding: '0.75rem 1rem', borderRadius: '1rem', border: '1px solid var(--bd)', flexWrap: 'wrap', gap: '1rem' }}>
+                                {renderActiveScriptDropdown()}
+                            </div>
+                        )}
+                        <GraphismTab hideScriptSelector={scriptSystems.length > 1} />
                     </div>
                 )}
                 {activeTab === 'script'  && (
                     <div className="tab-pane-container">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', background: 'var(--s2)', padding: '0.75rem 1rem', borderRadius: '1rem', border: '1px solid var(--bd)', flexWrap: 'wrap', gap: '1rem' }}>
-                            {renderActiveScriptDropdown() || <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tx)' }}>{t('orthography.scriptRegister')}</div>}
+                            {renderActiveScriptDropdown() || <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tx)' }}>{activeScript?.name || t('orthography.scriptRegister')}</div>}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <Button variant="sec" className="btn-sm" onClick={() => setActiveTab('studio')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                    <Brush size={14} /> {t('settings.graphism.title')}
+                                </Button>
                                 <span style={{ fontSize: '0.85rem', color: 'var(--tx2)', fontWeight: 600, whiteSpace: 'nowrap' }}>{t('orthography.gridColumns')}</span>
                                 <select 
                                     className="select select-bordered" 

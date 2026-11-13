@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
+import { getScriptData, getScriptSystem, resolveWordScriptId } from '../../../utils/scriptResolver.js';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
 import { generateIpaFromWord } from '../../../utils/ipaGenerator.js';
 import { fetchSynonymOptions, fetchDefinitionOptions } from '../../../utils/semanticUtils.js';
@@ -66,6 +67,9 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
     const syllabaryMap = useConfigStore(state => state.syllabaryMap);
     const rawScriptSystems = useConfigStore(state => state.scriptSystems);
     const scriptSystems = useMemo(() => rawScriptSystems || [], [rawScriptSystems]);
+    const activeScriptSystemId = useConfigStore(state => state.activeScriptSystemId);
+    const scriptDataById = useConfigStore(state => state.scriptDataById);
+    const scriptRules = useConfigStore(state => state.scriptRules);
 
     const [activeField, setActiveField] = useState('word');
     
@@ -125,17 +129,35 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
         return overriddenByClass || overriddenByTag;
     }, [wordClass, tags, vowelHarmonyOverrideWordClasses, vowelHarmonyOverrideTags, harmonyStatus]);
 
+    const resolvedWordScriptId = useMemo(() => resolveWordScriptId(
+        { word, wordClass, tags, scriptOverride },
+        { scriptSystems, activeScriptSystemId, scriptRules }
+    ), [word, wordClass, tags, scriptOverride, scriptSystems, activeScriptSystemId, scriptRules]);
+
+    const resolvedScriptSystem = useMemo(
+        () => getScriptSystem({ scriptSystems }, resolvedWordScriptId),
+        [scriptSystems, resolvedWordScriptId]
+    );
+    const resolvedScriptType = resolvedScriptSystem?.type || phonologyTypes || 'alphabetic';
+    const resolvedScriptData = useMemo(
+        () => getScriptData({ scriptSystems, scriptDataById, syllabaryMap, blockTemplates, blockSettings, phonologyTypes }, resolvedWordScriptId),
+        [scriptSystems, scriptDataById, syllabaryMap, blockTemplates, blockSettings, phonologyTypes, resolvedWordScriptId]
+    );
+    const effectiveSyllabaryMap = useMemo(() => resolvedScriptData?.syllabaryMap || syllabaryMap || {}, [resolvedScriptData, syllabaryMap]);
+    const effectiveBlockTemplates = resolvedScriptData?.blockTemplates || blockTemplates;
+    const effectiveBlockSettings = resolvedScriptData?.blockSettings || blockSettings;
+
     const possibleBlockStructures = useMemo(() => {
-        if (phonologyTypes !== 'featural_block' || !word || !syllabaryMap) return [];
+        if (resolvedScriptType !== 'featural_block' || !word || !effectiveSyllabaryMap) return [];
         const safeBaseWord = normalizeToBase(word.trim()).toLowerCase();
         if (!safeBaseWord) return [];
 
-        const activeTemplates = blockTemplates || (blockSettings ? [
+        const activeTemplates = effectiveBlockTemplates || (effectiveBlockSettings ? [
             {
                 id: 'legacy',
-                maxChars: blockSettings.maxChars || 3,
-                layoutTemplate: blockSettings.layoutTemplate || '2top1bottom',
-                slotMapping: blockSettings.slotMapping || []
+                maxChars: effectiveBlockSettings.maxChars || 3,
+                layoutTemplate: effectiveBlockSettings.layoutTemplate || '2top1bottom',
+                slotMapping: effectiveBlockSettings.slotMapping || []
             }
         ] : [
             {
@@ -159,7 +181,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
         const otherList = parseList(otherPhonemes);
 
         const isValidBlock = (part) => {
-            if (syllabaryMap[part]) return true; // Already compiled
+            if (effectiveSyllabaryMap[part]) return true; // Already compiled
             
             // Check if it perfectly matches an active template's slot mapping
             for (const template of activeTemplates) {
@@ -211,7 +233,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
         search(0, []);
         
         return results;
-    }, [word, phonologyTypes, syllabaryMap, normalizeToBase, blockTemplates, blockSettings, consonants, vowels, otherPhonemes]);
+    }, [word, resolvedScriptType, effectiveSyllabaryMap, normalizeToBase, effectiveBlockTemplates, effectiveBlockSettings, consonants, vowels, otherPhonemes]);
 
     const updateField = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
 
@@ -789,7 +811,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                 </div>
             </div>
 
-            {isLogographic && (
+            {(resolvedScriptSystem ? resolvedScriptType === 'logographic' : isLogographic) && (
                 <div className="ideogram-edit-compact">
                     <div className="ideogram-compact-header">
                         <label className="form-label">Ideogram / Symbol</label>
@@ -797,6 +819,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                     <div className="ideogram-compact-controls">
                         <GlyphPreviewBadge
                             glyph={ideogram}
+                            scriptId={resolvedWordScriptId}
                             size={34}
                             showCode={false}
                             onClick={ideogram ? () => setIsGlyphViewerOpen(true) : undefined}
@@ -806,7 +829,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                             value={ideogram}
                             onChange={(e) => updateField('ideogram', e.target.value)}
                             placeholder="e.g., 水"
-                            className="ideogram-compact-input notranslate custom-font-text"
+                            className={`ideogram-compact-input notranslate custom-font-text ${resolvedWordScriptId ? `conlang-script-${resolvedWordScriptId}` : ''}`}
                         />
                         <div className="ideogram-compact-btns">
                             <button
@@ -844,7 +867,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                 </div>
             )}
 
-            {phonologyTypes === 'featural_block' && possibleBlockStructures.length > 0 && (
+            {resolvedScriptType === 'featural_block' && possibleBlockStructures.length > 0 && (
                 <div className="block-picker-section" style={{ marginTop: '1rem', background: 'var(--bg2)', padding: '1rem', borderRadius: '8px' }}>
                     <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>Visual Block Structure</label>
                     <p style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '12px', lineHeight: '1.4' }}>
@@ -1187,7 +1210,7 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                 <FontStudioModal
                     targetLabel={word || 'Ideogram'}
                     existingCharCode={ideogram ? ideogram.codePointAt(0) : undefined}
-                    scriptId={scriptOverride}
+                    scriptId={resolvedWordScriptId}
                     onSave={(newChar) => {
                         updateField('ideogram', newChar);
                         setIsFontStudioOpen(false);
@@ -1201,7 +1224,8 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                     word={ideogram || word}
                     isOpen={isStrokeOrderOpen}
                     onClose={() => setIsStrokeOrderOpen(false)}
-                    scriptType="logographic"
+                    scriptId={resolvedWordScriptId}
+                    scriptType={resolvedScriptType || 'logographic'}
                 />
             )}
 
@@ -1211,7 +1235,8 @@ export default function LexiconEditModal({ wordObj, onClose, mode = 'edit' }) {
                     onClose={() => setIsGlyphViewerOpen(false)}
                     char={ideogram}
                     glyph={ideogram}
-                    type="logographic"
+                    scriptId={resolvedWordScriptId}
+                    type={resolvedScriptType || 'logographic'}
                     name={ideogram}
                 />
             )}

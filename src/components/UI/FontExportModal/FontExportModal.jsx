@@ -11,7 +11,7 @@ import {
     downloadFontTTF,
     downloadFontPackZip,
 } from '@/utils/fontExporter.js';
-import { getDefaultScriptId, getScriptData } from '@/utils/scriptResolver.js';
+import { getDefaultScriptId, getScriptTypographySettings } from '@/utils/scriptResolver.js';
 import { Download, Package, Type, Sparkles, Loader2, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './fontExportModal.css';
@@ -58,11 +58,8 @@ export default function FontExportModal({ isOpen, onClose, initialScriptId = nul
             : '';
         setFamilyName(`${baseConlang}${scriptSuffix}`);
 
-        const sData = getScriptData(config, targetId);
-        const scriptConsistent = sData?.consistentCharacterSize !== undefined
-            ? Boolean(sData.consistentCharacterSize)
-            : (config.typographySettings?.consistentCharacterSize ?? true);
-        setConsistentSizeOverride(scriptConsistent);
+        const scriptTypo = getScriptTypographySettings(config, targetId);
+        setConsistentSizeOverride(Boolean(scriptTypo.consistentCharacterSize ?? true));
         setPreviewFontFamily('');
     }, [isOpen, initialScriptId, defaultScriptId, scriptSystems, config.conlangName, config.typographySettings, config]);
 
@@ -210,6 +207,7 @@ export default function FontExportModal({ isOpen, onClose, initialScriptId = nul
                                 const found = scriptSystems.find(s => s.id === nextId);
                                 const baseConlang = (config.conlangName || 'Conlang').trim();
                                 setFamilyName(found?.name ? `${baseConlang} ${found.name}` : baseConlang);
+                                setConsistentSizeOverride(Boolean(getScriptTypographySettings(config, nextId).consistentCharacterSize ?? true));
                                 setPreviewFontFamily('');
                             }}
                         >

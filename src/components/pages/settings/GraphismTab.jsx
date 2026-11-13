@@ -5,6 +5,7 @@ import Infobox from '../../UI/Infobox/Infobox.jsx';
 import Modal from '../../UI/Modal/Modal.jsx';
 import FontStudioModal from '../../UI/Fontstudio/FontStudio.jsx';
 import FontExportModal from '../../UI/FontExportModal/FontExportModal.jsx';
+import GlyphPreviewBadge from '../../UI/Glyph/GlyphPreviewBadge.jsx';
 import { Type, Brush, Trash2, Plus, Monitor, Maximize2, Grid, Check, Download, ChevronDown } from 'lucide-react';
 import Card from '../../UI/Card/Card.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
@@ -17,6 +18,7 @@ import { previewSimplification, simplifyGlyphMap } from '../../../utils/glyphSim
 import { buildWorkspaceSnapshot, downloadWorkspaceBackup } from '../../../utils/workspaceExport.js';
 import GlyphLightenBackupModal from '../../UI/GlyphLightenBackupModal/GlyphLightenBackupModal.jsx';
 import { SCRIPT_MAPS } from '../../../utils/transliteration.js';
+import { resolveWordScriptId, getScriptTypographySettings } from '../../../utils/scriptResolver.js';
 import { pushProjectToCloud } from '../../../hooks/useSharing.jsx';
 import { useProjectStore } from '../../../store/useProjectStore.jsx';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
@@ -25,12 +27,14 @@ import './graphismTab.css';
 
 const TYPE_LABELS = {
     alphabetic: 'Alphabetic',
+    abjad: 'Abjad',
+    abugida: 'Abugida',
     syllabic: 'Syllabic',
     logographic: 'Logographic',
     featural_block: 'Featural/Block',
 };
 
-export default function TypographyStudio() {
+export default function TypographyStudio({ hideScriptSelector = false } = {}) {
     const { t } = useTranslation();
     const consonants = useConfigStore(state => state.consonants) || '';
     const vowels = useConfigStore(state => state.vowels) || '';
@@ -43,8 +47,11 @@ export default function TypographyStudio() {
     // exhaustive-deps lint rule for the useMemo below).
     const scriptSystemsRaw = useConfigStore(state => state.scriptSystems);
     const scriptSystems = scriptSystemsRaw || [];
+    const scriptRules = useConfigStore(state => state.scriptRules) || {};
     const scriptDataById = useConfigStore(state => state.scriptDataById) || {};
-    const defaultScriptId = useConfigStore(state => state.scriptRules?.defaultScriptId) || 'default';
+    const activeScriptSystemId = useConfigStore(state => state.activeScriptSystemId);
+    const setActiveScriptSystem = useConfigStore(state => state.setActiveScriptSystem);
+    const defaultScriptId = scriptRules?.defaultScriptId || 'default';
     const legacyAlphabetGlyphs = useConfigStore(state => state.alphabetGlyphs) || {};
     const legacyAlphabetNames = useConfigStore(state => state.alphabetNames) || {};
     const legacyWritingDirection = useConfigStore(state => state.writingDirection) || 'ltr';
@@ -52,13 +59,15 @@ export default function TypographyStudio() {
     const legacyAlphabeticScript = useConfigStore(state => state.alphabeticScript) || 'latin';
     const updateScriptData = useConfigStore(state => state.updateScriptData);
     const updateScriptSystem = useConfigStore(state => state.updateScriptSystem);
+    const updateScriptTypography = useConfigStore(state => state.updateScriptTypography);
     const simplifyAllGlyphs = useConfigStore(state => state.simplifyAllGlyphs);
     const customGlyphs = useConfigStore(state => state.customGlyphs) || {};
     const syllabaryMap = useConfigStore(state => state.syllabaryMap) || {};
     const lexicon = useLexiconStore(state => state.lexicon) || [];
 
-    // Track which script is being edited. Default to the project's default script.
-    const [editingScriptId, setEditingScriptId] = useState(defaultScriptId);
+    // Shared with OrthographyPage via Zustand so switching script stays unified across the app.
+    const editingScriptId = activeScriptSystemId || defaultScriptId;
+    const setEditingScriptId = setActiveScriptSystem;
 
     // Shared by the per-glyph Lighten button in Font Studio and the bulk
     // "Lighten all glyphs" action below, so both use the same fidelity knob.
@@ -93,8 +102,17 @@ export default function TypographyStudio() {
         || (isDefaultSelected ? legacyPhonologyTypes : 'alphabetic');
     const alphabeticScript = selectedScript?.alphabeticScript
         || (isDefaultSelected ? legacyAlphabeticScript : 'latin');
+    const scriptTypographySettings = useMemo(() => getScriptTypographySettings({
+        scriptSystems: scriptSystemsRaw,
+        scriptRules,
+        scriptDataById,
+        typographySettings
+    }, selectedScriptId), [scriptSystemsRaw, scriptRules, scriptDataById, typographySettings, selectedScriptId]);
+
+    const updateActiveScriptTypography = (patch) => updateScriptTypography(selectedScriptId, patch);
 
     const [drawingChar, setDrawingChar] = useState(null);
+    const [drawingLogogram, setDrawingLogogram] = useState(null);
     const [newMode, setNewMode] = useState('');
     const [editingMode, setEditingMode] = useState('Base');
     const [editingCharName, setEditingCharName] = useState(null);
@@ -143,13 +161,10 @@ export default function TypographyStudio() {
     const handleAddMode = () => {
         const mode = newMode.trim();
         if (!mode) return;
-        const currentModes = typographySettings.customTypographyModes || [];
+        const currentModes = scriptTypographySettings.customTypographyModes || [];
         if (!currentModes.includes(mode) && mode.toLowerCase() !== 'base' && mode.toLowerCase() !== 'uppercase') {
-            updateConfig({
-                typographySettings: {
-                    ...typographySettings,
-                    customTypographyModes: [...currentModes, mode]
-                }
+            updateActiveScriptTypography({
+                customTypographyModes: [...currentModes, mode]
             });
         }
         setNewMode('');
@@ -157,43 +172,34 @@ export default function TypographyStudio() {
     };
 
     const handleRemoveMode = (mode) => {
-        const currentModes = typographySettings.customTypographyModes || [];
-        updateConfig({
-            typographySettings: {
-                ...typographySettings,
-                customTypographyModes: currentModes.filter(m => m !== mode),
-                activeDisplayMode: typographySettings.activeDisplayMode === mode ? 'Base' : typographySettings.activeDisplayMode
-            }
+        const currentModes = scriptTypographySettings.customTypographyModes || [];
+        updateActiveScriptTypography({
+            customTypographyModes: currentModes.filter(m => m !== mode),
+            activeDisplayMode: scriptTypographySettings.activeDisplayMode === mode ? 'Base' : scriptTypographySettings.activeDisplayMode
         });
         if (editingMode === mode) setEditingMode('Base');
     };
 
     const handleUpdateDisplayMode = (e) => {
-        updateConfig({
-            typographySettings: {
-                ...typographySettings,
-                activeDisplayMode: e.target.value
-            }
+        updateActiveScriptTypography({
+            activeDisplayMode: e.target.value
         });
     };
 
     const handleWritingDirection = (e) => {
         const next = e.target.value;
         updateScriptSystem(selectedScriptId, { writingDirection: next });
-        if (isDefaultSelected) {
-            updateConfig({ writingDirection: next });
-        }
+    };
+
+    const handleAlphabeticScriptChange = (e) => {
+        const next = e.target.value;
+        updateScriptSystem(selectedScriptId, { alphabeticScript: next });
+        updateScriptData(selectedScriptId, { alphabeticScript: next });
     };
 
     const updateGlyph = (char, newCharUnicode) => {
-        const key = editingMode === 'Base' ? char : `${char}_${editingMode.toLowerCase()}`;
+        const key = effectiveEditingMode === 'Base' ? char : `${char}_${effectiveEditingMode.toLowerCase()}`;
         writeAlphabetGlyphs({ ...alphabetGlyphs, [key]: newCharUnicode });
-        
-        // Ensure script-level custom font base64 is refreshed immediately from Zustand
-        const latestFont = useConfigStore.getState().customFontBase64;
-        if (latestFont) {
-            updateScriptData(selectedScriptId, { customFontBase64: latestFont });
-        }
         setDrawingChar(null);
     };
 
@@ -289,28 +295,26 @@ export default function TypographyStudio() {
                 simplifiedByScript[scriptId] = simplifyGlyphMap(glyphs, { tolerance: glyphLightenTolerance, precision: 2 });
             }
 
-            // Recompile from the simplified default-script glyphs so the
-            // rendered font matches the new stroke data.
-            const fontSource = simplifiedByScript[selectedScriptId] || simplifiedTopLevel;
-            const settings = storeState.typographySettings || {};
-            const isConsistent = scriptData?.consistentCharacterSize !== undefined
-                ? scriptData.consistentCharacterSize
-                : (settings.consistentCharacterSize ?? false);
-            const fixedAdvance = scriptData?.fixedAdvanceWidth !== undefined
-                ? scriptData.fixedAdvanceWidth
-                : (settings.fixedAdvanceWidth ?? 1000);
-            const base64Font = await compileFont(
-                fontSource, 
-                settings.traceWidth ?? 30, 
-                settings.customFontScale ?? 1.0,
-                {
-                    consistentCharacterSize: isConsistent,
-                    fixedAdvanceWidth: fixedAdvance
-                }
-            );
+            // Recompile each script's simplified glyphs with that script's own typography settings.
+            const compiledByScript = {};
+            const targetScriptIds = new Set([defaultScriptId, ...Object.keys(simplifiedByScript)]);
+            for (const sId of targetScriptIds) {
+                const fontSource = simplifiedByScript[sId] || (sId === defaultScriptId ? simplifiedTopLevel : null);
+                if (!fontSource || Object.keys(fontSource).length === 0) continue;
+                const sTypo = getScriptTypographySettings(storeState, sId);
+                compiledByScript[sId] = await compileFont(
+                    fontSource,
+                    sTypo.traceWidth ?? 30,
+                    sTypo.customFontScale ?? 1.0,
+                    {
+                        consistentCharacterSize: sTypo.consistentCharacterSize ?? true,
+                        fixedAdvanceWidth: sTypo.fixedAdvanceWidth ?? 1000
+                    }
+                );
+            }
 
             // 1. Update active Zustand store and IndexedDB
-            simplifyAllGlyphs(simplifiedTopLevel, simplifiedByScript, base64Font);
+            simplifyAllGlyphs(simplifiedTopLevel, simplifiedByScript, compiledByScript);
 
             // 2. Update local project archive so local storage space is freed
             useProjectStore.getState().saveProjectToArchive(
@@ -338,12 +342,8 @@ export default function TypographyStudio() {
         }
     };
 
-    const isCurrentScriptConsistent = scriptData?.consistentCharacterSize !== undefined
-        ? scriptData.consistentCharacterSize
-        : (typographySettings.consistentCharacterSize ?? true);
-    const currentFixedAdvance = scriptData?.fixedAdvanceWidth !== undefined
-        ? scriptData.fixedAdvanceWidth
-        : (typographySettings.fixedAdvanceWidth ?? 1000);
+    const isCurrentScriptConsistent = scriptTypographySettings.consistentCharacterSize ?? true;
+    const currentFixedAdvance = scriptTypographySettings.fixedAdvanceWidth ?? 1000;
 
     const totalDrawnGlyphsCount = useMemo(() => {
         const targetGlyphs = scriptData?.customGlyphs || (isDefaultSelected ? customGlyphs : {}) || {};
@@ -354,22 +354,18 @@ export default function TypographyStudio() {
         const tId = toast.loading(t('settings.graphism.toastRecompilingFont'));
         try {
             const storeState = useConfigStore.getState();
-            const currentSettings = storeState.typographySettings || {};
-            const currentCustomGlyphs = (storeState.scriptDataById?.[selectedScriptId]?.customGlyphs) || storeState.customGlyphs || {};
-            const isConsistent = scriptData?.consistentCharacterSize !== undefined
-                ? scriptData.consistentCharacterSize
-                : (currentSettings.consistentCharacterSize ?? true);
-            const fixedAdvance = scriptData?.fixedAdvanceWidth !== undefined
-                ? scriptData.fixedAdvanceWidth
-                : (currentSettings.fixedAdvanceWidth ?? 1000);
+            const sTypo = getScriptTypographySettings(storeState, selectedScriptId);
+            const currentCustomGlyphs = isDefaultSelected
+                ? { ...(storeState.customGlyphs || {}), ...(storeState.scriptDataById?.[selectedScriptId]?.customGlyphs || {}) }
+                : (storeState.scriptDataById?.[selectedScriptId]?.customGlyphs || {});
 
             const base64Font = await compileFont(
                 currentCustomGlyphs, 
-                currentSettings.traceWidth ?? 30, 
-                currentSettings.customFontScale ?? 1.0,
+                sTypo.traceWidth ?? 30, 
+                sTypo.customFontScale ?? 1.0,
                 {
-                    consistentCharacterSize: isConsistent,
-                    fixedAdvanceWidth: fixedAdvance
+                    consistentCharacterSize: sTypo.consistentCharacterSize ?? true,
+                    fixedAdvanceWidth: sTypo.fixedAdvanceWidth ?? 1000
                 }
             );
             
@@ -391,25 +387,20 @@ export default function TypographyStudio() {
     };
 
     const handleToggleConsistentSize = async (enabled) => {
-        updateScriptData(selectedScriptId, { consistentCharacterSize: enabled });
-        if (isDefaultSelected) {
-            updateConfig({
-                typographySettings: {
-                    ...typographySettings,
-                    consistentCharacterSize: enabled
-                }
-            });
-        }
+        updateActiveScriptTypography({ consistentCharacterSize: enabled });
         const storeState = useConfigStore.getState();
-        const currentSettings = storeState.typographySettings || {};
-        const currentCustomGlyphs = (storeState.scriptDataById?.[selectedScriptId]?.customGlyphs) || storeState.customGlyphs || {};
+        const sTypo = getScriptTypographySettings(storeState, selectedScriptId);
+        const isDef = selectedScriptId === defaultScriptId;
+        const currentCustomGlyphs = isDef
+            ? { ...(storeState.customGlyphs || {}), ...(storeState.scriptDataById?.[selectedScriptId]?.customGlyphs || {}) }
+            : (storeState.scriptDataById?.[selectedScriptId]?.customGlyphs || {});
         const base64Font = await compileFont(
             currentCustomGlyphs, 
-            currentSettings.traceWidth ?? 30, 
-            currentSettings.customFontScale ?? 1.0,
+            sTypo.traceWidth ?? 30, 
+            sTypo.customFontScale ?? 1.0,
             {
                 consistentCharacterSize: enabled,
-                fixedAdvanceWidth: currentFixedAdvance || 1000
+                fixedAdvanceWidth: sTypo.fixedAdvanceWidth ?? 1000
             }
         );
         updateScriptData(selectedScriptId, { customFontBase64: base64Font });
@@ -420,20 +411,14 @@ export default function TypographyStudio() {
     };
 
     const handleUpdateFixedAdvance = (advance) => {
-        updateScriptData(selectedScriptId, { fixedAdvanceWidth: advance });
-        if (isDefaultSelected) {
-            updateConfig({
-                typographySettings: {
-                    ...typographySettings,
-                    fixedAdvanceWidth: advance
-                }
-            });
-        }
+        updateActiveScriptTypography({ fixedAdvanceWidth: advance });
     };
 
     const handleAutoCenterAllGlyphs = async () => {
         const storeState = useConfigStore.getState();
-        const rawCustomGlyphs = (storeState.scriptDataById?.[selectedScriptId]?.customGlyphs) || storeState.customGlyphs || {};
+        const rawCustomGlyphs = isDefaultSelected
+            ? { ...(storeState.customGlyphs || {}), ...(storeState.scriptDataById?.[selectedScriptId]?.customGlyphs || {}) }
+            : (storeState.scriptDataById?.[selectedScriptId]?.customGlyphs || {});
         const entries = Object.entries(rawCustomGlyphs);
         if (entries.length === 0) {
             toast('No drawn glyphs found in this script.');
@@ -501,16 +486,17 @@ export default function TypographyStudio() {
             if (isDefaultSelected) {
                 updateConfig({ customGlyphs: updatedGlyphs });
             }
-            updateScriptData(selectedScriptId, { customGlyphs: updatedGlyphs, consistentCharacterSize: true });
+            updateScriptData(selectedScriptId, { customGlyphs: updatedGlyphs });
+            updateActiveScriptTypography({ consistentCharacterSize: true });
 
-            const currentSettings = storeState.typographySettings || {};
+            const sTypo = getScriptTypographySettings(storeState, selectedScriptId);
             const base64Font = await compileFont(
                 updatedGlyphs,
-                currentSettings.traceWidth ?? 30,
-                currentSettings.customFontScale ?? 1.0,
+                sTypo.traceWidth ?? 30,
+                sTypo.customFontScale ?? 1.0,
                 {
                     consistentCharacterSize: true,
-                    fixedAdvanceWidth: currentFixedAdvance || 1000
+                    fixedAdvanceWidth: sTypo.fixedAdvanceWidth ?? 1000
                 }
             );
 
@@ -528,10 +514,9 @@ export default function TypographyStudio() {
 
     const unusedGlyphKeys = useMemo(() => {
         const storeState = useConfigStore.getState();
-        const activeGlyphs = { 
-            ...(storeState.customGlyphs || {}), 
-            ...(storeState.scriptDataById?.[editingScriptId]?.customGlyphs || {}) 
-        };
+        const activeGlyphs = isDefaultSelected
+            ? { ...(storeState.customGlyphs || {}), ...(storeState.scriptDataById?.[selectedScriptId]?.customGlyphs || {}) }
+            : (storeState.scriptDataById?.[selectedScriptId]?.customGlyphs || {});
         const usedCodes = new Set();
 
         const addStringToUsed = (str) => {
@@ -603,13 +588,13 @@ export default function TypographyStudio() {
         });
 
         return unused;
-    }, [customGlyphs, scriptDataById, editingScriptId, alphabetGlyphs, syllabaryMap, lexicon]);
+    }, [customGlyphs, scriptDataById, selectedScriptId, isDefaultSelected, alphabetGlyphs, syllabaryMap, lexicon]);
 
     const handleCleanUnusedGlyphs = async (keysToRemove) => {
         if (!keysToRemove || keysToRemove.length === 0) return;
         const removeAction = useConfigStore.getState().removeCustomGlyphs;
         if (removeAction) {
-            removeAction(keysToRemove);
+            removeAction(keysToRemove, selectedScriptId);
         }
         await handleRecompileFont();
         // Push immediately so a later cloud pull doesn't resurrect the removed glyphs
@@ -627,7 +612,7 @@ export default function TypographyStudio() {
         let count = 0;
 
         allChars.forEach(char => {
-            const key = editingMode === 'Base' ? char : `${char}_${editingMode.toLowerCase()}`;
+            const key = effectiveEditingMode === 'Base' ? char : `${char}_${effectiveEditingMode.toLowerCase()}`;
             if (!newGlyphs[key]) {
                 const mappedChar = mappingObj ? mappingObj[char] : char;
                 if (mappedChar) {
@@ -645,8 +630,9 @@ export default function TypographyStudio() {
         }
     };
 
-    const customModes = (typographySettings.customTypographyModes || []).filter(m => m.toLowerCase() !== 'uppercase' && m.toLowerCase() !== 'base');
+    const customModes = (scriptTypographySettings.customTypographyModes || []).filter(m => m.toLowerCase() !== 'uppercase' && m.toLowerCase() !== 'base');
     const allModes = ['Base', 'Uppercase', ...customModes];
+    const effectiveEditingMode = allModes.includes(editingMode) ? editingMode : 'Base';
 
     return (
         <div className="tab-pane-container">
@@ -659,13 +645,31 @@ export default function TypographyStudio() {
                 >
                     <FontStudioModal
                         targetLabel={t('settings.graphism.letterLabel', { char: drawingChar })}
+                        scriptId={selectedScriptId}
                         existingCharCode={(() => {
-                            const key = editingMode === 'Base' ? drawingChar : `${drawingChar}_${editingMode.toLowerCase()}`;
+                            const key = effectiveEditingMode === 'Base' ? drawingChar : `${drawingChar}_${effectiveEditingMode.toLowerCase()}`;
                             const existingUnicode = alphabetGlyphs[key];
                             return existingUnicode ? existingUnicode.codePointAt(0) : null;
                         })()}
                         onSave={(newCharUnicode) => updateGlyph(drawingChar, newCharUnicode)}
                         onCancel={() => setDrawingChar(null)}
+                    />
+                </Modal>
+            )}
+
+            {drawingLogogram && (
+                <Modal
+                    isOpen={!!drawingLogogram}
+                    onClose={() => setDrawingLogogram(null)}
+                    title={t('settings.graphism.drawCustomSymbol')}
+                    className="modal-wide"
+                >
+                    <FontStudioModal
+                        targetLabel={drawingLogogram.label || 'Ideogram'}
+                        scriptId={selectedScriptId}
+                        existingCharCode={drawingLogogram.charCode ?? null}
+                        onSave={() => setDrawingLogogram(null)}
+                        onCancel={() => setDrawingLogogram(null)}
                     />
                 </Modal>
             )}
@@ -693,7 +697,7 @@ export default function TypographyStudio() {
                 <span dangerouslySetInnerHTML={{ __html: t('settings.graphism.guideDesc') }} />
             </Infobox>
 
-            {hasMultipleScripts && (
+            {!hideScriptSelector && hasMultipleScripts && (
                 <Card style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                         <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', margin: 0 }}>
@@ -733,7 +737,53 @@ export default function TypographyStudio() {
 
             <Card style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                    <div style={{ flex: '1 1 300px' }}>
+                    <div style={{ flex: '1 1 280px' }}>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>{t('settings.general.scriptMappingLabel')}</h3>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '1rem' }}>
+                            {selectedScript?.name || t('orthography.scriptRegister')}
+                        </p>
+                        <select
+                            className="sg-select"
+                            style={{ width: '100%', padding: '0.5rem' }}
+                            value={alphabeticScript === 'custom' ? 'latin' : (alphabeticScript || 'latin')}
+                            onChange={handleAlphabeticScriptChange}
+                        >
+                            <option value="latin">{t('settings.general.scriptOptions.latin')}</option>
+                            {['alphabetic', 'abjad', 'abugida'].includes(scriptType || 'alphabetic') && (
+                                <>
+                                    <option value="cyrillic">{t('settings.general.scriptOptions.cyrillic')}</option>
+                                    <option value="greek">{t('settings.general.scriptOptions.greek')}</option>
+                                    <option value="runic">{t('settings.general.scriptOptions.runic')}</option>
+                                    <option value="georgian">{t('settings.general.scriptOptions.georgian')}</option>
+                                    <option value="arabic">{t('settings.general.scriptOptions.arabic')}</option>
+                                    <option value="hebrew">{t('settings.general.scriptOptions.hebrew')}</option>
+                                    <option value="devanagari">{t('settings.general.scriptOptions.devanagari')}</option>
+                                    <option value="thai">{t('settings.general.scriptOptions.thai')}</option>
+                                </>
+                            )}
+                            {scriptType === 'syllabic' && (
+                                <>
+                                    <option value="hiragana">{t('settings.general.scriptOptions.hiragana')}</option>
+                                    <option value="katakana">{t('settings.general.scriptOptions.katakana')}</option>
+                                    <option value="cherokee">{t('settings.general.scriptOptions.cherokee')}</option>
+                                    <option value="inuktitut">{t('settings.general.scriptOptions.inuktitut')}</option>
+                                    <option value="hangul_syllables">{t('settings.general.scriptOptions.hangul_syllables')}</option>
+                                </>
+                            )}
+                            {scriptType === 'logographic' && (
+                                <>
+                                    <option value="hanzi">{t('settings.general.scriptOptions.hanzi')}</option>
+                                    <option value="hieroglyphs">{t('settings.general.scriptOptions.hieroglyphs')}</option>
+                                </>
+                            )}
+                            {scriptType === 'featural_block' && (
+                                <>
+                                    <option value="hangul_jamo">{t('settings.general.scriptOptions.hangul_jamo')}</option>
+                                </>
+                            )}
+                        </select>
+                    </div>
+                    <div style={{ flex: '1 1 280px' }}>
                         <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--tx)', marginBottom: '0.5rem' }}>{t('settings.graphism.writingDirection')}</h3>
                         <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', marginBottom: '1rem' }}>{t('settings.graphism.writingDirectionDesc')}</p>
                         <select 
@@ -805,9 +855,14 @@ export default function TypographyStudio() {
                         >
                             <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--tx)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <Monitor size={16} className="text-accent" /> {t('settings.graphism.activeDisplayMode')}
+                                {hasMultipleScripts && selectedScript?.name && (
+                                    <span style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--acc)', background: 'var(--s3)', padding: '2px 8px', borderRadius: '999px', border: '1px solid var(--bd)' }}>
+                                        {selectedScript.name}
+                                    </span>
+                                )}
                             </span>
                             <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--tx2)', fontSize: '0.85rem' }}>
-                                <span>{typographySettings.activeDisplayMode || t('settings.graphism.modeBase')}</span>
+                                <span>{scriptTypographySettings.activeDisplayMode || t('settings.graphism.modeBase')}</span>
                                 <ChevronDown
                                     size={18}
                                     style={{
@@ -825,7 +880,7 @@ export default function TypographyStudio() {
                         <select 
                             className="sg-select" 
                             style={{ width: '100%', padding: '0.5rem' }}
-                            value={typographySettings.activeDisplayMode || 'Base'}
+                            value={scriptTypographySettings.activeDisplayMode || 'Base'}
                             onChange={handleUpdateDisplayMode}
                         >
                             <option value="Base">{t('settings.graphism.modeBase')}</option>
@@ -846,12 +901,12 @@ export default function TypographyStudio() {
                                     min="-1.5" 
                                     max="1.5" 
                                     step="0.1" 
-                                    value={typographySettings.letterSpacing || 0}
-                                    onChange={(e) => updateConfig({ typographySettings: { ...typographySettings, letterSpacing: parseFloat(e.target.value) } })}
+                                    value={scriptTypographySettings.letterSpacing || 0}
+                                    onChange={(e) => updateActiveScriptTypography({ letterSpacing: parseFloat(e.target.value) })}
                                     style={{ flex: 1, accentColor: 'var(--acc)' }}
                                 />
                                 <span style={{ color: 'var(--tx)', fontWeight: 'bold', minWidth: '40px' }}>
-                                    {(typographySettings.letterSpacing || 0).toFixed(1)}em
+                                    {(scriptTypographySettings.letterSpacing || 0).toFixed(1)}em
                                 </span>
                             </div>
                         </div>
@@ -867,12 +922,12 @@ export default function TypographyStudio() {
                                     min="-1.5" 
                                     max="1.5" 
                                     step="0.1" 
-                                    value={typographySettings.verticalLetterSpacing || 0}
-                                    onChange={(e) => updateConfig({ typographySettings: { ...typographySettings, verticalLetterSpacing: parseFloat(e.target.value) } })}
+                                    value={scriptTypographySettings.verticalLetterSpacing || 0}
+                                    onChange={(e) => updateActiveScriptTypography({ verticalLetterSpacing: parseFloat(e.target.value) })}
                                     style={{ flex: 1, accentColor: 'var(--acc)' }}
                                 />
                                 <span style={{ color: 'var(--tx)', fontWeight: 'bold', minWidth: '40px' }}>
-                                    {(typographySettings.verticalLetterSpacing || 0).toFixed(1)}em
+                                    {(scriptTypographySettings.verticalLetterSpacing || 0).toFixed(1)}em
                                 </span>
                             </div>
                         </div>
@@ -986,12 +1041,12 @@ export default function TypographyStudio() {
                                     min="0.5" 
                                     max="3.0" 
                                     step="0.1" 
-                                    value={typographySettings.customFontScale || 1.0}
-                                    onChange={(e) => updateConfig({ typographySettings: { ...typographySettings, customFontScale: parseFloat(e.target.value) } })}
+                                    value={scriptTypographySettings.customFontScale || 1.0}
+                                    onChange={(e) => updateActiveScriptTypography({ customFontScale: parseFloat(e.target.value) })}
                                     style={{ flex: 1, accentColor: 'var(--acc)' }}
                                 />
                                 <span style={{ color: 'var(--tx)', fontWeight: 'bold', minWidth: '40px' }}>
-                                    {(typographySettings.customFontScale || 1.0).toFixed(1)}x
+                                    {(scriptTypographySettings.customFontScale || 1.0).toFixed(1)}x
                                 </span>
                             </div>
                         </div>
@@ -1007,12 +1062,12 @@ export default function TypographyStudio() {
                                     min="5" 
                                     max="60" 
                                     step="1" 
-                                    value={typographySettings.traceWidth ?? 30}
-                                    onChange={(e) => updateConfig({ typographySettings: { ...typographySettings, traceWidth: parseInt(e.target.value) } })}
+                                    value={scriptTypographySettings.traceWidth ?? 30}
+                                    onChange={(e) => updateActiveScriptTypography({ traceWidth: parseInt(e.target.value, 10) })}
                                     style={{ flex: 1, accentColor: 'var(--acc)' }}
                                 />
                                 <span style={{ color: 'var(--tx)', fontWeight: 'bold', minWidth: '40px' }}>
-                                    {typographySettings.traceWidth ?? 30}px
+                                    {scriptTypographySettings.traceWidth ?? 30}px
                                 </span>
                             </div>
                         </div>
@@ -1101,14 +1156,121 @@ export default function TypographyStudio() {
                 />
             )}
 
-            {allChars.length > 0 && (
+            {scriptType === 'logographic' && (() => {
+                const scopedCustomGlyphs = isDefaultSelected
+                    ? { ...(customGlyphs || {}), ...(scriptData?.customGlyphs || {}) }
+                    : (scriptData?.customGlyphs || {});
+                const configSnapshot = { scriptSystems, scriptRules, lexicon };
+                const itemMap = new Map();
+
+                lexicon.forEach(entry => {
+                    const directForm = entry.scriptForms?.[selectedScriptId];
+                    const resolvedId = resolveWordScriptId(entry, configSnapshot);
+                    const usesThisScript = Boolean(directForm)
+                        || entry.scriptOverride === selectedScriptId
+                        || (!entry.scriptOverride && (resolvedId === selectedScriptId || isDefaultSelected));
+                    const glyphStr = directForm || (usesThisScript ? entry.ideogram : '');
+                    if (!glyphStr || !glyphStr.trim()) return;
+                    for (const ch of Array.from(glyphStr.trim())) {
+                        if (!ch.trim()) continue;
+                        if (!itemMap.has(ch)) {
+                            const cp = ch.codePointAt(0);
+                            itemMap.set(ch, {
+                                key: ch,
+                                char: ch,
+                                charCode: cp,
+                                strokes: scopedCustomGlyphs[cp] || scopedCustomGlyphs[String(cp)] || null,
+                                words: [`${entry.word} (${entry.translation || ''})`],
+                            });
+                        } else {
+                            itemMap.get(ch).words.push(`${entry.word} (${entry.translation || ''})`);
+                        }
+                    }
+                });
+
+                Object.entries(scopedCustomGlyphs).forEach(([codeKey, strokes]) => {
+                    const cp = Number(codeKey);
+                    if (!Number.isFinite(cp) || cp <= 0) return;
+                    const ch = String.fromCodePoint(cp);
+                    if (!itemMap.has(ch)) {
+                        itemMap.set(ch, {
+                            key: codeKey,
+                            char: ch,
+                            charCode: cp,
+                            strokes,
+                            words: [],
+                        });
+                    }
+                });
+
+                const logograms = Array.from(itemMap.values());
+
+                return (
+                    <Card style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                            <div>
+                                <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--tx)', margin: 0 }}>
+                                    {t('orthography.logographicRegisterTitle')}
+                                </h3>
+                                <p style={{ fontSize: '0.85rem', color: 'var(--tx2)', margin: '0.25rem 0 0 0' }}>
+                                    {t('orthography.logographicRegisterDesc')}
+                                </p>
+                            </div>
+                            <Button
+                                variant="primary"
+                                onClick={() => setDrawingLogogram({ charCode: null, label: selectedScript?.name || 'New Ideogram' })}
+                            >
+                                <Plus size={16} /> {t('createWord.drawSymbol')}
+                            </Button>
+                        </div>
+
+                        {logograms.length === 0 ? (
+                            <div className="empty-state glass">
+                                <Type size={40} className="text-tx2 opacity-20" />
+                                <p>{t('orthography.noLogographicFound')}</p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: '0.75rem' }}>
+                                {logograms.map(item => (
+                                    <div key={item.key} className="char-card glass" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '52px' }}>
+                                            {item.strokes ? (
+                                                <GlyphPreviewBadge glyph={item.char} strokes={item.strokes} scriptId={selectedScriptId} size={48} plain />
+                                            ) : (
+                                                <span className={`custom-font-text conlang-script-${selectedScriptId}`} style={{ fontSize: '2.2rem', lineHeight: 1 }}>
+                                                    {item.char}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div style={{ fontSize: '0.78rem', color: 'var(--tx2)', textAlign: 'center', wordBreak: 'break-word' }}>
+                                            {item.words.length > 0 ? item.words.slice(0, 2).join(', ') : `U+${item.charCode.toString(16).toUpperCase().padStart(4, '0')}`}
+                                        </div>
+                                        <button
+                                            className="btn-v btn-sec-v"
+                                            style={{ display: 'flex', gap: '6px', alignItems: 'center', fontSize: '0.8rem', padding: '4px 10px' }}
+                                            onClick={() => setDrawingLogogram({
+                                                charCode: item.charCode,
+                                                label: item.words[0] || item.char,
+                                            })}
+                                        >
+                                            <Brush size={13} /> {item.strokes ? t('settings.graphism.redrawBtn') : t('settings.graphism.drawBtn')}
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </Card>
+                );
+            })()}
+
+            {['alphabetic', 'abjad', 'abugida'].includes(scriptType || 'alphabetic') && allChars.length > 0 && (
                 <div className="alphabet-table-container">
                     <div style={{ padding: '1rem', background: 'var(--s2)', borderBottom: '1px solid var(--bd)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>{t('settings.graphism.currentlyEditing')}</h3>
                         <select 
                             className="sg-select" 
                             style={{ width: '200px' }}
-                            value={editingMode}
+                            value={effectiveEditingMode}
                             onChange={e => setEditingMode(e.target.value)}
                         >
                             {allModes.map(mode => (
@@ -1135,20 +1297,20 @@ export default function TypographyStudio() {
                                     <tr>
                                         <th>{t('settings.graphism.thLetter')}</th>
                                         <th>{t('settings.graphism.thName')}</th>
-                                        <th>{t('settings.graphism.thGlyph', { mode: editingMode === 'Base' ? t('settings.graphism.modeBase') : (editingMode === 'Uppercase' ? t('settings.graphism.modeUppercase') : editingMode) })}</th>
+                                        <th>{t('settings.graphism.thGlyph', { mode: effectiveEditingMode === 'Base' ? t('settings.graphism.modeBase') : (effectiveEditingMode === 'Uppercase' ? t('settings.graphism.modeUppercase') : effectiveEditingMode) })}</th>
                                         <th>{t('settings.graphism.thActions')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {allChars.map((char) => {
-                                        const key = editingMode === 'Base' ? char : `${char}_${editingMode.toLowerCase()}`;
+                                        const key = effectiveEditingMode === 'Base' ? char : `${char}_${effectiveEditingMode.toLowerCase()}`;
                                         const customGlyph = alphabetGlyphs[key];
                                         
                                         return (
                                             <tr key={char}>
                                                 <td className="letter-cell">
-                                                    <span className="ipa-badge custom-font-text">
-                                                        {editingMode === 'Uppercase' ? char.toUpperCase() : char}
+                                                    <span className={`ipa-badge custom-font-text conlang-script-${selectedScriptId}`}>
+                                                        {effectiveEditingMode === 'Uppercase' ? char.toUpperCase() : char}
                                                     </span>
                                                 </td>
                                                 
@@ -1181,21 +1343,32 @@ export default function TypographyStudio() {
                                                 </td>
                                                 
                                                 <td className="glyph-cell">
-                                                    <input 
-                                                        type="text" 
-                                                        className="sg-input custom-font-text" 
-                                                        style={{ 
-                                                            width: '100px', 
-                                                            padding: '4px 8px', 
-                                                            fontSize: '1.1rem', 
-                                                            textAlign: 'center',
-                                                            color: editingMode === 'Base' ? 'var(--tx)' : 'var(--acc)',
-                                                            fontWeight: 'bold'
-                                                        }}
-                                                        placeholder={t('settings.graphism.notDrawnPlaceholder')}
-                                                        value={customGlyph || ''}
-                                                        onChange={(e) => updateGlyph(char, e.target.value)}
-                                                    />
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        {customGlyph && (
+                                                            <GlyphPreviewBadge
+                                                                glyph={customGlyph}
+                                                                scriptId={selectedScriptId}
+                                                                size={28}
+                                                                hideOnEmpty
+                                                                plain
+                                                            />
+                                                        )}
+                                                        <input 
+                                                            type="text" 
+                                                            className={`sg-input custom-font-text conlang-script-${selectedScriptId}`} 
+                                                            style={{ 
+                                                                width: '90px', 
+                                                                padding: '4px 8px', 
+                                                                fontSize: '1.1rem', 
+                                                                textAlign: 'center',
+                                                                color: effectiveEditingMode === 'Base' ? 'var(--tx)' : 'var(--acc)',
+                                                                fontWeight: 'bold'
+                                                            }}
+                                                            placeholder={t('settings.graphism.notDrawnPlaceholder')}
+                                                            value={customGlyph || ''}
+                                                            onChange={(e) => updateGlyph(char, e.target.value)}
+                                                        />
+                                                    </div>
                                                 </td>
                                                 
                                                 <td className="actions-cell">

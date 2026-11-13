@@ -1,10 +1,17 @@
 import { useEffect } from "react";
 import { useConfigStore } from "../store/useConfigStore.jsx";
-import { getDefaultScriptId } from "./scriptResolver.js";
+import { getDefaultScriptId, getScriptTypographySettings } from "./scriptResolver.js";
 import { compileFontBufferInWorker } from "./fontCompiler.jsx";
 import { sanitizeCssFontUrl } from "./sanitizeHtml.js";
 
 const safeScriptFamily = (scriptId) => `ConlangScript_${String(scriptId || 'default').replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+
+const formatLetterSpacingCSS = (val) => {
+    const parsed = Number(val);
+    return val !== undefined && val !== null && Number.isFinite(parsed) && parsed !== 0
+        ? `${parsed}em`
+        : 'normal';
+};
 
 
 export function useFontInjector(){
@@ -23,7 +30,7 @@ export function useFontInjector(){
         let isCancelled = false;
         let styleNode = document.getElementById('custom-font');
 
-        const config = { scriptRules, scriptSystems };
+        const config = { scriptRules, scriptSystems, scriptDataById, typographySettings };
         const defaultScriptId = getDefaultScriptId(config);
 
         const buildAndInjectFonts = async () => {
@@ -55,12 +62,14 @@ export function useFontInjector(){
                 ...Object.keys(scriptDataById || {})
             ]);
 
-            const traceWidth = typographySettings?.traceWidth ?? 30;
-            const fontScale = typographySettings?.customFontScale ?? 1.0;
+            const defaultTypo = getScriptTypographySettings(config, defaultScriptId);
+            const defaultTraceWidth = defaultTypo.traceWidth ?? 30;
+            const defaultFontScale = defaultTypo.customFontScale ?? 1.0;
 
             for (const sId of allTargetScriptIds) {
                 const sData = scriptDataById?.[sId] || {};
                 const sGlyphs = sData.customGlyphs || {};
+                const sTypo = getScriptTypographySettings(config, sId);
                 
                 // Pull in any referenced glyphs from root customGlyphs if mapped in this script's syllabary or alphabet
                 const referencedCodes = new Set();
@@ -94,16 +103,15 @@ export function useFontInjector(){
                 // If no font exists yet for this script, but glyphs exist: compile!
                 if (!scriptFontMap[sId] && Object.keys(mergedGlyphs).length > 0) {
                     try {
-                        const isConsistent = sData?.consistentCharacterSize !== undefined
-                            ? sData.consistentCharacterSize
-                            : (typographySettings?.consistentCharacterSize ?? false);
-                        const fixedAdvance = sData?.fixedAdvanceWidth !== undefined
-                            ? sData.fixedAdvanceWidth
-                            : (typographySettings?.fixedAdvanceWidth ?? 1000);
-                        const compiledBuffer = await compileFontBufferInWorker(mergedGlyphs, traceWidth, fontScale, {
-                            consistentCharacterSize: isConsistent,
-                            fixedAdvanceWidth: fixedAdvance
-                        });
+                        const compiledBuffer = await compileFontBufferInWorker(
+                            mergedGlyphs,
+                            sTypo.traceWidth ?? 30,
+                            sTypo.customFontScale ?? 1.0,
+                            {
+                                consistentCharacterSize: sTypo.consistentCharacterSize ?? false,
+                                fixedAdvanceWidth: sTypo.fixedAdvanceWidth ?? 1000
+                            }
+                        );
                         if (compiledBuffer && !isCancelled) {
                             scriptFontMap[sId] = [compiledBuffer];
                         }
@@ -116,9 +124,9 @@ export function useFontInjector(){
             // If default script still has no font but root customGlyphs exists: compile default font!
             if (!scriptFontMap[defaultScriptId] && customGlyphs && Object.keys(customGlyphs).length > 0) {
                 try {
-                    const isConsistent = typographySettings?.consistentCharacterSize ?? false;
-                    const fixedAdvance = typographySettings?.fixedAdvanceWidth ?? 1000;
-                    const compiledBuffer = await compileFontBufferInWorker(customGlyphs, traceWidth, fontScale, {
+                    const isConsistent = defaultTypo.consistentCharacterSize ?? false;
+                    const fixedAdvance = defaultTypo.fixedAdvanceWidth ?? 1000;
+                    const compiledBuffer = await compileFontBufferInWorker(customGlyphs, defaultTraceWidth, defaultFontScale, {
                         consistentCharacterSize: isConsistent,
                         fixedAdvanceWidth: fixedAdvance
                     });
@@ -197,32 +205,40 @@ export function useFontInjector(){
                 });
             }
 
-            const parsedSpacing = Number(typographySettings?.letterSpacing);
-            const letterSpacingCSS = typographySettings?.letterSpacing && Number.isFinite(parsedSpacing)
-                ? parsedSpacing + 'em'
-                : 'normal';
-
-            const parsedVerticalSpacing = Number(typographySettings?.verticalLetterSpacing);
-            const verticalLetterSpacingCSS = typographySettings?.verticalLetterSpacing !== undefined && Number.isFinite(parsedVerticalSpacing)
-                ? parsedVerticalSpacing + 'em'
-                : 'normal';
+            const letterSpacingCSS = formatLetterSpacingCSS(defaultTypo.letterSpacing);
+            const verticalLetterSpacingCSS = formatLetterSpacingCSS(defaultTypo.verticalLetterSpacing);
 
             const defaultFontFamily = safeScriptFamily(defaultScriptId);
 
             // Build per-script CSS classes: .conlang-script-{scriptId}
-            // Always fall back to defaultFontFamily so glyphs defined in the primary script/root render cleanly
+            // High-specificity selectors ensure .conlang-script-* always beats generic
+            // .custom-font-text, .alpha-btn *, or .letter-filter-chip * rules,
+            // and isolates each script's own horizontal & vertical letter spacing.
             let perScriptCSS = '';
             for (const scriptId of allTargetScriptIds) {
+                const escapedId = CSS.escape(scriptId);
                 const family = loadedByScript[scriptId] ? safeScriptFamily(scriptId) : defaultFontFamily;
+                const sTypo = getScriptTypographySettings(config, scriptId);
+                const sLetterSpacingCSS = formatLetterSpacingCSS(sTypo.letterSpacing);
+                const sVerticalSpacingCSS = formatLetterSpacingCSS(sTypo.verticalLetterSpacing);
                 perScriptCSS += `
-                .conlang-script-${CSS.escape(scriptId)} {
+                .conlang-script-${escapedId},
+                .conlang-script-${escapedId} *,
+                .custom-font-text.conlang-script-${escapedId},
+                .entry-main-word.conlang-script-${escapedId},
+                .alpha-btn.conlang-script-${escapedId},
+                .alpha-btn.conlang-script-${escapedId} *,
+                .letter-filter-val.conlang-script-${escapedId},
+                .letter-filter-val.conlang-script-${escapedId} * {
                     font-family: '${family}', '${defaultFontFamily}', 'Inter', sans-serif !important;
                     font-weight: normal;
                     font-style: normal;
-                    letter-spacing: ${letterSpacingCSS} !important;
+                    letter-spacing: ${sLetterSpacingCSS} !important;
                 }
-                .conlang-script-${CSS.escape(scriptId)}[data-writing-direction="vertical"] {
-                    letter-spacing: ${verticalLetterSpacingCSS} !important;
+                .conlang-script-${escapedId}[data-writing-direction="vertical"],
+                [data-writing-direction="vertical"].conlang-script-${escapedId},
+                .conlang-script-${escapedId} [data-writing-direction="vertical"] {
+                    letter-spacing: ${sVerticalSpacingCSS} !important;
                 }
                 `;
             }

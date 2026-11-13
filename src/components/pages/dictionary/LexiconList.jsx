@@ -29,6 +29,26 @@ import { useShallow } from 'zustand/react/shallow';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
 import './lexiconList.css';
 
+// Resolves a lexicon entry's displayed script text respecting the active
+// script switcher, entry overrides, script rules, and transliteration.
+function resolveEntryDisplayText(entry, { activeDisplayScript, configFull, lexicon, transliterate, scriptSystems, stripHyphens = false }) {
+    const cleanWord = (entry?.word || '').replace(stripHyphens ? /[*-]/g : /\*/g, '');
+    if (activeDisplayScript === 'latin') {
+        return cleanWord;
+    }
+    const cleanEntry = stripHyphens ? { ...entry, word: cleanWord } : entry;
+    if (activeDisplayScript && activeDisplayScript !== 'auto') {
+        return renderWordInScript(cleanEntry, configFull, lexicon, activeDisplayScript).text || cleanWord;
+    }
+    if (entry?.scriptOverride || (scriptSystems && scriptSystems.length > 1)) {
+        return renderWordInScript(cleanEntry, configFull, lexicon).text || cleanWord;
+    }
+    if (entry?.ideogram) {
+        return entry.ideogram;
+    }
+    return transliterate(cleanWord, lexicon);
+}
+
 // Config fields read by the script helpers LexiconList calls. Union scanned
 // across utils/scriptResolver.js, utils/scriptRendering.js and
 // utils/transliteration.js.
@@ -166,10 +186,13 @@ export default function LexiconList() {
                 letters.add(first.toUpperCase() + rest.toLowerCase());
             });
             lexicon.forEach(w => {
-                const cleanWord = (w.word || '').replace(/\*/g, '');
-                const displayWord = w.scriptOverride 
-                    ? renderWordInScript(w, configFull, lexicon).text 
-                    : (w.ideogram || transliterate(cleanWord, lexicon));
+                const displayWord = resolveEntryDisplayText(w, {
+                    activeDisplayScript,
+                    configFull,
+                    lexicon,
+                    transliterate,
+                    scriptSystems
+                });
                 if (displayWord) {
                     letters.add(extractFirstCustomLetter(displayWord, customAlphabet));
                 }
@@ -213,10 +236,13 @@ export default function LexiconList() {
 
         // 2. Add first letters from actual lexicon words (fallback / auto-discovery)
         lexicon.forEach(w => {
-            const cleanWord = (w.word || '').replace(/\*/g, '');
-            const displayWord = w.scriptOverride 
-                ? renderWordInScript(w, configFull, lexicon).text 
-                : (w.ideogram || transliterate(cleanWord, lexicon));
+            const displayWord = resolveEntryDisplayText(w, {
+                activeDisplayScript,
+                configFull,
+                lexicon,
+                transliterate,
+                scriptSystems
+            });
             if (displayWord) {
                 const firstChar = Array.from(displayWord)[0];
                 if (firstChar) {
@@ -229,7 +255,7 @@ export default function LexiconList() {
         });
         
         return [...letters].filter(Boolean).sort((a, b) => a.localeCompare(b));
-    }, [lexicon, transliterate, consonants, vowels, otherPhonemes, customAlphabet, isScriptMode, configFull]);
+    }, [lexicon, transliterate, consonants, vowels, otherPhonemes, customAlphabet, isScriptMode, configFull, activeDisplayScript, scriptSystems]);
 
     // Do the same for word classes (Noun, Verb, etc.) to populate the dropdown
     const uniqueClasses = useMemo(() => {
@@ -290,7 +316,13 @@ export default function LexiconList() {
                 result = result.map(e => {
                     const safeWord = (e.word || '').replace(/\*/g, '').toLowerCase();
                     const normalizedWord = normalizeToBase(safeWord).toLowerCase();
-                    const displayWord = ((e.ideogram && !e.scriptOverride) ? e.ideogram : transliterate(e.word || '', lexicon)).toLowerCase();
+                    const displayWord = resolveEntryDisplayText(e, {
+                        activeDisplayScript,
+                        configFull,
+                        lexicon,
+                        transliterate,
+                        scriptSystems
+                    }).toLowerCase();
                     const trans = (e.translation || '').toLowerCase();
                     const def = (e.definition || '').toLowerCase();
                     const ipa = (e.ipa || '').toLowerCase();
@@ -331,10 +363,14 @@ export default function LexiconList() {
 
         if (filters.letter !== 'all') {
             result = result.filter(e => {
-                const cleanWord = (e.word || '').replace(/[*-]/g, '');
-                const displayWord = e.scriptOverride 
-                    ? renderWordInScript(e, configFull, lexicon).text 
-                    : (e.ideogram || transliterate(cleanWord, lexicon));
+                const displayWord = resolveEntryDisplayText(e, {
+                    activeDisplayScript,
+                    configFull,
+                    lexicon,
+                    transliterate,
+                    scriptSystems,
+                    stripHyphens: true
+                });
                 if (customAlphabet && customAlphabet.trim()) {
                     const firstLetter = extractFirstCustomLetter(displayWord, customAlphabet);
                     return firstLetter.toLowerCase() === filters.letter.toLowerCase();
@@ -393,7 +429,7 @@ export default function LexiconList() {
         }
 
         return result;
-    }, [lexicon, filters, transliterate, showBoundMorphemes, grammarRules, normalizeToBase, consonants, vowels, otherPhonemes, customAlphabet, configFull]);
+    }, [lexicon, filters, transliterate, showBoundMorphemes, grammarRules, normalizeToBase, consonants, vowels, otherPhonemes, customAlphabet, configFull, activeDisplayScript, scriptSystems]);
 
     // Group identical conlang words visually so the user can see multiple senses under 1 dictionary entry.
     // Homophones with different ideograms or different scripts remain separate cards so distinct
@@ -531,6 +567,14 @@ export default function LexiconList() {
         }
     };
 
+    const isLatinPreview = activeDisplayScript === 'latin';
+    const previewScriptId = (!isLatinPreview && activeDisplayScript && activeDisplayScript !== 'auto')
+        ? activeDisplayScript
+        : defaultScriptId;
+    const activePreviewScript = getScriptSystem(configFull, previewScriptId);
+    const isAnyConscript = isScriptMode || scriptSystems.length > 1 || scriptSystems.some(s => s.type && s.type !== 'alphabetic');
+    const isPreviewNonLatin = !isLatinPreview && (isScriptMode || (activePreviewScript && activePreviewScript.type !== 'latin') || (activeDisplayScript && activeDisplayScript !== 'auto'));
+
     return (
         <div className="lexicon-container">
             {selectedGlyphDetails && (
@@ -626,7 +670,7 @@ export default function LexiconList() {
                         {t('lexicon.showAffixes')}
                     </label>
 
-                    {isScriptMode && (
+                    {isAnyConscript && !isLatinPreview && (
                         <label className="bound-toggle">
                             <input 
                                 type="checkbox" 
@@ -688,14 +732,17 @@ export default function LexiconList() {
                         {filters.letter !== 'all' && (
                             <button type="button" className="tag-chip letter-filter-chip" aria-label="Remove starting-letter filter" onClick={() => updateFilter('letter', 'all')}>
                                 {t('lexicon.startsWith')}{' '}
-                                <span className={`letter-filter-val notranslate custom-font-text conlang-script-${defaultScriptId}`}>
-                                    <GlyphPreviewBadge 
-                                        glyph={filters.letter} 
-                                        size={14} 
-                                        strokeWidth={20}
-                                        strokeColor="currentColor"
-                                        plain={true}
-                                    />
+                                <span className={`letter-filter-val notranslate ${isPreviewNonLatin ? `custom-font-text conlang-script-${previewScriptId}` : ''}`}>
+                                    {isLatinPreview ? filters.letter : (
+                                        <GlyphPreviewBadge 
+                                            glyph={filters.letter} 
+                                            scriptId={previewScriptId}
+                                            size={14} 
+                                            strokeWidth={20}
+                                            strokeColor="currentColor"
+                                            plain={true}
+                                        />
+                                    )}
                                 </span>
                                 {' '}<X size={12} />
                             </button>
@@ -738,17 +785,20 @@ export default function LexiconList() {
                                 <button 
                                     type="button"
                                     key={letter}
-                                    className={`alpha-btn notranslate custom-font-text conlang-script-${defaultScriptId} ${filters.letter === letter ? 'active' : ''}`}
+                                    className={`alpha-btn notranslate ${isPreviewNonLatin ? `custom-font-text conlang-script-${previewScriptId}` : ''} ${filters.letter === letter ? 'active' : ''}`}
                                     onClick={() => updateFilter('letter', letter)}
                                     title={typeof letter === 'string' && letter.codePointAt(0) ? `U+${letter.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}` : String(letter)}
                                 >
-                                    <GlyphPreviewBadge 
-                                        glyph={letter} 
-                                        size={18} 
-                                        strokeWidth={22}
-                                        strokeColor="currentColor"
-                                        plain={true}
-                                    />
+                                    {isLatinPreview ? letter : (
+                                        <GlyphPreviewBadge 
+                                            glyph={letter} 
+                                            scriptId={previewScriptId}
+                                            size={18} 
+                                            strokeWidth={22}
+                                            strokeColor="currentColor"
+                                            plain={true}
+                                        />
+                                    )}
                                 </button>
                             ))}
                         </div>
@@ -834,20 +884,17 @@ export default function LexiconList() {
                     const wordScriptId = (activeDisplayScript && activeDisplayScript !== 'auto' && !isLatinSelected)
                         ? activeDisplayScript
                         : resolveWordScriptId(baseEntry, configFull);
+                    const cardScript = getScriptSystem(configFull, wordScriptId);
+                    const cardScriptType = isLatinSelected ? 'latin' : (cardScript?.type || phonologyTypes || 'alphabetic');
 
                     // Respect active script switcher if selected, otherwise entry's own script/ideogram
-                    let displayWord;
-                    if (isLatinSelected) {
-                        displayWord = safeWord;
-                    } else if (activeDisplayScript && activeDisplayScript !== 'auto') {
-                        displayWord = renderWordInScript(baseEntry, configFull, lexicon, activeDisplayScript).text || safeWord;
-                    } else if (baseEntry.scriptOverride) {
-                        displayWord = renderWordInScript(baseEntry, configFull, lexicon).text;
-                    } else if (baseEntry.ideogram) {
-                        displayWord = baseEntry.ideogram;
-                    } else {
-                        displayWord = transliterate(safeWord, lexicon);
-                    }
+                    const displayWord = resolveEntryDisplayText(baseEntry, {
+                        activeDisplayScript,
+                        configFull,
+                        lexicon,
+                        transliterate,
+                        scriptSystems
+                    });
 
                     // Auto-compute prosody from rules if no manual values set
                     const computed = (filters.showTones && (!baseEntry.stress || !baseEntry.tone) && (stressRules.length > 0 || toneRules.length > 0))
@@ -910,14 +957,14 @@ export default function LexiconList() {
                                     </div>
 
                                     {/* Romanized form — shown as a dedicated readable line when toggle is on */}
-                                    {isScriptMode && showRomanization && (
+                                    {(isScriptMode || !['latin', 'alphabetic', 'abjad', 'abugida'].includes(cardScriptType) || wordScriptId !== defaultScriptId) && !isLatinSelected && showRomanization && (
                                         <span className="notranslate entry-romanized">
                                             {safeWord}
                                         </span>
                                     )}
 
                                     {/* Compact bracket form — shown when toggle is off */}
-                                    {(!['alphabetic', 'abjad', 'abugida'].includes(phonologyTypes || 'alphabetic')) && !showRomanization && !isLatinSelected && (
+                                    {(!['latin', 'alphabetic', 'abjad', 'abugida'].includes(cardScriptType)) && !showRomanization && !isLatinSelected && (
                                         <span className="notranslate entry-base-word">
                                             [{safeWord}]
                                         </span>
@@ -981,7 +1028,7 @@ export default function LexiconList() {
                                     <Button variant="edit" onClick={() => setNewSenseBase(baseEntry)} title={t('lexicon.addDefinition')} className="btn-icon-only">
                                         <PlusCircle size={16} />
                                     </Button>
-                                    {(!['alphabetic', 'abjad', 'abugida'].includes(phonologyTypes || 'alphabetic')) && (
+                                    {(!isLatinSelected && !['latin', 'alphabetic', 'abjad', 'abugida'].includes(cardScriptType)) && (
                                         <>
                                             {(() => {
                                                 const wordScript = getScriptSystem(configFull, wordScriptId);

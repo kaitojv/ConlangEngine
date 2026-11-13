@@ -182,6 +182,53 @@ export function resolveWordScriptId(entry, config) {
 }
 
 /**
+ * Default per-script typography display & compilation settings.
+ */
+export const DEFAULT_TYPOGRAPHY_SETTINGS = {
+    customTypographyModes: [],
+    activeDisplayMode: 'Base',
+    letterSpacing: 0,
+    verticalLetterSpacing: 0,
+    consistentCharacterSize: true,
+    fixedAdvanceWidth: 1000,
+    customFontScale: 1.0,
+    traceWidth: 30,
+};
+
+/**
+ * Resolve typography settings for a specific script.
+ * Non-default scripts keep their own independent spacing, scale, trace width,
+ * display modes, and em-box sizing rather than inheriting changes made to the
+ * default script.
+ */
+export function getScriptTypographySettings(config, scriptId) {
+    const script = getScriptSystem(config, scriptId);
+    const data = getScriptData(config, scriptId);
+    const defaultId = getDefaultScriptId(config);
+    const isDefault = (script?.id || scriptId || defaultId) === defaultId;
+    const globalTs = config?.typographySettings || {};
+    const scriptTs = script?.typographySettings || {};
+
+    const pick = (key, fallbackVal) => {
+        if (scriptTs[key] !== undefined) return scriptTs[key];
+        if (data?.[key] !== undefined) return data[key];
+        if (isDefault && globalTs[key] !== undefined) return globalTs[key];
+        return fallbackVal;
+    };
+
+    return {
+        customTypographyModes: pick('customTypographyModes', []),
+        activeDisplayMode: pick('activeDisplayMode', 'Base'),
+        letterSpacing: pick('letterSpacing', 0),
+        verticalLetterSpacing: pick('verticalLetterSpacing', 0),
+        consistentCharacterSize: pick('consistentCharacterSize', true),
+        fixedAdvanceWidth: pick('fixedAdvanceWidth', 1000),
+        customFontScale: pick('customFontScale', 1.0),
+        traceWidth: pick('traceWidth', 30),
+    };
+}
+
+/**
  * Build a compatibility config object for one script.
  * This overlays script-specific settings onto the base config
  * so existing transliteration/rendering code can use it unchanged.
@@ -199,6 +246,7 @@ export function buildScriptConfig(config, scriptId) {
         blockSettings: script.blockSettings,
         blockTemplates: script.blockTemplates,
         alphabetNames: script.alphabetNames,
+        typographySettings: getScriptTypographySettings(config, scriptId),
         customGlyphs: data.customGlyphs,
         syllabaryMap: data.syllabaryMap,
         featuralComponents: data.featuralComponents,
@@ -233,6 +281,7 @@ export function repairScriptSystems(config) {
             blockSettings: config.blockSettings || { maxChars: 3, layoutTemplate: '2top1bottom', slotMapping: ['Initial', 'Vowel', 'Final'] },
             blockTemplates: config.blockTemplates || [],
             alphabetNames: config.alphabetNames || {},
+            ...(config.typographySettings ? { typographySettings: { ...DEFAULT_TYPOGRAPHY_SETTINGS, ...config.typographySettings } } : {}),
         });
     }
 

@@ -3,11 +3,11 @@ import React, { useState } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { SCRIPT_TYPES, getDefaultScriptId } from '../../../utils/scriptResolver.js';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
-import { Plus, Trash2, Edit2, Check, X, Copy, AlertTriangle, GripVertical, Star } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X, Copy, AlertTriangle, GripVertical, Star, Brush } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './scriptManager.css';
 
-export default function ScriptManager() {
+export default function ScriptManager({ onEditScript } = {}) {
     const { t } = useTranslation();
     const scriptSystems = useConfigStore(state => state.scriptSystems) || [];
     const scriptRules = useConfigStore(state => state.scriptRules) || {};
@@ -18,6 +18,8 @@ export default function ScriptManager() {
 
     const TYPE_LABELS = {
         alphabetic: t('orthography.scriptManager.types.alphabetic', 'Alphabetic'),
+        abjad: t('settings.general.typologyOptions.abjad', 'Abjad'),
+        abugida: t('settings.general.typologyOptions.abugida', 'Abugida'),
         syllabic: t('orthography.scriptManager.types.syllabic', 'Syllabic'),
         logographic: t('orthography.scriptManager.types.logographic', 'Logographic'),
         featural_block: t('orthography.scriptManager.types.featural_block', 'Featural Block'),
@@ -249,6 +251,16 @@ export default function ScriptManager() {
                             ))}
                         </select>
                         <div className="script-card-meta-spacer" />
+                        {onEditScript && (
+                            <button
+                                className="script-default-btn"
+                                onClick={() => onEditScript(script.id)}
+                                title={t('settings.graphism.title')}
+                            >
+                                <Brush size={13} />
+                                {t('settings.graphism.title')}
+                            </button>
+                        )}
                         <button
                             className={`script-default-btn ${isDefault ? 'script-default-btn-active' : ''}`}
                             onClick={() => !isDefault && handleSetDefault(script.id)}

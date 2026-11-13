@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { normalizeScriptType, normalizeScriptName, repairScriptSystems, normalizeRuleKey, getDefaultScriptId } from '../utils/scriptResolver.js';
+import { normalizeScriptType, normalizeScriptName, repairScriptSystems, normalizeRuleKey, getDefaultScriptId, getScriptTypographySettings } from '../utils/scriptResolver.js';
 
 export function getInitialLanguage() {
     if (typeof localStorage !== 'undefined') {
@@ -775,19 +775,23 @@ export const useConfigStore = create(
             // Cleanup utility (deprecated: no-op to protect user glyphs)
             purgeBloatedGlyphs: () => set(() => ({})),
 
-            removeCustomGlyphs: (charCodesToRemove) => {
+            removeCustomGlyphs: (charCodesToRemove, targetScriptId = null) => {
                 const state = useConfigStore.getState();
                 const { projectId, scriptRules, scriptDataById } = state;
                 const defaultScriptId = scriptRules?.defaultScriptId || 'default';
                 const codesSet = new Set(charCodesToRemove.map(String));
+                const stripRoot = !targetScriptId || targetScriptId === defaultScriptId;
 
                 const nextCustomGlyphs = { ...state.customGlyphs };
-                codesSet.forEach(code => delete nextCustomGlyphs[code]);
+                if (stripRoot) {
+                    codesSet.forEach(code => delete nextCustomGlyphs[code]);
+                }
 
-                // Strip the codes from every script's glyph map, tracking which scripts changed
+                // Strip the codes from the targeted script (or every script when targetScriptId is omitted)
                 const nextScriptDataById = { ...(scriptDataById || {}) };
                 const changedScriptIds = new Set();
-                Object.keys(nextScriptDataById).forEach(sId => {
+                const targetIds = targetScriptId ? [targetScriptId] : Object.keys(nextScriptDataById);
+                targetIds.forEach(sId => {
                     if (nextScriptDataById[sId]?.customGlyphs) {
                         const sg = { ...nextScriptDataById[sId].customGlyphs };
                         let changed = false;
@@ -805,10 +809,12 @@ export const useConfigStore = create(
                 });
 
                 if (projectId) {
-                    saveLargeDataToDB(projectId, { customGlyphs: nextCustomGlyphs });
+                    if (stripRoot) {
+                        saveLargeDataToDB(projectId, { customGlyphs: nextCustomGlyphs });
+                        changedScriptIds.add(defaultScriptId);
+                    }
                     // Persist every script that changed (previously only the default script was saved,
                     // so orphans in other scripts came back after a reload).
-                    changedScriptIds.add(defaultScriptId);
                     changedScriptIds.forEach(sId => {
                         if (nextScriptDataById[sId]) {
                             saveScriptDataToDB(projectId, sId, nextScriptDataById[sId]);
@@ -839,35 +845,44 @@ export const useConfigStore = create(
              * Both customGlyphs and each script's own copy are updated, and the
              * large-data layer is patched alongside, matching addCustomGlyph.
              */
-            simplifyAllGlyphs: (simplifiedTopLevel, simplifiedByScript, base64Font) => {
+            simplifyAllGlyphs: (simplifiedTopLevel, simplifiedByScript, base64FontOrByScript) => {
                 const state = useConfigStore.getState();
-                const { projectId, scriptDataById } = state;
+                const { projectId, scriptDataById, scriptRules } = state;
+                const defaultScriptId = scriptRules?.defaultScriptId || 'default';
+                const isFontMap = base64FontOrByScript && typeof base64FontOrByScript === 'object' && !Array.isArray(base64FontOrByScript);
+                const rootFont = isFontMap ? base64FontOrByScript[defaultScriptId] : base64FontOrByScript;
 
                 const nextScriptDataById = { ...scriptDataById };
                 for (const [scriptId, glyphs] of Object.entries(simplifiedByScript || {})) {
                     const existing = scriptDataById[scriptId] || {};
+                    const scriptFont = isFontMap ? base64FontOrByScript[scriptId] : base64FontOrByScript;
                     nextScriptDataById[scriptId] = {
                         ...existing,
                         customGlyphs: glyphs,
-                        ...(base64Font ? { customFontBase64: base64Font, customFont: base64Font } : {}),
+                        ...(scriptFont ? { customFontBase64: scriptFont, customFont: scriptFont } : {}),
                     };
                 }
 
                 if (projectId) {
                     const bloatPatch = { customGlyphs: simplifiedTopLevel };
                     for (const [scriptId, glyphs] of Object.entries(simplifiedByScript || {})) {
-                        bloatPatch[scriptId] = { ...(scriptDataById[scriptId] || {}), customGlyphs: glyphs };
+                        const scriptFont = isFontMap ? base64FontOrByScript[scriptId] : base64FontOrByScript;
+                        bloatPatch[scriptId] = {
+                            ...(scriptDataById[scriptId] || {}),
+                            customGlyphs: glyphs,
+                            ...(scriptFont ? { customFontBase64: scriptFont, customFont: scriptFont } : {}),
+                        };
                     }
-                    if (base64Font) {
-                        bloatPatch.customFontBase64 = base64Font;
-                        bloatPatch.customFont = base64Font;
+                    if (rootFont) {
+                        bloatPatch.customFontBase64 = rootFont;
+                        bloatPatch.customFont = rootFont;
                     }
                     saveLargeDataToDB(projectId, bloatPatch);
                 }
 
                 set(() => ({
                     customGlyphs: simplifiedTopLevel,
-                    ...(base64Font ? { customFontBase64: base64Font, customFont: base64Font } : {}),
+                    ...(rootFont ? { customFontBase64: rootFont, customFont: rootFont } : {}),
                     scriptDataById: nextScriptDataById,
                     lastGlyphUpdate: Date.now(),
                 }));
@@ -878,10 +893,13 @@ export const useConfigStore = create(
                 const { projectId, scriptRules, scriptDataById } = state;
                 const defaultScriptId = scriptRules?.defaultScriptId || 'default';
                 const resolvedScriptId = targetScriptId || defaultScriptId;
+                const isDefault = resolvedScriptId === defaultScriptId;
 
-                const nextCustomGlyphs = { ...state.customGlyphs, [charCode]: strokesArray };
                 const currentScriptData = scriptDataById[resolvedScriptId] || {};
-                const nextScriptGlyphs = { ...(currentScriptData.customGlyphs || {}), [charCode]: strokesArray };
+                const baseScriptGlyphs = isDefault
+                    ? { ...(state.customGlyphs || {}), ...(currentScriptData.customGlyphs || {}) }
+                    : { ...(currentScriptData.customGlyphs || {}) };
+                const nextScriptGlyphs = { ...baseScriptGlyphs, [charCode]: strokesArray };
                 const newScriptData = {
                     ...currentScriptData,
                     customGlyphs: nextScriptGlyphs,
@@ -890,47 +908,59 @@ export const useConfigStore = create(
 
                 if (projectId) {
                     const bloatPatch = {
-                        customGlyphs: nextCustomGlyphs,
                         [resolvedScriptId]: newScriptData
                     };
-                    if (base64Font) {
-                        bloatPatch.customFontBase64 = base64Font;
-                        bloatPatch.customFont = base64Font;
+                    if (isDefault) {
+                        bloatPatch.customGlyphs = nextScriptGlyphs;
+                        if (base64Font) {
+                            bloatPatch.customFontBase64 = base64Font;
+                            bloatPatch.customFont = base64Font;
+                        }
                     }
                     saveLargeDataToDB(projectId, bloatPatch);
                 }
 
                 set((state) => ({
-                    customGlyphs: nextCustomGlyphs,
-                    ...(base64Font ? { customFontBase64: base64Font, customFont: base64Font } : {}),
+                    ...(isDefault ? {
+                        customGlyphs: nextScriptGlyphs,
+                        ...(base64Font ? { customFontBase64: base64Font, customFont: base64Font } : {}),
+                    } : {}),
                     scriptDataById: {
                         ...state.scriptDataById,
                         [resolvedScriptId]: newScriptData
                     },
+                    lastGlyphUpdate: Date.now(),
                     ...(isSilent ? {} : {
                         activity: [{ text: `Created custom glyph (${charCode})`, time: new Date().toISOString() }, ...(state.activity || [])].slice(0, 15)
                     })
                 }));
             },
 
-            incrementPuaCounter: () => {
+            incrementPuaCounter: (targetScriptId = null) => {
                 const state = useConfigStore.getState();
                 const { projectId, scriptRules, scriptDataById } = state;
                 const defaultScriptId = scriptRules?.defaultScriptId || 'default';
-                const nextCounter = state.puaCounter + 1;
+                const resolvedScriptId = targetScriptId || defaultScriptId;
+                const isDefault = resolvedScriptId === defaultScriptId;
+                const currentScriptData = scriptDataById[resolvedScriptId] || {};
+                const currentCounter = isDefault
+                    ? (currentScriptData.puaCounter || state.puaCounter || 57344)
+                    : (currentScriptData.puaCounter || 57344);
+                const nextCounter = currentCounter + 1;
                 
                 if (projectId) {
-                    const scriptData = scriptDataById[defaultScriptId] || {};
-                    saveScriptDataToDB(projectId, defaultScriptId, { ...scriptData, puaCounter: nextCounter });
-                    saveLargeDataToDB(projectId, { puaCounter: nextCounter });
+                    saveScriptDataToDB(projectId, resolvedScriptId, { ...currentScriptData, puaCounter: nextCounter });
+                    if (isDefault) {
+                        saveLargeDataToDB(projectId, { puaCounter: nextCounter });
+                    }
                 }
 
-                set((state) => ({ 
-                    puaCounter: nextCounter,
+                set((state) => ({
+                    ...(isDefault ? { puaCounter: nextCounter } : {}),
                     scriptDataById: {
                         ...state.scriptDataById,
-                        [defaultScriptId]: {
-                            ...(state.scriptDataById[defaultScriptId] || {}),
+                        [resolvedScriptId]: {
+                            ...(state.scriptDataById[resolvedScriptId] || {}),
                             puaCounter: nextCounter
                         }
                     }
@@ -1144,6 +1174,10 @@ export const useConfigStore = create(
                     blockSettings: partialScript.blockSettings || INITIAL_CONFIG.blockSettings,
                     blockTemplates: partialScript.blockTemplates || [],
                     alphabetNames: partialScript.alphabetNames || {},
+                    typographySettings: {
+                        ...INITIAL_CONFIG.typographySettings,
+                        ...(partialScript.typographySettings || {}),
+                    },
                 };
 
                 const scriptSystems = [...(state.scriptSystems || []), newScript];
@@ -1238,6 +1272,8 @@ export const useConfigStore = create(
             }),
 
             updateScriptSystem: (scriptId, patch) => set((state) => {
+                const defaultId = state.scriptRules?.defaultScriptId || 'default';
+                let normalizedType = null;
                 const systems = (state.scriptSystems || []).map(s => {
                     if (s.id !== scriptId) return s;
                     const updated = { ...s, ...patch };
@@ -1245,23 +1281,147 @@ export const useConfigStore = create(
                         updated.name = normalizeScriptName(patch.name, s.name);
                     }
                     if (patch.type !== undefined) {
-                        updated.type = normalizeScriptType(patch.type);
+                        normalizedType = normalizeScriptType(patch.type);
+                        updated.type = normalizedType;
                     }
                     return updated;
                 });
-                return { scriptSystems: systems };
+
+                const legacyMirror = {};
+                if (scriptId === defaultId) {
+                    if (normalizedType !== null) legacyMirror.phonologyTypes = normalizedType;
+                    if (patch.alphabeticScript !== undefined) legacyMirror.alphabeticScript = patch.alphabeticScript;
+                    if (patch.writingDirection !== undefined) legacyMirror.writingDirection = patch.writingDirection;
+                    if (patch.alphabetNames !== undefined) legacyMirror.alphabetNames = patch.alphabetNames;
+                    if (patch.blockSettings !== undefined) legacyMirror.blockSettings = patch.blockSettings;
+                    if (patch.blockTemplates !== undefined) legacyMirror.blockTemplates = patch.blockTemplates;
+                    if (patch.typographySettings !== undefined) legacyMirror.typographySettings = patch.typographySettings;
+                }
+                return { scriptSystems: systems, ...legacyMirror };
+            }),
+
+            updateScriptTypography: (scriptId, typographyPatch) => set((state) => {
+                const defaultId = state.scriptRules?.defaultScriptId || 'default';
+                const resolvedId = scriptId || defaultId;
+                const currentTypography = getScriptTypographySettings(state, resolvedId);
+                const nextTypography = { ...currentTypography, ...typographyPatch };
+
+                const systems = (state.scriptSystems || []).map(s =>
+                    s.id === resolvedId ? { ...s, typographySettings: nextTypography } : s
+                );
+
+                const dataPatch = {};
+                if (typographyPatch.consistentCharacterSize !== undefined) {
+                    dataPatch.consistentCharacterSize = typographyPatch.consistentCharacterSize;
+                }
+                if (typographyPatch.fixedAdvanceWidth !== undefined) {
+                    dataPatch.fixedAdvanceWidth = typographyPatch.fixedAdvanceWidth;
+                }
+
+                let nextScriptDataById = state.scriptDataById;
+                if (Object.keys(dataPatch).length > 0) {
+                    const prevData = (state.scriptDataById && state.scriptDataById[resolvedId]) || {};
+                    const updatedData = { ...prevData, ...dataPatch };
+                    nextScriptDataById = { ...(state.scriptDataById || {}), [resolvedId]: updatedData };
+                    if (state.projectId) {
+                        saveScriptDataToDB(state.projectId, resolvedId, updatedData);
+                    }
+                }
+
+                return {
+                    scriptSystems: systems,
+                    ...(nextScriptDataById !== state.scriptDataById ? { scriptDataById: nextScriptDataById } : {}),
+                    ...(resolvedId === defaultId ? { typographySettings: nextTypography } : {}),
+                };
             }),
 
             setDefaultScriptSystem: (scriptId) => set((state) => {
+                const prevDefaultId = state.scriptRules?.defaultScriptId || 'default';
+                const prevScriptDataById = { ...(state.scriptDataById || {}) };
+                const prevDefaultTypography = prevDefaultId && prevDefaultId !== scriptId
+                    ? getScriptTypographySettings(state, prevDefaultId)
+                    : null;
+
+                // Preserve previous default script's root data in scriptDataById before switching
+                if (prevDefaultId && prevDefaultId !== scriptId) {
+                    const prevBucket = prevScriptDataById[prevDefaultId] || {};
+                    prevScriptDataById[prevDefaultId] = {
+                        ...prevBucket,
+                        customGlyphs: (prevBucket.customGlyphs && Object.keys(prevBucket.customGlyphs).length > 0)
+                            ? prevBucket.customGlyphs
+                            : (state.customGlyphs || {}),
+                        syllabaryMap: (prevBucket.syllabaryMap && Object.keys(prevBucket.syllabaryMap).length > 0)
+                            ? prevBucket.syllabaryMap
+                            : (state.syllabaryMap || {}),
+                        featuralComponents: (prevBucket.featuralComponents && Object.keys(prevBucket.featuralComponents).length > 0)
+                            ? prevBucket.featuralComponents
+                            : (state.featuralComponents || {}),
+                        alphabetGlyphs: (prevBucket.alphabetGlyphs && Object.keys(prevBucket.alphabetGlyphs).length > 0)
+                            ? prevBucket.alphabetGlyphs
+                            : (state.alphabetGlyphs || {}),
+                        customFontBase64: prevBucket.customFontBase64 ?? state.customFontBase64 ?? null,
+                        customFont: prevBucket.customFont ?? state.customFont ?? null,
+                        puaCounter: prevBucket.puaCounter ?? state.puaCounter ?? 57344,
+                    };
+                }
+
                 const systems = (state.scriptSystems || []).map(s => ({
                     ...s,
                     isDefault: s.id === scriptId,
+                    ...(s.id === prevDefaultId && prevDefaultTypography ? { typographySettings: prevDefaultTypography } : {}),
                 }));
+                const nextDefault = systems.find(s => s.id === scriptId);
+                const nextBucket = prevScriptDataById[scriptId] || {};
                 const scriptRules = {
                     ...(state.scriptRules || {}),
                     defaultScriptId: scriptId,
                 };
-                return { scriptSystems: systems, scriptRules };
+                const nextTypography = getScriptTypographySettings(
+                    { ...state, scriptSystems: systems, scriptRules, scriptDataById: prevScriptDataById },
+                    scriptId
+                );
+
+                const nextRootFont = nextBucket.customFontBase64 ?? nextBucket.customFont ?? null;
+                const legacyMirror = {
+                    customGlyphs: nextBucket.customGlyphs || {},
+                    syllabaryMap: nextBucket.syllabaryMap || {},
+                    featuralComponents: nextBucket.featuralComponents || {},
+                    alphabetGlyphs: nextBucket.alphabetGlyphs || {},
+                    customFontBase64: nextRootFont,
+                    customFont: nextRootFont,
+                    puaCounter: nextBucket.puaCounter || 57344,
+                    typographySettings: nextTypography,
+                    ...(nextDefault ? {
+                        phonologyTypes: nextDefault.type || 'alphabetic',
+                        alphabeticScript: nextDefault.alphabeticScript || 'latin',
+                        writingDirection: nextDefault.writingDirection || 'ltr',
+                        alphabetNames: nextDefault.alphabetNames || {},
+                        ...(nextDefault.blockSettings ? { blockSettings: nextDefault.blockSettings } : {}),
+                        ...(nextDefault.blockTemplates ? { blockTemplates: nextDefault.blockTemplates } : {}),
+                    } : {}),
+                };
+
+                if (state.projectId) {
+                    if (prevDefaultId && prevScriptDataById[prevDefaultId]) {
+                        saveScriptDataToDB(state.projectId, prevDefaultId, prevScriptDataById[prevDefaultId]);
+                    }
+                    saveLargeDataToDB(state.projectId, {
+                        customGlyphs: legacyMirror.customGlyphs,
+                        syllabaryMap: legacyMirror.syllabaryMap,
+                        featuralComponents: legacyMirror.featuralComponents,
+                        alphabetGlyphs: legacyMirror.alphabetGlyphs,
+                        customFontBase64: legacyMirror.customFontBase64,
+                        customFont: legacyMirror.customFont,
+                        puaCounter: legacyMirror.puaCounter,
+                    });
+                }
+
+                return {
+                    scriptSystems: systems,
+                    scriptRules,
+                    scriptDataById: prevScriptDataById,
+                    ...legacyMirror,
+                };
             }),
 
             setActiveScriptSystem: (scriptId) => set({ activeScriptSystemId: scriptId }),

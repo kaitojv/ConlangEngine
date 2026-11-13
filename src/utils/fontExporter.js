@@ -12,6 +12,7 @@ import {
     getDefaultScriptId,
     getScriptSystem,
     getScriptData,
+    getScriptTypographySettings,
     normalizeScriptType,
     resolveWordScriptId,
 } from './scriptResolver.js';
@@ -718,21 +719,16 @@ export async function exportFontArtifacts(config = {}, lexicon = [], scriptId = 
         options.familyName || `${config?.conlangName || 'Conlang'} ${exportData.script?.name || 'Script'}`
     );
 
-    const typographySettings = config?.typographySettings || {};
-    const traceWidth = options.traceWidth ?? typographySettings.traceWidth ?? 30;
-    const fontScale = options.fontScale ?? typographySettings.customFontScale ?? 1.0;
+    const scriptTypo = getScriptTypographySettings(config, exportData.script.id);
+    const traceWidth = options.traceWidth ?? scriptTypo.traceWidth ?? 30;
+    const fontScale = options.fontScale ?? scriptTypo.customFontScale ?? 1.0;
 
-    const scriptData = getScriptData(config, exportData.script.id);
     const consistentCharacterSize = options.consistentCharacterSize !== undefined
         ? Boolean(options.consistentCharacterSize)
-        : (scriptData?.consistentCharacterSize !== undefined
-            ? Boolean(scriptData.consistentCharacterSize)
-            : (typographySettings.consistentCharacterSize ?? true));
+        : Boolean(scriptTypo.consistentCharacterSize ?? true);
     const fixedAdvanceWidth = options.fixedAdvanceWidth !== undefined
         ? Number(options.fixedAdvanceWidth)
-        : (scriptData?.fixedAdvanceWidth !== undefined
-            ? Number(scriptData.fixedAdvanceWidth)
-            : (typographySettings.fixedAdvanceWidth ?? 1000));
+        : Number(scriptTypo.fixedAdvanceWidth ?? 1000);
 
     const chunks = chunkGlyphExportData(exportData, options.maxGlyphsPerFont);
     const ttfFiles = [];

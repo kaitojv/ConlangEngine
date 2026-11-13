@@ -9,6 +9,7 @@ import Button from '../../UI/Buttons/Buttons.jsx';
 import { Sparkles, AlertTriangle, Save, Brush, X, Plus, Wand2 } from 'lucide-react';
 import { applyRuleToWord, expandWildcardDependencies } from '../../../utils/morphologyEngine.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
+import { getScriptData, getScriptSystem, resolveWordScriptId } from '../../../utils/scriptResolver.js';
 import { validateNewWord } from '@/utils/validationEngine.jsx';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { fetchSynonymOptions, fetchDefinitionOptions, fetchTopicOptions } from '../../../utils/semanticUtils.js';
@@ -68,7 +69,8 @@ export default function CreateWordTab() {
     const { phonologyTypes, grammarRules, vowels, consonants, otherPhonemes, syllablePattern, verbMarker,
             customWordClasses, customTags, addCustomWordClass, addCustomTag, autoReturnToLexicon,
             vowelHarmonyMode, vowelHarmonySets, vowelHarmonyOverrideWordClasses, vowelHarmonyOverrideTags,
-            updateConfig, syllabaryMap, blockTemplates, blockSettings } = useConfigStore(useShallow(state => ({
+            updateConfig, syllabaryMap, blockTemplates, blockSettings,
+            activeScriptSystemId, scriptDataById, scriptRules } = useConfigStore(useShallow(state => ({
         phonologyTypes: state.phonologyTypes,
         grammarRules: state.grammarRules,
         vowels: state.vowels,
@@ -89,7 +91,10 @@ export default function CreateWordTab() {
         blockTemplates: state.blockTemplates,
         blockSettings: state.blockSettings,
         updateConfig: state.updateConfig,
-        syllabaryMap: state.syllabaryMap || {}
+        syllabaryMap: state.syllabaryMap || {},
+        activeScriptSystemId: state.activeScriptSystemId,
+        scriptDataById: state.scriptDataById,
+        scriptRules: state.scriptRules
     })));
     const rawScriptSystems = useConfigStore(state => state.scriptSystems);
     const scriptSystems = useMemo(() => rawScriptSystems || [], [rawScriptSystems]);
@@ -198,17 +203,35 @@ export default function CreateWordTab() {
         return overriddenByClass || overriddenByTag;
     }, [wordClass, tags, vowelHarmonyOverrideWordClasses, vowelHarmonyOverrideTags, harmonyStatus]);
 
+    const resolvedWordScriptId = useMemo(() => resolveWordScriptId(
+        { word, wordClass, tags, scriptOverride },
+        { scriptSystems, activeScriptSystemId, scriptRules }
+    ), [word, wordClass, tags, scriptOverride, scriptSystems, activeScriptSystemId, scriptRules]);
+
+    const resolvedScriptSystem = useMemo(
+        () => getScriptSystem({ scriptSystems }, resolvedWordScriptId),
+        [scriptSystems, resolvedWordScriptId]
+    );
+    const resolvedScriptType = resolvedScriptSystem?.type || phonologyTypes || 'alphabetic';
+    const resolvedScriptData = useMemo(
+        () => getScriptData({ scriptSystems, scriptDataById, syllabaryMap, blockTemplates, blockSettings, phonologyTypes }, resolvedWordScriptId),
+        [scriptSystems, scriptDataById, syllabaryMap, blockTemplates, blockSettings, phonologyTypes, resolvedWordScriptId]
+    );
+    const effectiveSyllabaryMap = useMemo(() => resolvedScriptData?.syllabaryMap || syllabaryMap || {}, [resolvedScriptData, syllabaryMap]);
+    const effectiveBlockTemplates = resolvedScriptData?.blockTemplates || blockTemplates;
+    const effectiveBlockSettings = resolvedScriptData?.blockSettings || blockSettings;
+
     const possibleBlockStructures = useMemo(() => {
-        if (phonologyTypes !== 'featural_block' || !word || !syllabaryMap) return [];
+        if (resolvedScriptType !== 'featural_block' || !word || !effectiveSyllabaryMap) return [];
         const safeBaseWord = normalizeToBase(word.trim()).toLowerCase();
         if (!safeBaseWord) return [];
 
-        const activeTemplates = blockTemplates || (blockSettings ? [
+        const activeTemplates = effectiveBlockTemplates || (effectiveBlockSettings ? [
             {
                 id: 'legacy',
-                maxChars: blockSettings.maxChars || 3,
-                layoutTemplate: blockSettings.layoutTemplate || '2top1bottom',
-                slotMapping: blockSettings.slotMapping || []
+                maxChars: effectiveBlockSettings.maxChars || 3,
+                layoutTemplate: effectiveBlockSettings.layoutTemplate || '2top1bottom',
+                slotMapping: effectiveBlockSettings.slotMapping || []
             }
         ] : [
             {
@@ -232,7 +255,7 @@ export default function CreateWordTab() {
         const otherList = parseList(otherPhonemes);
 
         const isValidBlock = (part) => {
-            if (syllabaryMap[part]) return true; // Already compiled
+            if (effectiveSyllabaryMap[part]) return true; // Already compiled
             
             // Check if it perfectly matches an active template's slot mapping
             for (const template of activeTemplates) {
@@ -284,7 +307,7 @@ export default function CreateWordTab() {
         search(0, []);
         
         return results;
-    }, [word, phonologyTypes, syllabaryMap, normalizeToBase, blockTemplates, blockSettings, consonants, vowels, otherPhonemes]);
+    }, [word, resolvedScriptType, effectiveSyllabaryMap, normalizeToBase, effectiveBlockTemplates, effectiveBlockSettings, consonants, vowels, otherPhonemes]);
 
     const { isDuplicateWord, isDuplicateTranslation } = checkDuplicate(word, translation);
     const isDuplicate = (isDuplicateWord || isDuplicateTranslation) && (word !== '' || translation !== '');
@@ -930,7 +953,7 @@ export default function CreateWordTab() {
                     <IpaChart onSelect={handleIpaSelect} />
                 </div>
 
-                {isLogographic && (
+                {(resolvedScriptSystem ? resolvedScriptType === 'logographic' : isLogographic) && (
                     <div className="ideogram-section">
                         <div className="ideogram-header-row">
                             <label className="form-label">{t('createWord.ideogramLabel')}</label>
@@ -938,6 +961,7 @@ export default function CreateWordTab() {
                         <div className="ideogram-row">
                             <GlyphPreviewBadge
                                 glyph={ideogram}
+                                scriptId={resolvedWordScriptId}
                                 size={38}
                                 showCode={false}
                                 onClick={ideogram ? () => setIsGlyphViewerOpen(true) : undefined}
@@ -947,7 +971,7 @@ export default function CreateWordTab() {
                                 value={ideogram}
                                 onChange={(e) => updateField('ideogram', e.target.value)}
                                 placeholder="e.g., 水"
-                                className="ideogram-input notranslate custom-font-text"
+                                className={`ideogram-input notranslate custom-font-text ${resolvedWordScriptId ? `conlang-script-${resolvedWordScriptId}` : ''}`}
                             />
                             <div className="ideogram-button-group">
                                 <button
@@ -1001,7 +1025,7 @@ export default function CreateWordTab() {
                     </div>
                 )}
 
-                {phonologyTypes === 'featural_block' && possibleBlockStructures.length > 0 && (
+                {resolvedScriptType === 'featural_block' && possibleBlockStructures.length > 0 && (
                     <div className="block-picker-section" style={{ marginTop: '1rem', background: 'var(--bg2)', padding: '1rem', borderRadius: '8px' }}>
                         <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>{t('createWord.visualBlockTitle')}</label>
                         <p style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '12px', lineHeight: '1.4' }}>
@@ -1058,7 +1082,7 @@ export default function CreateWordTab() {
                                     
                                     return (
                                         <div key={bIdx} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', border: '1px solid var(--bd)', borderRadius: 'var(--rad)', background: 'var(--bg2)' }}>
-                                            <div className="custom-font-text notranslate" style={{ fontSize: '1.5rem', color: 'var(--acc)', minWidth: '40px', textAlign: 'center' }}>
+                                            <div className={`custom-font-text notranslate ${resolvedWordScriptId ? `conlang-script-${resolvedWordScriptId}` : ''}`} style={{ fontSize: '1.5rem', color: 'var(--acc)', minWidth: '40px', textAlign: 'center' }}>
                                                 {transliterate(blockWithOverride)}
                                             </div>
                                             <div style={{ fontSize: '0.9rem', color: 'var(--tx2)', minWidth: '60px' }}>
@@ -1324,7 +1348,7 @@ export default function CreateWordTab() {
                     <FontStudioModal
                         targetLabel={word || 'New Root'}
                         existingCharCode={ideogram ? ideogram.codePointAt(0) : undefined}
-                        scriptId={scriptOverride}
+                        scriptId={resolvedWordScriptId}
                         onSave={(newChar) => {
                             updateField('ideogram', newChar);
                             setIsFontStudioOpen(false);
@@ -1339,7 +1363,8 @@ export default function CreateWordTab() {
                     word={ideogram || word}
                     isOpen={isStrokeOrderOpen}
                     onClose={() => setIsStrokeOrderOpen(false)}
-                    scriptType="logographic"
+                    scriptId={resolvedWordScriptId}
+                    scriptType={resolvedScriptType || 'logographic'}
                 />
             )}
 
@@ -1349,7 +1374,8 @@ export default function CreateWordTab() {
                     onClose={() => setIsGlyphViewerOpen(false)}
                     char={ideogram}
                     glyph={ideogram}
-                    type="logographic"
+                    scriptId={resolvedWordScriptId}
+                    type={resolvedScriptType || 'logographic'}
                     name={ideogram}
                 />
             )}

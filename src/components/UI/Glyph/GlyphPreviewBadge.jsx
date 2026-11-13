@@ -37,12 +37,14 @@ export default function GlyphPreviewBadge({
     } else if (glyph) {
         const targetScriptId = scriptId || activeScriptSystemId || defaultScriptId;
         const targetScriptData = scriptDataById?.[targetScriptId];
+        const isDefaultTarget = targetScriptId === defaultScriptId;
+        const allowCrossScriptFallback = !scriptId || isDefaultTarget;
 
         // Resolve aliases if glyph is a letter/syllable rather than a PUA char
         let effectiveGlyph = glyph;
         if (typeof glyph === 'string') {
-            const agMap = targetScriptData?.alphabetGlyphs || rootAlphabetGlyphs;
-            const sylMap = targetScriptData?.syllabaryMap || rootSyllabaryMap;
+            const agMap = targetScriptData?.alphabetGlyphs || (isDefaultTarget ? rootAlphabetGlyphs : {});
+            const sylMap = targetScriptData?.syllabaryMap || (isDefaultTarget ? rootSyllabaryMap : {});
             if (agMap?.[glyph]) {
                 effectiveGlyph = agMap[glyph];
             } else if (sylMap?.[glyph]) {
@@ -75,18 +77,18 @@ export default function GlyphPreviewBadge({
         // 1. Scoped script customGlyphs
         let rawStrokes = lookupInMap(targetScriptData?.customGlyphs);
 
-        // 2. Root customGlyphs
-        if (!rawStrokes) {
+        // 2. Root customGlyphs (for default script or unscoped badges)
+        if (!rawStrokes && allowCrossScriptFallback) {
             rawStrokes = lookupInMap(customGlyphs);
         }
 
-        // 3. Fallback to default script if different
-        if (!rawStrokes && targetScriptId !== defaultScriptId && scriptDataById?.[defaultScriptId]) {
+        // 3. Fallback to default script only for unscoped badges
+        if (!rawStrokes && !scriptId && targetScriptId !== defaultScriptId && scriptDataById?.[defaultScriptId]) {
             rawStrokes = lookupInMap(scriptDataById[defaultScriptId]?.customGlyphs);
         }
 
-        // 4. Fallback to any script ONLY if still not found
-        if (!rawStrokes && scriptDataById) {
+        // 4. Fallback to other scripts ONLY if no explicit scriptId was given
+        if (!rawStrokes && !scriptId && scriptDataById) {
             for (const [sId, sData] of Object.entries(scriptDataById)) {
                 if (sId === targetScriptId || sId === defaultScriptId) continue;
                 rawStrokes = lookupInMap(sData?.customGlyphs);

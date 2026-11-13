@@ -2,6 +2,7 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback, useReducer } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
+import { getScriptTypographySettings } from '../../../utils/scriptResolver.js';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
 import Button from '../Buttons/Buttons.jsx';
 import { RotateCcw, RotateCw, Undo2, Redo2, Trash2, Download, Pencil, Minus, Spline, Eraser, Feather, FlipHorizontal, FlipVertical, Grid, Square, Circle, Triangle, SquareDashed, PenTool, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ZoomIn, ZoomOut, MousePointer, Maximize2, Sliders, Move, Crosshair, Brush, Type, Plus, Pointer, PaintBucket } from 'lucide-react';
@@ -167,8 +168,8 @@ const extractInitialGlyphData = (existingCharCode, customGlyphs) => {
 
 export default function FontStudioModal({ targetLabel, onSave, onCancel, existingCharCode, scriptId = null }) {
     const canvasRef = useRef(null);
-    const resolvedScriptId = scriptId;
     const {
+        defaultScriptId,
         rootCustomGlyphs,
         scriptCustomGlyphs,
         scriptPuaCounter,
@@ -182,8 +183,11 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
         scriptFeaturalComponents,
         storeFeaturalComponents,
     } = useConfigStore(useShallow(state => {
-        const scriptData = resolvedScriptId ? state.scriptDataById?.[resolvedScriptId] : null;
+        const defId = state.scriptRules?.defaultScriptId || 'default';
+        const targetId = scriptId || state.activeScriptSystemId || defId;
+        const scriptData = targetId ? state.scriptDataById?.[targetId] : null;
         return {
+            defaultScriptId: defId,
             rootCustomGlyphs: state.customGlyphs,
             scriptCustomGlyphs: scriptData?.customGlyphs,
             scriptPuaCounter: scriptData?.puaCounter,
@@ -192,24 +196,30 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
             incrementPuaCounter: state.incrementPuaCounter,
             scriptAlphabetGlyphs: scriptData?.alphabetGlyphs,
             storeAlphabetGlyphs: state.alphabetGlyphs,
-            scriptAlphabetNames: scriptData?.alphabetNames,
+            scriptAlphabetNames: (state.scriptSystems || []).find(s => s.id === targetId)?.alphabetNames,
             storeAlphabetNames: state.alphabetNames,
             scriptFeaturalComponents: scriptData?.featuralComponents,
             storeFeaturalComponents: state.featuralComponents,
         };
     }));
+    const activeScriptSystemId = useConfigStore(state => state.activeScriptSystemId);
+    const resolvedScriptId = scriptId || activeScriptSystemId || defaultScriptId;
+    const isDefaultScript = !resolvedScriptId || resolvedScriptId === defaultScriptId;
 
     const customGlyphs = useMemo(() => {
-        if (!scriptCustomGlyphs || Object.keys(scriptCustomGlyphs).length === 0) {
-            return rootCustomGlyphs || {};
+        if (isDefaultScript) {
+            if (!scriptCustomGlyphs || Object.keys(scriptCustomGlyphs).length === 0) {
+                return rootCustomGlyphs || {};
+            }
+            return { ...(rootCustomGlyphs || {}), ...scriptCustomGlyphs };
         }
-        return { ...(rootCustomGlyphs || {}), ...scriptCustomGlyphs };
-    }, [rootCustomGlyphs, scriptCustomGlyphs]);
+        return scriptCustomGlyphs || {};
+    }, [isDefaultScript, rootCustomGlyphs, scriptCustomGlyphs]);
 
-    const puaCounter = scriptPuaCounter || storePuaCounter;
-    const alphabetGlyphs = scriptAlphabetGlyphs || storeAlphabetGlyphs;
-    const alphabetNames = scriptAlphabetNames || storeAlphabetNames;
-    const featuralComponents = scriptFeaturalComponents || storeFeaturalComponents;
+    const puaCounter = isDefaultScript ? (scriptPuaCounter || storePuaCounter || 57344) : (scriptPuaCounter || 57344);
+    const alphabetGlyphs = isDefaultScript ? (scriptAlphabetGlyphs || storeAlphabetGlyphs) : (scriptAlphabetGlyphs || {});
+    const alphabetNames = isDefaultScript ? (scriptAlphabetNames || storeAlphabetNames) : (scriptAlphabetNames || {});
+    const featuralComponents = isDefaultScript ? (scriptFeaturalComponents || storeFeaturalComponents) : (scriptFeaturalComponents || {});
 
     const initialData = useMemo(() => {
         return extractInitialGlyphData(existingCharCode, customGlyphs);
@@ -311,14 +321,12 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
     const [simplifyTolerance, setSimplifyTolerance] = useState(0.5);
     const [isFontExportOpen, setIsFontExportOpen] = useState(false);
 
-    const scriptConsistent = useConfigStore(state => {
-        const sData = resolvedScriptId ? state.scriptDataById?.[resolvedScriptId] : null;
-        return sData?.consistentCharacterSize ?? state.typographySettings?.consistentCharacterSize ?? true;
-    });
-    const fixedAdvanceWidth = useConfigStore(state => {
-        const sData = resolvedScriptId ? state.scriptDataById?.[resolvedScriptId] : null;
-        return sData?.fixedAdvanceWidth ?? state.typographySettings?.fixedAdvanceWidth ?? 1000;
-    });
+    const scriptConsistent = useConfigStore(state =>
+        Boolean(getScriptTypographySettings(state, resolvedScriptId).consistentCharacterSize ?? true)
+    );
+    const fixedAdvanceWidth = useConfigStore(state =>
+        Number(getScriptTypographySettings(state, resolvedScriptId).fixedAdvanceWidth ?? 1000)
+    );
     const isConsistentActive = isGlyphConsistent !== undefined ? Boolean(isGlyphConsistent) : scriptConsistent;
 
     const [backgroundStrokes, setBackgroundStrokes] = useState([]);
@@ -1459,7 +1467,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
             charCode = typeof existingCharCode === 'number' ? existingCharCode : parseInt(existingCharCode);
         } else {
             charCode = puaCounter;
-            incrementPuaCounter();
+            incrementPuaCounter(resolvedScriptId);
         }
 
         // 1. Save metadata object as the first stroke
@@ -1483,12 +1491,12 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
 
         const updatedGlyphDb = { ...customGlyphs, [charCode]: strokesToSave };
         
-        // 2. Compile the font
-        const typographySettings = useConfigStore.getState().typographySettings || {};
+        // 2. Compile the font using the target script's own traceWidth & customFontScale
+        const scriptTypo = getScriptTypographySettings(useConfigStore.getState(), resolvedScriptId);
         const base64Font = await compileFont(
             updatedGlyphDb, 
-            typographySettings.traceWidth ?? 30, 
-            typographySettings.customFontScale ?? 1.0,
+            scriptTypo.traceWidth ?? 30, 
+            scriptTypo.customFontScale ?? 1.0,
             {
                 consistentCharacterSize: isConsistentActive,
                 fixedAdvanceWidth: fixedAdvanceWidth
@@ -1510,7 +1518,7 @@ export default function FontStudioModal({ targetLabel, onSave, onCancel, existin
             <div className="fs-header">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', width: '100%' }}>
                     <div style={{ textAlign: 'left' }}>
-                        <h3 className="fs-title">Drawing: <span className="custom-font-text">{targetLabel}</span></h3>
+                        <h3 className="fs-title">Drawing: <span className={`custom-font-text ${resolvedScriptId ? `conlang-script-${resolvedScriptId}` : ''}`}>{targetLabel}</span></h3>
                         <p className="fs-subtitle">Draw your custom ideogram below or use a reference.</p>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>

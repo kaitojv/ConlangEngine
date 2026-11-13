@@ -7,6 +7,7 @@ import Button from "../Buttons/Buttons.jsx";
 import './syllabaryManager.css';
 import Modal from "../Modal/Modal.jsx";
 import FontStudioModal from "../Fontstudio/FontStudio.jsx";
+import GlyphPreviewBadge from "../Glyph/GlyphPreviewBadge.jsx";
 import Infobox from "../Infobox/Infobox.jsx";
 import { SCRIPT_MAPS, composeHangulSyllable } from "../../../utils/transliteration.js";
 import { useTranslation } from "@/hooks/useTranslation.jsx";
@@ -24,6 +25,7 @@ export default function SyllabaryManager({ scriptId } = {}) {
   const consonants = useConfigStore(s => s.consonants);
   const vowels = useConfigStore(s => s.vowels);
   const otherPhonemes = useConfigStore(s => s.otherPhonemes);
+  const scriptSystems = useConfigStore(s => s.scriptSystems) || [];
   const legacySyllabaryMap = useConfigStore(s => s.syllabaryMap);
   const scriptDataById = useConfigStore(s => s.scriptDataById);
   const defaultScriptId = useConfigStore(s => s.scriptRules?.defaultScriptId) || 'default';
@@ -33,11 +35,13 @@ export default function SyllabaryManager({ scriptId } = {}) {
 
   const targetScriptId = scriptId || defaultScriptId;
   const isDefault = targetScriptId === defaultScriptId;
+  const targetScript = scriptSystems.find(s => s.id === targetScriptId);
   // Read from script-scoped data; fall back to legacy top-level only for default.
   const syllabaryMap = scriptDataById?.[targetScriptId]?.syllabaryMap
     || (isDefault ? legacySyllabaryMap : {})
     || {};
-  const alphabeticScript = scriptDataById?.[targetScriptId]?.alphabeticScript
+  const alphabeticScript = targetScript?.alphabeticScript
+    || scriptDataById?.[targetScriptId]?.alphabeticScript
     || (isDefault ? legacyAlphabeticScript : 'latin');
 
   // Route writes to the selected script. Mirror to legacy field for default so
@@ -224,7 +228,7 @@ export default function SyllabaryManager({ scriptId } = {}) {
 
                                                 <input 
                                                     type="text" 
-                                                    className="sm-grid-input custom-font-text" 
+                                                    className={`sm-grid-input custom-font-text conlang-script-${targetScriptId}`} 
                                                     placeholder={syl}
                                                     value={savedChar}
                                                     onChange={(e) => handleUpdateSyllable(syl, e.target.value)}
@@ -256,7 +260,7 @@ export default function SyllabaryManager({ scriptId } = {}) {
                                             <td key={p} className="sm-td">
                                                 <input 
                                                     type="text" 
-                                                    className="sm-grid-input custom-font-text" 
+                                                    className={`sm-grid-input custom-font-text conlang-script-${targetScriptId}`} 
                                                     placeholder={p}
                                                     value={savedChar}
                                                     onChange={(e) => handleUpdateSyllable(p, e.target.value)}
@@ -285,7 +289,7 @@ export default function SyllabaryManager({ scriptId } = {}) {
                         />
                         <input 
                             type="text" 
-                            className="sm-list-input sm-list-input-lg custom-font-text" 
+                            className={`sm-list-input sm-list-input-lg custom-font-text conlang-script-${targetScriptId}`} 
                             placeholder="Symbol (e.g. 𐍁, ん)"
                             value={newSylVal}
                             onChange={(e) => setNewSylVal(e.target.value)}
@@ -302,7 +306,11 @@ export default function SyllabaryManager({ scriptId } = {}) {
                             Object.keys(syllabaryMap).sort().map(key => (
                                 <div key={key} className="sm-list-card">
                                     <div className="sm-list-card-info">
-                                        <span className="sm-list-card-symbol custom-font-text">{syllabaryMap[key] || '∅'}</span>
+                                        <span className={`sm-list-card-symbol custom-font-text conlang-script-${targetScriptId}`}>
+                                            {syllabaryMap[key] ? (
+                                                <GlyphPreviewBadge glyph={syllabaryMap[key]} scriptId={targetScriptId} size={28} plain />
+                                            ) : '∅'}
+                                        </span>
                                         <span className="sm-list-card-key">{key}</span>
                                     </div>
                                     <div className="sm-list-card-actions">
@@ -329,6 +337,7 @@ export default function SyllabaryManager({ scriptId } = {}) {
             <FontStudioModal 
                 targetLabel={drawingForSyl}
                 scriptId={targetScriptId}
+                existingCharCode={drawingForSyl && syllabaryMap[drawingForSyl] ? syllabaryMap[drawingForSyl].codePointAt(0) : null}
                 onSave={(newChar) => {
                     handleUpdateSyllable(drawingForSyl, newChar);
                     setDrawingForSyl(null);

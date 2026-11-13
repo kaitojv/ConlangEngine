@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { compileFont } from '../utils/fontCompiler.jsx';
+import { getScriptTypographySettings } from '../utils/scriptResolver.js';
 import { sanitizeCssFontUrl, sanitizeCssValue } from '../utils/sanitizeHtml.js';
 
 const safePublicFamily = (instanceId, scriptId) =>
@@ -69,18 +70,23 @@ export function usePublicFontInjector(config) {
             // Build a map of scriptId → font base64 string(s)
             const scriptFontMap = {};
             const defaultScriptId = config.scriptRules?.defaultScriptId || 'default';
-            const typographySettings = config.typographySettings || {};
+            const defaultTypo = getScriptTypographySettings(config, defaultScriptId);
 
             // Collect from scriptDataById (multi-script)
             if (config.scriptDataById) {
                 for (const [scriptId, scriptData] of Object.entries(config.scriptDataById)) {
                     let font = scriptData?.customFontBase64 || scriptData?.customFont;
                     if (!font && scriptData?.customGlyphs && Object.keys(scriptData.customGlyphs).length > 0) {
+                        const sTypo = getScriptTypographySettings(config, scriptId);
                         try {
                             font = await compileFont(
                                 scriptData.customGlyphs,
-                                typographySettings.traceWidth ?? 30,
-                                typographySettings.customFontScale ?? 1.0
+                                sTypo.traceWidth ?? 30,
+                                sTypo.customFontScale ?? 1.0,
+                                {
+                                    consistentCharacterSize: sTypo.consistentCharacterSize ?? true,
+                                    fixedAdvanceWidth: sTypo.fixedAdvanceWidth ?? 1000
+                                }
                             );
                         } catch (e) {
                             console.warn("Could not compile customGlyphs for script", scriptId, e);
@@ -99,8 +105,12 @@ export function usePublicFontInjector(config) {
                     try {
                         font = await compileFont(
                             config.customGlyphs,
-                            typographySettings.traceWidth ?? 30,
-                            typographySettings.customFontScale ?? 1.0
+                            defaultTypo.traceWidth ?? 30,
+                            defaultTypo.customFontScale ?? 1.0,
+                            {
+                                consistentCharacterSize: defaultTypo.consistentCharacterSize ?? true,
+                                fixedAdvanceWidth: defaultTypo.fixedAdvanceWidth ?? 1000
+                            }
                         );
                     } catch (e) {
                         console.warn("Could not compile root customGlyphs", e);
@@ -172,13 +182,23 @@ export function usePublicFontInjector(config) {
                 // The default script's font family
                 const defaultFontFamily = safePublicFamily(instanceId, defaultScriptId);
 
+                const formatSpacing = (val) => {
+                    const num = Number(val);
+                    return val !== undefined && val !== null && Number.isFinite(num) && num !== 0 ? `${num}em` : 'normal';
+                };
+                const defaultSpacing = formatSpacing(defaultTypo.letterSpacing);
+
                 // Build per-script CSS classes
                 let perScriptCSS = '';
                 for (const scriptId of Object.keys(loadedByScript)) {
                     const family = safePublicFamily(instanceId, scriptId);
+                    const sTypo = getScriptTypographySettings(config, scriptId);
+                    const sSpacing = formatSpacing(sTypo.letterSpacing);
                     perScriptCSS += `
-                    .conlang-script-${CSS.escape(scriptId)} {
+                    .conlang-script-${CSS.escape(scriptId)},
+                    .conlang-script-${CSS.escape(scriptId)} * {
                         font-family: '${family}', 'Inter', sans-serif !important;
+                        letter-spacing: ${sSpacing} !important;
                     }
                     `;
                 }
@@ -186,6 +206,7 @@ export function usePublicFontInjector(config) {
                 styleNode.textContent = `
                     .custom-font-text, .conlang-word, .dict-ipa {
                         font-family: '${defaultFontFamily}', 'Inter', sans-serif !important;
+                        letter-spacing: ${defaultSpacing} !important;
                     }
 
                     .custom-font-text::placeholder,
