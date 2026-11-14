@@ -42,6 +42,7 @@ import { CharacterCount } from '@tiptap/extension-character-count';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Mark, mergeAttributes } from '@tiptap/core';
 import { createGrammarAnalyzer } from '@/utils/grammarAnalyzer.js';
+import { resolveEffectiveSyntaxOrder, buildRolePriorityMap } from '@/utils/wordAssist/syntaxOrdering.js';
 import LiveTranslatorPanel from './LiveTranslatorPanel.jsx';
 import LexiconEditModal from '../dictionary/LexiconEditModal.jsx';
 import { Indent } from './indentExtension.js';
@@ -520,32 +521,8 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
         'R': 'Adverb'
     };
 
-    let syntaxOrder = (wa.syntaxOrder || '')
-        .split('')
-        .filter(r => roleLabels[r])
-        .join('');
-
-    if (!syntaxOrder) {
-        const baseOrder = (config.syntaxOrder || 'SVO').toUpperCase();
-        const core = [];
-        for (const c of baseOrder) {
-            if (['S', 'V', 'O'].includes(c) && !core.includes(c)) core.push(c);
-        }
-        ['S', 'V', 'O'].forEach(c => { if (!core.includes(c)) core.push(c); });
-
-        const defaultSeq = ['Q', 'C', 'T', 'L'];
-        core.forEach(c => {
-            if (c === 'S') defaultSeq.push('S');
-            else if (c === 'V') defaultSeq.push('M', 'V', 'N');
-            else if (c === 'O') defaultSeq.push('O', 'D');
-        });
-        ['P', 'R'].forEach(r => { if (!defaultSeq.includes(r)) defaultSeq.push(r); });
-        syntaxOrder = defaultSeq.join('');
-    } else {
-        Object.keys(roleLabels).forEach(r => {
-            if (!syntaxOrder.includes(r)) syntaxOrder += r;
-        });
-    }
+    const effectiveOrder = resolveEffectiveSyntaxOrder(wa.syntaxOrder, config.syntaxOrder || 'SVO', config.syntaxOrder || 'SVO');
+    const syntaxOrder = buildRolePriorityMap(effectiveOrder).baseOrder.filter(r => roleLabels[r]).join('');
 
     const [draggedRoleIdx, setDraggedRoleIdx] = useState(null);
 
@@ -590,21 +567,7 @@ function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
                         <button
                             type="button"
                             onClick={() => {
-                                const baseOrder = (config.syntaxOrder || 'SVO').toUpperCase();
-                                const core = [];
-                                for (const c of baseOrder) {
-                                    if (['S', 'V', 'O'].includes(c) && !core.includes(c)) core.push(c);
-                                }
-                                ['S', 'V', 'O'].forEach(c => { if (!core.includes(c)) core.push(c); });
-
-                                const defaultSeq = ['Q', 'C', 'T', 'L'];
-                                core.forEach(c => {
-                                    if (c === 'S') defaultSeq.push('S');
-                                    else if (c === 'V') defaultSeq.push('M', 'V', 'N');
-                                    else if (c === 'O') defaultSeq.push('O', 'D');
-                                });
-                                ['P', 'R'].forEach(r => { if (!defaultSeq.includes(r)) defaultSeq.push(r); });
-                                updateConfig({ wordAssistConfig: { ...wa, syntaxOrder: defaultSeq.join('') } });
+                                updateConfig({ wordAssistConfig: { ...wa, syntaxOrder: '' } });
                             }}
                             style={{
                                 background: 'none',
@@ -1319,9 +1282,12 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                             onClose={() => setWordAssist(false)}
                             onOpenSettings={() => setIsWaSettingsOpen(true)}
                             onOpenAddWord={(missingWordObj) => setWordForAdd(missingWordObj)}
-                            syntaxOrder={waConfig?.syntaxOrder || syntaxOrder}
+                            syntaxOrder={resolveEffectiveSyntaxOrder(waConfig?.syntaxOrder, syntaxOrder, syntaxOrder)}
                             transliterate={transliterate}
                             lexicon={lexicon}
+                            config={config}
+                            scriptSystems={config.scriptSystems || []}
+                            activeScriptId={config.activeScriptSystemId || 'default'}
                         />
                     </div>
                 )}
@@ -1398,6 +1364,7 @@ function LegacyWikiEditor({ content, onSave }) {
 
     const {
         analyzer,
+        transliterate,
         syntaxOrder,
         waConfig,
         updateConfig,
@@ -1715,9 +1682,12 @@ function LegacyWikiEditor({ content, onSave }) {
                             onClose={() => setWordAssist(false)}
                             onOpenSettings={() => setIsWaSettingsOpen(true)}
                             onOpenAddWord={(missingWordObj) => setWordForAdd(missingWordObj)}
-                            syntaxOrder={waConfig?.syntaxOrder || syntaxOrder}
-                            transliterate={transliterateText}
+                            syntaxOrder={resolveEffectiveSyntaxOrder(waConfig?.syntaxOrder, syntaxOrder, syntaxOrder)}
+                            transliterate={transliterate}
                             lexicon={lexicon}
+                            config={config}
+                            scriptSystems={scriptSystems}
+                            activeScriptId={config.activeScriptSystemId || 'default'}
                         />
                     </div>
                 )}

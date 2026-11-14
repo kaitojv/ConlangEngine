@@ -230,7 +230,7 @@ export const INITIAL_CONFIG = {
     // Config version for migration
     configVersion: 2,
     wordAssistConfig: {
-        syntaxOrder: 'QCTLJNORVMSAPG',
+        syntaxOrder: '',
         copulaBehavior: 'normal',
         copulaReplacement: '',
         triggers: [
