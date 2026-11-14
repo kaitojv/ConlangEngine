@@ -1,8 +1,10 @@
 import { useEffect } from "react";
 import { useConfigStore } from "../store/useConfigStore.jsx";
-import { getDefaultScriptId, getScriptTypographySettings } from "./scriptResolver.js";
+import { getDefaultScriptId, getScriptSystem, getScriptTypographySettings } from "./scriptResolver.js";
 import { compileFontBufferInWorker } from "./fontCompiler.jsx";
 import { sanitizeCssFontUrl } from "./sanitizeHtml.js";
+
+const VALID_WRITING_DIRECTIONS = ['ltr', 'rtl', 'vertical-rl', 'vertical-lr'];
 
 const safeScriptFamily = (scriptId) => `ConlangScript_${String(scriptId || 'default').replace(/[^a-zA-Z0-9_-]/g, '_')}`;
 
@@ -72,13 +74,14 @@ export function useFontInjector(){
     const typographySettings = useConfigStore((state) => state.typographySettings);
     const scriptRules = useConfigStore((state) => state.scriptRules);
     const scriptSystems = useConfigStore((state) => state.scriptSystems);
+    const writingDirection = useConfigStore((state) => state.writingDirection);
 
     useEffect(() => {
         if (isRehydrating) return;
         let isCancelled = false;
         let styleNode = document.getElementById('custom-font');
 
-        const config = { scriptRules, scriptSystems, scriptDataById, typographySettings };
+        const config = { scriptRules, scriptSystems, scriptDataById, typographySettings, writingDirection };
         const defaultScriptId = getDefaultScriptId(config);
 
         const buildAndInjectFonts = async () => {
@@ -268,7 +271,8 @@ export function useFontInjector(){
             // Build per-script CSS classes: .conlang-script-{scriptId}
             // High-specificity selectors ensure .conlang-script-* always beats generic
             // .custom-font-text, .alpha-btn *, or .letter-filter-chip * rules,
-            // and isolates each script's own horizontal & vertical letter spacing.
+            // and isolates each script's own horizontal & vertical letter spacing
+            // as well as its per-script writingDirection.
             let perScriptCSS = '';
             for (const scriptId of allTargetScriptIds) {
                 const escapedId = CSS.escape(scriptId);
@@ -276,6 +280,12 @@ export function useFontInjector(){
                 const sTypo = getScriptTypographySettings(config, scriptId);
                 const sLetterSpacingCSS = formatLetterSpacingCSS(sTypo.letterSpacing);
                 const sVerticalSpacingCSS = formatLetterSpacingCSS(sTypo.verticalLetterSpacing);
+                const scriptMeta = getScriptSystem(config, scriptId);
+                const rawScriptDir = scriptMeta?.writingDirection || 'ltr';
+                const scriptDir = VALID_WRITING_DIRECTIONS.includes(rawScriptDir) ? rawScriptDir : 'ltr';
+                const isVerticalScript = scriptDir.startsWith('vertical');
+                const scriptWritingMode = isVerticalScript ? scriptDir : 'horizontal-tb';
+                const scriptTextDir = scriptDir === 'rtl' ? 'rtl' : 'ltr';
                 perScriptCSS += `
                 .conlang-script-${escapedId},
                 .conlang-script-${escapedId} *,
@@ -288,11 +298,24 @@ export function useFontInjector(){
                     font-family: '${family}', '${defaultFontFamily}', 'Inter', sans-serif !important;
                     font-weight: normal;
                     font-style: normal;
+                    letter-spacing: ${(isVerticalScript ? sVerticalSpacingCSS : sLetterSpacingCSS)} !important;
+                }
+                .custom-font-text.conlang-script-${escapedId},
+                .entry-main-word.conlang-script-${escapedId} {
+                    writing-mode: ${scriptWritingMode};
+                    direction: ${scriptTextDir};
+                    ${isVerticalScript ? 'text-orientation: upright;' : ''}
+                }
+                input.conlang-script-${escapedId},
+                textarea.conlang-script-${escapedId},
+                .alpha-btn.conlang-script-${escapedId},
+                .letter-filter-val.conlang-script-${escapedId} {
+                    writing-mode: horizontal-tb !important;
                     letter-spacing: ${sLetterSpacingCSS} !important;
                 }
-                .conlang-script-${escapedId}[data-writing-direction="vertical"],
-                [data-writing-direction="vertical"].conlang-script-${escapedId},
-                .conlang-script-${escapedId} [data-writing-direction="vertical"] {
+                .conlang-script-${escapedId}[data-writing-direction^="vertical"],
+                [data-writing-direction^="vertical"].conlang-script-${escapedId},
+                .conlang-script-${escapedId} [data-writing-direction^="vertical"] {
                     letter-spacing: ${sVerticalSpacingCSS} !important;
                 }
                 `;
@@ -335,13 +358,13 @@ export function useFontInjector(){
                     font-family: '${defaultFontFamily}', 'Inter', sans-serif !important;
                 }
 
-                [data-writing-direction="vertical"].custom-font-text,
-                [data-writing-direction="vertical"].conlang-word,
-                [data-writing-direction="vertical"].word-text,
-                [data-writing-direction="vertical"].word,
-                [data-writing-direction="vertical"].lexicon-word,
-                [data-writing-direction="vertical"].matrix-base-word,
-                [data-writing-direction="vertical"].entry-main-word {
+                [data-writing-direction^="vertical"].custom-font-text,
+                [data-writing-direction^="vertical"].conlang-word,
+                [data-writing-direction^="vertical"].word-text,
+                [data-writing-direction^="vertical"].word,
+                [data-writing-direction^="vertical"].lexicon-word,
+                [data-writing-direction^="vertical"].matrix-base-word,
+                [data-writing-direction^="vertical"].entry-main-word {
                     letter-spacing: ${verticalLetterSpacingCSS} !important;
                 }
 
@@ -371,5 +394,5 @@ export function useFontInjector(){
             isCancelled = true;
             clearTimeout(timer);
         };
-    }, [customFont, customGlyphs, scriptDataById, isRehydrating, projectId, typographySettings, scriptRules, scriptSystems]);    
+    }, [customFont, customGlyphs, scriptDataById, isRehydrating, projectId, typographySettings, scriptRules, scriptSystems, writingDirection]);    
 }

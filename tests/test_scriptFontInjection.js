@@ -268,4 +268,16 @@ const xsCalligThick = calligThick.commands.filter(c => c.x !== undefined).map(c 
 assert.ok((Math.max(...xsCalligThick) - Math.min(...xsCalligThick)) > (Math.max(...xsCalligThin) - Math.min(...xsCalligThin)), 'calligraphy contour width expands cleanly with traceWidth');
 console.log('  ✓ cleanStrokes, getGlyphMetrics, SVG contour paths, and font compiler obey trace modes & traceWidth');
 
-console.log('10 passed, 0 failed\n');
+// 8. Vertical writing direction per-script CSS injection & Lexicon CSS adaptation
+assert.ok(fontInjectorSource.includes('writing-mode: ${scriptWritingMode};'), 'useFontInjector emits per-script writing-mode rules');
+assert.ok(fontInjectorSource.includes('[data-writing-direction^="vertical"]'), 'useFontInjector matches vertical-rl/vertical-lr for verticalLetterSpacing');
+const lexiconListSource = fs.readFileSync(path.join(__dirname, '../src/components/pages/dictionary/LexiconList.jsx'), 'utf8');
+assert.ok(lexiconListSource.includes('data-writing-direction={cardWritingDir}'), 'LexiconList exposes card writing direction attribute on entries and headwords');
+assert.ok(lexiconListSource.includes('is-vertical-script'), 'LexiconList applies is-vertical-script modifier on vertical script entries');
+const lexiconCssSource = fs.readFileSync(path.join(__dirname, '../src/components/pages/dictionary/lexiconList.css'), 'utf8');
+assert.ok(lexiconCssSource.includes('.lexicon-entry.is-vertical-script .entry-words'), 'lexiconList.css adapts .entry-words flex alignment for vertical entries');
+assert.ok(lexiconCssSource.includes('writing-mode: vertical-rl;') && lexiconCssSource.includes('writing-mode: vertical-lr;'), 'lexiconList.css explicitly supports both vertical-rl and vertical-lr');
+assert.ok(lexiconCssSource.includes('.lexicon-cards.layout-grid .lexicon-entry.is-vertical-script .entry-words'), 'lexiconList.css adapts grid card layout for vertical entries');
+console.log('  ✓ Per-script vertical writing-mode & Lexicon vertical layout CSS verified');
+
+console.log('11 passed, 0 failed\n');

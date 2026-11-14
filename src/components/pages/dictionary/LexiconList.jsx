@@ -73,6 +73,8 @@ const LEXICON_SCRIPT_CONFIG_KEYS = [
     'typographySettings',
 ];
 
+const VALID_WRITING_DIRECTIONS = ['ltr', 'rtl', 'vertical-rl', 'vertical-lr'];
+
 
 
 export default function LexiconList() {
@@ -886,6 +888,9 @@ export default function LexiconList() {
                         : resolveWordScriptId(baseEntry, configFull);
                     const cardScript = getScriptSystem(configFull, wordScriptId);
                     const cardScriptType = isLatinSelected ? 'latin' : (cardScript?.type || phonologyTypes || 'alphabetic');
+                    const rawCardDir = isLatinSelected ? 'ltr' : (cardScript?.writingDirection || configFull.writingDirection || 'ltr');
+                    const cardWritingDir = VALID_WRITING_DIRECTIONS.includes(rawCardDir) ? rawCardDir : 'ltr';
+                    const isVerticalCard = cardWritingDir.startsWith('vertical');
 
                     // Respect active script switcher if selected, otherwise entry's own script/ideogram
                     const displayWord = resolveEntryDisplayText(baseEntry, {
@@ -907,7 +912,8 @@ export default function LexiconList() {
                     return (
                         <Card 
                             key={`${baseEntry.id}-${groupIdx}`} 
-                            className="lexicon-entry"
+                            className={`lexicon-entry${isVerticalCard ? ' is-vertical-script' : ''}`}
+                            data-writing-direction={cardWritingDir}
                             initial={{ opacity: 0, y: 15 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.3, delay: Math.min(groupIdx * 0.05, 0.5), ease: "easeOut" }}
@@ -922,7 +928,8 @@ export default function LexiconList() {
                                             return (
                                                 <span 
                                                     className={`notranslate entry-main-word ${isLatinSelected ? '' : `custom-font-text conlang-script-${wordScriptId}`} ${resolvedScriptType === 'featural_block' && !isLatinSelected ? 'featural-block-render' : ''}`} 
-                                                    style={{ textAlign: 'center', cursor: 'pointer', transition: 'color 0.2s' }}
+                                                    data-writing-direction={cardWritingDir}
+                                                    style={{ textAlign: isVerticalCard ? 'start' : 'center', cursor: 'pointer', transition: 'color 0.2s' }}
                                                     onClick={() => setSelectedGlyphDetails({ 
                                                         char: resolvedScriptType === 'logographic' ? (baseEntry.ideogram || safeWord) : safeWord, 
                                                         glyph: displayWord, 
