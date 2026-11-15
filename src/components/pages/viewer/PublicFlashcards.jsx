@@ -55,14 +55,26 @@ export default function PublicFlashcards({ lexicon = [], config = {} }) {
         const cleanText = text.replace(/[.\-*]/g, '');
         const cleanIpa = wordObj.ipa ? wordObj.ipa.replace(/[.\-*]/g, '') : undefined;
 
+        if (wordObj.customAudioBase64) {
+            try {
+                const audio = new Audio(wordObj.customAudioBase64);
+                await audio.play();
+                return;
+            } catch {
+                // Fall back to synthesized speech if custom audio fails
+            }
+        }
+
         if (config.azureTtsVoice) {
+            const safeEngine = ['browser', 'formant', 'human'].includes(config?.ttsEngine) ? config.ttsEngine : 'browser';
             const toastId = toast.loading("Generating audio...");
             try {
                 await playAzureTTS({
                     text: cleanText,
                     ipa: cleanIpa,
                     voice: config.azureTtsVoice,
-                    useIpa: config.azureTtsUseIpa
+                    useIpa: config.azureTtsUseIpa,
+                    engine: safeEngine
                 });
                 toast.dismiss(toastId);
             } catch {

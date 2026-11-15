@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { createGrammarAnalyzer } from '../src/utils/grammarAnalyzer.js';
+import { transliterateText, normalizeToBase } from '../src/utils/transliteration.js';
 
 describe('Word Assist Remake: Lexicon Choice, POS & Word Order', () => {
     const richLexicon = [
@@ -213,5 +214,41 @@ describe('Word Assist Remake: Lexicon Choice, POS & Word Order', () => {
         const resWhQ = analyzer.computePhraseSuggestion('What did you eat?', 17);
         // Question word + Nominative 'tu' + Past 'mangita' (support 'did' swallowed cleanly, 'you' is S)
         assert.strictEqual(resWhQ[0].romanized, 'kio tu mangita?');
+    });
+
+    it('never hangs when alphabetGlyphs or syllabaryMap contain empty or mode-only keys', () => {
+        const linearConfig = {
+            phonologyTypes: 'alphabetic',
+            alphabeticScript: 'custom',
+            alphabetGlyphs: { '': '\uE000', '_uppercase': '\uE001', '_cursive': '\uE002', a: '\uE003' },
+            consonants: 't, k',
+            vowels: 'a'
+        };
+        assert.strictEqual(transliterateText('[cat] ka', linearConfig, richLexicon), '[c\uE003t] k\uE003');
+        assert.strictEqual(normalizeToBase('k\uE003', linearConfig), 'ka');
+
+        const syllabicLtr = {
+            phonologyTypes: 'syllabic',
+            syllabificationAlgorithm: 'ltr',
+            syllabaryMap: { '': '\uE010', ka: '\uE011' }
+        };
+        assert.strictEqual(transliterateText('ka.ta', syllabicLtr, richLexicon), '\uE011ta');
+
+        const syllabicRtl = {
+            phonologyTypes: 'syllabic',
+            syllabificationAlgorithm: 'rtl',
+            syllabaryMap: { '': '\uE010', ka: '\uE011' }
+        };
+        assert.strictEqual(transliterateText('ka.ta', syllabicRtl, richLexicon), '\uE011ta');
+
+        const analyzer = createGrammarAnalyzer({
+            lexicon: richLexicon,
+            grammarRules: rules,
+            syntaxOrder: 'SVO',
+            waConfig: { copulaBehavior: 'zero_copula', copulaReplacement: 'ne' },
+            transliterate: (s, lex) => transliterateText(s, linearConfig, lex)
+        });
+        const suggs = analyzer.computePhraseSuggestion('The cat is unknownword', 22);
+        assert.ok(Array.isArray(suggs) && suggs.length > 0);
     });
 });

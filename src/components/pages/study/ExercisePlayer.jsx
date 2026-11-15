@@ -207,12 +207,16 @@ export default function ExercisePlayer({ levelNode, onComplete, onExit, customLe
         if (!cleanText) return;
 
         const ipa = resolvePhraseIpa(cleanText, lexicon, config.ipaMappingRules);
+        const publicEngine = customConfig
+            ? (['browser', 'formant', 'human'].includes(customConfig.ttsEngine) ? customConfig.ttsEngine : 'browser')
+            : undefined;
         setIsAudioPlaying(true);
         playAzureTTS({
             text: cleanText,
             ipa,
             voice: config.azureTtsVoice,
-            useIpa: config.azureTtsUseIpa ?? true
+            useIpa: config.azureTtsUseIpa ?? true,
+            ...(publicEngine ? { engine: publicEngine } : {})
         }).finally(() => {
             setIsAudioPlaying(false);
         });

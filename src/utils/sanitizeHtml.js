@@ -13,6 +13,8 @@ export const WIKI_DOMPURIFY_CONFIG = {
         'data-align',
         'data-width',
         'data-caption',
+        'data-script-id',
+        'data-writing-direction',
         'target',
         'rel',
     ],

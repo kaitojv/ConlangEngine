@@ -87,43 +87,38 @@ export function useThemeInjector() {
         if (!colors) return;
         
         const root = document.documentElement;
+        const setOrReset = (prop, val) => {
+            if (val !== undefined && val !== null && val !== '') {
+                root.style.setProperty(prop, val);
+            } else {
+                root.style.removeProperty(prop);
+            }
+        };
         
         // Main colors & Surfaces
-        if (colors.bg) root.style.setProperty('--bg', colors.bg);
-        if (colors.header) root.style.setProperty('--h-bg', colors.header);
-        
-        if (colors.s1) root.style.setProperty('--s1', colors.s1);
-        if (colors.s2) root.style.setProperty('--s2', colors.s2);
-        if (colors.s3) root.style.setProperty('--s3', colors.s3);
-        if (colors.s4) root.style.setProperty('--s4', colors.s4);
-        
+        setOrReset('--bg', colors.bg);
+        setOrReset('--h-bg', colors.header);
+        setOrReset('--s1', colors.s1);
+        setOrReset('--s2', colors.s2);
+        setOrReset('--s3', colors.s3);
         // Backward compatibility: old presets used 'card' key, map it to --s4
-        if (colors.card) root.style.setProperty('--s4', colors.card);
+        setOrReset('--s4', colors.s4 || colors.card);
         
         // Texts and Accents
-        if (colors.font) root.style.setProperty('--tx', colors.font);
-        if (colors.font2) root.style.setProperty('--tx2', colors.font2);
-        if (colors.accent) root.style.setProperty('--acc', colors.accent);
-        if (colors.accent2) root.style.setProperty('--acc2', colors.accent2);
-        if (colors.accent3) root.style.setProperty('--acc3', colors.accent3);
+        setOrReset('--tx', colors.font);
+        setOrReset('--tx2', colors.font2);
+        setOrReset('--acc', colors.accent);
+        setOrReset('--acc2', colors.accent2);
+        setOrReset('--acc3', colors.accent3);
         
         // Borders and Visual Effects
-        if (colors.border) root.style.setProperty('--bd', colors.border);
-        if (colors.blur !== undefined) root.style.setProperty('--blur', colors.blur);
-        if (colors.glow !== undefined) root.style.setProperty('--glow', colors.glow);
+        setOrReset('--bd', colors.border);
+        setOrReset('--blur', colors.blur);
+        setOrReset('--glow', colors.glow);
         
         // Dynamic Gradients
-        if (colors.logoGradient) {
-            root.style.setProperty('--logo-gradient', colors.logoGradient);
-        } else {
-            root.style.removeProperty('--logo-gradient');
-        }
-        
-        if (colors.glowGradient) {
-            root.style.setProperty('--glow-gradient', colors.glowGradient);
-        } else {
-            root.style.removeProperty('--glow-gradient');
-        }
+        setOrReset('--logo-gradient', colors.logoGradient);
+        setOrReset('--glow-gradient', colors.glowGradient);
         
     }, [colors]); 
 }

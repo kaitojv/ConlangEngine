@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { getScriptTypographySettings } from '../../../utils/scriptResolver.js';
-import { cleanStrokes, buildSvgPathDFromStrokes } from '../../../utils/fontCompiler.js';
+import { cleanStrokes, buildSvgPathDFromStrokes, extractStrokeMetaAndPoints } from '../../../utils/fontCompiler.js';
 import './glyphPreviewBadge.css';
 
 function renderStrokeElements(resolvedStrokes, strokeColor, strokeWidth) {
@@ -162,7 +162,16 @@ export default function GlyphPreviewBadge({
 
     const contouredPathD = useMemo(() => {
         if (!hasStrokes || !rawStrokes) return '';
-        return buildSvgPathDFromStrokes(rawStrokes, { strokeWidth: effectiveStrokeWidth });
+        const { meta, actualStrokes } = extractStrokeMetaAndPoints(rawStrokes);
+        const needsContouredNib = Boolean(
+            meta.isCalligraphy ||
+            meta.isBrushPen ||
+            meta.isChisel ||
+            meta.isPaintBrush ||
+            actualStrokes.some(s => s && !Array.isArray(s) && (s.isCalligraphy || s.isBrushPen || s.isChisel || s.isPaintBrush))
+        );
+        if (!needsContouredNib) return '';
+        return buildSvgPathDFromStrokes(rawStrokes, { strokeWidth: effectiveStrokeWidth, skipUnion: true });
     }, [hasStrokes, rawStrokes, effectiveStrokeWidth]);
 
     const isInteractive = Boolean(onClick);

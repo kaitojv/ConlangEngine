@@ -1,6 +1,6 @@
 /* src/components/pages/study/mascot.css */
-/* Tamagotchi / Retro-Modern Digital Bot Mascot */
-/* Dynamically inherits the user's active theme colors (--acc, --acc2, etc.) */
+/* Scholar Owl Course Companion */
+/* Dynamically inherits the user's active theme accent color (--acc) */
 
 .mascot-container {
     position: relative;
@@ -15,18 +15,18 @@
 
 /* Sizing variants */
 .mascot-container.size-small {
-    width: 46px;
-    height: 46px;
+    width: 48px;
+    height: 48px;
 }
 
 .mascot-container.size-medium {
-    width: 104px;
-    height: 104px;
+    width: 108px;
+    height: 108px;
 }
 
 .mascot-container.size-large {
-    width: 144px;
-    height: 144px;
+    width: 146px;
+    height: 146px;
 }
 
 .mascot-svg {
@@ -36,247 +36,283 @@
     display: block;
 }
 
-/* Ground shadow */
+/* Ground shadow anchored at bottom */
 .mascot-ground-shadow {
-    fill: rgba(0, 0, 0, 0.14);
-    transform-origin: 50px 93px;
-    transition: all 0.25s ease;
+    fill: rgba(15, 23, 42, 0.16);
+    transform-origin: 50px 91px;
 }
 
-/* Robot Chassis - Pure Theme Accent Color */
-.bot-chassis {
+.mascot-character-group {
+    transform-origin: 50px 84px;
+}
+
+/* Main Owl Body & Wings */
+.owl-body {
     fill: var(--acc);
-    stroke: color-mix(in srgb, var(--acc) 35%, #0f172a 65%);
-    stroke-width: 2.6px;
+    stroke: color-mix(in srgb, var(--acc) 55%, #0f172a 45%);
+    stroke-width: 2.2px;
     stroke-linejoin: round;
 }
 
-/* Antenna */
-.bot-antenna-stalk {
-    stroke: color-mix(in srgb, var(--acc) 40%, #0f172a 60%);
-    stroke-width: 2.5px;
+.owl-crown-highlight {
+    fill: rgba(255, 255, 255, 0.22);
+}
+
+.owl-wing {
+    fill: color-mix(in srgb, var(--acc) 82%, #0f172a 18%);
+    stroke: color-mix(in srgb, var(--acc) 55%, #0f172a 45%);
+    stroke-width: 2.1px;
+    stroke-linejoin: round;
+    transition: transform 0.25s ease;
+}
+
+.owl-wing.left {
+    transform-origin: 26px 52px;
+}
+
+.owl-wing.right {
+    transform-origin: 74px 52px;
+}
+
+/* Belly & Facial Discs */
+.owl-belly {
+    fill: color-mix(in srgb, var(--acc) 12%, #ffffff 88%);
+}
+
+.owl-feather-mark {
+    fill: none;
+    stroke: color-mix(in srgb, var(--acc) 35%, #cbd5e1 65%);
+    stroke-width: 1.6px;
     stroke-linecap: round;
 }
 
-.bot-antenna-orb {
-    fill: color-mix(in srgb, var(--acc) 75%, #ffffff 25%);
-    stroke: color-mix(in srgb, var(--acc) 35%, #0f172a 65%);
-    stroke-width: 2px;
-    animation: bot-antenna-pulse 2.8s ease-in-out infinite alternate;
+.owl-face-disc {
+    fill: color-mix(in srgb, var(--acc) 6%, #ffffff 94%);
 }
 
-.bot-antenna-orb.glowing {
-    fill: #38bdf8;
-    filter: drop-shadow(0 0 6px #38bdf8);
-    animation: bot-antenna-flash 0.4s ease-in-out infinite alternate;
+/* Feet & Beak */
+.owl-foot {
+    fill: #f59e0b;
+    stroke: #b45309;
+    stroke-width: 1.4px;
+    stroke-linejoin: round;
 }
 
-@keyframes bot-antenna-pulse {
+.owl-beak {
+    fill: #fbbf24;
+    stroke: #d97706;
+    stroke-width: 1.4px;
+    stroke-linejoin: round;
+}
+
+.owl-beak-open {
+    fill: #b45309;
+    transform-origin: 50px 53px;
+    animation: owl-speak-mouth 0.26s ease-in-out infinite alternate;
+}
+
+@keyframes owl-speak-mouth {
     0% {
-        transform: scale(1);
-        filter: drop-shadow(0 0 1px transparent);
+        transform: scaleY(0.45);
     }
     100% {
-        transform: scale(1.12);
-        filter: drop-shadow(0 0 4px color-mix(in srgb, var(--acc) 80%, #fff 20%));
+        transform: scaleY(1.15);
     }
 }
 
-@keyframes bot-antenna-flash {
-    0% {
-        transform: scale(1);
-    }
-    100% {
-        transform: scale(1.22);
-    }
+/* Eyes & Expressions */
+.owl-eye-iris {
+    fill: #1e293b;
 }
 
-/* Side Sensor Dials */
-.bot-ear-dial {
-    fill: color-mix(in srgb, var(--acc) 75%, #000 25%);
-    stroke: color-mix(in srgb, var(--acc) 35%, #0f172a 65%);
-    stroke-width: 2px;
+.owl-eye-shine {
+    fill: #ffffff;
 }
 
-/* Hover Pads / Feet */
-.bot-foot {
-    fill: color-mix(in srgb, var(--acc) 70%, #000 30%);
-    stroke: color-mix(in srgb, var(--acc) 35%, #0f172a 65%);
-    stroke-width: 2px;
-}
-
-/* Dark Glass OLED Screen */
-.bot-screen {
-    fill: #080c16;
-    stroke: color-mix(in srgb, var(--acc) 30%, #000 70%);
-    stroke-width: 2px;
-}
-
-/* Digital LED Face Styling */
-.bot-led-eye {
-    fill: color-mix(in srgb, var(--acc) 40%, #38bdf8 60%);
-    filter: drop-shadow(0 0 3px color-mix(in srgb, var(--acc) 50%, #38bdf8 50%));
-}
-
-.bot-led-mouth {
+.owl-eye-arc {
     fill: none;
-    stroke: color-mix(in srgb, var(--acc) 40%, #38bdf8 60%);
-    stroke-width: 2.4px;
+    stroke: #1e293b;
+    stroke-width: 2.9px;
     stroke-linecap: round;
-    filter: drop-shadow(0 0 3px color-mix(in srgb, var(--acc) 50%, #38bdf8 50%));
 }
 
-.bot-led-blush {
-    fill: #f472b6;
-    opacity: 0.8;
-}
-
-/* Happy State LED Expressions */
-.bot-led-happy-eye {
+.owl-brow {
     fill: none;
-    stroke: #38bdf8;
-    stroke-width: 2.8px;
-    filter: drop-shadow(0 0 4px #38bdf8);
-}
-
-.bot-led-happy-mouth {
-    fill: #38bdf8;
-    filter: drop-shadow(0 0 4px #38bdf8);
-}
-
-/* Sad / Sympathetic State LED Expressions */
-.bot-led-brow {
-    stroke: color-mix(in srgb, var(--acc) 40%, #38bdf8 60%);
+    stroke: #334155;
     stroke-width: 2.2px;
     stroke-linecap: round;
-    filter: drop-shadow(0 0 2px color-mix(in srgb, var(--acc) 40%, #38bdf8 60%));
 }
 
-.bot-led-tear {
-    animation: bot-tear-blink 1.2s ease-in-out infinite alternate;
+.owl-blush {
+    fill: #fb7185;
+    opacity: 0.45;
+    transition: opacity 0.2s ease;
 }
 
-@keyframes bot-tear-blink {
+.owl-blush.bright {
+    opacity: 0.72;
+}
+
+.owl-tear {
+    fill: #38bdf8;
+    stroke: #0284c7;
+    stroke-width: 0.9px;
+    animation: owl-tear-drop 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes owl-tear-drop {
     0% {
-        opacity: 0.5;
+        opacity: 0.65;
         transform: translateY(0);
     }
     100% {
         opacity: 1;
-        transform: translateY(1.5px);
+        transform: translateY(2px);
     }
 }
 
-/* Audio Equalizer Waveform Bars when Speaking */
-.bot-led-waveform .wave-bar {
-    stroke: #38bdf8;
-    stroke-width: 2.4px;
-    stroke-linecap: round;
-    transform-origin: bottom;
-    animation: bot-wave-bounce 0.28s ease-in-out infinite alternate;
-    filter: drop-shadow(0 0 3px #38bdf8);
+/* Sparkles when celebrating */
+.owl-sparkle {
+    fill: #fbbf24;
+    animation: owl-sparkle-pop 0.9s ease-in-out infinite alternate;
 }
 
-.bot-led-waveform .w1 { animation-delay: 0.05s; }
-.bot-led-waveform .w2 { animation-delay: 0.12s; }
-.bot-led-waveform .w3 { animation-delay: 0.00s; }
-.bot-led-waveform .w4 { animation-delay: 0.18s; }
-.bot-led-waveform .w5 { animation-delay: 0.08s; }
+.owl-sparkle.s2 {
+    animation-delay: 0.3s;
+}
 
-@keyframes bot-wave-bounce {
+@keyframes owl-sparkle-pop {
     0% {
-        transform: scaleY(0.4);
+        opacity: 0.4;
+        transform: scale(0.8);
     }
     100% {
-        transform: scaleY(1.4);
+        opacity: 1;
+        transform: scale(1.15);
     }
 }
 
-/* Natural Hover Bobbing */
-.anim-bob {
-    animation: bot-float-bob 3.2s ease-in-out infinite alternate;
+/* Natural Idle Floating Bob */
+.anim-bob .mascot-character-group {
+    animation: owl-float-bob 3s ease-in-out infinite alternate;
 }
 
 .anim-bob .mascot-ground-shadow {
-    animation: bot-shadow-bob 3.2s ease-in-out infinite alternate;
+    animation: owl-shadow-bob 3s ease-in-out infinite alternate;
 }
 
-@keyframes bot-float-bob {
+@keyframes owl-float-bob {
     0% {
         transform: translateY(0);
     }
     100% {
-        transform: translateY(-5px);
+        transform: translateY(-3.5px);
     }
 }
 
-@keyframes bot-shadow-bob {
+@keyframes owl-shadow-bob {
     0% {
         transform: scale(1);
         opacity: 0.85;
     }
     100% {
-        transform: scale(0.85);
-        opacity: 0.45;
+        transform: scale(0.9);
+        opacity: 0.55;
     }
 }
 
-/* Natural Digital Eye Blink */
-.bot-face-idle .bot-eye-group {
-    transform-origin: 50% 48px;
-    animation: bot-eye-blink 4s infinite;
+/* Natural Eye Blink */
+.owl-eyes-idle .owl-eye-group {
+    transform-origin: 50px 45px;
+    animation: owl-eye-blink 4.2s infinite;
 }
 
-@keyframes bot-eye-blink {
-    0%, 94%, 98%, 100% {
+@keyframes owl-eye-blink {
+    0%, 93%, 98%, 100% {
         transform: scaleY(1);
     }
-    96% {
+    95.5% {
         transform: scaleY(0.08);
     }
 }
 
-/* Celebratory Spring Jump on Correct */
-.anim-jump {
-    animation: bot-jump 0.8s cubic-bezier(0.25, 0.8, 0.5, 1) infinite;
+/* Wing Flap & Celebratory Jump on Correct */
+.anim-jump .mascot-character-group {
+    animation: owl-jump 0.82s cubic-bezier(0.25, 0.8, 0.5, 1) infinite;
 }
 
 .anim-jump .mascot-ground-shadow {
-    animation: bot-jump-shadow 0.8s cubic-bezier(0.25, 0.8, 0.5, 1) infinite;
+    animation: owl-jump-shadow 0.82s cubic-bezier(0.25, 0.8, 0.5, 1) infinite;
 }
 
-@keyframes bot-jump {
+.anim-jump .owl-wing.left {
+    animation: owl-wing-flap-left 0.41s ease-in-out infinite alternate;
+}
+
+.anim-jump .owl-wing.right {
+    animation: owl-wing-flap-right 0.41s ease-in-out infinite alternate;
+}
+
+@keyframes owl-wing-flap-left {
+    0% {
+        transform: rotate(6deg);
+    }
+    100% {
+        transform: rotate(32deg);
+    }
+}
+
+@keyframes owl-wing-flap-right {
+    0% {
+        transform: rotate(-6deg);
+    }
+    100% {
+        transform: rotate(-32deg);
+    }
+}
+
+@keyframes owl-jump {
     0%, 100% {
         transform: translateY(0) scale(1, 1);
     }
     18% {
-        transform: translateY(3px) scale(1.06, 0.94);
+        transform: translateY(2.5px) scale(1.06, 0.94);
     }
     50% {
-        transform: translateY(-15px) scale(0.96, 1.05);
+        transform: translateY(-13px) scale(0.96, 1.05);
     }
-    75% {
+    76% {
         transform: translateY(0) scale(1.02, 0.98);
     }
 }
 
-@keyframes bot-jump-shadow {
+@keyframes owl-jump-shadow {
     0%, 100% {
         transform: scale(1);
         opacity: 0.85;
     }
     50% {
         transform: scale(0.65);
-        opacity: 0.25;
+        opacity: 0.28;
     }
 }
 
 /* Sympathetic Wobble for Mistakes */
-.anim-wobble {
-    animation: bot-wobble 0.6s ease-in-out;
+.anim-wobble .mascot-character-group {
+    animation: owl-wobble 0.6s ease-in-out;
 }
 
-@keyframes bot-wobble {
+.state-incorrect .owl-wing.left,
+.state-encourage-idle .owl-wing.left {
+    transform: rotate(-8deg);
+}
+
+.state-incorrect .owl-wing.right,
+.state-encourage-idle .owl-wing.right {
+    transform: rotate(8deg);
+}
+
+@keyframes owl-wobble {
     0%, 100% {
         transform: translateX(0) rotate(0deg);
     }

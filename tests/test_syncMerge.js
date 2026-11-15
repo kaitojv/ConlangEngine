@@ -252,4 +252,31 @@ assert.equal(derivEntry.etymology, 'local_root', 'etymology remapped to survivin
 assert.deepEqual(resRemap.merged.phrases[0].componentWords, ['local_root'], 'Phrase componentWords remapped');
 console.log('✓ ID remapping updates parentRootId, etymology, and phrase componentWords');
 
+// 13. Theme colors object is treated atomically (never fused key-by-key across devices)
+const pcDarkColors = {
+    bg: '#0b0f19',
+    s1: '#151a28',
+    font: '#f8fafc',
+    accent: '#7c3aed',
+    logoGradient: 'linear-gradient(135deg, #7c3aed, #ec4899)',
+    card: '#12121c',
+};
+const mobileLightColors = {
+    bg: '#f8fafc',
+    s1: '#ffffff',
+    font: '#0f172a',
+    accent: '#2563eb',
+};
+const resThemeNoBase = mergeProject({
+    base: null,
+    local: { lexicon: [], phrases: [], config: { theme: 'dark', colors: pcDarkColors }, wiki: {} },
+    remote: { lexicon: [], phrases: [], config: { theme: 'light', colors: mobileLightColors }, wiki: {} },
+    mode: MERGE_MODES.AUTO,
+    localUpdatedAt: 100,
+    remoteUpdatedAt: 200,
+});
+assert.deepEqual(resThemeNoBase.merged.config.colors, mobileLightColors, 'Remote theme colors must replace local atomically without keeping stale logoGradient/card keys');
+assert.equal(resThemeNoBase.conflicts.filter(c => c.key.startsWith('config:colors')).length, 1, 'Conflicting theme colors produce one atomic config:colors conflict instead of per-key fusion');
+console.log('✓ Theme colors merge atomically without fusing palettes across devices');
+
 console.log('\nAll sync merge tests passed successfully!');

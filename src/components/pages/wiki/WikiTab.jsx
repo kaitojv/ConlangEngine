@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { sanitizeUrl } from '@/utils/sanitizeHtml.js';
+import { sanitizeUrl, escapeHtml } from '@/utils/sanitizeHtml.js';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { getUniqueParsings } from '@/utils/morphologyEngine.jsx';
 import { useTransliterator } from '@/hooks/useTransliterator.jsx';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
-import { transliterateText } from '@/utils/transliteration.js';
-import { buildScriptConfig } from '@/utils/scriptResolver.js';
+import { renderWordInScript } from '@/utils/scriptRendering.js';
+import { getScriptSystem, getDefaultScriptId, repairScriptSystems } from '@/utils/scriptResolver.js';
 import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
@@ -1320,26 +1320,50 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
 
 
 
+const VALID_WIKI_DIRECTIONS = ['ltr', 'rtl', 'vertical-rl', 'vertical-lr'];
+
+function renderWikiConlangText(rawText, config, lexicon, scriptId) {
+    if (!rawText) return '';
+    const tokens = String(rawText).split(/(\s+|[.,!?;:()[\]"'«»—–]+)/);
+    return tokens.map((token) => {
+        if (!token || /^(\s+|[.,!?;:()[\]"'«»—–]+)$/.test(token)) {
+            return token;
+        }
+        const cleanLower = token.replace(/\*/g, '').toLowerCase();
+        const entry = lexicon.find(e => e.isPrimary && e.word && e.word.replace(/\*/g, '').toLowerCase() === cleanLower)
+            || lexicon.find(e => e.word && e.word.replace(/\*/g, '').toLowerCase() === cleanLower)
+            || { word: token };
+        return renderWordInScript(entry, config, lexicon, scriptId).text || token;
+    }).join('');
+}
+
 // The Classic Rich Text Editor - Upgraded to TipTap
 function LegacyWikiEditor({ content, onSave }) {
     const { t } = useTranslation();
-    // Fields read here, plus the ten buildScriptConfig() reads in
-    // utils/scriptResolver.js.
     const config = useConfigStore(useShallow(state => ({
         scriptSystems: state.scriptSystems,
         activeScriptSystemId: state.activeScriptSystemId,
         alphabeticScript: state.alphabeticScript,
         alphabetNames: state.alphabetNames,
+        alphabetGlyphs: state.alphabetGlyphs,
+        customGlyphs: state.customGlyphs,
+        syllabaryMap: state.syllabaryMap,
+        featuralComponents: state.featuralComponents,
         blockSettings: state.blockSettings,
         blockTemplates: state.blockTemplates,
         phonologyTypes: state.phonologyTypes,
         scriptName: state.scriptName,
         scriptRules: state.scriptRules,
+        scriptDataById: state.scriptDataById,
         syllabificationAlgorithm: state.syllabificationAlgorithm,
         writingDirection: state.writingDirection,
+        typographySettings: state.typographySettings,
+        consonants: state.consonants,
+        vowels: state.vowels,
+        otherPhonemes: state.otherPhonemes,
     })));
     const lexicon = useLexiconStore(state => state.lexicon) || [];
-    const scriptSystems = config.scriptSystems || [];
+    const resolvedScripts = useMemo(() => repairScriptSystems(config).scriptSystems, [config]);
     
     const [linkModalOpen, setLinkModalOpen] = useState(false);
     const [linkUrl, setLinkUrl] = useState('');
@@ -1353,8 +1377,9 @@ function LegacyWikiEditor({ content, onSave }) {
     
     // Conlang font insertion state
     const [conlangModalOpen, setConlangModalOpen] = useState(false);
-    const [selectedScriptId, setSelectedScriptId] = useState(config.activeScriptSystemId || 'default');
-    const [writingDirection, setWritingDirection] = useState('horizontal');
+    const [selectedScriptId, setSelectedScriptId] = useState(() => config.activeScriptSystemId || getDefaultScriptId(config));
+    const [conlangSourceText, setConlangSourceText] = useState('');
+    const [savedConlangSelection, setSavedConlangSelection] = useState(null);
 
     // Word Assist Live Translator state
     const [wordAssist, setWordAssist] = useState(false);
@@ -1464,6 +1489,22 @@ function LegacyWikiEditor({ content, onSave }) {
         };
     }, []);
 
+    const activeConlangScript = useMemo(() => {
+        const cfgWithScripts = { ...config, scriptSystems: resolvedScripts };
+        return getScriptSystem(cfgWithScripts, selectedScriptId);
+    }, [config, resolvedScripts, selectedScriptId]);
+
+    const autoScriptDirection = useMemo(() => {
+        const rawDir = activeConlangScript?.writingDirection || config.writingDirection || 'ltr';
+        return VALID_WIKI_DIRECTIONS.includes(rawDir) ? rawDir : 'ltr';
+    }, [activeConlangScript, config.writingDirection]);
+
+    const conlangPreviewText = useMemo(() => {
+        if (!conlangModalOpen || !conlangSourceText.trim()) return '';
+        const cfgWithScripts = { ...config, scriptSystems: resolvedScripts };
+        return renderWikiConlangText(conlangSourceText, cfgWithScripts, lexicon, selectedScriptId);
+    }, [conlangModalOpen, conlangSourceText, config, resolvedScripts, lexicon, selectedScriptId]);
+
     if (!editor) {
         return null;
     }
@@ -1489,31 +1530,51 @@ function LegacyWikiEditor({ content, onSave }) {
     };
 
     const handleConlangBtnClick = () => {
+        if (!editor) return;
         const { from, to } = editor.state.selection;
-        if (from === to) return; // No selection
+        setSavedConlangSelection({ from, to });
+        const selected = from !== to ? editor.state.doc.textBetween(from, to, ' ') : '';
+        setConlangSourceText(selected);
+
+        const preferredId = config.activeScriptSystemId && resolvedScripts.some(s => s.id === config.activeScriptSystemId)
+            ? config.activeScriptSystemId
+            : (resolvedScripts.some(s => s.id === selectedScriptId) ? selectedScriptId : (resolvedScripts[0]?.id || getDefaultScriptId(config)));
+        setSelectedScriptId(preferredId);
         setConlangModalOpen(true);
     };
 
     const applyConlangFontWithOptions = () => {
-        const { from, to } = editor.state.selection;
-        if (from === to) {
+        if (!editor) return;
+        const sourceText = conlangSourceText.trim();
+        if (!sourceText) {
             setConlangModalOpen(false);
             return;
         }
-        
-        const text = editor.state.doc.textBetween(from, to, ' ');
-        if (text) {
-            const scriptConfig = buildScriptConfig(config, selectedScriptId);
-            const transliterated = transliterateText(text, scriptConfig, lexicon);
-            
-            let html;
-            if (writingDirection === 'vertical') {
-                html = `<span class="custom-font-text notranslate" data-script-id="${selectedScriptId}" data-writing-direction="vertical" style="color: var(--acc); font-weight: bold; writing-mode: vertical-rl; text-orientation: upright; display: block; margin: 10px auto; padding: 10px; width: fit-content;">${transliterated}</span>`;
-            } else {
-                html = `<span class="custom-font-text notranslate" data-script-id="${selectedScriptId}" data-writing-direction="horizontal" style="color: var(--acc); font-weight: bold;">${transliterated}</span>`;
-            }
-            editor.commands.insertContent(html);
+
+        const cfgWithScripts = { ...config, scriptSystems: resolvedScripts };
+        const rendered = renderWikiConlangText(conlangSourceText, cfgWithScripts, lexicon, selectedScriptId);
+        const safeScriptId = String(selectedScriptId || 'default').replace(/[^a-zA-Z0-9_-]/g, '');
+        const isVertical = autoScriptDirection.startsWith('vertical');
+        const isRtl = autoScriptDirection === 'rtl';
+        const isFeatural = activeConlangScript?.type === 'featural_block';
+
+        let inlineStyle = 'color: var(--acc); font-weight: bold;';
+        if (isVertical) {
+            inlineStyle += ` writing-mode: ${autoScriptDirection}; text-orientation: upright; display: inline-block; vertical-align: middle; line-height: 1.45; padding: 0.2rem 0.35rem;`;
+        } else if (isRtl) {
+            inlineStyle += ' writing-mode: horizontal-tb; direction: rtl; unicode-bidi: isolate;';
+        } else {
+            inlineStyle += ' writing-mode: horizontal-tb; direction: ltr;';
         }
+
+        const html = `<span class="custom-font-text notranslate conlang-script-${safeScriptId}${isFeatural ? ' featural-block-render' : ''}" data-script-id="${safeScriptId}" data-writing-direction="${autoScriptDirection}" style="${inlineStyle}">${escapeHtml(rendered)}</span>`;
+
+        const chain = editor.chain().focus();
+        if (savedConlangSelection && typeof savedConlangSelection.from === 'number') {
+            chain.setTextSelection(savedConlangSelection);
+        }
+        chain.insertContent(html).run();
+        setSavedConlangSelection(null);
         setConlangModalOpen(false);
     };
 
@@ -1686,7 +1747,7 @@ function LegacyWikiEditor({ content, onSave }) {
                             transliterate={transliterate}
                             lexicon={lexicon}
                             config={config}
-                            scriptSystems={scriptSystems}
+                            scriptSystems={resolvedScripts}
                             activeScriptId={config.activeScriptSystemId || 'default'}
                         />
                     </div>
@@ -1748,9 +1809,23 @@ function LegacyWikiEditor({ content, onSave }) {
                 isOpen={conlangModalOpen}
                 onClose={() => setConlangModalOpen(false)}
                 title={t('wiki.richText.conlangModalTitle')}
-                maxWidth="400px"
+                maxWidth="440px"
             >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', paddingTop: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingTop: '10px' }}>
+                    <div>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px', display: 'block' }}>
+                            {t('wiki.richText.formatConlang')}
+                        </label>
+                        <input
+                            type="text"
+                            className="fi"
+                            style={{ width: '100%' }}
+                            placeholder="Type or select text to write in conlang..."
+                            value={conlangSourceText}
+                            onChange={(e) => setConlangSourceText(e.target.value)}
+                            autoFocus
+                        />
+                    </div>
                     <div>
                         <label style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px', display: 'block' }}>{t('wiki.richText.targetScript')}</label>
                         <select 
@@ -1759,26 +1834,42 @@ function LegacyWikiEditor({ content, onSave }) {
                             value={selectedScriptId}
                             onChange={(e) => setSelectedScriptId(e.target.value)}
                         >
-                            {scriptSystems.map(sys => (
-                                <option key={sys.id} value={sys.id}>{sys.name}</option>
+                            {resolvedScripts.map(sys => (
+                                <option key={sys.id} value={sys.id}>
+                                    {sys.name} ({sys.type || 'alphabetic'})
+                                </option>
                             ))}
                         </select>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--tx2)', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span>{t('wiki.richText.writingDirection')}:</span>
+                            <span style={{ padding: '2px 8px', borderRadius: '999px', background: 'var(--s2)', border: '1px solid var(--bd)', color: 'var(--tx)', fontWeight: 600 }}>
+                                {autoScriptDirection === 'vertical-rl' ? 'Vertical (↓→)' : autoScriptDirection === 'vertical-lr' ? 'Vertical (↓←)' : autoScriptDirection === 'rtl' ? 'Right to Left (←)' : 'Horizontal (→)'}
+                            </span>
+                        </div>
                     </div>
-                    <div>
-                        <label style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '5px', display: 'block' }}>{t('wiki.richText.writingDirection')}</label>
-                        <select 
-                            className="select select-bordered w-full"
-                            style={{ height: '42px' }}
-                            value={writingDirection}
-                            onChange={(e) => setWritingDirection(e.target.value)}
-                        >
-                            <option value="horizontal">{t('wiki.richText.horizontal')}</option>
-                            <option value="vertical">{t('wiki.richText.vertical')}</option>
-                        </select>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                    {conlangPreviewText && (
+                        <div style={{ padding: '12px', borderRadius: '8px', background: 'var(--s2)', border: '1px solid var(--bd)', minHeight: '54px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                            <span
+                                className={`custom-font-text notranslate conlang-script-${String(selectedScriptId || 'default').replace(/[^a-zA-Z0-9_-]/g, '')}${activeConlangScript?.type === 'featural_block' ? ' featural-block-render' : ''}`}
+                                data-script-id={selectedScriptId}
+                                data-writing-direction={autoScriptDirection}
+                                style={{
+                                    color: 'var(--acc)',
+                                    fontSize: activeConlangScript?.type === 'featural_block' ? '2.2rem' : '1.4rem',
+                                    fontWeight: 'bold',
+                                    writingMode: autoScriptDirection.startsWith('vertical') ? autoScriptDirection : 'horizontal-tb',
+                                    direction: autoScriptDirection === 'rtl' ? 'rtl' : 'ltr',
+                                    textOrientation: autoScriptDirection.startsWith('vertical') ? 'upright' : undefined,
+                                    maxHeight: '10rem',
+                                }}
+                            >
+                                {conlangPreviewText}
+                            </span>
+                        </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
                         <Button variant="ghost" onClick={() => setConlangModalOpen(false)}>{t('wiki.richText.cancel')}</Button>
-                        <Button variant="imp" onClick={applyConlangFontWithOptions}>{t('wiki.richText.apply')}</Button>
+                        <Button variant="imp" onClick={applyConlangFontWithOptions} disabled={!conlangSourceText.trim()}>{t('wiki.richText.apply')}</Button>
                     </div>
                 </div>
             </Modal>

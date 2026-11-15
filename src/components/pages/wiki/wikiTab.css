@@ -17,6 +17,29 @@
 .wiki-editor-tiptap .ProseMirror p, .wiki-editor-tiptap .ProseMirror span {
     color: var(--tx);
 }
+.wiki-editor-tiptap .ProseMirror span.custom-font-text {
+    color: var(--acc);
+    font-weight: bold;
+}
+.wiki-editor-tiptap .ProseMirror span.custom-font-text[data-writing-direction^="vertical"] {
+    display: inline-block;
+    text-orientation: upright;
+    vertical-align: middle;
+    line-height: 1.45;
+    max-height: 16rem;
+    padding: 0.2rem 0.35rem;
+}
+.wiki-editor-tiptap .ProseMirror span.custom-font-text[data-writing-direction="vertical-rl"] {
+    writing-mode: vertical-rl;
+}
+.wiki-editor-tiptap .ProseMirror span.custom-font-text[data-writing-direction="vertical-lr"] {
+    writing-mode: vertical-lr;
+}
+.wiki-editor-tiptap .ProseMirror span.custom-font-text.featural-block-render {
+    font-size: 2.25rem;
+    font-weight: normal;
+    line-height: 1.1;
+}
 .wiki-editor-tiptap .ProseMirror h1, .wiki-editor-tiptap .ProseMirror h2, .wiki-editor-tiptap .ProseMirror h3 { 
     color: var(--tx); 
     margin-top: 15px; 

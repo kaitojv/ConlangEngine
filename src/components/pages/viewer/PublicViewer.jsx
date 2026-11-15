@@ -114,18 +114,30 @@ export default function PublicViewer() {
         if (playingWordId) return; // prevent overlapping
         setPlayingWordId(entry.id || entry.word);
         try {
+            if (entry?.customAudioBase64) {
+                const audio = new Audio(entry.customAudioBase64);
+                await new Promise((resolve) => {
+                    audio.onended = resolve;
+                    audio.onerror = resolve;
+                    audio.play().catch(resolve);
+                });
+                return;
+            }
+            const rawEngine = projectData?.config?.ttsEngine;
+            const safeEngine = ['browser', 'formant', 'human'].includes(rawEngine) ? rawEngine : 'browser';
             await playAzureTTS({
                 text: entry.word,
                 ipa: entry.ipa,
-                voice: 'ipa-default',
-                useIpa: true
+                voice: projectData?.config?.azureTtsVoice || 'ipa-default',
+                useIpa: projectData?.config?.azureTtsUseIpa ?? true,
+                engine: safeEngine
             });
         } catch (err) {
             console.warn('TTS playback failed:', err);
         } finally {
             setPlayingWordId(null);
         }
-    }, [playingWordId]);
+    }, [playingWordId, projectData]);
 
     // Fetch the project from Supabase using the project_id and listen for live updates
     useEffect(() => {
@@ -599,6 +611,7 @@ export default function PublicViewer() {
                                                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                                                                 /{entry.ipa}/
                                                                 <button
+                                                                    type="button"
                                                                     className="pv-ipa-play-btn"
                                                                     title="Listen to pronunciation"
                                                                     onClick={(e) => { e.stopPropagation(); handlePlayIpa(entry); }}

@@ -181,7 +181,7 @@ export function encodePCM16WAV(samples, sampleRate = 24000) {
 export const playRawAudio = async (rawAudio) => {
     stopKokoroAudio();
 
-    if (!rawAudio || !rawAudio.audio) return;
+    if (!rawAudio || !rawAudio.audio || !rawAudio.audio.length) return;
 
     const sampleRate = rawAudio.sampling_rate || 24000;
     const rawData = rawAudio.audio;
@@ -477,7 +477,8 @@ export const speakWithKokoroInBrowser = async ({
     if (cleanIpa && tts.tokenizer && typeof tts.generate_from_ids === 'function') {
         try {
             const { input_ids } = tts.tokenizer(cleanIpa, { truncation: true });
-            if (input_ids) {
+            const tokenLen = input_ids?.dims?.[1] ?? input_ids?.data?.length ?? input_ids?.length ?? 0;
+            if (input_ids && tokenLen > 0) {
                 try {
                     audio = await tts.generate_from_ids(input_ids, {
                         voice: targetVoice,

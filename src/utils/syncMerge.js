@@ -48,6 +48,12 @@ export const DEVICE_LOCAL_CONFIG_KEYS = new Set([
     'devicesOnlineCount', 'wikiPages', 'wiki',
 ]);
 
+/**
+ * Config keys whose plain-object values represent an indivisible preset/unit
+ * (e.g. `colors` theme palette) and must never be merged key-by-key across devices.
+ */
+const CONFIG_ATOMIC_KEYS = new Set(['colors']);
+
 /** How each entry collection identifies "the same word". */
 const COLLECTIONS = {
     lexicon: { wordKey: 'word', glossKey: 'translation', classKey: 'wordClass' },
@@ -213,7 +219,8 @@ function merge3(ctx, path, bv, lv, rv, hasBaseValue, depth) {
     if (depth === 0 && leaf === 'srs' && ctx.isEntry) {
         return pickSrs(lv, rv);
     }
-    if (depth < ctx.maxDepth && isPlainObject(lv) && isPlainObject(rv) && (isPlainObject(bv) || isEmpty(bv))) {
+    const isAtomic = depth === 0 && ctx.atomicKeys?.has(leaf);
+    if (!isAtomic && depth < ctx.maxDepth && isPlainObject(lv) && isPlainObject(rv) && (isPlainObject(bv) || isEmpty(bv))) {
         const out = {};
         for (const k of unionKeys(bv, lv, rv)) {
             const v = merge3(ctx, [...path, k], bv?.[k], lv[k], rv[k], hasBaseValue, depth + 1);
@@ -539,7 +546,7 @@ function remapReferences(lexicon, phrases, idRemap) {
 // ── Config & wiki ────────────────────────────────────────────────────────────
 
 function mergeMap(prefix, collection, baseObj, localObj, remoteObj, hasBase, opts) {
-    const { decisions, conflicts, defaultSide, excludeKeys, mergePrimitiveArrays, maxDepth } = opts;
+    const { decisions, conflicts, defaultSide, excludeKeys, atomicKeys, mergePrimitiveArrays, maxDepth } = opts;
     const ctx = {
         prefix,
         meta: { collection },
@@ -549,6 +556,7 @@ function mergeMap(prefix, collection, baseObj, localObj, remoteObj, hasBase, opt
         decisions,
         conflicts,
         setKeys: new Set(),
+        atomicKeys: atomicKeys || null,
         mergePrimitiveArrays,
         isEntry: false,
         maxDepth,
@@ -637,6 +645,7 @@ export function mergeProject({
         conflicts,
         defaultSide: projectDefaultSide,
         excludeKeys: DEVICE_LOCAL_CONFIG_KEYS,
+        atomicKeys: CONFIG_ATOMIC_KEYS,
         mergePrimitiveArrays: true, // e.g. customTags, customWordClasses
         maxDepth: 1,                // e.g. scriptDataById[scriptId]
         localUpdatedAt,

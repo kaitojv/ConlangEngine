@@ -149,7 +149,7 @@ export function transliterateText(word, config, lexicon = []) {
             ...Object.keys(scriptMap),
             ...Object.keys(alphabetGlyphs).map(k => k.split('_')[0]),
             ...allPhonemes,
-        ]);
+        ].filter(Boolean));
 
         const sortedBases = Array.from(allBases).sort((a, b) => b.length - a.length);
 
@@ -227,7 +227,7 @@ export function transliterateText(word, config, lexicon = []) {
                 }
             }
 
-            if (matchFound) {
+            if (matchFound && matchFound.length > 0) {
                 i += matchFound.length;
             } else {
                 out += rawWord[i];
@@ -240,7 +240,7 @@ export function transliterateText(word, config, lexicon = []) {
     if (phonologyTypes === 'syllabic' || phonologyTypes === 'featural_block') {
         const fallbackMap = SCRIPT_MAPS[alphabeticScript] || {};
         const effectiveSyllabaryMap = { ...fallbackMap, ...syllabaryMap };
-        const syllables = Object.keys(effectiveSyllabaryMap).sort((a, b) => b.length - a.length);
+        const syllables = Object.keys(effectiveSyllabaryMap).filter(Boolean).sort((a, b) => b.length - a.length);
         const cleanWordLower = cleanWord.toLowerCase();
         const dictEntry = lexicon.find(e => e.isPrimary && e.word && e.word.replace(/\*/g, '').toLowerCase() === cleanWordLower)
             || lexicon.find(e => e.word && e.word.replace(/\*/g, '').toLowerCase() === cleanWordLower);
@@ -378,6 +378,7 @@ export function normalizeToBase(word, config) {
     let baseWord = word;
 
     for (const [text, base] of Object.entries(mapToBase)) {
+        if (!text) continue;
         const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(escapedText, 'gi');
         baseWord = baseWord.replace(regex, (match) => {
@@ -402,6 +403,7 @@ export function normalizeToBase(word, config) {
 
     if (Object.keys(scriptMapToReverse).length > 0) {
         for (const [text, base] of Object.entries(scriptMapToReverse)) {
+            if (!text) continue;
             const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const regex = new RegExp(escapedText, 'gi');
             baseWord = baseWord.replace(regex, (match) => {

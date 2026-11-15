@@ -178,6 +178,7 @@ export function buildStrokeUnionRings({
     rdpFillEps = 1.0,
     rdpStrokeEps = 1.8,
     flagOverrides = {},
+    skipUnion = false,
 }) {
     const hasCalligraphy = flagOverrides.isCalligraphy ?? Boolean(meta.isCalligraphy);
     const hasBrushPen = flagOverrides.isBrushPen ?? Boolean(meta.isBrushPen);
@@ -298,6 +299,7 @@ export function buildStrokeUnionRings({
     });
 
     if (rawPolygons.length === 0) return [];
+    if (skipUnion) return rawPolygons;
     const unioned = unionPolygons(rawPolygons);
     return unioned.length > 0 ? unioned : rawPolygons;
 }
@@ -326,6 +328,7 @@ export function buildSvgPathDFromStrokes(strokeArray, options = {}) {
         rdpFillEps: 0.2,
         rdpStrokeEps: 0.35,
         flagOverrides: options,
+        skipUnion: Boolean(options.skipUnion),
     });
 
     const round2 = (n) => Number(n.toFixed(2));
@@ -472,6 +475,12 @@ export function buildGlyphPathAndMetrics(strokeArray, traceWidth = 30, fontScale
         return 400 + ((800 - y * 2.85 - 400) * meta.scale) + meta.yOffset;
     };
 
+    const totalGlyphPoints = actualStrokes.reduce((sum, s) => {
+        const pts = Array.isArray(s) ? s : (s?.points || []);
+        return sum + pts.length;
+    }, 0);
+    const isDenseGlyph = totalGlyphPoints > 550;
+
     const rings = buildStrokeUnionRings({
         actualStrokes,
         meta,
@@ -479,6 +488,9 @@ export function buildGlyphPathAndMetrics(strokeArray, traceWidth = 30, fontScale
         toY,
         baseHalfWidth: Math.max(1.5, r_base * meta.scale),
         minHalfWidth: 1.5,
+        distFilterSq: isDenseGlyph ? 4 : 1.5,
+        rdpFillEps: isDenseGlyph ? 0.6 : 0.35,
+        rdpStrokeEps: isDenseGlyph ? 0.85 : 0.45,
     });
     if (rings.length > 0) {
         emitRingsToPath(path, rings);
