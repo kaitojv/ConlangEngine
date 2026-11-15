@@ -14,6 +14,7 @@ import {
     getDefaultScriptId,
     getScriptSystem,
     buildScriptConfig,
+    mergeScriptGlyphs,
 } from '../../../utils/scriptResolver.js';
 import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
@@ -223,9 +224,10 @@ export default function PublicViewer() {
             if (compiledScriptsRef.current.has(s.id)) return false;
             const sConf = buildScriptConfig(normConf, s.id);
             if (sConf.customFontBase64) return false;
+            const mergedGlyphs = mergeScriptGlyphs(normConf, s.id);
             return (
                 (sConf.phonologyTypes === 'featural_block' && sConf.featuralComponents) ||
-                (sConf.customGlyphs && Object.keys(sConf.customGlyphs).length > 0)
+                Object.keys(mergedGlyphs).length > 0
             );
         });
 
@@ -246,19 +248,22 @@ export default function PublicViewer() {
                                 ...(newData.syllabaryMap ? { syllabaryMap: newData.syllabaryMap } : {}),
                             };
                         }
-                    } else if (sConf.customGlyphs && Object.keys(sConf.customGlyphs).length > 0) {
-                        const typo = sConf.typographySettings || {};
-                        const compiledBase64 = await compileFont(
-                            sConf.customGlyphs,
-                            typo.traceWidth ?? sConf.traceWidth ?? 30,
-                            typo.customFontScale ?? sConf.customFontScale ?? 1.0,
-                            {
-                                consistentCharacterSize: typo.consistentCharacterSize ?? true,
-                                fixedAdvanceWidth: typo.fixedAdvanceWidth ?? 1000,
+                    } else {
+                        const mergedGlyphs = mergeScriptGlyphs(normConf, s.id);
+                        if (Object.keys(mergedGlyphs).length > 0) {
+                            const typo = sConf.typographySettings || {};
+                            const compiledBase64 = await compileFont(
+                                mergedGlyphs,
+                                typo.traceWidth ?? sConf.traceWidth ?? 30,
+                                typo.customFontScale ?? sConf.customFontScale ?? 1.0,
+                                {
+                                    consistentCharacterSize: typo.consistentCharacterSize ?? true,
+                                    fixedAdvanceWidth: typo.fixedAdvanceWidth ?? 1000,
+                                }
+                            );
+                            if (compiledBase64) {
+                                compiledUpdates[s.id] = { customFontBase64: compiledBase64 };
                             }
-                        );
-                        if (compiledBase64) {
-                            compiledUpdates[s.id] = { customFontBase64: compiledBase64 };
                         }
                     }
                 } catch (e) {
@@ -799,8 +804,8 @@ export default function PublicViewer() {
                                                         ) : (
                                                             <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
                                                                 <span
-                                                                    className={`custom-font-text notranslate ${rendered.cssClass || activeScriptClass} ${isSpecialGlyphSize ? 'pv-featural-word' : ''}`}
-                                                                    data-writing-direction={rendered.direction}
+                                                                    className={`custom-font-text notranslate ${rendered.fontFamily || activeScriptClass} ${isSpecialGlyphSize ? 'pv-featural-word' : ''}`}
+                                                                    data-writing-direction={rendered.writingDirection}
                                                                 >
                                                                     {rendered.text || cleanRoman}
                                                                 </span>

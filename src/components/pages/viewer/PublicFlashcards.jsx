@@ -221,7 +221,7 @@ export default function PublicFlashcards({ lexicon = [], config = {}, rawConfig 
                                             <>
                                                 {scriptPracticeMode === 'native_only' ? (
                                                     <div className="fc-script-drill">
-                                                        <div className={`fc-word custom-font-text notranslate fc-word-large ${rendered.cssClass || ''}`} data-writing-direction={rendered.direction} style={{ display: 'flex', justifyContent: 'center' }}>
+                                                        <div className={`fc-word custom-font-text notranslate fc-word-large ${rendered.fontFamily || ''}`} data-writing-direction={rendered.writingDirection} style={{ display: 'flex', justifyContent: 'center' }}>
                                                             {wordImg ? (
                                                                 <img 
                                                                     src={wordImg} 
@@ -245,7 +245,7 @@ export default function PublicFlashcards({ lexicon = [], config = {}, rawConfig 
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <div className={`fc-word custom-font-text notranslate ${rendered.cssClass || ''}`} data-writing-direction={rendered.direction} style={{ display: 'flex', justifyContent: 'center' }}>
+                                                        <div className={`fc-word custom-font-text notranslate ${rendered.fontFamily || ''}`} data-writing-direction={rendered.writingDirection} style={{ display: 'flex', justifyContent: 'center' }}>
                                                             {wordImg ? (
                                                                 <img 
                                                                     src={wordImg} 

@@ -133,6 +133,53 @@ export function getScriptData(config, scriptId) {
 }
 
 /**
+ * Merge a script's own customGlyphs with any glyphs referenced in its
+ * syllabaryMap or alphabetGlyphs that live in root config.customGlyphs
+ * or the default script's customGlyphs.
+ */
+export function mergeScriptGlyphs(config, scriptId) {
+    const defaultId = getDefaultScriptId(config);
+    const sData = getScriptData(config, scriptId);
+    const sGlyphs = sData?.customGlyphs || {};
+    const mergedGlyphs = { ...sGlyphs };
+
+    const rootGlyphs = config?.customGlyphs || {};
+    const defaultData = scriptId !== defaultId ? getScriptData(config, defaultId) : null;
+    const defaultGlyphs = defaultData?.customGlyphs || {};
+
+    const pullCode = (code) => {
+        if (!code) return;
+        const key = String(code);
+        if (mergedGlyphs[key] || mergedGlyphs[code]) return;
+        if (rootGlyphs[key] || rootGlyphs[code]) {
+            mergedGlyphs[key] = rootGlyphs[key] || rootGlyphs[code];
+        } else if (defaultGlyphs[key] || defaultGlyphs[code]) {
+            mergedGlyphs[key] = defaultGlyphs[key] || defaultGlyphs[code];
+        }
+    };
+
+    const collectFromMap = (map) => {
+        if (!map || typeof map !== 'object') return;
+        Object.values(map).forEach((sym) => {
+            if (typeof sym === 'string') {
+                for (const ch of sym) {
+                    pullCode(ch.codePointAt(0));
+                }
+            }
+        });
+    };
+
+    collectFromMap(sData?.syllabaryMap);
+    collectFromMap(sData?.alphabetGlyphs);
+
+    if (scriptId === defaultId && rootGlyphs) {
+        Object.assign(mergedGlyphs, rootGlyphs);
+    }
+
+    return mergedGlyphs;
+}
+
+/**
  * Resolve which script ID a word entry should use.
  * Precedence: word.scriptOverride → roles → personCategory → tags → wordClasses → default.
  */

@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { decompressPayloadAsync } from '../../../utils/schemaValidator.jsx';
 import { transliterateText } from '../../../utils/transliteration.js';
-import { repairScriptSystems, getDefaultScriptId, buildScriptConfig } from '../../../utils/scriptResolver.js';
+import { repairScriptSystems, getDefaultScriptId, buildScriptConfig, mergeScriptGlyphs } from '../../../utils/scriptResolver.js';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
 import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
@@ -184,9 +184,10 @@ export default function ExplorePage() {
                     return scriptSystems.some(s => {
                         const sConf = buildScriptConfig(normCfg, s.id);
                         if (sConf.customFontBase64) return false;
+                        const mergedGlyphs = mergeScriptGlyphs(normCfg, s.id);
                         return (
                             (sConf.phonologyTypes === 'featural_block' && sConf.featuralComponents) ||
-                            (sConf.customGlyphs && Object.keys(sConf.customGlyphs).length > 0)
+                            Object.keys(mergedGlyphs).length > 0
                         );
                     });
                 });
@@ -219,20 +220,23 @@ export default function ExplorePage() {
                                     } catch (e) {
                                         console.warn("Could not generate block font for explore item", item.project_id, s.id, e);
                                     }
-                                } else if (merged.customGlyphs && Object.keys(merged.customGlyphs).length > 0) {
-                                    try {
-                                        const typographySettings = merged.typographySettings || {};
-                                        compiledFont = await compileFont(
-                                            merged.customGlyphs,
-                                            typographySettings.traceWidth ?? merged.traceWidth ?? 30,
-                                            typographySettings.customFontScale ?? merged.customFontScale ?? 1.0,
-                                            {
-                                                consistentCharacterSize: typographySettings.consistentCharacterSize ?? true,
-                                                fixedAdvanceWidth: typographySettings.fixedAdvanceWidth ?? 1000,
-                                            }
-                                        );
-                                    } catch (e) {
-                                        console.warn("Could not compile font for explore item", item.project_id, s.id, e);
+                                } else {
+                                    const mergedGlyphs = mergeScriptGlyphs(normCfg, s.id);
+                                    if (Object.keys(mergedGlyphs).length > 0) {
+                                        try {
+                                            const typographySettings = merged.typographySettings || {};
+                                            compiledFont = await compileFont(
+                                                mergedGlyphs,
+                                                typographySettings.traceWidth ?? merged.traceWidth ?? 30,
+                                                typographySettings.customFontScale ?? merged.customFontScale ?? 1.0,
+                                                {
+                                                    consistentCharacterSize: typographySettings.consistentCharacterSize ?? true,
+                                                    fixedAdvanceWidth: typographySettings.fixedAdvanceWidth ?? 1000,
+                                                }
+                                            );
+                                        } catch (e) {
+                                            console.warn("Could not compile font for explore item", item.project_id, s.id, e);
+                                        }
                                     }
                                 }
 

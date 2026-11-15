@@ -5,9 +5,23 @@ import {
     getScriptData,
     getScriptSystem,
     getScriptTypographySettings,
+    mergeScriptGlyphs,
     repairScriptSystems,
 } from '../utils/scriptResolver.js';
+import { buildFontCompileSignature } from '../utils/useFontInjector.jsx';
 import { sanitizeCssFontUrl, sanitizeCssValue } from '../utils/sanitizeHtml.js';
+
+const _publicCompiledFontCache = new Map();
+
+function normalizeFontUrl(fontStr) {
+    if (!fontStr || typeof fontStr !== 'string') return '';
+    const trimmed = fontStr.trim();
+    if (!trimmed) return '';
+    if (trimmed.startsWith('data:') || trimmed.startsWith('https://')) {
+        return trimmed;
+    }
+    return `data:font/truetype;base64,${trimmed}`;
+}
 
 const VALID_WRITING_DIRECTIONS = ['ltr', 'rtl', 'vertical-rl', 'vertical-lr'];
 
@@ -94,20 +108,38 @@ export function usePublicFontInjector(config, activeScriptId = null) {
             for (const scriptId of allCandidateIds) {
                 const scriptData = getScriptData(normConfig, scriptId);
                 let font = scriptData?.customFontBase64 || scriptData?.customFont;
-                if (!font && scriptData?.customGlyphs && Object.keys(scriptData.customGlyphs).length > 0) {
-                    const sTypo = getScriptTypographySettings(normConfig, scriptId);
-                    try {
-                        font = await compileFont(
-                            scriptData.customGlyphs,
-                            sTypo.traceWidth ?? 30,
-                            sTypo.customFontScale ?? 1.0,
-                            {
-                                consistentCharacterSize: sTypo.consistentCharacterSize ?? true,
-                                fixedAdvanceWidth: sTypo.fixedAdvanceWidth ?? 1000
+                const mergedGlyphs = mergeScriptGlyphs(normConfig, scriptId);
+                const hasGlyphs = Object.keys(mergedGlyphs).length > 0;
+                const sTypo = getScriptTypographySettings(normConfig, scriptId);
+                const compileSig = hasGlyphs ? buildFontCompileSignature(mergedGlyphs, sTypo) : '';
+                const isStale = Boolean(
+                    font &&
+                    hasGlyphs &&
+                    scriptData?.compiledSignature &&
+                    scriptData.compiledSignature !== compileSig
+                );
+
+                if ((!font || isStale) && hasGlyphs) {
+                    const cacheKey = `${scriptId}:${compileSig}`;
+                    if (_publicCompiledFontCache.has(cacheKey)) {
+                        font = _publicCompiledFontCache.get(cacheKey);
+                    } else {
+                        try {
+                            font = await compileFont(
+                                mergedGlyphs,
+                                sTypo.traceWidth ?? 30,
+                                sTypo.customFontScale ?? 1.0,
+                                {
+                                    consistentCharacterSize: sTypo.consistentCharacterSize ?? true,
+                                    fixedAdvanceWidth: sTypo.fixedAdvanceWidth ?? 1000
+                                }
+                            );
+                            if (font) {
+                                _publicCompiledFontCache.set(cacheKey, font);
                             }
-                        );
-                    } catch (e) {
-                        console.warn("Could not compile customGlyphs for script", scriptId, e);
+                        } catch (e) {
+                            console.warn("Could not compile customGlyphs for script", scriptId, e);
+                        }
                     }
                 }
                 if (font) {
@@ -141,7 +173,8 @@ export function usePublicFontInjector(config, activeScriptId = null) {
                 const fontStrings = scriptFontMap[scriptId];
 
                 const scriptPromises = fontStrings.map(fontStr => {
-                    const safeFontUrl = sanitizeCssFontUrl(fontStr);
+                    const normalizedUrl = normalizeFontUrl(fontStr);
+                    const safeFontUrl = sanitizeCssFontUrl(normalizedUrl);
                     if (!safeFontUrl) return Promise.reject(new Error('Invalid font URL'));
                     const face = new FontFace(fontFamily, `url('${safeFontUrl}')`);
                     return face.load();
@@ -255,10 +288,14 @@ export function usePublicFontInjector(config, activeScriptId = null) {
 
         return () => {
             isCancelled = true;
-            const styleId = 'public-custom-font';
-            const node = document.getElementById(styleId);
-            if (node) node.remove();
         };
     }, [config, activeScriptId]);
+
+    useEffect(() => {
+        return () => {
+            const node = document.getElementById('public-custom-font');
+            if (node) node.remove();
+        };
+    }, []);
 }
 
