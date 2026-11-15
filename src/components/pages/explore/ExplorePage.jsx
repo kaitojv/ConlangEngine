@@ -7,8 +7,9 @@ import toast from 'react-hot-toast';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { decompressPayloadAsync } from '../../../utils/schemaValidator.jsx';
 import { transliterateText } from '../../../utils/transliteration.js';
-import { repairScriptSystems, getDefaultScriptId, buildScriptConfig, mergeScriptGlyphs } from '../../../utils/scriptResolver.js';
+import { repairScriptSystems, getDefaultScriptId, buildScriptConfig, getScriptData, mergeScriptGlyphs } from '../../../utils/scriptResolver.js';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
+import { buildFontCompileSignature } from '../../../utils/useFontInjector.jsx';
 import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import PageSkeleton from '../../UI/PageSkeleton/PageSkeleton.jsx';
@@ -17,6 +18,23 @@ import CommentsModal from './CommentsModal.jsx';
 import './explorePage.css';
 
 const EXPLORE_CACHE_KEY = 'explore_conlangs_base_v1';
+
+function needsScriptFontCompile(normCfg, scriptId) {
+    const sConf = buildScriptConfig(normCfg, scriptId);
+    const sData = getScriptData(normCfg, scriptId);
+    if (sConf.phonologyTypes === 'featural_block' && sConf.featuralComponents) {
+        return !sConf.customFontBase64;
+    }
+    const mergedGlyphs = mergeScriptGlyphs(normCfg, scriptId);
+    if (Object.keys(mergedGlyphs).length === 0) return false;
+    if (!sConf.customFontBase64) return true;
+    const compileSig = buildFontCompileSignature(mergedGlyphs, sConf.typographySettings || {});
+    if (sData?.compiledSignature && sData.compiledSignature !== compileSig) return true;
+    if (!sData?.compiledSignature && Object.keys(mergedGlyphs).length > Object.keys(sConf.customGlyphs || {}).length) {
+        return true;
+    }
+    return false;
+}
 
 function buildExploreCardSummary(item) {
     const pd = item?.project_data || {};
@@ -181,15 +199,7 @@ export default function ExplorePage() {
                     if (!cfg) return false;
                     const { scriptSystems, scriptRules } = repairScriptSystems(cfg);
                     const normCfg = { ...cfg, scriptSystems, scriptRules };
-                    return scriptSystems.some(s => {
-                        const sConf = buildScriptConfig(normCfg, s.id);
-                        if (sConf.customFontBase64) return false;
-                        const mergedGlyphs = mergeScriptGlyphs(normCfg, s.id);
-                        return (
-                            (sConf.phonologyTypes === 'featural_block' && sConf.featuralComponents) ||
-                            Object.keys(mergedGlyphs).length > 0
-                        );
-                    });
+                    return scriptSystems.some(s => needsScriptFontCompile(normCfg, s.id));
                 });
 
                 (async () => {
@@ -207,10 +217,11 @@ export default function ExplorePage() {
                             const scriptUpdates = {};
 
                             for (const s of scriptSystems) {
+                                if (!needsScriptFontCompile(normCfg, s.id)) continue;
                                 const merged = buildScriptConfig(normCfg, s.id);
-                                if (merged.customFontBase64) continue;
                                 let compiledFont = null;
                                 let nextSyllabaryMap = null;
+                                let compiledSignature = null;
 
                                 if (merged.phonologyTypes === 'featural_block' && merged.featuralComponents) {
                                     try {
@@ -225,6 +236,7 @@ export default function ExplorePage() {
                                     if (Object.keys(mergedGlyphs).length > 0) {
                                         try {
                                             const typographySettings = merged.typographySettings || {};
+                                            compiledSignature = buildFontCompileSignature(mergedGlyphs, typographySettings);
                                             compiledFont = await compileFont(
                                                 mergedGlyphs,
                                                 typographySettings.traceWidth ?? merged.traceWidth ?? 30,
@@ -241,7 +253,7 @@ export default function ExplorePage() {
                                 }
 
                                 if (compiledFont) {
-                                    scriptUpdates[s.id] = { compiledFont, nextSyllabaryMap };
+                                    scriptUpdates[s.id] = { compiledFont, nextSyllabaryMap, compiledSignature };
                                 }
                             }
 
@@ -261,6 +273,7 @@ export default function ExplorePage() {
                                     updatedScriptData[sId] = {
                                         ...(updatedScriptData[sId] || {}),
                                         customFontBase64: sUpd.compiledFont,
+                                        ...(sUpd.compiledSignature ? { compiledSignature: sUpd.compiledSignature } : {}),
                                         ...(sUpd.nextSyllabaryMap ? { syllabaryMap: sUpd.nextSyllabaryMap } : {}),
                                     };
                                 }
@@ -673,15 +686,19 @@ export default function ExplorePage() {
         const effectiveCardScriptId = isRomanizedCard ? defaultScriptId : activeCardScriptId;
         const translitConfig = buildScriptConfig(normConfig, effectiveCardScriptId);
 
-        const customFont = !isRomanizedCard
+        const rawCustomFont = !isRomanizedCard
             ? (translitConfig.customFontBase64 || translitConfig.customFont)
             : null;
+        const customFontList = Array.isArray(rawCustomFont)
+            ? rawCustomFont.filter(Boolean)
+            : (rawCustomFont ? [rawCustomFont] : []);
+        const customFont = customFontList.length > 0;
         const safeScriptSuffix = String(effectiveCardScriptId || 'default').replace(/[^a-zA-Z0-9_-]/g, '_');
         const fontName = customFont ? `ExploreFont_${lang.project_id}_${safeScriptSuffix}` : undefined;
         // Ensure data URL header is clean and valid for @font-face
-        const safeFontUrl = customFont 
-            ? (customFont.startsWith('data:') ? customFont.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,') : `data:font/truetype;base64,${customFont}`) 
-            : '';
+        const safeFontUrls = customFontList.map((f) =>
+            f.startsWith('data:') ? f.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,') : `data:font/truetype;base64,${f}`
+        );
 
         let displayName = name;
 
@@ -707,12 +724,12 @@ export default function ExplorePage() {
                 onClick={() => handleCardClick(lang)}
             >
                 {customFont && (
-                    <style>{`
+                    <style>{safeFontUrls.map((url) => `
                         @font-face {
                             font-family: '${fontName}';
-                            src: url('${safeFontUrl}');
+                            src: url('${url}');
                         }
-                    `}</style>
+                    `).join('\n')}</style>
                 )}
                 <div className="explore-card-top">
                     <div className="explore-icon" style={{ color: themeColor }}>

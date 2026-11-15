@@ -115,8 +115,10 @@ export function usePublicFontInjector(config, activeScriptId = null) {
                 const isStale = Boolean(
                     font &&
                     hasGlyphs &&
-                    scriptData?.compiledSignature &&
-                    scriptData.compiledSignature !== compileSig
+                    (
+                        (scriptData?.compiledSignature && scriptData.compiledSignature !== compileSig) ||
+                        (!scriptData?.compiledSignature && Object.keys(mergedGlyphs).length > Object.keys(scriptData?.customGlyphs || {}).length)
+                    )
                 );
 
                 if ((!font || isStale) && hasGlyphs) {
