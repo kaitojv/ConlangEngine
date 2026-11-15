@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useDeferredValue } from 'react';
 import {
     Sparkles, X, Settings, Copy, Check, ArrowRight, Plus,
     ChevronDown, ArrowDownLeft, RefreshCw, GripVertical,
@@ -112,8 +112,10 @@ export default function LiveTranslatorPanel({
         return () => document.removeEventListener('mousedown', handleOutside);
     }, []);
 
+    const deferredSourceText = useDeferredValue(sourceText);
+
     const translationSuggestions = useMemo(() => {
-        const clean = sourceText.trim();
+        const clean = deferredSourceText.trim();
         if (!clean || !analyzer?.computePhraseSuggestion) return [];
         try {
             const res = analyzer.computePhraseSuggestion(
@@ -129,7 +131,7 @@ export default function LiveTranslatorPanel({
             console.error('LiveTranslator error:', e);
             return [];
         }
-    }, [sourceText, analyzer, syntaxOrder, manualRoles, wordChoices]);
+    }, [deferredSourceText, analyzer, syntaxOrder, manualRoles, wordChoices]);
 
     const safeReadingIdx = activeReadingIdx < translationSuggestions.length ? activeReadingIdx : 0;
     const baseSuggestion = translationSuggestions[safeReadingIdx] || null;

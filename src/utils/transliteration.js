@@ -360,35 +360,40 @@ export function transliterateText(word, config, lexicon = []) {
     return cleanWord;
 }
 
-/**
- * Pure normalizer: screen → memory.
- * Reverses transliteration back to base form.
- */
-export function normalizeToBase(word, config) {
-    if (!word) return '';
-    const phonologyTypes = config.phonologyTypes;
-    const isLinearScript = ['alphabetic', 'abjad', 'abugida'].includes(phonologyTypes) || !phonologyTypes;
-    
-    if (!isLinearScript) return word;
+const NORMALIZE_CONFIG_CACHE = new WeakMap();
 
+function getCompiledNormalizeRules(config) {
     const alphabeticScript = config.alphabeticScript;
     const alphabetGlyphs = config.alphabetGlyphs || {};
+    const consonants = config.consonants || '';
+    const vowels = config.vowels || '';
+    const otherPhonemes = config.otherPhonemes || '';
+
+    let cached = NORMALIZE_CONFIG_CACHE.get(config);
+    if (
+        cached &&
+        cached.alphabeticScript === alphabeticScript &&
+        cached.alphabetGlyphs === alphabetGlyphs &&
+        cached.consonants === consonants &&
+        cached.vowels === vowels &&
+        cached.otherPhonemes === otherPhonemes
+    ) {
+        return cached;
+    }
 
     const { mapToBase } = getOrthographyMap(config);
-    let baseWord = word;
-
+    const orthoRules = [];
     for (const [text, base] of Object.entries(mapToBase)) {
-        if (!text) continue;
+        if (!text || text.toLowerCase() === base.toLowerCase()) continue;
         const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(escapedText, 'gi');
-        baseWord = baseWord.replace(regex, (match) => {
-            if (match === match.toUpperCase() && match !== match.toLowerCase()) return base.toUpperCase();
-            if (match[0] === match[0].toUpperCase()) return base.charAt(0).toUpperCase() + base.slice(1).toLowerCase();
-            return base.toLowerCase();
+        orthoRules.push({
+            textLow: text.toLowerCase(),
+            regex: new RegExp(escapedText, 'gi'),
+            base,
         });
     }
 
-    let scriptMapToReverse = {};
+    const scriptMapToReverse = {};
     if (alphabeticScript && alphabeticScript !== 'latin' && alphabeticScript !== 'custom') {
         Object.entries(SCRIPT_MAPS[alphabeticScript] || {}).forEach(([base, text]) => {
             scriptMapToReverse[text] = base;
@@ -401,18 +406,75 @@ export function normalizeToBase(word, config) {
         scriptMapToReverse[text] = base;
     });
 
-    if (Object.keys(scriptMapToReverse).length > 0) {
-        for (const [text, base] of Object.entries(scriptMapToReverse)) {
-            if (!text) continue;
-            const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const regex = new RegExp(escapedText, 'gi');
-            baseWord = baseWord.replace(regex, (match) => {
-                if (!match.match(/[\uE000-\uF8FF]/) && match === match.toUpperCase() && match !== match.toLowerCase()) {
-                    return base.charAt(0).toUpperCase() + base.slice(1);
-                }
-                return base;
-            });
+    const puaRules = [];
+    const nonPuaScriptRules = [];
+    for (const [text, base] of Object.entries(scriptMapToReverse)) {
+        if (!text) continue;
+        const escapedText = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const rule = {
+            text,
+            regex: new RegExp(escapedText, 'gi'),
+            base,
+        };
+        if (/^[\uE000-\uF8FF]+$/.test(text)) {
+            puaRules.push(rule);
+        } else {
+            nonPuaScriptRules.push(rule);
         }
+    }
+
+    cached = {
+        alphabeticScript,
+        alphabetGlyphs,
+        consonants,
+        vowels,
+        otherPhonemes,
+        orthoRules,
+        puaRules,
+        nonPuaScriptRules,
+    };
+    NORMALIZE_CONFIG_CACHE.set(config, cached);
+    return cached;
+}
+
+/**
+ * Pure normalizer: screen → memory.
+ * Reverses transliteration back to base form.
+ */
+export function normalizeToBase(word, config) {
+    if (!word) return '';
+    const phonologyTypes = config.phonologyTypes;
+    const isLinearScript = ['alphabetic', 'abjad', 'abugida'].includes(phonologyTypes) || !phonologyTypes;
+    
+    if (!isLinearScript) return word;
+
+    const { orthoRules, puaRules, nonPuaScriptRules } = getCompiledNormalizeRules(config);
+    let baseWord = word;
+
+    for (let i = 0; i < orthoRules.length; i++) {
+        const { regex, base } = orthoRules[i];
+        baseWord = baseWord.replace(regex, (match) => {
+            if (match === match.toUpperCase() && match !== match.toLowerCase()) return base.toUpperCase();
+            if (match[0] === match[0].toUpperCase()) return base.charAt(0).toUpperCase() + base.slice(1).toLowerCase();
+            return base.toLowerCase();
+        });
+    }
+
+    if (puaRules.length > 0 && /[\uE000-\uF8FF]/.test(baseWord)) {
+        for (let i = 0; i < puaRules.length; i++) {
+            const { regex, base } = puaRules[i];
+            baseWord = baseWord.replace(regex, base);
+        }
+    }
+
+    for (let i = 0; i < nonPuaScriptRules.length; i++) {
+        const { regex, base } = nonPuaScriptRules[i];
+        baseWord = baseWord.replace(regex, (match) => {
+            if (!match.match(/[\uE000-\uF8FF]/) && match === match.toUpperCase() && match !== match.toLowerCase()) {
+                return base.charAt(0).toUpperCase() + base.slice(1);
+            }
+            return base;
+        });
     }
 
     return baseWord;

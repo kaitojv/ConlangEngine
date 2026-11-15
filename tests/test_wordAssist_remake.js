@@ -250,5 +250,42 @@ describe('Word Assist Remake: Lexicon Choice, POS & Word Order', () => {
         });
         const suggs = analyzer.computePhraseSuggestion('The cat is unknownword', 22);
         assert.ok(Array.isArray(suggs) && suggs.length > 0);
+
+        // Large alphabetic lexicon with 52 custom PUA glyphs + normalizeToBase must complete in < 350ms (was 17.8s)
+        const alphabetGlyphs = {};
+        for (let i = 0; i < 26; i++) {
+            const ch = String.fromCharCode(97 + i);
+            alphabetGlyphs[ch] = String.fromCodePoint(0xE000 + i);
+            alphabetGlyphs[ch + '_uppercase'] = String.fromCodePoint(0xE020 + i);
+        }
+        const heavyCfg = {
+            phonologyTypes: 'alphabetic',
+            alphabeticScript: 'custom',
+            alphabetGlyphs,
+            consonants: 'p=p, t=t, k=k, s=s, m=m, n=n, l=l, r=r',
+            vowels: 'a=a, e=e, i=i, o=o, u=u',
+            wordAssistConfig: { copulaBehavior: 'zero_copula', copulaReplacement: 'ne' }
+        };
+        const largeLex = Array.from({ length: 1200 }, (_, i) => ({
+            id: 'w' + i,
+            word: 'kalama' + i,
+            translation: 'word' + i + ', to act' + i + ' (verb)',
+            shortTranslation: 'word' + i,
+            definition: 'a sample definition for entry ' + i + ' in the dictionary',
+            wordClass: i % 3 === 0 ? 'Verb' : i % 3 === 1 ? 'Noun' : 'Adjective'
+        }));
+        const heavyAnalyzer = createGrammarAnalyzer({
+            lexicon: largeLex,
+            grammarRules: rules,
+            syntaxOrder: 'SVO',
+            waConfig: heavyCfg.wordAssistConfig,
+            transliterate: (w, l) => transliterateText(w, heavyCfg, l),
+            normalizeToBase: (w) => normalizeToBase(w, heavyCfg)
+        });
+        const t0 = performance.now();
+        const heavyRes = heavyAnalyzer.computePhraseSuggestion('The black cat is in the big house', 33);
+        const dt = performance.now() - t0;
+        assert.ok(Array.isArray(heavyRes) && heavyRes.length > 0);
+        assert.ok(dt < 350, `Expected < 350ms per keystroke on 1200-entry alphabetic lexicon, took ${Math.round(dt)}ms`);
     });
 });

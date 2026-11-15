@@ -610,15 +610,25 @@ export function createGrammarAnalyzer(configOptions = {}) {
         negativeContractions: NEGATIVE_CONTRACTIONS
     });
 
-    // Centralized POS-aware scored lexicon lookup
+    // Centralized POS-aware scored lexicon lookup (memoized per analyzer instance)
+    const candidateCache = new Map();
     const findRankedLexiconCandidates = (query, preferredRole = null, lemma = null) => {
         if (!query || !Array.isArray(lexicon)) return [];
+        const cacheKey = `${String(query).toLowerCase()}\0${preferredRole || ''}\0${lemma ? String(lemma).toLowerCase() : ''}`;
+        if (candidateCache.has(cacheKey)) {
+            return candidateCache.get(cacheKey);
+        }
+
         const surfaceRanked = rankLexiconMatches(lexicon, query, getMatchOptions(preferredRole, false));
         if (!lemma || lemma.toLowerCase() === query.toLowerCase()) {
+            candidateCache.set(cacheKey, surfaceRanked);
             return surfaceRanked;
         }
         const lemmaRanked = rankLexiconMatches(lexicon, lemma, getMatchOptions(preferredRole, true));
-        if (surfaceRanked.length === 0) return lemmaRanked;
+        if (surfaceRanked.length === 0) {
+            candidateCache.set(cacheKey, lemmaRanked);
+            return lemmaRanked;
+        }
 
         // Merge any additional candidates from lemma without dropping higher-scoring surface hits
         const seen = new Set(surfaceRanked.map(r => r.entry.id != null ? `id:${r.entry.id}` : r.entry.word));
@@ -631,6 +641,7 @@ export function createGrammarAnalyzer(configOptions = {}) {
             }
         }
         merged.sort((a, b) => b.score - a.score);
+        candidateCache.set(cacheKey, merged);
         return merged;
     };
 
@@ -1208,8 +1219,10 @@ export function createGrammarAnalyzer(configOptions = {}) {
                 return { original: t, low, occKey, span: spans[idx], info, context, nlpTerm };
             });
 
-            // Helper to query lexicon POS capabilities for ambiguous English words
+            // Helper to query lexicon POS capabilities for ambiguous English words (memoized per token index)
+            const capableRolesCache = new Array(tokens.length);
             const getCapableRoles = (idx) => {
+                if (capableRolesCache[idx]) return capableRolesCache[idx];
                 const td = tokenData[idx];
                 const tags = td.nlpTerm?.tags || [];
                 const caps = new Set();
@@ -1233,6 +1246,7 @@ export function createGrammarAnalyzer(configOptions = {}) {
                     if (matchesPos(wc, 'N')) caps.add('N');
                     if (matchesPos(wc, 'M')) caps.add('M');
                 });
+                capableRolesCache[idx] = caps;
                 return caps;
             };
 
@@ -1442,10 +1456,8 @@ export function createGrammarAnalyzer(configOptions = {}) {
                 let resolvedRole = null;
 
                 // Direct lexicon word match (e.g. conlang word typed directly like "I glofur water")
-                const directConlangHit = lexicon.find(e => {
-                    const cw = (e?.word || '').replace(/\*/g, '').toLowerCase().trim();
-                    return cw && (cw === low || (normalizeToBase && normalizeToBase(cw) === normalizeToBase(low)));
-                });
+                const topDirect = findRankedLexiconCandidates(low, null, null)[0];
+                const directConlangHit = topDirect?.matchSource === 'conlang' ? topDirect.entry : null;
                 if (directConlangHit && directConlangHit.wordClass) {
                     resolvedRole = getRoleFromWordClass(directConlangHit.wordClass);
                 }

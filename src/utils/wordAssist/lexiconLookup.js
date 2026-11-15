@@ -56,8 +56,9 @@ export function parseGlossSenses(rawGloss) {
 /**
  * Check if query appears cleanly as whole words in a short text.
  */
-function hasWholeWordMatch(haystack, needle) {
+function hasWholeWordMatch(haystack, needle, precompiledRegex = null) {
     if (!haystack || !needle) return false;
+    if (precompiledRegex) return precompiledRegex.test(haystack);
     const esc = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     try {
         const regex = new RegExp(`(^|[^a-z0-9'])${esc}($|[^a-z0-9'])`, 'i');
@@ -65,6 +66,78 @@ function hasWholeWordMatch(haystack, needle) {
     } catch {
         return false;
     }
+}
+
+const ENTRY_PARSE_CACHE = new WeakMap();
+
+function getCachedEntryData(entry, normalizeToBase) {
+    const rawWord = entry.word || '';
+    const shortTrans = entry.shortTranslation || '';
+    const trans = entry.translation || '';
+    const def = entry.definition || '';
+    const wcRaw = entry.wordClass || '';
+
+    let cached = ENTRY_PARSE_CACHE.get(entry);
+    if (
+        !cached ||
+        cached.rawWord !== rawWord ||
+        cached.shortTrans !== shortTrans ||
+        cached.trans !== trans ||
+        cached.def !== def ||
+        cached.wcRaw !== wcRaw
+    ) {
+        const rawConlang = rawWord.replace(/\*/g, '');
+        const conlangLow = cleanText(rawConlang);
+        cached = {
+            rawWord,
+            shortTrans,
+            trans,
+            def,
+            wcRaw,
+            rawConlang,
+            conlangLow,
+            conlangBase: null,
+            normFn: null,
+            shortSenses: shortTrans ? parseGlossSenses(shortTrans) : [],
+            transSenses: trans ? parseGlossSenses(trans) : [],
+            normKeys: trans ? normalizeTranslation(trans) : [],
+            defSenses: undefined, // lazy: only parsed when gloss senses don't match
+            wc: cleanText(wcRaw)
+        };
+        ENTRY_PARSE_CACHE.set(entry, cached);
+    }
+
+    if (normalizeToBase && cached.normFn !== normalizeToBase) {
+        cached.conlangBase = conlangLowFromCache(cached, normalizeToBase);
+        cached.normFn = normalizeToBase;
+    } else if (!normalizeToBase && cached.conlangBase === null) {
+        cached.conlangBase = cached.conlangLow;
+    }
+
+    return cached;
+}
+
+function conlangLowFromCache(cached, normalizeToBase) {
+    if (!cached.conlangLow) return '';
+    return cleanText(normalizeToBase(cached.conlangLow));
+}
+
+function buildPrecomputedQuery(query, normalizeToBase) {
+    const qLow = cleanText(query);
+    if (!qLow) return null;
+    const qStrippedTo = qLow.replace(/^to\s+/i, '').trim();
+    const qStrippedWordCount = qStrippedTo ? qStrippedTo.split(/\s+/).length : 0;
+    const qBase = normalizeToBase ? cleanText(normalizeToBase(qLow)) : qLow;
+    let qWordRegex = null;
+    if (qStrippedTo) {
+        const esc = qStrippedTo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        try {
+            qWordRegex = new RegExp(`(^|[^a-z0-9'])${esc}($|[^a-z0-9'])`, 'i');
+        } catch {
+            qWordRegex = null;
+        }
+    }
+    return { qLow, qStrippedTo, qStrippedWordCount, qBase, qWordRegex };
 }
 
 /**
@@ -80,13 +153,13 @@ export function scoreLexiconCandidate(entry, query, options = {}) {
         getRoleFromWordClass = null,
         matchesPos = null,
         isLemmaFallback = false,
-        negativeContractions = null
+        negativeContractions = null,
+        _precomputedQuery = null
     } = options;
 
-    const qLow = cleanText(query);
-    if (!qLow) return null;
-    const qStrippedTo = qLow.replace(/^to\s+/i, '').trim();
-    const qBase = normalizeToBase ? cleanText(normalizeToBase(qLow)) : qLow;
+    const pq = _precomputedQuery || buildPrecomputedQuery(query, normalizeToBase);
+    if (!pq) return null;
+    const { qLow, qStrippedTo, qStrippedWordCount, qBase, qWordRegex } = pq;
 
     let effectivePrefRole = preferredRole;
     if (!effectivePrefRole && (qLow.startsWith('to ') || qLow.startsWith('to_'))) {
@@ -97,10 +170,8 @@ export function scoreLexiconCandidate(entry, query, options = {}) {
     let matchSource = null;
     let matchedSense = '';
 
-    // 1. Conlang word direct match (entry.word stripped of asterisks)
-    const rawConlang = (entry.word || '').replace(/\*/g, '');
-    const conlangLow = cleanText(rawConlang);
-    const conlangBase = normalizeToBase ? cleanText(normalizeToBase(conlangLow)) : conlangLow;
+    const ed = getCachedEntryData(entry, normalizeToBase);
+    const { rawConlang, conlangLow, conlangBase, shortSenses, transSenses, normKeys, wc } = ed;
 
     if (conlangLow && (conlangLow === qLow || conlangBase === qBase || conlangLow === qBase || conlangBase === qLow)) {
         semanticScore = 1000;
@@ -110,9 +181,6 @@ export function scoreLexiconCandidate(entry, query, options = {}) {
 
     // 2. Check shortTranslation & translation senses
     if (!matchSource) {
-        const shortSenses = parseGlossSenses(entry.shortTranslation || '');
-        const transSenses = parseGlossSenses(entry.translation || '');
-
         const evalSenses = (senses, fieldWeight, sourceLabel) => {
             for (const s of senses) {
                 // Exact sense match (e.g. "water", "to drink", "water (noun)")
@@ -126,9 +194,9 @@ export function scoreLexiconCandidate(entry, query, options = {}) {
                         matchSource = sourceLabel;
                         matchedSense = s.rawSense;
                     }
-                } else if (!STOP_DEFINITION_WORDS.has(qStrippedTo) && s.words.length > 1 && hasWholeWordMatch(s.cleanSense, qStrippedTo)) {
+                } else if (!STOP_DEFINITION_WORDS.has(qStrippedTo) && s.words.length > 1 && hasWholeWordMatch(s.cleanSense, qStrippedTo, qWordRegex)) {
                     // Multi-word gloss containing query word (e.g. querying "water" matches "drinking water" strictly below exact "water")
-                    const extraWords = Math.max(1, s.words.length - qStrippedTo.split(/\s+/).length);
+                    const extraWords = Math.max(1, s.words.length - qStrippedWordCount);
                     const candScore = 180 - Math.min(100, extraWords * 25) - s.index * 10;
                     if (candScore > semanticScore) {
                         semanticScore = candScore;
@@ -139,12 +207,11 @@ export function scoreLexiconCandidate(entry, query, options = {}) {
             }
         };
 
-        evalSenses(shortSenses, 580, 'shortTranslation');
-        evalSenses(transSenses, 500, 'translation');
+        if (shortSenses.length > 0) evalSenses(shortSenses, 580, 'shortTranslation');
+        if (transSenses.length > 0) evalSenses(transSenses, 500, 'translation');
 
         // Also check normalizeTranslation canonical keys for edge parentheticals
-        if (!matchSource && entry.translation) {
-            const normKeys = normalizeTranslation(entry.translation);
+        if (!matchSource && normKeys.length > 0) {
             const hitIdx = normKeys.indexOf(qStrippedTo);
             if (hitIdx !== -1) {
                 semanticScore = 480 - hitIdx * 15;
@@ -155,8 +222,11 @@ export function scoreLexiconCandidate(entry, query, options = {}) {
     }
 
     // 3. Fallback: entry.definition (strictly lower priority than any gloss match, blocked for short function words)
-    if (!matchSource && entry.definition && !STOP_DEFINITION_WORDS.has(qStrippedTo)) {
-        const defSenses = parseGlossSenses(entry.definition);
+    if (!matchSource && ed.def && !STOP_DEFINITION_WORDS.has(qStrippedTo)) {
+        if (ed.defSenses === undefined) {
+            ed.defSenses = parseGlossSenses(ed.def);
+        }
+        const defSenses = ed.defSenses;
         for (const s of defSenses) {
             if (s.cleanSense === qStrippedTo) {
                 const candScore = 110 - Math.min(40, s.index * 8);
@@ -165,7 +235,7 @@ export function scoreLexiconCandidate(entry, query, options = {}) {
                     matchSource = 'definition-exact';
                     matchedSense = s.rawSense;
                 }
-            } else if (hasWholeWordMatch(s.cleanSense, qStrippedTo)) {
+            } else if (hasWholeWordMatch(s.cleanSense, qStrippedTo, qWordRegex)) {
                 const extraWords = Math.max(1, s.words.length - 1);
                 const candScore = Math.max(30, 80 - extraWords * 5);
                 if (candScore > semanticScore) {
@@ -181,6 +251,7 @@ export function scoreLexiconCandidate(entry, query, options = {}) {
     if (!matchSource && negativeContractions?.[qLow]) {
         return scoreLexiconCandidate(entry, negativeContractions[qLow], {
             ...options,
+            _precomputedQuery: null,
             preferredRole: effectivePrefRole || 'N'
         });
     }
@@ -190,7 +261,6 @@ export function scoreLexiconCandidate(entry, query, options = {}) {
     // 5. Apply POS / WordClass alignment score
     let posScore = 0;
     let posMatched = false;
-    const wc = cleanText(entry.wordClass);
 
     if (effectivePrefRole && wc && matchesPos) {
         if (matchesPos(wc, effectivePrefRole)) {
@@ -226,13 +296,17 @@ export function scoreLexiconCandidate(entry, query, options = {}) {
 export function rankLexiconMatches(lexicon, query, options = {}) {
     if (!query || !Array.isArray(lexicon) || lexicon.length === 0) return [];
 
+    const precomputedQuery = buildPrecomputedQuery(query, options.normalizeToBase);
+    if (!precomputedQuery) return [];
+    const optsWithQuery = { ...options, _precomputedQuery: precomputedQuery };
+
     const scored = [];
     const seenIds = new Set();
 
     for (let idx = 0; idx < lexicon.length; idx++) {
         const entry = lexicon[idx];
         if (!entry) continue;
-        const result = scoreLexiconCandidate(entry, query, options);
+        const result = scoreLexiconCandidate(entry, query, optsWithQuery);
         if (!result) continue;
 
         const key = entry.id != null ? `id:${entry.id}` : `w:${cleanText(entry.word)}:${cleanText(entry.wordClass)}:${idx}`;
