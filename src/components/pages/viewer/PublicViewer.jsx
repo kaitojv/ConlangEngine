@@ -9,6 +9,12 @@ import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import { usePublicThemeInjector, usePublicFontInjector } from '../../../hooks/usePublicInjectors.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { renderWordInScript } from '../../../utils/scriptRendering.js';
+import {
+    repairScriptSystems,
+    getDefaultScriptId,
+    getScriptSystem,
+    buildScriptConfig,
+} from '../../../utils/scriptResolver.js';
 import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
 import PublicFlashcards from './PublicFlashcards.jsx';
@@ -38,6 +44,9 @@ export default function PublicViewer() {
     const [savedScroll, setSavedScroll] = useState(0);
     const [playingWordId, setPlayingWordId] = useState(null);
     const [collapsedFolders, setCollapsedFolders] = useState({});
+    const [selectedScriptMode, setSelectedScriptMode] = useState(() => location.state?.initialScriptId || null);
+    const [showRomanization, setShowRomanization] = useState(false);
+    const compiledScriptsRef = React.useRef(new Set());
 
     // Visitor progress persistence for the public course map
     const [viewerProgress, setViewerProgress] = useState(() => {
@@ -197,92 +206,149 @@ export default function PublicViewer() {
         };
     }, [projectId]);
 
-    // Auto-compile the block font or custom glyph font on the fly if it was stripped from the cloud sync payload
+    useEffect(() => {
+        compiledScriptsRef.current = new Set();
+        setSelectedScriptMode(location.state?.initialScriptId || null);
+    }, [projectId, location.state?.initialScriptId]);
+
+    // Auto-compile the block font or custom glyph font on the fly for all scripts if stripped from the cloud sync payload
     useEffect(() => {
         if (!projectData || !projectData.config) return;
         const rawConf = projectData.config;
-        const defaultScriptId = rawConf.scriptRules?.defaultScriptId || 'default';
-        const scriptData = rawConf.scriptDataById?.[defaultScriptId] || {};
-        const conf = { ...rawConf, ...scriptData };
-        
-        if (conf.phonologyTypes === 'featural_block' && !conf.customFontBase64 && conf.featuralComponents) {
-            const compileBlock = async () => {
+        const { scriptSystems, scriptRules } = repairScriptSystems(rawConf);
+        const normConf = { ...rawConf, scriptSystems, scriptRules };
+        const defaultScriptId = getDefaultScriptId(normConf);
+
+        const pendingScripts = scriptSystems.filter(s => {
+            if (compiledScriptsRef.current.has(s.id)) return false;
+            const sConf = buildScriptConfig(normConf, s.id);
+            if (sConf.customFontBase64) return false;
+            return (
+                (sConf.phonologyTypes === 'featural_block' && sConf.featuralComponents) ||
+                (sConf.customGlyphs && Object.keys(sConf.customGlyphs).length > 0)
+            );
+        });
+
+        if (pendingScripts.length === 0) return;
+
+        let isCancelled = false;
+        const compileAll = async () => {
+            const compiledUpdates = {};
+            for (const s of pendingScripts) {
+                compiledScriptsRef.current.add(s.id);
+                const sConf = buildScriptConfig(normConf, s.id);
                 try {
-                    const newData = await generateBlockFontData({ ...conf, lexicon: projectData.dictionary || [] });
-                    setProjectData(prev => {
-                        if (!prev) return prev;
-                        return {
-                            ...prev,
-                            config: {
-                                ...prev.config,
+                    if (sConf.phonologyTypes === 'featural_block' && sConf.featuralComponents) {
+                        const newData = await generateBlockFontData({ ...sConf, lexicon: projectData.dictionary || [] });
+                        if (newData?.customFontBase64) {
+                            compiledUpdates[s.id] = {
                                 customFontBase64: newData.customFontBase64,
-                                syllabaryMap: newData.syllabaryMap
-                            }
-                        };
-                    });
-                } catch (e) {
-                    console.warn("PublicViewer auto-compile failed:", e);
-                }
-            };
-            compileBlock();
-        } else if (!conf.customFontBase64 && conf.customGlyphs && Object.keys(conf.customGlyphs).length > 0) {
-            const compileCustom = async () => {
-                try {
-                    const typographySettings = conf.typographySettings || {};
-                    const compiledBase64 = await compileFont(
-                        conf.customGlyphs,
-                        typographySettings.traceWidth ?? conf.traceWidth ?? 30,
-                        typographySettings.customFontScale ?? conf.customFontScale ?? 1.0
-                    );
-                    if (compiledBase64) {
-                        setProjectData(prev => {
-                            if (!prev) return prev;
-                            const prevConf = prev.config || {};
-                            const prevScriptDataById = prevConf.scriptDataById ? { ...prevConf.scriptDataById } : {};
-                            if (prevScriptDataById[defaultScriptId]) {
-                                prevScriptDataById[defaultScriptId] = {
-                                    ...prevScriptDataById[defaultScriptId],
-                                    customFontBase64: compiledBase64
-                                };
-                            }
-                            return {
-                                ...prev,
-                                config: {
-                                    ...prevConf,
-                                    customFontBase64: compiledBase64,
-                                    scriptDataById: prevScriptDataById
-                                }
+                                ...(newData.syllabaryMap ? { syllabaryMap: newData.syllabaryMap } : {}),
                             };
-                        });
+                        }
+                    } else if (sConf.customGlyphs && Object.keys(sConf.customGlyphs).length > 0) {
+                        const typo = sConf.typographySettings || {};
+                        const compiledBase64 = await compileFont(
+                            sConf.customGlyphs,
+                            typo.traceWidth ?? sConf.traceWidth ?? 30,
+                            typo.customFontScale ?? sConf.customFontScale ?? 1.0,
+                            {
+                                consistentCharacterSize: typo.consistentCharacterSize ?? true,
+                                fixedAdvanceWidth: typo.fixedAdvanceWidth ?? 1000,
+                            }
+                        );
+                        if (compiledBase64) {
+                            compiledUpdates[s.id] = { customFontBase64: compiledBase64 };
+                        }
                     }
                 } catch (e) {
-                    console.warn("PublicViewer custom glyph compile failed:", e);
+                    console.warn(`PublicViewer auto-compile failed for script ${s.id}:`, e);
                 }
-            };
-            compileCustom();
-        }
+            }
+
+            if (isCancelled || Object.keys(compiledUpdates).length === 0) return;
+
+            setProjectData(prev => {
+                if (!prev) return prev;
+                const prevConf = prev.config || {};
+                const nextScriptDataById = prevConf.scriptDataById ? { ...prevConf.scriptDataById } : {};
+                for (const [sId, upd] of Object.entries(compiledUpdates)) {
+                    nextScriptDataById[sId] = {
+                        ...(nextScriptDataById[sId] || {}),
+                        ...upd,
+                    };
+                }
+                const defaultUpd = compiledUpdates[defaultScriptId];
+                return {
+                    ...prev,
+                    config: {
+                        ...prevConf,
+                        ...(defaultUpd?.customFontBase64 ? { customFontBase64: defaultUpd.customFontBase64 } : {}),
+                        ...(defaultUpd?.syllabaryMap ? { syllabaryMap: defaultUpd.syllabaryMap } : {}),
+                        scriptDataById: nextScriptDataById,
+                    },
+                };
+            });
+        };
+
+        compileAll();
+        return () => { isCancelled = true; };
     }, [projectData]);
 
-    // Extract data from the fetched project — memoize to prevent re-running
-    // expensive hooks (font injection, theme injection) on unrelated re-renders
-    const config = useMemo(() => {
-        const rawConfig = projectData?.config || {};
-        const defaultScriptId = rawConfig.scriptRules?.defaultScriptId || 'default';
-        const scriptData = rawConfig.scriptDataById?.[defaultScriptId] || {};
-        return { ...rawConfig, ...scriptData };
-    }, [projectData]);
-    
+    // Normalize scripts and resolve the active script config
+    const { scriptSystems, scriptRules } = useMemo(
+        () => repairScriptSystems(projectData?.config || {}),
+        [projectData]
+    );
+
+    const rawConfig = useMemo(
+        () => ({ ...(projectData?.config || {}), scriptSystems, scriptRules }),
+        [projectData, scriptSystems, scriptRules]
+    );
+
+    const defaultScriptId = useMemo(() => getDefaultScriptId(rawConfig), [rawConfig]);
     const dictionary = useMemo(() => projectData?.dictionary || [], [projectData]);
+
+    const hasScriptRulesOrOverrides = useMemo(() => {
+        if (scriptSystems.length <= 1) return false;
+        const rules = rawConfig.scriptRules || {};
+        const hasRules = ['wordClasses', 'tags', 'personCategories', 'roles'].some(
+            k => rules[k] && Object.keys(rules[k]).length > 0
+        );
+        return hasRules || dictionary.some(e => e?.scriptOverride);
+    }, [scriptSystems, rawConfig, dictionary]);
+
+    const activeScriptMode = useMemo(() => {
+        if (selectedScriptMode === 'latin') return 'latin';
+        if (selectedScriptMode === 'auto' && hasScriptRulesOrOverrides) return 'auto';
+        if (selectedScriptMode && scriptSystems.some(s => s.id === selectedScriptMode)) {
+            return selectedScriptMode;
+        }
+        return hasScriptRulesOrOverrides ? 'auto' : defaultScriptId;
+    }, [selectedScriptMode, hasScriptRulesOrOverrides, scriptSystems, defaultScriptId]);
+
+    const effectiveScriptId = (activeScriptMode && activeScriptMode !== 'auto' && activeScriptMode !== 'latin')
+        ? activeScriptMode
+        : defaultScriptId;
+
+    const config = useMemo(
+        () => buildScriptConfig(rawConfig, effectiveScriptId),
+        [rawConfig, effectiveScriptId]
+    );
+    const activeScriptMeta = useMemo(
+        () => getScriptSystem(rawConfig, effectiveScriptId),
+        [rawConfig, effectiveScriptId]
+    );
+
     const grammarRules = config.grammarRules || [];
     const wikiPages = useMemo(() => projectData?.wiki || config.wikiPages || {}, [projectData, config]);
     const customCourse = useMemo(() => projectData?.customCourse || config.customCourse || [], [projectData, config]);
 
     const { transliterate } = useTransliterator(config);
-    const isLogographic = ['logographic', 'syllabic', 'featural_block'].includes(config.phonologyTypes);
 
     // Safely inject aesthetics for this viewer only
-    usePublicThemeInjector(config);
-    usePublicFontInjector(config);
+    usePublicThemeInjector(rawConfig);
+    usePublicFontInjector(rawConfig, activeScriptMode === 'latin' ? 'latin' : effectiveScriptId);
 
     // Filter + sort dictionary for the search
     const filteredDictionary = useMemo(() => {
@@ -372,13 +438,28 @@ export default function PublicViewer() {
     }
 
     // --- MAIN VIEW ---
-    const writingDirection = config.writingDirection || 'ltr';
+    const writingDirection = activeScriptMode === 'latin' ? 'ltr' : (config.writingDirection || 'ltr');
+    const activeScriptClass = activeScriptMode === 'latin' ? '' : `conlang-script-${effectiveScriptId}`;
+
+    const formatScriptTypeLabel = (type) => ({
+        syllabic: 'Syllabic',
+        logographic: 'Logographic',
+        featural_block: 'Featural Block',
+        abjad: 'Abjad',
+        abugida: 'Abugida',
+    }[type] || 'Alphabetic');
+
+    const renderTextInActiveScript = (text) => {
+        const clean = String(text || '').replace(/\*/g, '');
+        if (!clean || activeScriptMode === 'latin') return clean;
+        return transliterate(clean, dictionary);
+    };
 
     // Prepare title and description
     let displayName = config.conlangName || 'Untitled Conlang';
     let displayDesc = config.description;
 
-    const needsTransliteration = ['logographic', 'syllabic', 'alphabetic', 'abjad', 'abugida'].includes(config.phonologyTypes);
+    const needsTransliteration = activeScriptMode !== 'latin' && ['logographic', 'syllabic', 'alphabetic', 'abjad', 'abugida'].includes(config.phonologyTypes);
     if (needsTransliteration) {
         displayName = (config.conlangName || 'Untitled Conlang').split(/(\s+)/).map(w => w.trim() ? transliterate(w, dictionary) : w).join('');
         // Description is intentionally NOT transliterated — it should remain readable
@@ -395,9 +476,47 @@ export default function PublicViewer() {
                     }
                     input.custom-font-text, 
                     textarea.custom-font-text,
-                    .pv-dict-table .custom-font-text,
                     .pv-rule-affix.custom-font-text {
                         writing-mode: horizontal-tb !important;
+                    }
+                    .pv-word-cell [data-writing-direction^="vertical"] {
+                        display: inline-block;
+                        max-height: 110px;
+                        line-height: 1.25;
+                        padding: 4px 2px;
+                        vertical-align: middle;
+                    }
+                    .pv-script-switcher {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 8px;
+                        flex-wrap: wrap;
+                        margin-top: 16px;
+                    }
+                    .pv-script-pill {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 6px;
+                        padding: 6px 14px;
+                        border-radius: 999px;
+                        font-size: 0.8rem;
+                        font-weight: 600;
+                        border: 1px solid var(--bd, rgba(255,255,255,0.12));
+                        background: var(--s1, rgba(21,26,40,0.7));
+                        color: var(--tx2, #94a3b8);
+                        cursor: pointer;
+                        transition: all 0.2s;
+                    }
+                    .pv-script-pill:hover {
+                        color: var(--tx, #f8fafc);
+                        border-color: var(--acc, #7c3aed);
+                    }
+                    .pv-script-pill.active {
+                        background: var(--acc, #7c3aed);
+                        color: #fff;
+                        border-color: var(--acc, #7c3aed);
+                        box-shadow: 0 2px 10px rgba(124, 58, 237, 0.28);
                     }
                     .pv-back-btn {
                         position: absolute;
@@ -435,7 +554,7 @@ export default function PublicViewer() {
                         <div style={{ color: 'var(--acc)' }}>
                             {getConlangIcon(config.conlangIcon, 40)}
                         </div>
-                        <h1 className="pv-lang-name custom-font-text notranslate" style={{ margin: 0, writingMode: 'horizontal-tb' }}>{displayName}</h1>
+                        <h1 className={`pv-lang-name ${activeScriptMode === 'latin' ? '' : `custom-font-text ${activeScriptClass}`} notranslate`} style={{ margin: 0, writingMode: 'horizontal-tb' }}>{displayName}</h1>
                     </div>
                     <div className="pv-author">
                         <User size={14} />
@@ -445,9 +564,44 @@ export default function PublicViewer() {
                         <p className="pv-description notranslate" style={{ writingMode: 'horizontal-tb' }}>{displayDesc}</p>
                     )}
                     <div className="pv-badges">
-                        <span className="pv-badge"><Globe size={12} /> {directionLabel}</span>
-                        <span className="pv-badge"><PenTool size={12} /> {phonoTypeLabel}</span>
+                        <span className="pv-badge"><Globe size={12} /> {activeScriptMode === 'latin' ? 'Left to Right' : directionLabel}</span>
+                        <span className="pv-badge"><PenTool size={12} /> {activeScriptMode === 'latin' ? 'Romanized' : `${activeScriptMeta?.name ? `${activeScriptMeta.name} · ` : ''}${phonoTypeLabel}`}</span>
                         {config.syntaxOrder && <span className="pv-badge"><Layers size={12} /> {config.syntaxOrder}</span>}
+                    </div>
+
+                    {/* SCRIPT SWITCHER BAR */}
+                    <div className="pv-script-switcher" role="group" aria-label="Switch writing system">
+                        {hasScriptRulesOrOverrides && (
+                            <button
+                                type="button"
+                                className={`pv-script-pill ${activeScriptMode === 'auto' ? 'active' : ''}`}
+                                onClick={() => setSelectedScriptMode('auto')}
+                                title="Automatically choose script per word based on language rules"
+                            >
+                                <PenTool size={12} /> Auto (Rules)
+                            </button>
+                        )}
+                        {scriptSystems.map(s => (
+                            <button
+                                key={s.id}
+                                type="button"
+                                className={`pv-script-pill ${activeScriptMode === s.id ? 'active' : ''}`}
+                                onClick={() => setSelectedScriptMode(s.id)}
+                                title={`View in ${s.name} (${formatScriptTypeLabel(s.type)})`}
+                            >
+                                <Type size={12} />
+                                <span>{s.name || 'Main Script'}</span>
+                                <span style={{ opacity: 0.78, fontSize: '0.72rem' }}>({formatScriptTypeLabel(s.type)})</span>
+                            </button>
+                        ))}
+                        <button
+                            type="button"
+                            className={`pv-script-pill ${activeScriptMode === 'latin' ? 'active' : ''}`}
+                            onClick={() => setSelectedScriptMode('latin')}
+                            title="View romanized / phonetic transcription"
+                        >
+                            Romanized
+                        </button>
                     </div>
                 </div>
             </header>
@@ -549,9 +703,48 @@ export default function PublicViewer() {
 
                 {/* DICTIONARY */}
                 <section className="pv-section">
-                    <div className="pv-section-header">
-                        <BookOpen size={20} className="pv-section-icon" />
-                        <h2 className="pv-section-title">Dictionary</h2>
+                    <div className="pv-section-header" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <BookOpen size={20} className="pv-section-icon" />
+                            <h2 className="pv-section-title">Dictionary</h2>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                            {scriptSystems.length > 1 && (
+                                <select
+                                    value={activeScriptMode}
+                                    onChange={(e) => setSelectedScriptMode(e.target.value)}
+                                    style={{
+                                        background: 'var(--s1)',
+                                        color: 'var(--tx)',
+                                        border: '1px solid var(--bd)',
+                                        borderRadius: '8px',
+                                        padding: '6px 10px',
+                                        fontSize: '0.82rem',
+                                        fontWeight: 600,
+                                        cursor: 'pointer'
+                                    }}
+                                    aria-label="Dictionary script selector"
+                                >
+                                    {hasScriptRulesOrOverrides && <option value="auto">Script: Auto (Rules)</option>}
+                                    {scriptSystems.map(s => (
+                                        <option key={s.id} value={s.id}>
+                                            Script: {s.name || s.id} ({formatScriptTypeLabel(s.type)})
+                                        </option>
+                                    ))}
+                                    <option value="latin">Script: Romanized (Latin)</option>
+                                </select>
+                            )}
+                            {activeScriptMode !== 'latin' && (
+                                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: 'var(--tx2)', cursor: 'pointer', userSelect: 'none' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={showRomanization}
+                                        onChange={(e) => setShowRomanization(e.target.checked)}
+                                    />
+                                    Show Romanization
+                                </label>
+                            )}
+                        </div>
                     </div>
                     <div className="pv-section-body">
                         {dictionary.length === 0 ? (
@@ -582,28 +775,41 @@ export default function PublicViewer() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {visibleDictionary.map((entry, i) => (
+                                            {visibleDictionary.map((entry, i) => {
+                                                const cleanRoman = (entry.word || '').replace(/\*/g, '');
+                                                const forcedId = activeScriptMode === 'auto' ? null : effectiveScriptId;
+                                                const rendered = renderWordInScript(entry, rawConfig, dictionary, forcedId);
+                                                const isSpecialGlyphSize = rendered.isLogographic || ['syllabic', 'featural_block'].includes(rendered.scriptType);
+                                                const legacyWordImg = typeof config.customGlyphs?.[(entry.word || '').toLowerCase()] === 'string'
+                                                    ? config.customGlyphs[(entry.word || '').toLowerCase()]
+                                                    : null;
+
+                                                return (
                                                 <tr key={entry.id || i}>
                                                     <td className="pv-word-cell">
-                                                        {config.customGlyphs?.[(entry.word || '').toLowerCase()] ? (
+                                                        {activeScriptMode === 'latin' ? (
+                                                            <span className="notranslate">{cleanRoman}</span>
+                                                        ) : legacyWordImg ? (
                                                             <img 
-                                                                src={config.customGlyphs[(entry.word || '').toLowerCase()]} 
+                                                                src={legacyWordImg} 
                                                                 alt={entry.word}
                                                                 className="entry-custom-glyph"
                                                                 style={{ maxHeight: '40px', maxWidth: '100px', objectFit: 'contain' }}
                                                             />
                                                         ) : (
-                                                            <span className={`custom-font-text notranslate ${isLogographic && entry.ideogram ? 'pv-featural-word' : ''}`}>
-                                                                {(() => {
-                                                                    // Use script rendering if script override exists
-                                                                    if (entry.scriptOverride) {
-                                                                        const rendered = renderWordInScript(entry, config, dictionary);
-                                                                        return rendered.text;
-                                                                    }
-                                                                    // Legacy fallback
-                                                                    return config.phonologyTypes === 'logographic' && entry.ideogram ? entry.ideogram : transliterate(entry.word, dictionary);
-                                                                })()}
-                                                            </span>
+                                                            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
+                                                                <span
+                                                                    className={`custom-font-text notranslate ${rendered.cssClass || activeScriptClass} ${isSpecialGlyphSize ? 'pv-featural-word' : ''}`}
+                                                                    data-writing-direction={rendered.direction}
+                                                                >
+                                                                    {rendered.text || cleanRoman}
+                                                                </span>
+                                                                {(showRomanization || rendered.isLogographic) && cleanRoman && rendered.text !== cleanRoman && (
+                                                                    <span className="notranslate" style={{ fontSize: '0.78rem', color: 'var(--tx2)', fontWeight: 500, writingMode: 'horizontal-tb' }}>
+                                                                        {cleanRoman}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         )}
                                                     </td>
                                                     <td className="pv-ipa-cell">
@@ -634,7 +840,8 @@ export default function PublicViewer() {
                                                         }
                                                     </td>
                                                 </tr>
-                                            ))}
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>
@@ -662,7 +869,9 @@ export default function PublicViewer() {
                             <div className="pv-rules-list">
                                 {grammarRules.map((rule, i) => (
                                     <div key={rule.id || i} className="pv-rule-item">
-                                        <div className="pv-rule-affix custom-font-text notranslate">{rule.affix || '—'}</div>
+                                        <div className={`pv-rule-affix ${activeScriptMode === 'latin' ? '' : `custom-font-text ${activeScriptClass}`} notranslate`}>
+                                            {rule.affix ? renderTextInActiveScript(rule.affix) : '—'}
+                                        </div>
                                         <div className="pv-rule-details">
                                             <div className="pv-rule-name">{rule.name || 'Unnamed Rule'}</div>
                                             <div className="pv-rule-applies">
@@ -791,31 +1000,137 @@ export default function PublicViewer() {
                 {activeTab === 'overview' && (
                     <>
 
-                {/* ALPHABET / ORTHOGRAPHY */}
-                {config.alphabetNames && Object.keys(config.alphabetNames).length > 0 && (
-                    <section className="pv-section">
-                        <div className="pv-section-header">
-                            <Type size={20} className="pv-section-icon" />
-                            <h2 className="pv-section-title">Alphabet</h2>
-                        </div>
-                        <div className="pv-section-body">
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '1rem' }}>
-                                {Object.entries(config.alphabetNames).map(([phoneme, name]) => {
-                                    const glyph = config.alphabetGlyphs?.[phoneme];
-                                    return (
-                                        <div key={phoneme} style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: '8px', padding: '1rem', textAlign: 'center' }}>
-                                            <div className="custom-font-text notranslate" style={{ fontSize: '2rem', marginBottom: '0.5rem', color: 'var(--acc)' }}>
-                                                {glyph || transliterate(phoneme, dictionary)}
-                                            </div>
-                                            <div style={{ fontWeight: 600, color: 'var(--tx)' }}>{name}</div>
-                                            <div style={{ fontSize: '0.8rem', color: 'var(--tx2)' }}>/{phoneme}/</div>
-                                        </div>
-                                    );
-                                })}
+                {/* WRITING SYSTEM / ORTHOGRAPHY */}
+                {(() => {
+                    const sType = config.phonologyTypes || 'alphabetic';
+                    let orthoItems = [];
+
+                    if (sType === 'logographic') {
+                        orthoItems = dictionary
+                            .map((entry) => {
+                                const glyph = entry.scriptForms?.[effectiveScriptId] || entry.ideogram;
+                                if (!glyph) return null;
+                                return {
+                                    key: entry.id || `${entry.word}-${glyph}`,
+                                    glyph,
+                                    label: (entry.word || '').replace(/\*/g, ''),
+                                    sub: entry.translation || '',
+                                };
+                            })
+                            .filter(Boolean)
+                            .slice(0, 60);
+                    } else if (sType === 'syllabic' || sType === 'featural_block') {
+                        orthoItems = Object.entries(config.syllabaryMap || {})
+                            .filter(([k, v]) => !k.endsWith('__mode') && typeof v === 'string' && v.trim())
+                            .slice(0, 80)
+                            .map(([syl, glyph]) => ({
+                                key: syl,
+                                glyph,
+                                label: `/${syl}/`,
+                                sub: '',
+                            }));
+                    } else {
+                        const charSet = new Set();
+                        const charToPhoneme = {};
+                        const rules = (config.ipaMappingRules || '').split('\n');
+                        rules.forEach(line => {
+                            const trimmed = line.trim();
+                            if (trimmed && !trimmed.startsWith('//') && trimmed.includes('=')) {
+                                const [left, right] = trimmed.split('=').map(s => s.trim());
+                                if (right) {
+                                    charSet.add(right);
+                                    if (left && !charToPhoneme[right]) charToPhoneme[right] = left;
+                                }
+                            }
+                        });
+                        if (charSet.size === 0) {
+                            const raw = `${config.consonants || ''} ${config.vowels || ''} ${config.otherPhonemes || ''}`;
+                            raw.split(/[\s,]+/).filter(Boolean).forEach(p => {
+                                charSet.add(p);
+                                if (!charToPhoneme[p]) charToPhoneme[p] = p;
+                            });
+                        }
+                        Object.keys(config.alphabetNames || {}).forEach(k => {
+                            if (k && !k.endsWith('__mode')) {
+                                charSet.add(k);
+                                if (!charToPhoneme[k]) charToPhoneme[k] = k;
+                            }
+                        });
+                        Object.keys(config.alphabetGlyphs || {}).forEach(k => {
+                            if (k && !k.endsWith('__mode')) {
+                                charSet.add(k);
+                                if (!charToPhoneme[k]) charToPhoneme[k] = k;
+                            }
+                        });
+
+                        orthoItems = Array.from(charSet).map(ch => {
+                            const rawName = (config.alphabetNames?.[ch] || '').trim();
+                            const hasCustomName = rawName && rawName.toLowerCase() !== 'unnamed';
+                            const phoneme = charToPhoneme[ch] || ch;
+                            const glyph = (typeof config.alphabetGlyphs?.[ch] === 'string' && config.alphabetGlyphs[ch])
+                                ? config.alphabetGlyphs[ch]
+                                : transliterate(ch, dictionary);
+                            return {
+                                key: ch,
+                                glyph,
+                                label: hasCustomName ? rawName : `/${phoneme}/`,
+                                sub: hasCustomName ? `/${phoneme}/` : '',
+                            };
+                        });
+                    }
+
+                    if (orthoItems.length === 0 && scriptSystems.length <= 1) return null;
+
+                    return (
+                        <section className="pv-section">
+                            <div className="pv-section-header" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <Type size={20} className="pv-section-icon" />
+                                    <h2 className="pv-section-title">
+                                        Writing System — {activeScriptMeta?.name || 'Main Script'} ({phonoTypeLabel})
+                                    </h2>
+                                </div>
+                                {scriptSystems.length > 1 && (
+                                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                        {scriptSystems.map(s => (
+                                            <button
+                                                key={s.id}
+                                                type="button"
+                                                className={`pv-script-pill ${effectiveScriptId === s.id && activeScriptMode !== 'latin' ? 'active' : ''}`}
+                                                onClick={() => setSelectedScriptMode(s.id)}
+                                                style={{ padding: '4px 12px', fontSize: '0.76rem' }}
+                                            >
+                                                {s.name || s.id} ({formatScriptTypeLabel(s.type)})
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    </section>
-                )}
+                            <div className="pv-section-body">
+                                {orthoItems.length === 0 ? (
+                                    <div className="pv-empty">No characters registered for this script yet.</div>
+                                ) : (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '1rem' }}>
+                                        {orthoItems.map((item) => (
+                                            <div key={item.key} style={{ background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: '8px', padding: '1rem', textAlign: 'center' }}>
+                                                <div
+                                                    className={`custom-font-text notranslate ${activeScriptClass}`}
+                                                    style={{ fontSize: '2rem', marginBottom: '0.5rem', color: 'var(--acc)', writingMode: 'horizontal-tb' }}
+                                                >
+                                                    {item.glyph}
+                                                </div>
+                                                <div className="notranslate" style={{ fontWeight: 600, color: 'var(--tx)' }}>{item.label}</div>
+                                                {item.sub && (
+                                                    <div className="notranslate" style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginTop: '2px' }}>{item.sub}</div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </section>
+                    );
+                })()}
 
                 {/* NUMBER SYSTEM */}
                 {config.numberSystem && config.numberSystem.stems && Object.keys(config.numberSystem.stems).length > 0 && (
@@ -829,7 +1144,7 @@ export default function PublicViewer() {
                                 {Object.entries(config.numberSystem.stems).sort((a,b) => Number(a[0]) - Number(b[0])).map(([val, stem]) => (
                                     <div key={val} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: '6px' }}>
                                         <span style={{ fontWeight: 600, color: 'var(--acc)' }}>{val}</span>
-                                        <span className="custom-font-text notranslate">{stem}</span>
+                                        <span className={`${activeScriptMode === 'latin' ? '' : `custom-font-text ${activeScriptClass}`} notranslate`}>{renderTextInActiveScript(stem)}</span>
                                     </div>
                                 ))}
                             </div>
@@ -849,19 +1164,19 @@ export default function PublicViewer() {
                                 {config.numberDerivedRules.ordinal && (
                                     <div style={{ padding: '0.75rem', background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: '6px', textAlign: 'center' }}>
                                         <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 600 }}>Ordinal</div>
-                                        <div className="custom-font-text notranslate" style={{ fontWeight: 600, color: 'var(--acc)' }}>{config.numberDerivedRules.ordinal}</div>
+                                        <div className={`${activeScriptMode === 'latin' ? '' : `custom-font-text ${activeScriptClass}`} notranslate`} style={{ fontWeight: 600, color: 'var(--acc)' }}>{renderTextInActiveScript(config.numberDerivedRules.ordinal)}</div>
                                     </div>
                                 )}
                                 {config.numberDerivedRules.fractional && (
                                     <div style={{ padding: '0.75rem', background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: '6px', textAlign: 'center' }}>
                                         <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 600 }}>Fractional</div>
-                                        <div className="custom-font-text notranslate" style={{ fontWeight: 600, color: 'var(--acc)' }}>{config.numberDerivedRules.fractional}</div>
+                                        <div className={`${activeScriptMode === 'latin' ? '' : `custom-font-text ${activeScriptClass}`} notranslate`} style={{ fontWeight: 600, color: 'var(--acc)' }}>{renderTextInActiveScript(config.numberDerivedRules.fractional)}</div>
                                     </div>
                                 )}
                                 {config.numberDerivedRules.multiplier && (
                                     <div style={{ padding: '0.75rem', background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: '6px', textAlign: 'center' }}>
                                         <div style={{ fontSize: '0.8rem', color: 'var(--tx2)', marginBottom: '0.25rem', textTransform: 'uppercase', fontWeight: 600 }}>Multiplier</div>
-                                        <div className="custom-font-text notranslate" style={{ fontWeight: 600, color: 'var(--acc)' }}>{config.numberDerivedRules.multiplier}</div>
+                                        <div className={`${activeScriptMode === 'latin' ? '' : `custom-font-text ${activeScriptClass}`} notranslate`} style={{ fontWeight: 600, color: 'var(--acc)' }}>{renderTextInActiveScript(config.numberDerivedRules.multiplier)}</div>
                                     </div>
                                 )}
                             </div>
@@ -884,7 +1199,7 @@ export default function PublicViewer() {
                                     return (
                                         <div key={key} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: '6px' }}>
                                             <span style={{ fontWeight: 600, color: 'var(--tx2)' }}>{label}</span>
-                                            <span className="custom-font-text notranslate" style={{ color: 'var(--acc)' }}>{val}</span>
+                                            <span className={`${activeScriptMode === 'latin' ? '' : `custom-font-text ${activeScriptClass}`} notranslate`} style={{ color: 'var(--acc)' }}>{renderTextInActiveScript(val)}</span>
                                         </div>
                                     );
                                 })}
@@ -916,7 +1231,7 @@ export default function PublicViewer() {
                                             return (
                                                 <tr key={day} style={{ borderBottom: '1px solid var(--bd)' }}>
                                                     <td style={{ padding: '0.75rem 1rem', color: 'var(--tx)' }}>Day {day}</td>
-                                                    <td className="custom-font-text notranslate" style={{ padding: '0.75rem 1rem', color: 'var(--acc)', fontWeight: 600 }}>{val}</td>
+                                                    <td className={`${activeScriptMode === 'latin' ? '' : `custom-font-text ${activeScriptClass}`} notranslate`} style={{ padding: '0.75rem 1rem', color: 'var(--acc)', fontWeight: 600 }}>{renderTextInActiveScript(val)}</td>
                                                 </tr>
                                             );
                                         })}
@@ -938,7 +1253,7 @@ export default function PublicViewer() {
                                             return (
                                                 <tr key={month} style={{ borderBottom: '1px solid var(--bd)' }}>
                                                     <td style={{ padding: '0.75rem 1rem', color: 'var(--tx)' }}>Month {month}</td>
-                                                    <td className="custom-font-text notranslate" style={{ padding: '0.75rem 1rem', color: 'var(--acc)', fontWeight: 600 }}>{val}</td>
+                                                    <td className={`${activeScriptMode === 'latin' ? '' : `custom-font-text ${activeScriptClass}`} notranslate`} style={{ padding: '0.75rem 1rem', color: 'var(--acc)', fontWeight: 600 }}>{renderTextInActiveScript(val)}</td>
                                                 </tr>
                                             );
                                         })}
@@ -960,7 +1275,7 @@ export default function PublicViewer() {
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                                 {config.functionWords.map((fw, i) => (
                                     <div key={i} style={{ padding: '0.5rem 1rem', background: 'var(--s1)', border: '1px solid var(--bd)', borderRadius: '20px', fontSize: '0.9rem' }}>
-                                        <span className="custom-font-text notranslate" style={{ color: 'var(--acc)', marginRight: '0.5rem' }}>{fw.word}</span>
+                                        <span className={`${activeScriptMode === 'latin' ? '' : `custom-font-text ${activeScriptClass}`} notranslate`} style={{ color: 'var(--acc)', marginRight: '0.5rem' }}>{renderTextInActiveScript(fw.word)}</span>
                                         <span style={{ color: 'var(--tx2)' }}>{fw.meaning} ({fw.type})</span>
                                     </div>
                                 ))}
@@ -1511,7 +1826,7 @@ export default function PublicViewer() {
                             <BrainCircuit size={28} className="pv-section-icon" />
                             <h2 className="pv-section-title" style={{ fontSize: '1.8rem' }}>Flashcards</h2>
                         </div>
-                        <PublicFlashcards lexicon={dictionary} config={config} />
+                        <PublicFlashcards lexicon={dictionary} config={config} rawConfig={rawConfig} activeScriptId={activeScriptMode} />
                     </section>
                 )}
                     </>

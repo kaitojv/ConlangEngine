@@ -3,7 +3,10 @@ import Modal from '../Modal/Modal.jsx';
 import { Volume2, BarChart2, FileText, ArrowRight, ArrowLeft, PenTool } from 'lucide-react';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
+import { useShallow } from 'zustand/react/shallow';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
+import { buildScriptConfig, getDefaultScriptId } from '../../../utils/scriptResolver.js';
+import { renderWordInScript } from '../../../utils/scriptRendering.js';
 import { playAzureTTS } from '../../../utils/azureTTS.js';
 import StrokeOrderViewer from '../StrokeOrder/StrokeOrderViewer.jsx';
 import GlyphPreviewBadge from '../Glyph/GlyphPreviewBadge.jsx';
@@ -11,17 +14,49 @@ import { useTranslation } from '@/hooks/useTranslation.jsx';
 import toast from 'react-hot-toast';
 import './glyphDetailsModal.css';
 
-export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, name, isWord, scriptId = null, strokes = null }) {
+export default function GlyphDetailsModal({ isOpen, onClose, char, phoneme, glyph, type, name, isWord, scriptId = null, strokes = null }) {
     const { t } = useTranslation();
     const rawLexicon = useLexiconStore(state => state.lexicon);
     const lexicon = useMemo(() => Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []), [rawLexicon]);
-    const config = useConfigStore.getState();
-    const { transliterate } = useTransliterator();
+    const config = useConfigStore(useShallow(state => ({
+        scriptSystems: state.scriptSystems,
+        scriptRules: state.scriptRules,
+        scriptDataById: state.scriptDataById,
+        activeScriptSystemId: state.activeScriptSystemId,
+        phonologyTypes: state.phonologyTypes,
+        alphabeticScript: state.alphabeticScript,
+        writingDirection: state.writingDirection,
+        syllabificationAlgorithm: state.syllabificationAlgorithm,
+        blockSettings: state.blockSettings,
+        blockTemplates: state.blockTemplates,
+        alphabetNames: state.alphabetNames,
+        typographySettings: state.typographySettings,
+        customGlyphs: state.customGlyphs,
+        syllabaryMap: state.syllabaryMap,
+        featuralComponents: state.featuralComponents,
+        alphabetGlyphs: state.alphabetGlyphs,
+        consonants: state.consonants,
+        vowels: state.vowels,
+        otherPhonemes: state.otherPhonemes,
+        azureTtsVoice: state.azureTtsVoice,
+        azureTtsUseIpa: state.azureTtsUseIpa,
+    })));
+    const effectiveScriptId = scriptId || config.activeScriptSystemId || getDefaultScriptId(config);
+    const scriptConfig = useMemo(
+        () => buildScriptConfig(config, effectiveScriptId),
+        [config, effectiveScriptId]
+    );
+    const { transliterate } = useTransliterator(scriptConfig);
     const [stats, setStats] = useState(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const isConscript = ['syllabic', 'logographic', 'featural_block', 'featural', 'block'].includes(type);
     // Default to the glyph viewer (large display + usage stats), NOT the stroke editor.
     const [activeTab, setActiveTab] = useState('analysis');
+
+    const rawName = (name || '').trim();
+    const displayName = (rawName && rawName.toLowerCase() !== 'unnamed')
+        ? rawName
+        : `/${String(phoneme || char || '').replace(/^\/+|\/+$/g, '')}/`;
 
     useEffect(() => {
         // Always open the character viewer first; the stroke editor is opt-in via its own tab.
@@ -43,9 +78,10 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                 // Word Mode Statistics
                 const compounds = [];
                 lexicon.forEach(entry => {
-                    if (entry.word === char || (type === 'logographic' && entry.ideogram === char)) return; // Skip self
+                    const entryLogo = entry.scriptForms?.[effectiveScriptId] || entry.ideogram || '';
+                    if (entry.word === char || (type === 'logographic' && entryLogo === char)) return; // Skip self
                     
-                    let targetString = type === 'logographic' ? (entry.ideogram || '') : transliterate(entry.word || '');
+                    let targetString = type === 'logographic' ? entryLogo : transliterate(entry.word || '', lexicon);
                     if (targetString.includes(char)) {
                         compounds.push(entry);
                     }
@@ -60,43 +96,53 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
 
             } else {
                 // Glyph Mode Statistics
+                const glyphToken = (typeof glyph === 'string' && glyph.length > 0) ? glyph : null;
+                const transliteratedChar = transliterate(char, lexicon) || char;
+
                 lexicon.forEach(entry => {
                     let targetString = '';
                     
                     if (type === 'logographic') {
-                        targetString = entry.ideogram || '';
-                        totalChars += targetString.length;
+                        targetString = entry.scriptForms?.[effectiveScriptId] || entry.ideogram || '';
+                        const codePoints = Array.from(targetString);
+                        totalChars += codePoints.length;
                         
                         if (targetString.includes(char)) {
                             frequency += targetString.split(char).length - 1;
                             containingWords.push(entry);
                         }
                     } else {
-                        // Alphabetic, Syllabic, Block
-                        targetString = transliterate(entry.word) || '';
+                        // Alphabetic, Syllabic, Block — transliterated in the target script
+                        targetString = transliterate(entry.word, lexicon) || '';
                         totalChars += targetString.length;
+
+                        const needle = (glyphToken && targetString.includes(glyphToken))
+                            ? glyphToken
+                            : (transliteratedChar && targetString.includes(transliteratedChar))
+                                ? transliteratedChar
+                                : char;
                         
                         // Count occurrences and context
-                        if (targetString.includes(char)) {
+                        if (needle && targetString.includes(needle)) {
                             let countInWord = 0;
-                            let index = targetString.indexOf(char);
+                            let index = targetString.indexOf(needle);
                             while (index !== -1) {
                                 countInWord++;
                                 
                                 // Find predecessor
                                 if (index > 0) {
-                                    const prev = targetString.charAt(index - 1);
-                                    predecessors[prev] = (predecessors[prev] || 0) + 1;
+                                    const prev = Array.from(targetString.slice(0, index)).pop();
+                                    if (prev) predecessors[prev] = (predecessors[prev] || 0) + 1;
                                 }
                                 
                                 // Find successor
-                                const nextIndex = index + char.length;
+                                const nextIndex = index + needle.length;
                                 if (nextIndex < targetString.length) {
-                                    const next = targetString.charAt(nextIndex);
-                                    successors[next] = (successors[next] || 0) + 1;
+                                    const next = Array.from(targetString.slice(nextIndex))[0];
+                                    if (next) successors[next] = (successors[next] || 0) + 1;
                                 }
                                 
-                                index = targetString.indexOf(char, index + 1);
+                                index = targetString.indexOf(needle, index + 1);
                             }
                             
                             frequency += countInWord;
@@ -122,7 +168,7 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
         };
 
         analyzeGlyph();
-    }, [isOpen, char, type, lexicon, transliterate, isWord]);
+    }, [isOpen, char, glyph, type, lexicon, transliterate, isWord, effectiveScriptId]);
 
     const handlePlayAudio = async () => {
         setIsPlaying(true);
@@ -151,7 +197,7 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
     if (!isOpen) return null;
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} className="modal-xwide" title={`${name || char}`}>
+        <Modal isOpen={isOpen} onClose={onClose} className="modal-xwide" title={displayName}>
             <div className="glyph-modal-content">
                 {/* Tab Switcher for Conscript Systems */}
                 {isConscript && (
@@ -172,12 +218,12 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                 )}
 
                 {activeTab === 'stroke_order' && isConscript ? (
-                    <StrokeOrderViewer word={char} char={char} scriptType={type} scriptId={scriptId} rawStrokes={strokes} />
+                    <StrokeOrderViewer word={char} char={char} scriptType={type} scriptId={effectiveScriptId} rawStrokes={strokes} />
                 ) : (
                     <>
                         <div className="glyph-display-card glass">
                             <div 
-                                className={`glyph-large custom-font-text notranslate ${scriptId ? `conlang-script-${scriptId}` : ''}`}
+                                className={`glyph-large custom-font-text notranslate ${effectiveScriptId ? `conlang-script-${effectiveScriptId}` : ''}`}
                                 style={{ fontSize: dynamicFontSize }}
                             >
                                 {isWord ? displayStr : (
@@ -186,7 +232,7 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                                             {glyph}
                                         </div>
                                     ) : (
-                                        <GlyphPreviewBadge plain strokes={strokes} glyph={glyph || char} scriptId={scriptId} size={180} />
+                                        <GlyphPreviewBadge plain strokes={strokes} glyph={glyph || char} scriptId={effectiveScriptId} size={180} />
                                     )
                                 )}
                             </div>
@@ -231,14 +277,22 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                                             <ArrowLeft size={16} className="context-icon" />
                                             <div className="context-content">
                                                 <div className="context-label">{t('glyphDetails.mostCommonPreceding')}</div>
-                                                <div className={`context-value custom-font-text ${scriptId ? `conlang-script-${scriptId}` : ''}`}>{stats.topPredecessor}</div>
+                                                <div className={`context-value custom-font-text notranslate ${effectiveScriptId ? `conlang-script-${effectiveScriptId}` : ''}`}>
+                                                    {stats.topPredecessor && stats.topPredecessor !== '-' ? (
+                                                        <GlyphPreviewBadge plain glyph={stats.topPredecessor} scriptId={effectiveScriptId} size={28} />
+                                                    ) : '-'}
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="stat-context-card glass">
                                             <ArrowRight size={16} className="context-icon" />
                                             <div className="context-content">
                                                 <div className="context-label">{t('glyphDetails.mostCommonFollowing')}</div>
-                                                <div className={`context-value custom-font-text ${scriptId ? `conlang-script-${scriptId}` : ''}`}>{stats.topSuccessor}</div>
+                                                <div className={`context-value custom-font-text notranslate ${effectiveScriptId ? `conlang-script-${effectiveScriptId}` : ''}`}>
+                                                    {stats.topSuccessor && stats.topSuccessor !== '-' ? (
+                                                        <GlyphPreviewBadge plain glyph={stats.topSuccessor} scriptId={effectiveScriptId} size={28} />
+                                                    ) : '-'}
+                                                </div>
                                             </div>
                                         </div>
                                     </>
@@ -247,15 +301,24 @@ export default function GlyphDetailsModal({ isOpen, onClose, char, glyph, type, 
                         )}
 
                         <div className="glyph-words-list glass">
-                            <h3 className="words-list-title"><FileText size={18}/> {stats?.isWordMode ? t('glyphDetails.compoundsTitle', { name }) : t('glyphDetails.topWordsTitle', { name })}</h3>
+                            <h3 className="words-list-title"><FileText size={18}/> {stats?.isWordMode ? t('glyphDetails.compoundsTitle', { name: displayName }) : t('glyphDetails.topWordsTitle', { name: displayName })}</h3>
                             {stats?.containingWords.length > 0 ? (
                                 <div className="words-grid">
-                                    {stats.containingWords.map(word => (
-                                        <div key={word.id} className="word-pill">
-                                            <span className={`word-text custom-font-text ${scriptId ? `conlang-script-${scriptId}` : ''}`}>{type === 'logographic' ? (word.scriptForms?.[scriptId] || word.ideogram) : word.word}</span>
-                                            <span className="word-translation">{word.translation}</span>
-                                        </div>
-                                    ))}
+                                    {stats.containingWords.map(word => {
+                                        const rendered = renderWordInScript(word, config, lexicon, effectiveScriptId);
+                                        return (
+                                            <div key={word.id} className="word-pill">
+                                                <span
+                                                    className={`word-text custom-font-text notranslate ${effectiveScriptId ? `conlang-script-${effectiveScriptId}` : ''}`}
+                                                    data-script-id={effectiveScriptId}
+                                                    data-writing-direction={rendered.writingDirection}
+                                                >
+                                                    {rendered.text}
+                                                </span>
+                                                <span className="word-translation">{word.translation}</span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             ) : (
                                 <p className="no-words-text">{stats?.isWordMode ? t('glyphDetails.noCompounds') : t('glyphDetails.noWords')}</p>

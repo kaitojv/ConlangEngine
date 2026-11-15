@@ -1076,26 +1076,32 @@ const AlphabeticShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
     const otherPhonemes = useConfigStore(state => state.otherPhonemes) || '';
     const { alphabetGlyphs, alphabetNames, resolvedScriptId } = useScriptScopedData(scriptId);
 
-    const parseChars = (str) => {
-        if (!str) return [];
-        return str.split(',')
-            .map(s => s.trim())
-            .filter(Boolean)
-            .map(s => {
-                // RIGHT side of IPA=Text is the grapheme/letter identity
-                if (s.includes('=')) return s.split('=')[1].trim();
-                return s;
-            });
-    };
-
-    const allChars = useMemo(() => {
-        return [
-            ...new Set([
-                ...parseChars(consonants),
-                ...parseChars(vowels),
-                ...parseChars(otherPhonemes)
-            ])
-        ];
+    const { allChars, charToPhoneme } = useMemo(() => {
+        const map = {};
+        const chars = [];
+        const collect = (str) => {
+            if (!str) return;
+            str.split(',')
+                .map(s => s.trim())
+                .filter(Boolean)
+                .forEach(s => {
+                    if (s.includes('=')) {
+                        const [ipaPart, textPart] = s.split('=').map(p => p.trim());
+                        const grapheme = textPart || ipaPart;
+                        if (grapheme) {
+                            if (!map[grapheme]) map[grapheme] = ipaPart || grapheme;
+                            if (!chars.includes(grapheme)) chars.push(grapheme);
+                        }
+                    } else {
+                        if (!map[s]) map[s] = s;
+                        if (!chars.includes(s)) chars.push(s);
+                    }
+                });
+        };
+        collect(consonants);
+        collect(vowels);
+        collect(otherPhonemes);
+        return { allChars: chars, charToPhoneme: map };
     }, [consonants, vowels, otherPhonemes]);
 
     return (
@@ -1107,14 +1113,18 @@ const AlphabeticShowcase = ({ scriptId, onGlyphClick, registerCols } = {}) => {
             <div className="alphabet-grid" style={registerCols > 0 ? { '--grid-cols': `repeat(${registerCols}, 1fr)` } : {}}>
                 {allChars.length > 0 ? (
                     allChars.map((char) => {
-                        const charName = alphabetNames[char] || 'unnamed';
+                        const rawName = (alphabetNames[char] || '').trim();
+                        const phoneme = charToPhoneme[char] || char;
+                        const charName = (rawName && rawName.toLowerCase() !== 'unnamed')
+                            ? rawName
+                            : `/${phoneme}/`;
                         const customGlyph = alphabetGlyphs[char];
                         
                         return (
                             <div 
                                 key={char} 
                                 className="char-card glass interactive-card" 
-                                onClick={() => onGlyphClick && onGlyphClick({ char, glyph: customGlyph || char, type: 'alphabetic', name: charName, scriptId: resolvedScriptId })}
+                                onClick={() => onGlyphClick && onGlyphClick({ char, phoneme, glyph: customGlyph || char, type: 'alphabetic', name: charName, scriptId: resolvedScriptId })}
                             >
                                 <div className={`char-display custom-font-text conlang-script-${resolvedScriptId}`} style={{ fontSize: customGlyph ? '3rem' : '2rem', marginBottom: customGlyph ? '0' : '0.5rem' }}>
                                     {customGlyph ? (

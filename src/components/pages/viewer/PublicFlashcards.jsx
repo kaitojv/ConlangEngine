@@ -2,14 +2,14 @@ import React, { useState, useMemo } from 'react';
 import Card from '../../UI/Card/Card.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import { BrainCircuit, Play, X, Check, Volume2 } from 'lucide-react';
-import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
+import { renderWordInScript } from '../../../utils/scriptRendering.js';
 import { playAzureTTS } from '../../../utils/azureTTS.js';
 
 import toast from 'react-hot-toast';
 import '../../pages/study/studyTab.css';
 
-export default function PublicFlashcards({ lexicon = [], config = {} }) {
-    const { transliterate } = useTransliterator(config);
+export default function PublicFlashcards({ lexicon = [], config = {}, rawConfig = null, activeScriptId = null }) {
+    const forcedScriptId = (activeScriptId && activeScriptId !== 'auto' && activeScriptId !== 'latin') ? activeScriptId : null;
 
     const [deck, setDeck] = useState([]);
     const [currentIdx, setCurrentIdx] = useState(0);
@@ -211,56 +211,65 @@ export default function PublicFlashcards({ lexicon = [], config = {} }) {
                                         <Button variant="default" onClick={() => setDeckStarted(false)} style={{marginTop: '20px'}}>Back to Menu</Button>
                                     </>
                                 ) : currentWord ? (
-                                    <>
-                                        {scriptPracticeMode === 'native_only' ? (
-                                            <div className="fc-script-drill">
-                                                <div className="fc-word custom-font-text notranslate fc-word-large" style={{ display: 'flex', justifyContent: 'center' }}>
-                                                    {config.customGlyphs?.[(currentWord.word || '').toLowerCase()] ? (
-                                                        <img 
-                                                            src={config.customGlyphs[(currentWord.word || '').toLowerCase()]} 
-                                                            alt={currentWord.word}
-                                                            style={{ maxHeight: '80px', maxWidth: '200px', objectFit: 'contain' }}
-                                                        />
-                                                    ) : (
-                                                        transliterate(currentWord.word)
-                                                    )}
-                                                </div>
-                                                <div className="fc-script-hint">Native Script Drill</div>
-                                            </div>
-                                        ) : scriptPracticeMode === 'romanized_only' ? (
+                                    (() => {
+                                        const rendered = renderWordInScript(currentWord, rawConfig || config, lexicon, forcedScriptId);
+                                        const isRomanizedView = scriptPracticeMode === 'romanized_only' || activeScriptId === 'latin';
+                                        const wordImg = typeof config.customGlyphs?.[(currentWord.word || '').toLowerCase()] === 'string'
+                                            ? config.customGlyphs[(currentWord.word || '').toLowerCase()]
+                                            : null;
+                                        return (
                                             <>
-                                                <div className="fc-word notranslate" style={{ fontSize: '2rem', fontWeight: 600 }}>
-                                                    {currentWord.word.replace(/\*/g, '')}
-                                                </div>
-                                                {currentWord.ipa && (
-                                                    <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>
+                                                {scriptPracticeMode === 'native_only' ? (
+                                                    <div className="fc-script-drill">
+                                                        <div className={`fc-word custom-font-text notranslate fc-word-large ${rendered.cssClass || ''}`} data-writing-direction={rendered.direction} style={{ display: 'flex', justifyContent: 'center' }}>
+                                                            {wordImg ? (
+                                                                <img 
+                                                                    src={wordImg} 
+                                                                    alt={currentWord.word}
+                                                                    style={{ maxHeight: '80px', maxWidth: '200px', objectFit: 'contain' }}
+                                                                />
+                                                            ) : (
+                                                                rendered.text || (currentWord.word || '').replace(/\*/g, '')
+                                                            )}
+                                                        </div>
+                                                        <div className="fc-script-hint">Native Script Drill</div>
+                                                    </div>
+                                                ) : isRomanizedView ? (
+                                                    <>
+                                                        <div className="fc-word notranslate" style={{ fontSize: '2rem', fontWeight: 600 }}>
+                                                            {(currentWord.word || '').replace(/\*/g, '')}
+                                                        </div>
+                                                        {currentWord.ipa && (
+                                                            <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div className={`fc-word custom-font-text notranslate ${rendered.cssClass || ''}`} data-writing-direction={rendered.direction} style={{ display: 'flex', justifyContent: 'center' }}>
+                                                            {wordImg ? (
+                                                                <img 
+                                                                    src={wordImg} 
+                                                                    alt={currentWord.word}
+                                                                    style={{ maxHeight: '80px', maxWidth: '200px', objectFit: 'contain' }}
+                                                                />
+                                                            ) : (
+                                                                rendered.text || (currentWord.word || '').replace(/\*/g, '')
+                                                            )}
+                                                        </div>
+                                                        {currentWord.ipa && (
+                                                            <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>
+                                                        )}
+                                                    </>
                                                 )}
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div className="fc-word custom-font-text notranslate" style={{ display: 'flex', justifyContent: 'center' }}>
-                                                    {config.customGlyphs?.[(currentWord.word || '').toLowerCase()] ? (
-                                                        <img 
-                                                            src={config.customGlyphs[(currentWord.word || '').toLowerCase()]} 
-                                                            alt={currentWord.word}
-                                                            style={{ maxHeight: '80px', maxWidth: '200px', objectFit: 'contain' }}
-                                                        />
-                                                    ) : (
-                                                        transliterate(currentWord.word)
-                                                    )}
+                                                <div style={{ marginTop: '15px' }}>
+                                                    <Button variant="default" onClick={(e) => handleListen(e, currentWord)} style={{ padding: '6px 12px' }}>
+                                                        <div className="btn-content-flex"><Volume2 size={16} /> Listen</div>
+                                                    </Button>
                                                 </div>
-                                                {currentWord.ipa && (
-                                                    <div className="fc-ipa notranslate">/{currentWord.ipa}/</div>
-                                                )}
+                                                <div className="flip-hint" style={{ marginTop: '15px' }}>Click to flip</div>
                                             </>
-                                        )}
-                                        <div style={{ marginTop: '15px' }}>
-                                            <Button variant="default" onClick={(e) => handleListen(e, currentWord)} style={{ padding: '6px 12px' }}>
-                                                <div className="btn-content-flex"><Volume2 size={16} /> Listen</div>
-                                            </Button>
-                                        </div>
-                                        <div className="flip-hint" style={{ marginTop: '15px' }}>Click to flip</div>
-                                    </>
+                                        );
+                                    })()
                                 ) : null}
                             </div>
 

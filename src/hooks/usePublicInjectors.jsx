@@ -1,7 +1,15 @@
 import { useEffect, useRef } from 'react';
 import { compileFont } from '../utils/fontCompiler.jsx';
-import { getScriptTypographySettings } from '../utils/scriptResolver.js';
+import {
+    getDefaultScriptId,
+    getScriptData,
+    getScriptSystem,
+    getScriptTypographySettings,
+    repairScriptSystems,
+} from '../utils/scriptResolver.js';
 import { sanitizeCssFontUrl, sanitizeCssValue } from '../utils/sanitizeHtml.js';
+
+const VALID_WRITING_DIRECTIONS = ['ltr', 'rtl', 'vertical-rl', 'vertical-lr'];
 
 const safePublicFamily = (instanceId, scriptId) =>
     `PublicScript_${instanceId}_${String(scriptId || 'default').replace(/[^a-zA-Z0-9_-]/g, '_')}`;
@@ -59,7 +67,7 @@ let fontInstanceCounter = 0;
  * The default script's font is applied to the broad .custom-font-text selector.
  * Uses a unique font name per mount and properly cleans up FontFace objects from document.fonts.
  */
-export function usePublicFontInjector(config) {
+export function usePublicFontInjector(config, activeScriptId = null) {
     const loadedFontsRef = useRef([]);
 
     useEffect(() => {
@@ -67,66 +75,51 @@ export function usePublicFontInjector(config) {
         let isCancelled = false;
 
         const loadAndInject = async () => {
+            const { scriptSystems, scriptRules } = repairScriptSystems(config);
+            const normConfig = { ...config, scriptSystems, scriptRules };
+            const defaultScriptId = getDefaultScriptId(normConfig);
+            const primaryScriptId = (activeScriptId && activeScriptId !== 'auto' && activeScriptId !== 'latin')
+                ? activeScriptId
+                : defaultScriptId;
+            const primaryTypo = getScriptTypographySettings(normConfig, primaryScriptId);
+
             // Build a map of scriptId → font base64 string(s)
             const scriptFontMap = {};
-            const defaultScriptId = config.scriptRules?.defaultScriptId || 'default';
-            const defaultTypo = getScriptTypographySettings(config, defaultScriptId);
+            const allCandidateIds = new Set([
+                ...scriptSystems.map(s => s.id),
+                ...Object.keys(config.scriptDataById || {}),
+                defaultScriptId,
+            ]);
 
-            // Collect from scriptDataById (multi-script)
-            if (config.scriptDataById) {
-                for (const [scriptId, scriptData] of Object.entries(config.scriptDataById)) {
-                    let font = scriptData?.customFontBase64 || scriptData?.customFont;
-                    if (!font && scriptData?.customGlyphs && Object.keys(scriptData.customGlyphs).length > 0) {
-                        const sTypo = getScriptTypographySettings(config, scriptId);
-                        try {
-                            font = await compileFont(
-                                scriptData.customGlyphs,
-                                sTypo.traceWidth ?? 30,
-                                sTypo.customFontScale ?? 1.0,
-                                {
-                                    consistentCharacterSize: sTypo.consistentCharacterSize ?? true,
-                                    fixedAdvanceWidth: sTypo.fixedAdvanceWidth ?? 1000
-                                }
-                            );
-                        } catch (e) {
-                            console.warn("Could not compile customGlyphs for script", scriptId, e);
-                        }
-                    }
-                    if (font) {
-                        scriptFontMap[scriptId] = Array.isArray(font) ? font.filter(Boolean) : [font];
-                    }
-                }
-            }
-
-            // Legacy/merged fallback: root-level customFontBase64 or customGlyphs
-            if (!scriptFontMap[defaultScriptId]) {
-                let font = config.customFontBase64 || config.customFont;
-                if (!font && config.customGlyphs && Object.keys(config.customGlyphs).length > 0) {
+            for (const scriptId of allCandidateIds) {
+                const scriptData = getScriptData(normConfig, scriptId);
+                let font = scriptData?.customFontBase64 || scriptData?.customFont;
+                if (!font && scriptData?.customGlyphs && Object.keys(scriptData.customGlyphs).length > 0) {
+                    const sTypo = getScriptTypographySettings(normConfig, scriptId);
                     try {
                         font = await compileFont(
-                            config.customGlyphs,
-                            defaultTypo.traceWidth ?? 30,
-                            defaultTypo.customFontScale ?? 1.0,
+                            scriptData.customGlyphs,
+                            sTypo.traceWidth ?? 30,
+                            sTypo.customFontScale ?? 1.0,
                             {
-                                consistentCharacterSize: defaultTypo.consistentCharacterSize ?? true,
-                                fixedAdvanceWidth: defaultTypo.fixedAdvanceWidth ?? 1000
+                                consistentCharacterSize: sTypo.consistentCharacterSize ?? true,
+                                fixedAdvanceWidth: sTypo.fixedAdvanceWidth ?? 1000
                             }
                         );
                     } catch (e) {
-                        console.warn("Could not compile root customGlyphs", e);
+                        console.warn("Could not compile customGlyphs for script", scriptId, e);
                     }
                 }
                 if (font) {
                     const fonts = Array.isArray(font) ? font.filter(Boolean) : [font];
                     if (fonts.length > 0) {
-                        scriptFontMap[defaultScriptId] = fonts;
+                        scriptFontMap[scriptId] = fonts;
                     }
                 }
             }
 
             if (isCancelled) return;
-            const scriptIds = Object.keys(scriptFontMap);
-            if (scriptIds.length === 0) return;
+            const scriptIdsWithFont = Object.keys(scriptFontMap);
 
             fontInstanceCounter++;
             const instanceId = fontInstanceCounter;
@@ -143,7 +136,7 @@ export function usePublicFontInjector(config) {
             const loadPromises = [];
             const loadedByScript = {};
 
-            for (const scriptId of scriptIds) {
+            for (const scriptId of scriptIdsWithFont) {
                 const fontFamily = safePublicFamily(instanceId, scriptId);
                 const fontStrings = scriptFontMap[scriptId];
 
@@ -157,6 +150,8 @@ export function usePublicFontInjector(config) {
                 loadPromises.push(
                     Promise.all(scriptPromises).then(loaded => {
                         loadedByScript[scriptId] = loaded;
+                    }).catch(err => {
+                        console.warn(`PublicViewer: failed to load font for script ${scriptId}`, err);
                     })
                 );
             }
@@ -179,34 +174,68 @@ export function usePublicFontInjector(config) {
                 }
                 loadedFontsRef.current = allFaces;
 
-                // The default script's font family
-                const defaultFontFamily = safePublicFamily(instanceId, defaultScriptId);
-
                 const formatSpacing = (val) => {
                     const num = Number(val);
                     return val !== undefined && val !== null && Number.isFinite(num) && num !== 0 ? `${num}em` : 'normal';
                 };
-                const defaultSpacing = formatSpacing(defaultTypo.letterSpacing);
 
-                // Build per-script CSS classes
+                const primaryHasCustomFont = activeScriptId !== 'latin' && Boolean(loadedByScript[primaryScriptId]);
+                const primaryFontStack = primaryHasCustomFont
+                    ? `'${safePublicFamily(instanceId, primaryScriptId)}', 'Inter', sans-serif`
+                    : `'Inter', sans-serif`;
+
+                const primaryScriptMeta = getScriptSystem(normConfig, primaryScriptId);
+                const primaryRawDir = primaryScriptMeta?.writingDirection || normConfig.writingDirection || 'ltr';
+                const primaryDir = VALID_WRITING_DIRECTIONS.includes(primaryRawDir) ? primaryRawDir : 'ltr';
+                const isPrimaryVertical = activeScriptId !== 'latin' && primaryDir.startsWith('vertical');
+                const primarySpacing = formatSpacing(
+                    isPrimaryVertical ? primaryTypo.verticalLetterSpacing : primaryTypo.letterSpacing
+                );
+
+                // Build per-script CSS classes for all scripts (both custom-font and standard-font scripts)
                 let perScriptCSS = '';
-                for (const scriptId of Object.keys(loadedByScript)) {
-                    const family = safePublicFamily(instanceId, scriptId);
-                    const sTypo = getScriptTypographySettings(config, scriptId);
-                    const sSpacing = formatSpacing(sTypo.letterSpacing);
+                const allScriptIds = new Set([
+                    ...scriptSystems.map(s => s.id),
+                    ...Object.keys(loadedByScript),
+                ]);
+
+                for (const scriptId of allScriptIds) {
+                    const escapedId = typeof CSS !== 'undefined' && CSS.escape
+                        ? CSS.escape(scriptId)
+                        : String(scriptId).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+                    const hasFont = Boolean(loadedByScript[scriptId]);
+                    const familyStack = hasFont
+                        ? `'${safePublicFamily(instanceId, scriptId)}', 'Inter', sans-serif`
+                        : `'Inter', sans-serif`;
+                    const sTypo = getScriptTypographySettings(normConfig, scriptId);
+                    const sLetterSpacing = formatSpacing(sTypo.letterSpacing);
+                    const sVerticalSpacing = formatSpacing(sTypo.verticalLetterSpacing);
+                    const scriptMeta = getScriptSystem(normConfig, scriptId);
+                    const rawDir = scriptMeta?.writingDirection || 'ltr';
+                    const scriptDir = VALID_WRITING_DIRECTIONS.includes(rawDir) ? rawDir : 'ltr';
+                    const isVertical = scriptDir.startsWith('vertical');
+                    const scriptWritingMode = isVertical ? scriptDir : 'horizontal-tb';
+                    const scriptTextDir = scriptDir === 'rtl' ? 'rtl' : 'ltr';
+
                     perScriptCSS += `
-                    .conlang-script-${CSS.escape(scriptId)},
-                    .conlang-script-${CSS.escape(scriptId)} * {
-                        font-family: '${family}', 'Inter', sans-serif !important;
-                        letter-spacing: ${sSpacing} !important;
+                    .conlang-script-${escapedId},
+                    .conlang-script-${escapedId} *,
+                    .custom-font-text.conlang-script-${escapedId} {
+                        font-family: ${familyStack} !important;
+                        letter-spacing: ${isVertical ? sVerticalSpacing : sLetterSpacing} !important;
+                    }
+                    .custom-font-text.conlang-script-${escapedId} {
+                        writing-mode: ${scriptWritingMode};
+                        direction: ${scriptTextDir};
+                        ${isVertical ? 'text-orientation: upright;' : ''}
                     }
                     `;
                 }
 
                 styleNode.textContent = `
                     .custom-font-text, .conlang-word, .dict-ipa {
-                        font-family: '${defaultFontFamily}', 'Inter', sans-serif !important;
-                        letter-spacing: ${defaultSpacing} !important;
+                        font-family: ${primaryFontStack} !important;
+                        letter-spacing: ${primarySpacing} !important;
                     }
 
                     .custom-font-text::placeholder,
@@ -230,6 +259,6 @@ export function usePublicFontInjector(config) {
             const node = document.getElementById(styleId);
             if (node) node.remove();
         };
-    }, [config]);
+    }, [config, activeScriptId]);
 }
 

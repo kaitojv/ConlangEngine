@@ -343,9 +343,13 @@
 
 /* Vertical Script Writing Order Adaptation (vertical-rl & vertical-lr) */
 .lexicon-entry.is-vertical-script .entry-words {
-    /* Align horizontal metadata cleanly beside tall vertical columns instead of baseline collapse */
+    /* Stack the vertical word at the top and IPA / metadata directly underneath */
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.65rem 1rem;
+    justify-content: center;
+    text-align: center;
+    gap: 0.4rem;
 }
 
 .lexicon-entry.is-vertical-script .entry-word-with-wave {
@@ -368,11 +372,11 @@
     text-orientation: upright;
     direction: ltr;
     text-align: start;
-    line-height: 1.45;
+    line-height: 1.3;
     min-height: 1.6em;
-    max-height: 15rem;
+    max-height: 11.5rem;
     max-width: 100%;
-    padding: 0.25rem 0.4rem;
+    padding: 0.2rem 0.35rem;
     overflow-wrap: anywhere;
     word-break: normal;
 }
@@ -390,7 +394,95 @@
 .lexicon-entry.is-vertical-script .entry-main-word.featural-block-render {
     font-size: 3rem;
     line-height: 1.15;
-    max-height: 16rem;
+    max-height: 13rem;
+}
+
+/* List View Mode for Vertical Scripts:
+   Left pillar holds the vertical word with IPA/romanization underneath;
+   Right column places POS, translation, definition, and tags directly beside the word. */
+.lexicon-cards.layout-list .lexicon-entry.is-vertical-script {
+    display: grid;
+    grid-template-columns: minmax(96px, max-content) 1fr;
+    column-gap: 1.5rem;
+    align-items: stretch;
+}
+
+.lexicon-cards.layout-list .lexicon-entry.is-vertical-script .entry-header {
+    display: contents;
+}
+
+.lexicon-cards.layout-list .lexicon-entry.is-vertical-script .entry-words {
+    grid-column: 1;
+    grid-row: 1;
+    padding-right: 1.35rem;
+    border-right: 1px solid var(--bd);
+    min-width: 88px;
+    align-self: stretch;
+}
+
+.lexicon-cards.layout-list .lexicon-entry.is-vertical-script .entry-ipa {
+    display: block;
+    text-align: center;
+    margin-top: 0.1rem;
+}
+
+.lexicon-cards.layout-list .lexicon-entry.is-vertical-script .entry-romanized,
+.lexicon-cards.layout-list .lexicon-entry.is-vertical-script .entry-base-word,
+.lexicon-cards.layout-list .lexicon-entry.is-vertical-script .entry-romanization {
+    width: auto;
+    max-width: 11rem;
+    border-left: none;
+    padding-left: 0;
+    text-align: center;
+}
+
+.lexicon-cards.layout-list .lexicon-entry.is-vertical-script .entry-tone,
+.lexicon-cards.layout-list .lexicon-entry.is-vertical-script .entry-stress,
+.lexicon-cards.layout-list .lexicon-entry.is-vertical-script .entry-etymology-top {
+    margin-left: 0 !important;
+    border-left: none !important;
+    padding-left: 0 !important;
+    justify-content: center;
+}
+
+.lexicon-cards.layout-list .lexicon-entry.is-vertical-script .entry-actions-top {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    align-self: start;
+    z-index: 2;
+}
+
+.lexicon-cards.layout-list .lexicon-entry.is-vertical-script .entry-senses {
+    grid-column: 2;
+    grid-row: 1;
+    margin-top: 0;
+    border-top: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+}
+
+.lexicon-cards.layout-list .lexicon-entry.is-vertical-script .lexicon-sense-row:first-child {
+    padding-top: 0;
+}
+
+.lexicon-cards.layout-list .lexicon-entry.is-vertical-script .lexicon-sense-row:last-child {
+    padding-bottom: 0;
+}
+
+.lexicon-cards.layout-list .lexicon-entry.is-vertical-script .lexicon-sense-row:first-child .sense-content > div:first-child {
+    padding-right: 11rem;
+}
+
+.lexicon-cards.layout-list .lexicon-entry.is-vertical-script .lexicon-sense-row:first-child .sense-actions {
+    margin-top: 2.75rem;
+    align-self: flex-end;
+}
+
+.lexicon-cards.layout-list .lexicon-entry.is-vertical-script .sense-actions {
+    align-self: flex-end;
 }
 
 .entry-base-word {
@@ -959,6 +1051,36 @@
         padding: 8px 14px;
         min-width: 38px;
         min-height: 36px;
+    }
+
+    /* Mobile List View for Vertical Scripts */
+    .lexicon-cards.layout-list .lexicon-entry.is-vertical-script {
+        grid-template-columns: minmax(72px, max-content) 1fr;
+        column-gap: 1rem;
+        row-gap: 0.5rem;
+    }
+    .lexicon-cards.layout-list .lexicon-entry.is-vertical-script .entry-words {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+        width: auto;
+        min-width: 68px;
+        padding-right: 0.85rem;
+    }
+    .lexicon-cards.layout-list .lexicon-entry.is-vertical-script .entry-senses {
+        grid-column: 2;
+        grid-row: 1;
+    }
+    .lexicon-cards.layout-list .lexicon-entry.is-vertical-script .entry-actions-top {
+        grid-column: 2;
+        grid-row: 2;
+        width: 100%;
+        justify-content: flex-end;
+    }
+    .lexicon-cards.layout-list .lexicon-entry.is-vertical-script .lexicon-sense-row:first-child .sense-content > div:first-child {
+        padding-right: 0;
+    }
+    .lexicon-cards.layout-list .lexicon-entry.is-vertical-script .lexicon-sense-row:first-child .sense-actions {
+        margin-top: 0;
     }
 
     /* Filters, Search & Toolbar */

@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../../utils/supabaseClient.js';
-import { Globe, BookA, User, Loader2, Heart, Trash2, Library, Map as MapIcon, Search, Users, ChevronDown, ChevronsUpDown, ChevronsDownUp, MessageSquare } from 'lucide-react';
+import { Globe, BookA, User, Loader2, Heart, Trash2, Library, Map as MapIcon, Search, Users, ChevronDown, ChevronsUpDown, ChevronsDownUp, MessageSquare, PenTool } from 'lucide-react';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
 import toast from 'react-hot-toast';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
 import { decompressPayloadAsync } from '../../../utils/schemaValidator.jsx';
 import { transliterateText } from '../../../utils/transliteration.js';
+import { repairScriptSystems, getDefaultScriptId, buildScriptConfig } from '../../../utils/scriptResolver.js';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
 import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
@@ -22,6 +23,7 @@ function buildExploreCardSummary(item) {
     const cfg = pd.config || {};
     const wikiPages = pd.wiki || cfg.wikiPages || {};
     const customCourse = pd.customCourse || cfg.customCourse || [];
+    const { scriptSystems, scriptRules } = repairScriptSystems(cfg);
     return {
         project_id: item.project_id,
         user_id: item.user_id,
@@ -39,6 +41,8 @@ function buildExploreCardSummary(item) {
                 authorName: cfg.authorName,
                 description: cfg.description,
                 phonologyTypes: cfg.phonologyTypes,
+                scriptSystems: scriptSystems.map(s => ({ id: s.id, name: s.name, type: s.type, isDefault: s.isDefault, writingDirection: s.writingDirection })),
+                scriptRules: { defaultScriptId: scriptRules.defaultScriptId },
                 colors: { accent: cfg.colors?.accent },
             },
         },
@@ -73,6 +77,7 @@ export default function ExplorePage() {
     const [groupByAuthor, setGroupByAuthor] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [collapsedAuthors, setCollapsedAuthors] = useState(() => new Set());
+    const [cardScriptSelection, setCardScriptSelection] = useState({}); // { [projectId]: scriptId }
 
     const isPublic = useConfigStore((state) => state.isPublic);
     const updateConfig = useConfigStore((state) => state.updateConfig);
@@ -168,20 +173,22 @@ export default function ExplorePage() {
                     });
                 }
 
-                // Lazily compile missing card preview fonts in small background batches
+                // Lazily compile missing card preview fonts in small background batches (all scripts)
                 const runId = ++fontCompileRunIdRef.current;
                 const compileBatchSize = 2;
                 const needsFont = validConlangs.filter((item) => {
                     const cfg = item.project_data?.config;
                     if (!cfg) return false;
-                    const defaultScriptId = cfg.scriptRules?.defaultScriptId || 'default';
-                    const scriptData = cfg.scriptDataById?.[defaultScriptId] || {};
-                    const merged = { ...cfg, ...scriptData };
-                    if (merged.customFontBase64) return false;
-                    return (
-                        (merged.phonologyTypes === 'featural_block' && merged.featuralComponents) ||
-                        (merged.customGlyphs && Object.keys(merged.customGlyphs).length > 0)
-                    );
+                    const { scriptSystems, scriptRules } = repairScriptSystems(cfg);
+                    const normCfg = { ...cfg, scriptSystems, scriptRules };
+                    return scriptSystems.some(s => {
+                        const sConf = buildScriptConfig(normCfg, s.id);
+                        if (sConf.customFontBase64) return false;
+                        return (
+                            (sConf.phonologyTypes === 'featural_block' && sConf.featuralComponents) ||
+                            (sConf.customGlyphs && Object.keys(sConf.customGlyphs).length > 0)
+                        );
+                    });
                 });
 
                 (async () => {
@@ -193,35 +200,49 @@ export default function ExplorePage() {
                         await Promise.all(batch.map(async (item) => {
                             if (fontCompileRunIdRef.current !== runId) return;
                             const cfg = item.project_data?.config;
-                            const defaultScriptId = cfg.scriptRules?.defaultScriptId || 'default';
-                            const scriptData = cfg.scriptDataById?.[defaultScriptId] || {};
-                            const merged = { ...cfg, ...scriptData };
-                            let compiledFont = null;
-                            let nextSyllabaryMap = null;
+                            const { scriptSystems, scriptRules } = repairScriptSystems(cfg);
+                            const normCfg = { ...cfg, scriptSystems, scriptRules };
+                            const defaultScriptId = getDefaultScriptId(normCfg);
+                            const scriptUpdates = {};
 
-                            if (merged.phonologyTypes === 'featural_block' && merged.featuralComponents) {
-                                try {
-                                    const newData = await generateBlockFontData({ ...merged, lexicon: item.project_data?.dictionary || [] });
-                                    compiledFont = newData?.customFontBase64 || null;
-                                    nextSyllabaryMap = newData?.syllabaryMap || null;
-                                } catch (e) {
-                                    console.warn("Could not generate block font for explore item", item.project_id, e);
+                            for (const s of scriptSystems) {
+                                const merged = buildScriptConfig(normCfg, s.id);
+                                if (merged.customFontBase64) continue;
+                                let compiledFont = null;
+                                let nextSyllabaryMap = null;
+
+                                if (merged.phonologyTypes === 'featural_block' && merged.featuralComponents) {
+                                    try {
+                                        const newData = await generateBlockFontData({ ...merged, lexicon: item.project_data?.dictionary || [] });
+                                        compiledFont = newData?.customFontBase64 || null;
+                                        nextSyllabaryMap = newData?.syllabaryMap || null;
+                                    } catch (e) {
+                                        console.warn("Could not generate block font for explore item", item.project_id, s.id, e);
+                                    }
+                                } else if (merged.customGlyphs && Object.keys(merged.customGlyphs).length > 0) {
+                                    try {
+                                        const typographySettings = merged.typographySettings || {};
+                                        compiledFont = await compileFont(
+                                            merged.customGlyphs,
+                                            typographySettings.traceWidth ?? merged.traceWidth ?? 30,
+                                            typographySettings.customFontScale ?? merged.customFontScale ?? 1.0,
+                                            {
+                                                consistentCharacterSize: typographySettings.consistentCharacterSize ?? true,
+                                                fixedAdvanceWidth: typographySettings.fixedAdvanceWidth ?? 1000,
+                                            }
+                                        );
+                                    } catch (e) {
+                                        console.warn("Could not compile font for explore item", item.project_id, s.id, e);
+                                    }
                                 }
-                            } else if (merged.customGlyphs && Object.keys(merged.customGlyphs).length > 0) {
-                                try {
-                                    const typographySettings = merged.typographySettings || {};
-                                    compiledFont = await compileFont(
-                                        merged.customGlyphs,
-                                        typographySettings.traceWidth ?? merged.traceWidth ?? 30,
-                                        typographySettings.customFontScale ?? merged.customFontScale ?? 1.0
-                                    );
-                                } catch (e) {
-                                    console.warn("Could not compile font for explore item", item.project_id, e);
+
+                                if (compiledFont) {
+                                    scriptUpdates[s.id] = { compiledFont, nextSyllabaryMap };
                                 }
                             }
 
-                            if (compiledFont) {
-                                updates.set(item.project_id, { compiledFont, nextSyllabaryMap, defaultScriptId });
+                            if (Object.keys(scriptUpdates).length > 0) {
+                                updates.set(item.project_id, { scriptUpdates, defaultScriptId });
                             }
                         }));
 
@@ -232,21 +253,22 @@ export default function ExplorePage() {
                                 if (!upd) return item;
                                 const cfg = item.project_data.config;
                                 const updatedScriptData = cfg.scriptDataById ? { ...cfg.scriptDataById } : {};
-                                if (updatedScriptData[upd.defaultScriptId]) {
-                                    updatedScriptData[upd.defaultScriptId] = {
-                                        ...updatedScriptData[upd.defaultScriptId],
-                                        customFontBase64: upd.compiledFont,
-                                        ...(upd.nextSyllabaryMap ? { syllabaryMap: upd.nextSyllabaryMap } : {}),
+                                for (const [sId, sUpd] of Object.entries(upd.scriptUpdates)) {
+                                    updatedScriptData[sId] = {
+                                        ...(updatedScriptData[sId] || {}),
+                                        customFontBase64: sUpd.compiledFont,
+                                        ...(sUpd.nextSyllabaryMap ? { syllabaryMap: sUpd.nextSyllabaryMap } : {}),
                                     };
                                 }
+                                const defaultUpd = upd.scriptUpdates[upd.defaultScriptId];
                                 return {
                                     ...item,
                                     project_data: {
                                         ...item.project_data,
                                         config: {
                                             ...cfg,
-                                            customFontBase64: upd.compiledFont,
-                                            ...(upd.nextSyllabaryMap ? { syllabaryMap: upd.nextSyllabaryMap } : {}),
+                                            ...(defaultUpd?.compiledFont ? { customFontBase64: defaultUpd.compiledFont } : {}),
+                                            ...(defaultUpd?.nextSyllabaryMap ? { syllabaryMap: defaultUpd.nextSyllabaryMap } : {}),
                                             scriptDataById: updatedScriptData
                                         }
                                     }
@@ -331,9 +353,11 @@ export default function ExplorePage() {
 
     const handleCardClick = (lang) => {
         const cfg = lang?.project_data?.config || {};
+        const selectedScriptId = cardScriptSelection[lang.project_id] || null;
         // Open the public viewer in the same tab with preview metadata for the loading screen
         navigate(`/view/${lang.project_id}`, {
             state: {
+                initialScriptId: selectedScriptId,
                 previewMeta: {
                     name: cfg.conlangName || 'Unnamed Conlang',
                     icon: cfg.conlangIcon || '🌐',
@@ -637,20 +661,25 @@ export default function ExplorePage() {
         const customCourse = topCourse || config?.customCourse || [];
         const courseCount = lang.project_data?.courseCount ?? customCourse.length;
         
-        const defaultScriptId = config?.scriptRules?.defaultScriptId || 'default';
-        const scriptData = config?.scriptDataById?.[defaultScriptId] || config || {};
+        const { scriptSystems, scriptRules } = repairScriptSystems(config || {});
+        const normConfig = { ...(config || {}), scriptSystems, scriptRules };
+        const defaultScriptId = getDefaultScriptId(normConfig);
+        const activeCardScriptId = cardScriptSelection[lang.project_id] || defaultScriptId;
+        const isRomanizedCard = activeCardScriptId === 'latin';
+        const effectiveCardScriptId = isRomanizedCard ? defaultScriptId : activeCardScriptId;
+        const translitConfig = buildScriptConfig(normConfig, effectiveCardScriptId);
 
-        const customFont = scriptData?.customFontBase64 || config?.customFontBase64;
-        const fontName = customFont ? `ExploreFont_${lang.project_id}` : undefined;
+        const customFont = !isRomanizedCard
+            ? (translitConfig.customFontBase64 || translitConfig.customFont)
+            : null;
+        const safeScriptSuffix = String(effectiveCardScriptId || 'default').replace(/[^a-zA-Z0-9_-]/g, '_');
+        const fontName = customFont ? `ExploreFont_${lang.project_id}_${safeScriptSuffix}` : undefined;
         // Ensure data URL header is clean and valid for @font-face
         const safeFontUrl = customFont 
             ? (customFont.startsWith('data:') ? customFont.replace(/^data:.*?;base64,/, 'data:font/truetype;base64,') : `data:font/truetype;base64,${customFont}`) 
             : '';
 
         let displayName = name;
-
-        // Merge scriptData into a temporary config for transliteration
-        const translitConfig = { ...config, ...scriptData };
 
         // If the snapshot is missing a compiled font, do not attempt to map to PUA glyphs, 
         // as they will only render as tofu. This will allow standard Unicode transliterations 
@@ -661,7 +690,7 @@ export default function ExplorePage() {
         }
 
         // Hanul (featural_block) uses font ligatures so it doesn't need text replacement
-        const needsTransliteration = ['logographic', 'syllabic', 'alphabetic'].includes(config?.phonologyTypes);
+        const needsTransliteration = !isRomanizedCard && ['logographic', 'syllabic', 'alphabetic', 'abjad', 'abugida'].includes(translitConfig?.phonologyTypes);
         if (needsTransliteration) {
             displayName = name.split(/(\s+)/).map(w => w.trim() ? transliterateText(w, translitConfig, dictionary || []) : w).join('');
         }
@@ -701,6 +730,67 @@ export default function ExplorePage() {
                         </button>
                     )}
                 </div>
+                {scriptSystems.length > 1 && (
+                    <div
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '0.5rem' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {scriptSystems.map(s => {
+                            const isActive = activeCardScriptId === s.id;
+                            return (
+                                <button
+                                    key={s.id}
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCardScriptSelection(prev => ({ ...prev, [lang.project_id]: s.id }));
+                                    }}
+                                    style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '2px 8px',
+                                        borderRadius: '999px',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 600,
+                                        border: `1px solid ${isActive ? themeColor : 'var(--bd)'}`,
+                                        background: isActive ? themeColor : 'var(--s2)',
+                                        color: isActive ? '#fff' : 'var(--tx2)',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.15s',
+                                    }}
+                                    title={`Preview script: ${s.name} (${s.type})`}
+                                >
+                                    <PenTool size={10} />
+                                    <span>{s.name || s.id}</span>
+                                </button>
+                            );
+                        })}
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setCardScriptSelection(prev => ({ ...prev, [lang.project_id]: 'latin' }));
+                            }}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                padding: '2px 8px',
+                                borderRadius: '999px',
+                                fontSize: '0.72rem',
+                                fontWeight: 600,
+                                border: `1px solid ${isRomanizedCard ? themeColor : 'var(--bd)'}`,
+                                background: isRomanizedCard ? themeColor : 'var(--s2)',
+                                color: isRomanizedCard ? '#fff' : 'var(--tx2)',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s',
+                            }}
+                            title="Preview romanized name"
+                        >
+                            Romanized
+                        </button>
+                    </div>
+                )}
                 <p className="explore-desc notranslate">{desc}</p>
                 <div className="explore-stats">
                     <div className="explore-stat">
