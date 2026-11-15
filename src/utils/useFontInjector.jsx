@@ -26,7 +26,7 @@ export function buildFontCompileSignature(glyphMap, typoSettings = {}) {
     const consistent = typoSettings?.consistentCharacterSize ?? true;
     const advance = Number.isFinite(Number(typoSettings?.fixedAdvanceWidth)) ? Number(typoSettings.fixedAdvanceWidth) : 1000;
     const entries = Object.entries(glyphMap || {}).sort((a, b) => a[0].localeCompare(b[0]));
-    let hash = 2166136261;
+    let hash = 2166136261 ^ 0x5632; // compiler v2 (simple integer rings & pinhole cleanup)
     for (let i = 0; i < entries.length; i++) {
         const [k, strokes] = entries[i];
         hash ^= k.length;

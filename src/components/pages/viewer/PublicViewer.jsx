@@ -6,7 +6,7 @@ import Button from '../../UI/Buttons/Buttons.jsx';
 import { playAzureTTS } from '@/utils/azureTTS.js';
 import { sanitizeWikiHtml } from '../../../utils/sanitizeHtml.js';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
-import { usePublicThemeInjector, usePublicFontInjector } from '../../../hooks/usePublicInjectors.jsx';
+import { buildPublicThemeVars, usePublicThemeInjector, usePublicFontInjector } from '../../../hooks/usePublicInjectors.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { renderWordInScript } from '../../../utils/scriptRendering.js';
 import {
@@ -327,8 +327,9 @@ export default function PublicViewer() {
     const { transliterate } = useTransliterator(config);
 
     // Safely inject aesthetics for this viewer only
+    const publicThemeVars = useMemo(() => buildPublicThemeVars(rawConfig), [rawConfig]);
     usePublicThemeInjector(rawConfig);
-    usePublicFontInjector(rawConfig, activeScriptMode === 'latin' ? 'latin' : effectiveScriptId);
+    usePublicFontInjector(rawConfig, activeScriptMode === 'latin' ? 'latin' : effectiveScriptId, dictionary);
 
     // Filter + sort dictionary for the search
     const filteredDictionary = useMemo(() => {
@@ -446,7 +447,7 @@ export default function PublicViewer() {
     }
 
     return (
-        <div className="pv-page">
+        <div className="pv-page" style={publicThemeVars}>
             <style>
                 {`
                     .custom-font-text {
@@ -496,7 +497,7 @@ export default function PublicViewer() {
                         background: var(--acc, #7c3aed);
                         color: #fff;
                         border-color: var(--acc, #7c3aed);
-                        box-shadow: 0 2px 10px rgba(124, 58, 237, 0.28);
+                        box-shadow: 0 2px 10px color-mix(in srgb, var(--acc, #7c3aed) 28%, transparent);
                     }
                     .pv-back-btn {
                         position: absolute;

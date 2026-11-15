@@ -161,7 +161,7 @@ function App(){
       }
   }, [isRehydrating, phonologyTypes, customFontBase64, featuralComponents, updateConfig]);
 
-  useThemeInjector();
+  useThemeInjector(!isPublicView);
   useFontInjector(!isPublicView && !isExploreView);
   useGlobalHotkeys();
   useAutoSync();

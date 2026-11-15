@@ -2,7 +2,7 @@
 import { useEffect } from 'react';
 import { useConfigStore } from '../store/useConfigStore.jsx';
 
-export function useThemeInjector() {
+export function useThemeInjector(enabled = true) {
     const colors = useConfigStore((state) => state.colors);
     const appUiFont = useConfigStore((state) => state.appUiFont) || "'Outfit', sans-serif";
     const uiDensity = useConfigStore((state) => state.uiDensity) || 'default';
@@ -10,6 +10,7 @@ export function useThemeInjector() {
     const uiPattern = useConfigStore((state) => state.uiPattern) || 'none';
 
     useEffect(() => {
+        if (!enabled) return;
         const root = document.documentElement;
 
         // 1. UI Density
@@ -58,9 +59,10 @@ export function useThemeInjector() {
             root.style.setProperty('--pattern-overlay', 'none');
             root.style.setProperty('--pattern-size', 'auto');
         }
-    }, [uiDensity, uiRadius, uiPattern]);
+    }, [enabled, uiDensity, uiRadius, uiPattern]);
 
     useEffect(() => {
+        if (!enabled) return;
         // Handle App UI Font Injection
         if (appUiFont) {
             // Extract font name from the string, which might be e.g. "'Noto Sans', sans-serif" or "Inter"
@@ -81,10 +83,10 @@ export function useThemeInjector() {
                 document.documentElement.style.setProperty('--font-stack', appUiFont);
             }
         }
-    }, [appUiFont]);
+    }, [enabled, appUiFont]);
 
     useEffect(() => {
-        if (!colors) return;
+        if (!enabled || !colors) return;
         
         const root = document.documentElement;
         const setOrReset = (prop, val) => {
@@ -120,5 +122,5 @@ export function useThemeInjector() {
         setOrReset('--logo-gradient', colors.logoGradient);
         setOrReset('--glow-gradient', colors.glowGradient);
         
-    }, [colors]); 
+    }, [enabled, colors]); 
 }

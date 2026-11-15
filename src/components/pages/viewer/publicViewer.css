@@ -75,7 +75,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: radial-gradient(ellipse at 50% 0%, rgba(124, 58, 237, 0.15), transparent 70%);
+    background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--acc, #7c3aed) 15%, transparent), transparent 70%);
     pointer-events: none;
 }
 

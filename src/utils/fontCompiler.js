@@ -277,10 +277,10 @@ export function buildStrokeUnionRings({
                     ]);
 
                     if (strokeFlags.isChisel && (lineCap === 'round' || i > 0)) {
-                        rawPolygons.push(buildCapDisc(p1.cx, p1.cy, r1, 10, minHalfWidth));
+                        rawPolygons.push(buildCapDisc(p1.cx, p1.cy, r1, 14, minHalfWidth));
                     }
                     if (strokeFlags.isChisel && (lineCap === 'round' || i + 1 < mapped.length - 1)) {
-                        rawPolygons.push(buildCapDisc(p2.cx, p2.cy, r2, 10, minHalfWidth));
+                        rawPolygons.push(buildCapDisc(p2.cx, p2.cy, r2, 14, minHalfWidth));
                     }
                 }
             }
@@ -289,10 +289,10 @@ export function buildStrokeUnionRings({
                 const isEndpoint = i === 0 || i === mapped.length - 1;
                 if (isEndpoint) {
                     if (lineCap === 'round') {
-                        rawPolygons.push(buildCapDisc(p1.cx, p1.cy, p1.r, 10, minHalfWidth));
+                        rawPolygons.push(buildCapDisc(p1.cx, p1.cy, p1.r, 14, minHalfWidth));
                     }
                 } else {
-                    rawPolygons.push(buildCapDisc(p1.cx, p1.cy, p1.r, 10, minHalfWidth));
+                    rawPolygons.push(buildCapDisc(p1.cx, p1.cy, p1.r, 14, minHalfWidth));
                 }
             }
         }
@@ -347,60 +347,141 @@ export function buildSvgPathDFromStrokes(strokeArray, options = {}) {
     return parts.join(' ');
 }
 
+function stripCollinearAndFoldbacks(ringPts) {
+    let pts = [];
+    for (let i = 0; i < ringPts.length; i++) {
+        const prev = pts[pts.length - 1];
+        if (!prev || prev.x !== ringPts[i].x || prev.y !== ringPts[i].y) {
+            pts.push({ x: ringPts[i].x, y: ringPts[i].y });
+        }
+    }
+    while (pts.length > 1) {
+        const first = pts[0];
+        const last = pts[pts.length - 1];
+        if (first.x === last.x && first.y === last.y) {
+            pts.pop();
+        } else {
+            break;
+        }
+    }
+    let changed = true;
+    while (changed && pts.length >= 3) {
+        changed = false;
+        const nextPts = [];
+        const n = pts.length;
+        for (let i = 0; i < n; i++) {
+            const prev = pts[(i - 1 + n) % n];
+            const curr = pts[i];
+            const next = pts[(i + 1) % n];
+            const dx1 = curr.x - prev.x;
+            const dy1 = curr.y - prev.y;
+            const dx2 = next.x - curr.x;
+            const dy2 = next.y - curr.y;
+            if (dx1 * dy2 - dy1 * dx2 === 0) {
+                changed = true;
+                continue;
+            }
+            nextPts.push(curr);
+        }
+        pts = nextPts;
+    }
+    return pts;
+}
+
+function intSegsProperlyIntersect(a, b, c, d) {
+    const ccw = (p1, p2, p3) => (p3.y - p1.y) * (p2.x - p1.x) - (p2.y - p1.y) * (p3.x - p1.x);
+    const d1 = ccw(c, d, a);
+    const d2 = ccw(c, d, b);
+    const d3 = ccw(a, b, c);
+    const d4 = ccw(a, b, d);
+    return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+}
+
+/**
+ * Splits rounding-induced pinched duplicate vertices and removes local integer-grid
+ * twist crossings so CFF/TrueType contours remain strictly simple (no vector dots).
+ */
+function cleanIntegerRing(rawPts) {
+    let pts = stripCollinearAndFoldbacks(rawPts);
+    if (pts.length < 3) return [];
+
+    // 1. Excise rounding-induced pinched duplicate-vertex micro-loops
+    let hadDup = true;
+    let dupGuard = 0;
+    while (hadDup && pts.length >= 3 && dupGuard++ < 32) {
+        hadDup = false;
+        const firstIdx = new Map();
+        for (let i = 0; i < pts.length; i++) {
+            const k = `${pts[i].x},${pts[i].y}`;
+            if (firstIdx.has(k)) {
+                const start = firstIdx.get(k);
+                const loopA = pts.slice(start, i);
+                const loopB = pts.slice(0, start).concat(pts.slice(i));
+                const keepA = Math.abs(signedArea(loopA)) > Math.abs(signedArea(loopB));
+                pts = stripCollinearAndFoldbacks(keepA ? loopA : loopB);
+                hadDup = true;
+                break;
+            }
+            firstIdx.set(k, i);
+        }
+    }
+
+    // 2. Untwist local edge crossings introduced by Math.round on close vertices
+    let hadCross = true;
+    let crossGuard = 0;
+    while (hadCross && pts.length >= 4 && crossGuard++ < 32) {
+        hadCross = false;
+        const n = pts.length;
+        for (let i = 0; i < n && !hadCross; i++) {
+            const a = pts[i];
+            const b = pts[(i + 1) % n];
+            for (let j = i + 2; j < n; j++) {
+                if (i === 0 && j === n - 1) continue;
+                const c = pts[j];
+                const d = pts[(j + 1) % n];
+                if (intSegsProperlyIntersect(a, b, c, d)) {
+                    // Drop the shorter pinched arc between the two crossing segments
+                    const spanFwd = j - i;
+                    const spanBwd = n - spanFwd;
+                    let candidate;
+                    if (spanFwd <= spanBwd) {
+                        candidate = pts.slice(0, i + 1).concat(pts.slice(j + 1));
+                    } else {
+                        candidate = pts.slice(i + 1, j + 1);
+                    }
+                    pts = stripCollinearAndFoldbacks(candidate);
+                    hadCross = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    return pts;
+}
+
 /**
  * Appends integer-rounded, non-degenerate contour rings onto an opentype.Path.
- * Strips collinear vertices and rounding-induced zero-width spike foldbacks so
- * Windows GDI / PostScript CFF rasterizers never suffer small-size dropouts.
+ * Strips collinear vertices, rounding-induced zero-width spike foldbacks,
+ * pinch twists, and micro-sliver pinhole CW rings so rasterizers never suffer
+ * small-size vector dot dropouts.
  */
 function emitRingsToPath(path, rings) {
+    const MIN_HOLE_AREA = 64;
+
     for (let rIdx = 0; rIdx < rings.length; rIdx++) {
         const ring = rings[rIdx];
         if (!ring || ring.length < 3) continue;
 
-        let pts = [];
-        for (let i = 0; i < ring.length; i++) {
-            const rx = Math.round(ring[i].x);
-            const ry = Math.round(ring[i].y);
-            const prev = pts[pts.length - 1];
-            if (!prev || prev.x !== rx || prev.y !== ry) {
-                pts.push({ x: rx, y: ry });
-            }
-        }
-        while (pts.length > 1) {
-            const first = pts[0];
-            const last = pts[pts.length - 1];
-            if (first.x === last.x && first.y === last.y) {
-                pts.pop();
-            } else {
-                break;
-            }
-        }
+        const rounded = ring.map(p => ({ x: Math.round(p.x), y: Math.round(p.y) }));
+        const pts = cleanIntegerRing(rounded);
+        if (pts.length < 3) continue;
 
-        // Remove collinear points and 180-degree spike foldbacks introduced by integer rounding
-        let changed = true;
-        while (changed && pts.length >= 3) {
-            changed = false;
-            const nextPts = [];
-            const n = pts.length;
-            for (let i = 0; i < n; i++) {
-                const prev = pts[(i - 1 + n) % n];
-                const curr = pts[i];
-                const next = pts[(i + 1) % n];
-                const dx1 = curr.x - prev.x;
-                const dy1 = curr.y - prev.y;
-                const dx2 = next.x - curr.x;
-                const dy2 = next.y - curr.y;
-                const cross = dx1 * dy2 - dy1 * dx2;
-                if (cross === 0) {
-                    changed = true;
-                    continue;
-                }
-                nextPts.push(curr);
-            }
-            pts = nextPts;
-        }
-
-        if (pts.length < 3 || Math.abs(signedArea(pts)) < 4) continue;
+        const area = signedArea(pts);
+        const absArea = Math.abs(area);
+        if (absArea < 4) continue;
+        // Tiny interior CW holes inside strokes are triangulation/chord slivers ("vector dots")
+        if (area < 0 && absArea < MIN_HOLE_AREA) continue;
 
         path.moveTo(pts[0].x, pts[0].y);
         for (let i = 1; i < pts.length; i++) {

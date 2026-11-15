@@ -374,11 +374,12 @@
     text-align: start;
     line-height: 1.3;
     min-height: 1.6em;
-    max-height: 11.5rem;
+    max-height: none;
     max-width: 100%;
     padding: 0.2rem 0.35rem;
-    overflow-wrap: anywhere;
-    word-break: normal;
+    white-space: normal;
+    overflow-wrap: normal;
+    word-break: keep-all;
 }
 
 .lexicon-entry[data-writing-direction="vertical-rl"] .entry-main-word,
@@ -394,7 +395,7 @@
 .lexicon-entry.is-vertical-script .entry-main-word.featural-block-render {
     font-size: 3rem;
     line-height: 1.15;
-    max-height: 13rem;
+    max-height: none;
 }
 
 /* List View Mode for Vertical Scripts:
@@ -994,7 +995,7 @@
         margin: 0;
     }
     .lexicon-entry.is-vertical-script .entry-main-word {
-        max-height: 12rem;
+        max-height: none;
     }
     .lexicon-cards.layout-grid .entry-actions-top {
         justify-content: flex-start;

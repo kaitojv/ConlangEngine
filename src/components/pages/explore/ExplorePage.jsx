@@ -10,6 +10,8 @@ import { transliterateText } from '../../../utils/transliteration.js';
 import { repairScriptSystems, getDefaultScriptId, buildScriptConfig, getScriptData, mergeScriptGlyphs } from '../../../utils/scriptResolver.js';
 import { compileFont } from '../../../utils/fontCompiler.jsx';
 import { buildFontCompileSignature } from '../../../utils/useFontInjector.jsx';
+import { collectSubsetGlyphs } from '../../../hooks/usePublicInjectors.jsx';
+import { arrayBufferToFontDataUrl, getCachedPublicFont } from '../../../utils/publicFontCache.js';
 import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
 import PageSkeleton from '../../UI/PageSkeleton/PageSkeleton.jsx';
@@ -96,6 +98,7 @@ export default function ExplorePage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [collapsedAuthors, setCollapsedAuthors] = useState(() => new Set());
     const [cardScriptSelection, setCardScriptSelection] = useState({}); // { [projectId]: scriptId }
+    const [cardPreviewFonts, setCardPreviewFonts] = useState({}); // { [projectId]: { [scriptId]: dataUrl } }
 
     const isPublic = useConfigStore((state) => state.isPublic);
     const updateConfig = useConfigStore((state) => state.updateConfig);
@@ -191,9 +194,9 @@ export default function ExplorePage() {
                     });
                 }
 
-                // Lazily compile missing card preview fonts in small background batches (all scripts)
+                // Lazily compile missing card preview fonts (title-glyph subsets) in small background batches
                 const runId = ++fontCompileRunIdRef.current;
-                const compileBatchSize = 2;
+                const compileBatchSize = 4;
                 const needsFont = validConlangs.filter((item) => {
                     const cfg = item.project_data?.config;
                     if (!cfg) return false;
@@ -207,14 +210,17 @@ export default function ExplorePage() {
                         if (fontCompileRunIdRef.current !== runId) return;
                         const batch = needsFont.slice(i, i + compileBatchSize);
                         const updates = new Map();
+                        const previewFontBatch = {};
 
                         await Promise.all(batch.map(async (item) => {
                             if (fontCompileRunIdRef.current !== runId) return;
                             const cfg = item.project_data?.config;
+                            const dict = item.project_data?.dictionary || [];
                             const { scriptSystems, scriptRules } = repairScriptSystems(cfg);
                             const normCfg = { ...cfg, scriptSystems, scriptRules };
                             const defaultScriptId = getDefaultScriptId(normCfg);
                             const scriptUpdates = {};
+                            const cardFonts = {};
 
                             for (const s of scriptSystems) {
                                 if (!needsScriptFontCompile(normCfg, s.id)) continue;
@@ -225,44 +231,75 @@ export default function ExplorePage() {
 
                                 if (merged.phonologyTypes === 'featural_block' && merged.featuralComponents) {
                                     try {
-                                        const newData = await generateBlockFontData({ ...merged, lexicon: item.project_data?.dictionary || [] });
+                                        const newData = await generateBlockFontData({ ...merged, lexicon: dict });
                                         compiledFont = newData?.customFontBase64 || null;
                                         nextSyllabaryMap = newData?.syllabaryMap || null;
                                     } catch (e) {
                                         console.warn("Could not generate block font for explore item", item.project_id, s.id, e);
                                     }
+                                    if (compiledFont) {
+                                        scriptUpdates[s.id] = { compiledFont, nextSyllabaryMap, compiledSignature };
+                                    }
                                 } else {
                                     const mergedGlyphs = mergeScriptGlyphs(normCfg, s.id);
-                                    if (Object.keys(mergedGlyphs).length > 0) {
+                                    const glyphKeys = Object.keys(mergedGlyphs);
+                                    if (glyphKeys.length > 0) {
                                         try {
                                             const typographySettings = merged.typographySettings || {};
                                             compiledSignature = buildFontCompileSignature(mergedGlyphs, typographySettings);
-                                            compiledFont = await compileFont(
-                                                mergedGlyphs,
-                                                typographySettings.traceWidth ?? merged.traceWidth ?? 30,
-                                                typographySettings.customFontScale ?? merged.customFontScale ?? 1.0,
-                                                {
-                                                    consistentCharacterSize: typographySettings.consistentCharacterSize ?? true,
-                                                    fixedAdvanceWidth: typographySettings.fixedAdvanceWidth ?? 1000,
+                                            const cachedBuf = await getCachedPublicFont(`${s.id}:${compiledSignature}`);
+                                            if (cachedBuf) {
+                                                cardFonts[s.id] = await arrayBufferToFontDataUrl(cachedBuf);
+                                            } else {
+                                                // Only compile the glyphs actually needed for the card title preview
+                                                const langName = cfg.conlangName || 'Unnamed Conlang';
+                                                const titleTokens = langName
+                                                    .split(/(\s+)/)
+                                                    .filter(w => w.trim())
+                                                    .map(w => transliterateText(w, merged, dict));
+                                                const subsetGlyphs = glyphKeys.length > 120
+                                                    ? collectSubsetGlyphs(mergedGlyphs, titleTokens)
+                                                    : mergedGlyphs;
+                                                const targetGlyphs = Object.keys(subsetGlyphs).length > 1 ? subsetGlyphs : mergedGlyphs;
+
+                                                const dataUrl = await compileFont(
+                                                    targetGlyphs,
+                                                    typographySettings.traceWidth ?? merged.traceWidth ?? 30,
+                                                    typographySettings.customFontScale ?? merged.customFontScale ?? 1.0,
+                                                    {
+                                                        consistentCharacterSize: typographySettings.consistentCharacterSize ?? true,
+                                                        fixedAdvanceWidth: typographySettings.fixedAdvanceWidth ?? 1000,
+                                                    }
+                                                );
+                                                if (dataUrl) {
+                                                    cardFonts[s.id] = dataUrl;
                                                 }
-                                            );
+                                            }
                                         } catch (e) {
                                             console.warn("Could not compile font for explore item", item.project_id, s.id, e);
                                         }
                                     }
                                 }
-
-                                if (compiledFont) {
-                                    scriptUpdates[s.id] = { compiledFont, nextSyllabaryMap, compiledSignature };
-                                }
                             }
 
+                            if (Object.keys(cardFonts).length > 0) {
+                                previewFontBatch[item.project_id] = cardFonts;
+                            }
                             if (Object.keys(scriptUpdates).length > 0) {
                                 updates.set(item.project_id, { scriptUpdates, defaultScriptId });
                             }
                         }));
 
                         if (fontCompileRunIdRef.current !== runId) return;
+                        if (Object.keys(previewFontBatch).length > 0) {
+                            setCardPreviewFonts(prev => {
+                                const next = { ...prev };
+                                for (const [pId, fonts] of Object.entries(previewFontBatch)) {
+                                    next[pId] = { ...(next[pId] || {}), ...fonts };
+                                }
+                                return next;
+                            });
+                        }
                         if (updates.size > 0) {
                             setConlangs((prev) => prev.map((item) => {
                                 const upd = updates.get(item.project_id);
@@ -686,8 +723,9 @@ export default function ExplorePage() {
         const effectiveCardScriptId = isRomanizedCard ? defaultScriptId : activeCardScriptId;
         const translitConfig = buildScriptConfig(normConfig, effectiveCardScriptId);
 
+        const previewFont = cardPreviewFonts[lang.project_id]?.[effectiveCardScriptId];
         const rawCustomFont = !isRomanizedCard
-            ? (translitConfig.customFontBase64 || translitConfig.customFont)
+            ? (previewFont || translitConfig.customFontBase64 || translitConfig.customFont)
             : null;
         const customFontList = Array.isArray(rawCustomFont)
             ? rawCustomFont.filter(Boolean)
