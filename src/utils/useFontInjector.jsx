@@ -64,7 +64,7 @@ export function buildFontCompileSignature(glyphMap, typoSettings = {}) {
 }
 
 
-export function useFontInjector(){
+export function useFontInjector(enabled = true){
 
     const customFont = useConfigStore((state) => state.customFont);
     const customGlyphs = useConfigStore((state) => state.customGlyphs);
@@ -77,6 +77,11 @@ export function useFontInjector(){
     const writingDirection = useConfigStore((state) => state.writingDirection);
 
     useEffect(() => {
+        if (!enabled) {
+            const existing = document.getElementById('custom-font');
+            if (existing) existing.remove();
+            return;
+        }
         if (isRehydrating) return;
         let isCancelled = false;
         let styleNode = document.getElementById('custom-font');
@@ -394,5 +399,5 @@ export function useFontInjector(){
             isCancelled = true;
             clearTimeout(timer);
         };
-    }, [customFont, customGlyphs, scriptDataById, isRehydrating, projectId, typographySettings, scriptRules, scriptSystems, writingDirection]);    
+    }, [enabled, customFont, customGlyphs, scriptDataById, isRehydrating, projectId, typographySettings, scriptRules, scriptSystems, writingDirection]);
 }

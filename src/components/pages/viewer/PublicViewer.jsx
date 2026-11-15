@@ -14,10 +14,8 @@ import {
     getDefaultScriptId,
     getScriptSystem,
     buildScriptConfig,
-    mergeScriptGlyphs,
 } from '../../../utils/scriptResolver.js';
 import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
-import { compileFont } from '../../../utils/fontCompiler.jsx';
 import PublicFlashcards from './PublicFlashcards.jsx';
 import ExercisePlayer from '../study/ExercisePlayer.jsx';
 import PageSkeleton from '../../UI/PageSkeleton/PageSkeleton.jsx';
@@ -224,11 +222,7 @@ export default function PublicViewer() {
             if (compiledScriptsRef.current.has(s.id)) return false;
             const sConf = buildScriptConfig(normConf, s.id);
             if (sConf.customFontBase64) return false;
-            const mergedGlyphs = mergeScriptGlyphs(normConf, s.id);
-            return (
-                (sConf.phonologyTypes === 'featural_block' && sConf.featuralComponents) ||
-                Object.keys(mergedGlyphs).length > 0
-            );
+            return sConf.phonologyTypes === 'featural_block' && Boolean(sConf.featuralComponents);
         });
 
         if (pendingScripts.length === 0) return;
@@ -240,31 +234,12 @@ export default function PublicViewer() {
                 compiledScriptsRef.current.add(s.id);
                 const sConf = buildScriptConfig(normConf, s.id);
                 try {
-                    if (sConf.phonologyTypes === 'featural_block' && sConf.featuralComponents) {
-                        const newData = await generateBlockFontData({ ...sConf, lexicon: projectData.dictionary || [] });
-                        if (newData?.customFontBase64) {
-                            compiledUpdates[s.id] = {
-                                customFontBase64: newData.customFontBase64,
-                                ...(newData.syllabaryMap ? { syllabaryMap: newData.syllabaryMap } : {}),
-                            };
-                        }
-                    } else {
-                        const mergedGlyphs = mergeScriptGlyphs(normConf, s.id);
-                        if (Object.keys(mergedGlyphs).length > 0) {
-                            const typo = sConf.typographySettings || {};
-                            const compiledBase64 = await compileFont(
-                                mergedGlyphs,
-                                typo.traceWidth ?? sConf.traceWidth ?? 30,
-                                typo.customFontScale ?? sConf.customFontScale ?? 1.0,
-                                {
-                                    consistentCharacterSize: typo.consistentCharacterSize ?? true,
-                                    fixedAdvanceWidth: typo.fixedAdvanceWidth ?? 1000,
-                                }
-                            );
-                            if (compiledBase64) {
-                                compiledUpdates[s.id] = { customFontBase64: compiledBase64 };
-                            }
-                        }
+                    const newData = await generateBlockFontData({ ...sConf, lexicon: projectData.dictionary || [] });
+                    if (newData?.customFontBase64) {
+                        compiledUpdates[s.id] = {
+                            customFontBase64: newData.customFontBase64,
+                            ...(newData.syllabaryMap ? { syllabaryMap: newData.syllabaryMap } : {}),
+                        };
                     }
                 } catch (e) {
                     console.warn(`PublicViewer auto-compile failed for script ${s.id}:`, e);

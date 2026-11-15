@@ -74,6 +74,7 @@ function App(){
   const location = useLocation();
   const navigate = useNavigate();
   const isPublicView = location.pathname.startsWith('/view/');
+  const isExploreView = location.pathname.startsWith('/explore');
 
   const[openMenu, setOpenMenu] = useState(false);
   const customFontBase64 = useConfigStore(state => state.customFontBase64);
@@ -161,7 +162,7 @@ function App(){
   }, [isRehydrating, phonologyTypes, customFontBase64, featuralComponents, updateConfig]);
 
   useThemeInjector();
-  useFontInjector();
+  useFontInjector(!isPublicView && !isExploreView);
   useGlobalHotkeys();
   useAutoSync();
   const { backupNow } = useBackupManager();

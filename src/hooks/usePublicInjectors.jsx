@@ -100,6 +100,7 @@ export function usePublicFontInjector(config, activeScriptId = null) {
             // Build a map of scriptId → font base64 string(s)
             const scriptFontMap = {};
             const allCandidateIds = new Set([
+                primaryScriptId,
                 ...scriptSystems.map(s => s.id),
                 ...Object.keys(config.scriptDataById || {}),
                 defaultScriptId,
