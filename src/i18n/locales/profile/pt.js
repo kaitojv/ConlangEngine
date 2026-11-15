@@ -78,6 +78,23 @@ export default {
     calligrapher: { name: "Calígrafo", desc: "Desenhe um ideograma personalizado ou envie uma fonte." },
     typologist: { name: "Tipólogo", desc: "Altere a tipologia do idioma." },
     archivist: { name: "Arquivista", desc: "Exporte um backup em PDF ou JSON." },
-    multiverse: { name: "Multiverso", desc: "Crie um segundo projeto de conlang." }
+    multiverse: { name: "Multiverso", desc: "Crie um segundo projeto de conlang." },
+    grand_linguist: { name: "Grão-Linguista", desc: "Alcance 2.000 palavras no léxico." },
+    living_dictionary: { name: "Dicionário Vivo", desc: "Alcance 3.500 palavras no léxico." },
+    immortal_tongue: { name: "Língua Imortal", desc: "Alcance 5.000 palavras! Um léxico épico." },
+    taxonomist: { name: "Taxonomista", desc: "Use 25 tags semânticas diferentes." },
+    ipa_perfectionist: { name: "Perfeccionista do AFI", desc: "Transcreva o IPA em 100% de um léxico com 100+ palavras." },
+    root_architect: { name: "Arquiteto de Raízes", desc: "Documente etimologia ou raízes-mãe em 50+ palavras." },
+    lexical_sculptor: { name: "Escultor Lexical", desc: "Classifique palavras em 8 ou mais classes gramaticais." },
+    phrase_weaver: { name: "Tecelão de Frases", desc: "Registre 25 frases ou sentenças." },
+    master_chronicler: { name: "Cronista Mestre", desc: "Escreva 5 ou mais páginas na Wiki." },
+    grammar_engine: { name: "Motor Gramatical", desc: "Crie 20 regras gramaticais ou afixos." },
+    biscriptal: { name: "Biescrita", desc: "Mantenha 2 ou mais sistemas de escrita." },
+    script_savant: { name: "Mestre dos Glifos", desc: "Desenhe 100 ou mais glifos personalizados." },
+    monumental_script: { name: "Escrita Monumental", desc: "Desenhe 500 ou mais glifos personalizados." },
+    course_creator: { name: "Criador de Cursos", desc: "Crie 5 ou mais lições de curso personalizadas." },
+    study_legend: { name: "Lenda dos Estudos", desc: "Alcance uma sequência de 30 nos Flashcards." },
+    worldbuilder: { name: "Construtor de Mundos", desc: "Gerencie 3 ou mais projetos de conlang." },
+    ambassador: { name: "Embaixador", desc: "Publique um idioma no Explorar." }
   }
 };

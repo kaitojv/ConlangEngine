@@ -78,6 +78,23 @@ export default {
     calligrapher: { name: "書道家", desc: "独自の文字を描画するかフォントを導入しました。" },
     typologist: { name: "類型論者", desc: "言語類型論の設定を変更しました。" },
     archivist: { name: "記録保管人", desc: "PDFまたはJSONバックアップを書き出しました。" },
-    multiverse: { name: "多元宇宙", desc: "2つ目の人工言語プロジェクトを作成しました。" }
+    multiverse: { name: "多元宇宙", desc: "2つ目の人工言語プロジェクトを作成しました。" },
+    grand_linguist: { name: "大言語学者", desc: "辞書に2,000語以上を登録しました。" },
+    living_dictionary: { name: "生ける辞典", desc: "辞書に3,500語以上を登録しました。" },
+    immortal_tongue: { name: "不滅の言語", desc: "5,000語を達成しました！壮大な語彙体系です。" },
+    taxonomist: { name: "分類学者", desc: "25種類以上の意味タグを使用しました。" },
+    ipa_perfectionist: { name: "IPA完璧主義者", desc: "100語以上の辞書でIPA発音表記を100%網羅しました。" },
+    root_architect: { name: "語源建築家", desc: "50語以上で語源または親語根を記録しました。" },
+    lexical_sculptor: { name: "語彙彫刻家", desc: "8種類以上の品詞で語彙を分類しました。" },
+    phrase_weaver: { name: "文章の織り手", desc: "25個以上の例文・フレーズを記録しました。" },
+    master_chronicler: { name: "大年代記作家", desc: "5ページ以上のWikiを作成しました。" },
+    grammar_engine: { name: "文法機関", desc: "20個以上の文法ルールや接辞を作成しました。" },
+    biscriptal: { name: "二文字体系", desc: "2つ以上の表記体系を運用しています。" },
+    script_savant: { name: "文字の賢人", desc: "100個以上の独自グリフをデザインしました。" },
+    monumental_script: { name: "記念碑的文字", desc: "500個以上の独自グリフをデザインしました。" },
+    course_creator: { name: "講座創作者", desc: "5つ以上のカスタムコースレッスンを作成しました。" },
+    study_legend: { name: "学習の伝説", desc: "フラッシュカードで30連続正解を達成しました。" },
+    worldbuilder: { name: "世界構築者", desc: "3つ以上の人工言語プロジェクトを管理しています。" },
+    ambassador: { name: "言語大使", desc: "探索（Explore）に言語を公開しました。" }
   }
 };

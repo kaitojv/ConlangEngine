@@ -8,7 +8,7 @@ import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import Modal from '@/components/UI/Modal/Modal.jsx';
-import { CloudUpload, CloudDownload, Trophy, Activity, User, LogOut, Globe, MessageCircle, BookOpen, Crown, Cog, Puzzle, Tags, Flame, GitBranch, GitMerge, Share2, Heart, Coffee, PieChart, Sparkles, Book, Library, BrainCircuit, ScrollText, Network, Ear, ArrowLeftRight, Layers, Volume2, PenTool, Shapes, Download, Trash2, Edit2, History, RotateCcw, RefreshCw } from 'lucide-react';
+import { CloudUpload, CloudDownload, Trophy, Activity, User, LogOut, Globe, MessageCircle, BookOpen, Crown, Cog, Puzzle, Tags, Flame, GitBranch, GitMerge, Share2, Heart, Coffee, PieChart, Sparkles, Book, Library, BrainCircuit, ScrollText, Network, Ear, ArrowLeftRight, Layers, Volume2, PenTool, Shapes, Download, Trash2, Edit2, History, RotateCcw, RefreshCw, Gem, Landmark, Star, Compass, CheckCircle2, Award, Quote, BookMarked, Languages, Feather, Medal, GraduationCap, Zap, Scroll } from 'lucide-react';
 import './profileTab.css';
 import { isSyncReviewEnabled, setSyncReviewEnabled } from '@/utils/syncEngine.js';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -44,6 +44,23 @@ const BADGES = [
     { id: 'typologist', name: 'Typologist', desc: 'Change the language typology.', Icon: Shapes },
     { id: 'archivist', name: 'Archivist', desc: 'Export a PDF or JSON Backup.', Icon: Download },
     { id: 'multiverse', name: 'Multiverse', desc: 'Create a second conlang project.', Icon: Globe },
+    { id: 'grand_linguist', name: 'Grand Linguist', desc: 'Reach 2,000 words in the lexicon.', Icon: Gem },
+    { id: 'living_dictionary', name: 'Living Dictionary', desc: 'Reach 3,500 words in the lexicon.', Icon: Landmark },
+    { id: 'immortal_tongue', name: 'Immortal Tongue', desc: 'Reach 5,000 words! An epic lexicon.', Icon: Star },
+    { id: 'taxonomist', name: 'Taxonomist', desc: 'Use 25 different semantic tags.', Icon: Compass },
+    { id: 'ipa_perfectionist', name: 'IPA Perfectionist', desc: 'Transcribe IPA for 100% of a 100+ word lexicon.', Icon: CheckCircle2 },
+    { id: 'root_architect', name: 'Root Architect', desc: 'Trace etymology or parent roots for 50+ words.', Icon: GitBranch },
+    { id: 'lexical_sculptor', name: 'Lexical Sculptor', desc: 'Classify words across 8 or more parts of speech.', Icon: Award },
+    { id: 'phrase_weaver', name: 'Phrase Weaver', desc: 'Record 25 sentences or phrases.', Icon: Quote },
+    { id: 'master_chronicler', name: 'Master Chronicler', desc: 'Author 5 or more Wiki pages.', Icon: BookMarked },
+    { id: 'grammar_engine', name: 'Grammar Engine', desc: 'Create 20 grammatical rules or affixes.', Icon: Cog },
+    { id: 'biscriptal', name: 'Biscriptal', desc: 'Maintain 2 or more writing scripts.', Icon: Languages },
+    { id: 'script_savant', name: 'Script Savant', desc: 'Design 100 or more custom glyphs.', Icon: Feather },
+    { id: 'monumental_script', name: 'Monumental Script', desc: 'Design 500 or more custom glyphs.', Icon: Medal },
+    { id: 'course_creator', name: 'Course Creator', desc: 'Build 5 or more custom course lessons.', Icon: GraduationCap },
+    { id: 'study_legend', name: 'Study Legend', desc: 'Reach a 30 streak in Flashcards.', Icon: Zap },
+    { id: 'worldbuilder', name: 'Worldbuilder', desc: 'Manage 3 or more conlang projects.', Icon: Scroll },
+    { id: 'ambassador', name: 'Ambassador', desc: 'Publish a language to Explore.', Icon: Share2 },
 // { id: 'patron', name: 'Patron', desc: 'Upgrade to Conlang Engine LIVE.', Icon: Heart },
 ];
 
@@ -60,6 +77,7 @@ export default function ProfileTab() {
     
     // Grab the lexicon, but safely wrap it just in case local storage got corrupted
     const rawLexicon = useLexiconStore((state) => state.lexicon);
+    const phrases = useLexiconStore((state) => state.phrases);
     const setLexicon = useLexiconStore((state) => state.setLexicon);
     const setPhrases = useLexiconStore((state) => state.setPhrases);
     const lexicon = Array.isArray(rawLexicon) ? rawLexicon : (rawLexicon?.lexicon || []);
@@ -145,7 +163,9 @@ export default function ProfileTab() {
     const {
         grammarRules, streak: configStreak, wikiPages: configWikiPages,
         syntaxOrder: configSyntaxOrder, phonologyTypes: configPhonologyTypes,
-        customFont: configCustomFont, customGlyphs: configCustomGlyphs,
+        customFont: configCustomFont, customFontBase64: configCustomFontBase64,
+        customGlyphs: configCustomGlyphs, scriptSystems, scriptDataById,
+        customCourse, isPublic,
         unlockedBadges: configUnlockedBadges, unlockBadge, logActivity,
         isProActive, isAutoSyncEnabled, authorName,
         vowels, activity, projectId,
@@ -157,7 +177,12 @@ export default function ProfileTab() {
         syntaxOrder: state.syntaxOrder,
         phonologyTypes: state.phonologyTypes,
         customFont: state.customFont,
+        customFontBase64: state.customFontBase64,
         customGlyphs: state.customGlyphs,
+        scriptSystems: state.scriptSystems,
+        scriptDataById: state.scriptDataById,
+        customCourse: state.customCourse,
+        isPublic: state.isPublic,
         unlockedBadges: state.unlockedBadges,
         unlockBadge: state.unlockBadge,
         logActivity: state.logActivity,
@@ -192,26 +217,64 @@ export default function ProfileTab() {
         if (wordCount >= 50) unlock('polyglot', 'Polyglot');
         if (wordCount >= 200) unlock('lexicographer', 'Lexicographer');
         if (wordCount >= 1000) unlock('master_linguist', 'Master Linguist');
+        if (wordCount >= 2000) unlock('grand_linguist', 'Grand Linguist');
+        if (wordCount >= 3500) unlock('living_dictionary', 'Living Dictionary');
+        if (wordCount >= 5000) unlock('immortal_tongue', 'Immortal Tongue');
 
-        if (grammarRules?.length >= 1) unlock('grammarian', 'Grammarian');
-        if (grammarRules?.length >= 5) unlock('morphologist', 'Morphologist');
+        const ruleCount = grammarRules?.length || 0;
+        if (ruleCount >= 1) unlock('grammarian', 'Grammarian');
+        if (ruleCount >= 5) unlock('morphologist', 'Morphologist');
+        if (ruleCount >= 20) unlock('grammar_engine', 'Grammar Engine');
 
         const uniqueTags = new Set(lexicon.flatMap(w => w.tags || [])).size;
         if (uniqueTags >= 10) unlock('semanticist', 'Semanticist');
-        
+        if (uniqueTags >= 25) unlock('taxonomist', 'Taxonomist');
+
+        if (wordCount >= 100 && lexicon.every(w => w.ipa && String(w.ipa).trim() !== '')) {
+            unlock('ipa_perfectionist', 'IPA Perfectionist');
+        }
+        const etymologyCount = lexicon.filter(w => (w.etymology && String(w.etymology).trim() !== '') || w.parentRootId).length;
+        if (etymologyCount >= 50) unlock('root_architect', 'Root Architect');
+
+        const wordClassCount = new Set(lexicon.map(w => w.wordClass && String(w.wordClass).trim()).filter(Boolean)).size;
+        if (wordClassCount >= 8) unlock('lexical_sculptor', 'Lexical Sculptor');
+
+        if ((phrases?.length || 0) >= 25) unlock('phrase_weaver', 'Phrase Weaver');
+
         if (configStreak >= 10) unlock('native_speaker', 'Native Speaker');
-        if (Object.keys(configWikiPages || {}).length > 1) unlock('lore_keeper', 'Lore Keeper');
+        if (configStreak >= 30) unlock('study_legend', 'Study Legend');
+
+        const wikiCount = Object.keys(configWikiPages || {}).length;
+        if (wikiCount > 1) unlock('lore_keeper', 'Lore Keeper');
+        if (wikiCount >= 5) unlock('master_chronicler', 'Master Chronicler');
+
         if (configSyntaxOrder !== 'SVO') unlock('syntactician', 'Syntactician');
         if (localProjects.length > 1) unlock('multiverse', 'Multiverse');
+        if (localProjects.length >= 3) unlock('worldbuilder', 'Worldbuilder');
         if (configPhonologyTypes !== 'alphabetic') unlock('typologist', 'Typologist');
-        if (configCustomFont || Object.keys(configCustomGlyphs || {}).length > 0) unlock('calligrapher', 'Calligrapher');
+
+        const scriptEntries = Object.values(scriptDataById || {});
+        const scriptGlyphTotal = scriptEntries.reduce((sum, entry) => sum + Object.keys(entry?.customGlyphs || {}).length, 0);
+        const totalCustomGlyphs = Math.max(scriptGlyphTotal, Object.keys(configCustomGlyphs || {}).length);
+        const hasAnyCustomFont = Boolean(
+            configCustomFont ||
+            configCustomFontBase64 ||
+            scriptEntries.some(entry => entry?.customFont || entry?.customFontBase64)
+        );
+        if (hasAnyCustomFont || totalCustomGlyphs > 0) unlock('calligrapher', 'Calligrapher');
+        if (totalCustomGlyphs >= 100) unlock('script_savant', 'Script Savant');
+        if (totalCustomGlyphs >= 500) unlock('monumental_script', 'Monumental Script');
+
+        if ((scriptSystems?.length || 0) >= 2) unlock('biscriptal', 'Biscriptal');
+        if ((customCourse?.length || 0) >= 5) unlock('course_creator', 'Course Creator');
+        if (isPublic) unlock('ambassador', 'Ambassador');
 
         // New state-based triggers
         const phonemeCount = new Set(lexicon.map(w => w.word.toLowerCase()).join('').split('')).size;
         if (phonemeCount >= 20) unlock('phonologist', 'Phonologist');
         
         if (isProActive) unlock('patron', 'Patron');
-    }, [lexicon, grammarRules, configStreak, configUnlockedBadges, configWikiPages, configSyntaxOrder, localProjects.length, configPhonologyTypes, configCustomFont, configCustomGlyphs, isProActive, unlockBadge, logActivity]);
+    }, [lexicon, phrases, grammarRules, configStreak, configUnlockedBadges, configWikiPages, configSyntaxOrder, localProjects.length, configPhonologyTypes, configCustomFont, configCustomFontBase64, configCustomGlyphs, scriptSystems, scriptDataById, customCourse, isPublic, isProActive, unlockBadge, logActivity]);
 
     // Crunch the numbers for the overall dictionary statistics
     const analytics = useMemo(() => {

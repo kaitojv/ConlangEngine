@@ -78,6 +78,23 @@ export default {
     calligrapher: { name: "Calligrapher", desc: "Draw a custom ideogram or upload a Font." },
     typologist: { name: "Typologist", desc: "Change the language typology." },
     archivist: { name: "Archivist", desc: "Export a PDF or JSON Backup." },
-    multiverse: { name: "Multiverse", desc: "Create a second conlang project." }
+    multiverse: { name: "Multiverse", desc: "Create a second conlang project." },
+    grand_linguist: { name: "Grand Linguist", desc: "Reach 2,000 words in the lexicon." },
+    living_dictionary: { name: "Living Dictionary", desc: "Reach 3,500 words in the lexicon." },
+    immortal_tongue: { name: "Immortal Tongue", desc: "Reach 5,000 words! An epic lexicon." },
+    taxonomist: { name: "Taxonomist", desc: "Use 25 different semantic tags." },
+    ipa_perfectionist: { name: "IPA Perfectionist", desc: "Transcribe IPA for 100% of a 100+ word lexicon." },
+    root_architect: { name: "Root Architect", desc: "Trace etymology or parent roots for 50+ words." },
+    lexical_sculptor: { name: "Lexical Sculptor", desc: "Classify words across 8 or more parts of speech." },
+    phrase_weaver: { name: "Phrase Weaver", desc: "Record 25 sentences or phrases." },
+    master_chronicler: { name: "Master Chronicler", desc: "Author 5 or more Wiki pages." },
+    grammar_engine: { name: "Grammar Engine", desc: "Create 20 grammatical rules or affixes." },
+    biscriptal: { name: "Biscriptal", desc: "Maintain 2 or more writing scripts." },
+    script_savant: { name: "Script Savant", desc: "Design 100 or more custom glyphs." },
+    monumental_script: { name: "Monumental Script", desc: "Design 500 or more custom glyphs." },
+    course_creator: { name: "Course Creator", desc: "Build 5 or more custom course lessons." },
+    study_legend: { name: "Study Legend", desc: "Reach a 30 streak in Flashcards." },
+    worldbuilder: { name: "Worldbuilder", desc: "Manage 3 or more conlang projects." },
+    ambassador: { name: "Ambassador", desc: "Publish a language to Explore." }
   }
 };

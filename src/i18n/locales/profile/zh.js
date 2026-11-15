@@ -78,6 +78,23 @@ export default {
     calligrapher: { name: "书法工匠", desc: "绘制了专属表意文字或上传了字体。" },
     typologist: { name: "类型学者", desc: "变更了语言的形态学类型。" },
     archivist: { name: "文献档案官", desc: "导出了 PDF 或 JSON 完整备份。" },
-    multiverse: { name: "多元宇宙", desc: "创建了第二个造语项目。" }
+    multiverse: { name: "多元宇宙", desc: "创建了第二个造语项目。" },
+    grand_linguist: { name: "大语言学家", desc: "词汇量突破 2,000 个单词。" },
+    living_dictionary: { name: "活字典", desc: "词汇量突破 3,500 个单词。" },
+    immortal_tongue: { name: "不朽之语", desc: "词汇量突破 5,000 词！史诗级的词库。" },
+    taxonomist: { name: "分类学家", desc: "使用了 25 种不同的语义标签。" },
+    ipa_perfectionist: { name: "国际音标完美主义者", desc: "在超过 100 词的词库中实现 100% 国际音标覆盖。" },
+    root_architect: { name: "词根建筑师", desc: "为 50 个以上单词记录词源或关联母词根。" },
+    lexical_sculptor: { name: "词汇雕塑师", desc: "使用 8 种及以上词性对单词进行分类。" },
+    phrase_weaver: { name: "语句编织者", desc: "记录了 25 个或更多短语或例句。" },
+    master_chronicler: { name: "编年史大师", desc: "撰写了 5 篇或更多百科条目。" },
+    grammar_engine: { name: "语法引擎", desc: "创建了 20 条语法规则或词缀。" },
+    biscriptal: { name: "双文字体系", desc: "维护 2 套或更多书写文字系统。" },
+    script_savant: { name: "字形巨匠", desc: "绘制了 100 个或更多自定义字形。" },
+    monumental_script: { name: "纪念碑文字", desc: "绘制了 500 个或更多自定义字形。" },
+    course_creator: { name: "课程创建者", desc: "打造了 5 节或更多自定义课程。" },
+    study_legend: { name: "学习传奇", desc: "在闪卡测验中达成 30 次连胜。" },
+    worldbuilder: { name: "世界构建者", desc: "管理 3 个或更多造语项目。" },
+    ambassador: { name: "语言大使", desc: "将语言公开发布到探索广场。" }
   }
 };
