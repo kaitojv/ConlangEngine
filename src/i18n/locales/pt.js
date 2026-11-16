@@ -2129,7 +2129,11 @@ export default {
     "selectKeyFirst": "Por favor, selecione primeiro uma tecla no teclado.",
     "importSuccess": "Layout de teclado importado com sucesso!",
     "invalidFile": "Formato de arquivo JSON de layout inválido.",
-    "readError": "Não foi possível analisar o arquivo JSON."
+    "readError": "Não foi possível analisar o arquivo JSON.",
+    "windowsInstallerBtn": "Windows (Instalador .zip)",
+    "windowsInstallerTooltip": "Baixar instalador do Windows com 2 cliques (.zip) + .klc",
+    "windowsInstallerToast": "ZIP baixado! Extraia a pasta e dê dois cliques em Install_*.bat para instalar e ativar.",
+    "windowsKlcTooltip": "Exportar código-fonte MSKLC (.klc)"
   },
   "footer": {
     "tagline": "Feito com carinho para criadores de línguas.",

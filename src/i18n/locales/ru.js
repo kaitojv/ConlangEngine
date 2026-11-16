@@ -2072,6 +2072,10 @@ export default {
     "selectKeyFirst": "Пожалуйста, сначала выберите клавишу на клавиатуре.",
     "importSuccess": "Раскладка клавиатуры успешно импортирована!",
     "invalidFile": "Неверный формат JSON файла раскладки.",
-    "readError": "Не удалось прочитать JSON файл."
+    "readError": "Не удалось прочитать JSON файл.",
+    "windowsInstallerBtn": "Windows (Установщик .zip)",
+    "windowsInstallerTooltip": "Скачать установщик Windows в 2 клика (.zip) + .klc",
+    "windowsInstallerToast": "ZIP загружен! Распакуйте и дважды кликните Install_*.bat для установки и запуска.",
+    "windowsKlcTooltip": "Экспортировать исходник MSKLC (.klc)"
   }
 }

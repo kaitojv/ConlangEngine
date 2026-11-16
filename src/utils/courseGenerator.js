@@ -87,11 +87,22 @@ export function generateCourseExercise(theme, lexicon, config) {
     const analyzer = createGrammarAnalyzer({
         lexicon,
         grammarRules: config.grammarRules || [],
-        syntaxOrder: config.syntaxOrder || 'SVO',
+        syntaxOrder: config.wordAssistConfig?.syntaxOrder || config.syntaxOrder || 'SVO',
         waConfig: config.wordAssistConfig || {},
         personRulesArray: personRulesArray,
+        verbMarker: config.verbMarker,
+        cliticsRules: config.cliticsRules,
         adjectivePlacement: config.adjectivePlacement,
-        adjectiveAgreement: config.adjectiveAgreement
+        adjectiveAgreement: config.adjectiveAgreement,
+        pronounMatrixData: config.pronounMatrixData,
+        particleDatabase: config.particleDatabase,
+        usesParticles: config.usesParticles,
+        morphologyMode: config.morphologyMode,
+        numberSystem: config.numberSystem,
+        numeralBase: config.numeralBase,
+        vowels: config.vowels,
+        consonants: config.consonants,
+        otherPhonemes: config.otherPhonemes
     });
 
     // 1. Filter sentences by theme
@@ -109,7 +120,13 @@ export function generateCourseExercise(theme, lexicon, config) {
         const text = sentenceObj.text;
         
         // Use the analyzer to translate the sentence
-        const suggestions = analyzer.computePhraseSuggestion(text, text.length, config.syntaxOrder || 'SVO', {}, 'normal');
+        const suggestions = analyzer.computePhraseSuggestion(
+            text,
+            text.length,
+            config.wordAssistConfig?.syntaxOrder || config.syntaxOrder || 'SVO',
+            {},
+            null
+        );
         if (!suggestions || suggestions.length === 0) continue;
         
         // The first suggestion is the primary translation

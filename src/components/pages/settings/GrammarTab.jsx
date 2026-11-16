@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Card from '../../UI/Card/Card.jsx';
 import RulesManager from './grammarMatrix/RulesManager.jsx';
 import ParadigmMatrix from './grammarMatrix/ParadigmMatrix.jsx';
@@ -16,11 +17,28 @@ import {
 } from 'lucide-react';
 import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
+import {
+    resolveTranslatorSettings,
+    TYPOLOGY_SELECT_FIELDS
+} from '@/utils/wordAssist/configResolver.js';
 import './grammartab.css';
+
+const VALID_GRAMMAR_SUB_TABS = new Set(['morphology', 'syntax', 'paradigm', 'reference']);
 
 export default function GrammarTab() {
     const { t } = useTranslation();
-    const [subTab, setSubTab] = useState('morphology');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const requestedSub = searchParams.get('sub') || '';
+    const [localSubTab, setLocalSubTab] = useState('morphology');
+    const subTab = VALID_GRAMMAR_SUB_TABS.has(requestedSub) ? requestedSub : localSubTab;
+
+    const handleSubTabChange = (nextSub) => {
+        setLocalSubTab(nextSub);
+        const next = new URLSearchParams(searchParams);
+        next.set('tab', 'grammar');
+        next.set('sub', nextSub);
+        setSearchParams(next, { replace: true });
+    };
 
     const syntaxOrder = useConfigStore((state) => state.syntaxOrder) || 'SVO';
     const adjectivePlacement = useConfigStore((state) => state.adjectivePlacement) || 'pre-nominal';
@@ -31,6 +49,16 @@ export default function GrammarTab() {
     const updateConfig = useConfigStore((state) => state.updateConfig);
 
     const waConfig = useMemo(() => rawWaConfig || {}, [rawWaConfig]);
+    const resolvedTypology = useMemo(
+        () => resolveTranslatorSettings({
+            wordAssistConfig: waConfig,
+            syntaxOrder,
+            adjectivePlacement,
+            adjectiveAgreement
+        }),
+        [waConfig, syntaxOrder, adjectivePlacement, adjectiveAgreement]
+    );
+    const updateWaConfig = (patch) => updateConfig({ wordAssistConfig: { ...waConfig, ...patch } });
 
     // Compute constituent order pills for visual diagram
     const orderPills = useMemo(() => {
@@ -51,7 +79,7 @@ export default function GrammarTab() {
                 <button
                     type="button"
                     className={`grammar-subnav-btn ${subTab === 'morphology' ? 'active' : ''}`}
-                    onClick={() => setSubTab('morphology')}
+                    onClick={() => handleSubTabChange('morphology')}
                 >
                     <Layers size={16} />
                     <span>{t('settings.grammar.morphologyTab')}</span>
@@ -60,7 +88,7 @@ export default function GrammarTab() {
                 <button
                     type="button"
                     className={`grammar-subnav-btn ${subTab === 'syntax' ? 'active' : ''}`}
-                    onClick={() => setSubTab('syntax')}
+                    onClick={() => handleSubTabChange('syntax')}
                 >
                     <TextAlignStart size={16} />
                     <span>{t('settings.grammar.syntaxTab')}</span>
@@ -69,7 +97,7 @@ export default function GrammarTab() {
                 <button
                     type="button"
                     className={`grammar-subnav-btn ${subTab === 'paradigm' ? 'active' : ''}`}
-                    onClick={() => setSubTab('paradigm')}
+                    onClick={() => handleSubTabChange('paradigm')}
                 >
                     <Play size={16} />
                     <span>{t('settings.grammar.paradigmTab')}</span>
@@ -78,7 +106,7 @@ export default function GrammarTab() {
                 <button
                     type="button"
                     className={`grammar-subnav-btn ${subTab === 'reference' ? 'active' : ''}`}
-                    onClick={() => setSubTab('reference')}
+                    onClick={() => handleSubTabChange('reference')}
                 >
                     <BookOpen size={16} />
                     <span>{t('settings.grammar.referenceTab')}</span>
@@ -133,7 +161,10 @@ export default function GrammarTab() {
                                 id="syntax-order-select"
                                 className="fi custom-select"
                                 value={syntaxOrder}
-                                onChange={(e) => updateConfig({ syntaxOrder: e.target.value })}
+                                onChange={(e) => updateConfig({
+                                    syntaxOrder: e.target.value,
+                                    wordAssistConfig: { ...waConfig, syntaxOrder: e.target.value }
+                                })}
                             >
                                 <option value="SVO">{t('settings.grammar.svoOption')}</option>
                                 <option value="SOV">{t('settings.grammar.sovOption')}</option>
@@ -257,6 +288,49 @@ export default function GrammarTab() {
                                     />
                                 </div>
                             )}
+                        </div>
+                    </Card>
+
+                    {/* Word Assist Typology & Morphosyntactic Alignment Card */}
+                    <Card>
+                        <h2 className="flex sg-title">
+                            <Code2 /> Word Assist Typology &amp; Clause Rules
+                        </h2>
+                        <p className="settings-description">
+                            Explicit typological behavior synced with Library &amp; Document Word Assist. Replaces vague pattern rules with deterministic grammar execution.
+                        </p>
+                        <div className="syntax-options-grid">
+                            {TYPOLOGY_SELECT_FIELDS.map((field) => (
+                                <div key={field.key} className="input-wrapper">
+                                    <label className="form-label" htmlFor={`wa-typology-${field.key}`}>
+                                        {field.label}
+                                    </label>
+                                    <select
+                                        id={`wa-typology-${field.key}`}
+                                        className="fi custom-select"
+                                        value={resolvedTypology[field.key]}
+                                        onChange={(e) => updateWaConfig({ [field.key]: e.target.value })}
+                                    >
+                                        {field.options.map((opt) => (
+                                            <option key={opt.value} value={opt.value}>
+                                                {opt.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            ))}
+                        </div>
+                        <div style={{ marginTop: '14px' }}>
+                            <label className="syntax-checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    checked={Boolean(resolvedTypology.absorbPrepositionsIntoCase)}
+                                    onChange={(e) => updateWaConfig({ absorbPrepositionsIntoCase: e.target.checked })}
+                                />
+                                <span>
+                                    Absorb prepositions (in, from, with, to, of) into noun Case Rules automatically when defined
+                                </span>
+                            </label>
                         </div>
                     </Card>
                 </div>

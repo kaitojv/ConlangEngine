@@ -184,6 +184,9 @@ export function buildStrokeUnionRings({
     const hasBrushPen = flagOverrides.isBrushPen ?? Boolean(meta.isBrushPen);
     const hasChisel = flagOverrides.isChisel ?? Boolean(meta.isChisel);
     const hasPaintBrush = flagOverrides.isPaintBrush ?? Boolean(meta.isPaintBrush);
+    const glyphWeight = Number.isFinite(flagOverrides.strokeWeight) && flagOverrides.strokeWeight > 0
+        ? flagOverrides.strokeWeight
+        : (Number.isFinite(meta.strokeWeight) && meta.strokeWeight > 0 ? meta.strokeWeight : 1.0);
     const defaultChiselAngle = Number.isFinite(flagOverrides.chiselAngle)
         ? flagOverrides.chiselAngle
         : (Number.isFinite(meta.chiselAngle) ? meta.chiselAngle : 45);
@@ -197,6 +200,11 @@ export function buildStrokeUnionRings({
         const lineCap = strokeData?.lineCap || 'round';
 
         if (points.length === 0) return;
+
+        const strokeWeight = Number.isFinite(strokeData?.strokeWeight) && strokeData.strokeWeight > 0
+            ? strokeData.strokeWeight
+            : glyphWeight;
+        const strokeBaseHalfWidth = Math.max(minHalfWidth, baseHalfWidth * (strokeWeight / glyphWeight));
 
         const strokeFlags = {
             isCalligraphy: strokeData?.isCalligraphy ?? hasCalligraphy,
@@ -234,7 +242,7 @@ export function buildStrokeUnionRings({
 
         if (simplified.length === 1) {
             const pt = simplified[0];
-            rawPolygons.push(buildCapDisc(toX(pt.x), toY(pt.y), baseHalfWidth, 12, minHalfWidth));
+            rawPolygons.push(buildCapDisc(toX(pt.x), toY(pt.y), strokeBaseHalfWidth, 12, minHalfWidth));
             return;
         }
 
@@ -244,7 +252,7 @@ export function buildStrokeUnionRings({
             cy: toY(pt.y),
             origX: pt.x,
             origY: pt.y,
-            r: computePointHalfWidth(simplified, i, baseHalfWidth, minHalfWidth, strokeFlags),
+            r: computePointHalfWidth(simplified, i, strokeBaseHalfWidth, minHalfWidth, strokeFlags),
         }));
 
         for (let i = 0; i < mapped.length; i++) {
@@ -262,7 +270,7 @@ export function buildStrokeUnionRings({
                     if (strokeFlags.isChisel) {
                         const strokeAngle = Math.atan2(p2.origY - p1.origY, p2.origX - p1.origX);
                         const diff = Math.abs(Math.sin(strokeAngle - radChisel));
-                        const w = Math.max(minHalfWidth, baseHalfWidth * (0.2 + 0.8 * diff));
+                        const w = Math.max(minHalfWidth, strokeBaseHalfWidth * (0.2 + 0.8 * diff));
                         r1 = w;
                         r2 = w;
                     }
@@ -314,7 +322,10 @@ export function buildSvgPathDFromStrokes(strokeArray, options = {}) {
 
     const xOffset = Number.isFinite(options.xOffset) ? options.xOffset : 0;
     const strokeWidth = Number(options.strokeWidth) > 0 ? Number(options.strokeWidth) : 10;
-    const baseHalfWidth = Math.max(0.5, strokeWidth / 2);
+    const glyphWeight = Number.isFinite(options.strokeWeight) && options.strokeWeight > 0
+        ? options.strokeWeight
+        : (Number.isFinite(meta.strokeWeight) && meta.strokeWeight > 0 ? meta.strokeWeight : 1.0);
+    const baseHalfWidth = Math.max(0.5, (strokeWidth / 2) * glyphWeight);
     const minHalfWidth = Math.min(1.5, baseHalfWidth * 0.15);
 
     const rings = buildStrokeUnionRings({
@@ -562,12 +573,14 @@ export function buildGlyphPathAndMetrics(strokeArray, traceWidth = 30, fontScale
     }, 0);
     const isDenseGlyph = totalGlyphPoints > 550;
 
+    const glyphStrokeWeight = Number.isFinite(meta.strokeWeight) && meta.strokeWeight > 0 ? meta.strokeWeight : 1.0;
+
     const rings = buildStrokeUnionRings({
         actualStrokes,
         meta,
         toX,
         toY,
-        baseHalfWidth: Math.max(1.5, r_base * meta.scale),
+        baseHalfWidth: Math.max(1.5, r_base * meta.scale * glyphStrokeWeight),
         minHalfWidth: 1.5,
         distFilterSq: isDenseGlyph ? 4 : 1.5,
         rdpFillEps: isDenseGlyph ? 0.6 : 0.35,

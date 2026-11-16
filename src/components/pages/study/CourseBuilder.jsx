@@ -270,8 +270,10 @@ const COURSE_BUILDER_CONFIG_KEYS = [
     'consonants', 'customGlyphs', 'featuralComponents', 'otherPhonemes',
     'phonologyTypes', 'scriptDataById', 'scriptRules', 'syllabaryMap', 'vowels',
     // generateCourseExercise
-    'adjectiveAgreement', 'adjectivePlacement', 'grammarRules',
-    'personRules', 'syntaxOrder', 'wordAssistConfig',
+    'adjectiveAgreement', 'adjectivePlacement', 'cliticsRules', 'grammarRules',
+    'morphologyMode', 'numberSystem', 'numeralBase', 'particleDatabase',
+    'personRules', 'pronounMatrixData', 'syntaxOrder', 'usesParticles',
+    'verbMarker', 'wordAssistConfig',
     // used directly in this component
     'customCourse', 'projectId', 'updateConfig',
     // audio & IPA pronunciation

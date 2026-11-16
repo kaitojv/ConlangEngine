@@ -2079,6 +2079,10 @@ export default {
     "selectKeyFirst": "まずキーボードのキーを選択してください。",
     "importSuccess": "キーボードレイアウトを正常にインポートしました！",
     "invalidFile": "無効なキーボードレイアウトJSON形式です。",
-    "readError": "JSONファイルを読み込めませんでした。"
+    "readError": "JSONファイルを読み込めませんでした。",
+    "windowsInstallerBtn": "Windows (インストーラー .zip)",
+    "windowsInstallerTooltip": "2クリックWindowsインストーラー (.zip) + .klc をダウンロード",
+    "windowsInstallerToast": "ZIPをダウンロードしました！解凍して Install_*.bat をダブルクリックして開始してください。",
+    "windowsKlcTooltip": "MSKLCソース (.klc) をエクスポート"
   }
 }

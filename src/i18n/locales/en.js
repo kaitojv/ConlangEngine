@@ -2173,7 +2173,11 @@ export default {
     "selectKeyFirst": "Please select a key on the keyboard first.",
     "importSuccess": "Imported keyboard layout successfully!",
     "invalidFile": "Invalid keyboard layout JSON format.",
-    "readError": "Could not parse JSON file."
+    "readError": "Could not parse JSON file.",
+    "windowsInstallerBtn": "Windows (Installer .zip)",
+    "windowsInstallerTooltip": "Download 2-click Windows Installer (.zip) + .klc",
+    "windowsInstallerToast": "ZIP downloaded! Extract it and double-click Install_*.bat to install & run.",
+    "windowsKlcTooltip": "Export raw MSKLC source (.klc)"
   },
   "fontExport": {
     "title": "Export Custom Font (.ttf / Font Pack)",

@@ -2,12 +2,17 @@ import React, { useState, useEffect, useMemo, useRef, useDeferredValue } from 'r
 import {
     Sparkles, X, Settings, Copy, Check, ArrowRight, Plus,
     ChevronDown, ArrowDownLeft, RefreshCw, GripVertical,
-    RotateCcw, BookOpen, Layers
+    RotateCcw, BookOpen, Layers, AlertTriangle, CheckCircle2,
+    ExternalLink, Wrench
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
+import { useConfigStore } from '@/store/useConfigStore.jsx';
 import { buildScriptConfig } from '@/utils/scriptResolver.js';
 import { transliterateText } from '@/utils/transliteration.js';
 import { extractCoreOrderLabel } from '@/utils/wordAssist/syntaxOrdering.js';
+import { buildGrammarRuleEntry } from '@/utils/wordAssist/configResolver.js';
 import './liveTranslatorPanel.css';
 
 const ROLE_OPTIONS = [
@@ -65,12 +70,28 @@ export default function LiveTranslatorPanel({
     transliterate = (s) => s,
     lexicon = [],
     config = null,
+    updateConfig = null,
+    grammarRules = null,
     scriptSystems = [],
     activeScriptId = 'default'
 }) {
     const { t } = useTranslation();
+    const navigate = useNavigate();
+    const storeUpdateConfig = useConfigStore((s) => s.updateConfig);
+    const storeGrammarRules = useConfigStore((s) => s.grammarRules);
+    const storeWaConfig = useConfigStore((s) => s.wordAssistConfig);
+    const effectiveUpdateConfig = updateConfig || storeUpdateConfig;
+    const effectiveGrammarRules = Array.isArray(grammarRules)
+        ? grammarRules
+        : (Array.isArray(config?.grammarRules) ? config.grammarRules : (storeGrammarRules || []));
+    const effectiveWaConfig = config?.wordAssistConfig || storeWaConfig || {};
 
     const [sourceText, setSourceText] = useState(initialSourceText || '');
+    const [showReadiness, setShowReadiness] = useState(false);
+    const [inlineRuleDiagId, setInlineRuleDiagId] = useState(null);
+    const [inlineRuleDraft, setInlineRuleDraft] = useState({
+        name: '', affix: '', gloss: '', appliesTo: 'all', standalone: false
+    });
     const [manualRoles, setManualRoles] = useState({});
     const [wordChoices, setWordChoices] = useState({});
     const [customTokenOrder, setCustomTokenOrder] = useState(null);
@@ -215,6 +236,76 @@ export default function LiveTranslatorPanel({
         return extractCoreOrderLabel(raw);
     }, [baseSuggestion, syntaxOrder]);
 
+    const readiness = useMemo(
+        () => (analyzer?.auditReadiness ? analyzer.auditReadiness() : null),
+        [analyzer]
+    );
+
+    const alignmentBadge = useMemo(() => {
+        const align = baseSuggestion?.effectiveSettings?.alignment || effectiveWaConfig?.alignment || 'accusative';
+        if (align === 'ergative') return 'ERG';
+        if (align === 'neutral') return 'NEUT';
+        return 'ACC';
+    }, [baseSuggestion, effectiveWaConfig]);
+
+    const handleOpenDiagnosticTarget = (diag) => {
+        if (diag?.targetRoute) {
+            navigate(diag.targetRoute);
+            return;
+        }
+        const tab = diag?.targetTab || 'grammar';
+        const sub = tab === 'grammar'
+            ? (diag?.kind === 'setting' ? '&sub=syntax' : '&sub=morphology')
+            : '';
+        navigate(`/settings?tab=${tab}${sub}`);
+    };
+
+    const handleStartInlineRule = (diag) => {
+        if (inlineRuleDiagId === diag.id) {
+            setInlineRuleDiagId(null);
+            return;
+        }
+        const sug = diag.suggestedRule || {};
+        setInlineRuleDiagId(diag.id);
+        setInlineRuleDraft({
+            name: sug.name || diag.slotId || 'Rule',
+            affix: sug.affix || `-${(sug.gloss || 'mk').toLowerCase()}`,
+            gloss: sug.gloss || '',
+            appliesTo: (sug.targetPOS || 'all').toLowerCase(),
+            standalone: Boolean(sug.standalone)
+        });
+    };
+
+    const handleSaveInlineRule = (diag) => {
+        if (!inlineRuleDraft.name.trim() || !inlineRuleDraft.affix.trim()) {
+            toast.error('Enter both rule name and affix / marker.');
+            return;
+        }
+        const newRule = buildGrammarRuleEntry(diag.slotId, inlineRuleDraft);
+        const nextRules = [...effectiveGrammarRules, newRule];
+        const nextBindings = { ...(effectiveWaConfig.ruleBindings || {}) };
+        if (diag.slotId) nextBindings[diag.slotId] = newRule.id;
+        effectiveUpdateConfig({
+            grammarRules: nextRules,
+            wordAssistConfig: {
+                ...effectiveWaConfig,
+                ruleBindings: nextBindings
+            }
+        });
+        setInlineRuleDiagId(null);
+        toast.success(`Added rule "${newRule.name}" (${newRule.affix})`);
+    };
+
+    const handleEnableZeroCopula = () => {
+        effectiveUpdateConfig({
+            wordAssistConfig: {
+                ...effectiveWaConfig,
+                copulaBehavior: 'zero_copula'
+            }
+        });
+        toast.success('Zero Copula enabled in Grammar Settings.');
+    };
+
     const hasCustomOverrides = Object.keys(manualRoles).length > 0 || Object.keys(wordChoices).length > 0 || !!customTokenOrder;
 
     const handleResetCustomizations = () => {
@@ -288,10 +379,21 @@ export default function LiveTranslatorPanel({
                     </h3>
                     <span
                         className="live-translator-order-badge"
-                        title={`Active word order: ${baseSuggestion?.effectiveSyntaxOrder || syntaxOrder}`}
+                        title={`Active word order: ${baseSuggestion?.effectiveSyntaxOrder || syntaxOrder} (${alignmentBadge})`}
                     >
-                        {shortOrderLabel}
+                        {shortOrderLabel} · {alignmentBadge}
                     </span>
+                    {readiness && (
+                        <button
+                            type="button"
+                            className={`ltp-readiness-pill ${readiness.scorePercent >= 75 ? 'good' : readiness.scorePercent >= 40 ? 'mid' : 'low'}`}
+                            onClick={() => setShowReadiness(v => !v)}
+                            title={`Conlang grammar & lexicon readiness: ${readiness.readyCount}/${readiness.totalCount} ready (click to inspect)`}
+                        >
+                            {readiness.scorePercent >= 75 ? <CheckCircle2 size={11} /> : <AlertTriangle size={11} />}
+                            {readiness.scorePercent}%
+                        </button>
+                    )}
                 </div>
                 <div className="live-translator-actions-top">
                     {hasCustomOverrides && (
@@ -324,6 +426,43 @@ export default function LiveTranslatorPanel({
             </div>
 
             <div className="live-translator-body">
+                {showReadiness && readiness && (
+                    <div className="ltp-readiness-card">
+                        <div className="ltp-readiness-header">
+                            <span>Language Readiness ({readiness.readyCount}/{readiness.totalCount})</span>
+                            <button
+                                type="button"
+                                className="ltp-inline-link-btn"
+                                onClick={onOpenSettings}
+                            >
+                                Word Assist Settings
+                            </button>
+                        </div>
+                        <div className="ltp-readiness-list">
+                            {readiness.checks.map((chk) => (
+                                <div key={chk.id} className={`ltp-readiness-row ${chk.status === 'ok' ? 'ok' : 'missing'}`}>
+                                    <span className="ltp-readiness-icon">
+                                        {chk.status === 'ok' ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
+                                    </span>
+                                    <div className="ltp-readiness-copy">
+                                        <strong>{chk.label}</strong>
+                                        <span>{chk.detail}</span>
+                                    </div>
+                                    {chk.status !== 'ok' && (chk.targetTab || chk.targetRoute) && (
+                                        <button
+                                            type="button"
+                                            className="ltp-diag-btn"
+                                            onClick={() => handleOpenDiagnosticTarget(chk)}
+                                        >
+                                            <ExternalLink size={11} /> Fix
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* 1. English Source Input */}
                 <div className="live-translator-source-box">
                     <div className="live-translator-label-row">
@@ -443,6 +582,16 @@ export default function LiveTranslatorPanel({
                             </div>
                         )}
 
+                        {baseSuggestion?.appliedGrammar?.length > 0 && (
+                            <div className="ltp-applied-rules">
+                                {baseSuggestion.appliedGrammar.map((ruleName, rIdx) => (
+                                    <span key={`${ruleName}-${rIdx}`} className="ltp-applied-pill">
+                                        {ruleName}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+
                         <div className="live-translator-target-meta">
                             <div className="live-translator-target-copy-group">
                                 <button
@@ -475,6 +624,128 @@ export default function LiveTranslatorPanel({
                 ) : (
                     <div className="ltp-empty-state">
                         Type an English phrase above or place your cursor on a sentence in the document to inspect lexicon matches, POS roles, and word order.
+                    </div>
+                )}
+
+                {/* 2.5 Actionable Missing Rules & Vocabulary Diagnostics */}
+                {baseSuggestion?.diagnostics?.length > 0 && (
+                    <div className="ltp-diagnostics-card">
+                        <div className="ltp-diagnostics-header">
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                                <AlertTriangle size={13} /> Missing Rules &amp; Vocabulary ({baseSuggestion.diagnostics.length})
+                            </span>
+                        </div>
+                        <div className="ltp-diagnostics-list">
+                            {baseSuggestion.diagnostics.map((diag) => (
+                                <div key={diag.id} className={`ltp-diag-item kind-${diag.kind || 'rule'}`}>
+                                    <div className="ltp-diag-main">
+                                        <div className="ltp-diag-copy">
+                                            <strong>{diag.title}</strong>
+                                            <span>{diag.description}</span>
+                                        </div>
+                                        <div className="ltp-diag-actions">
+                                            {(diag.kind === 'word' || diag.kind === 'pronoun') && onOpenAddWord && (diag.lemma || diag.original) && (
+                                                <button
+                                                    type="button"
+                                                    className="ltp-diag-btn primary"
+                                                    onClick={() => onOpenAddWord({
+                                                        word: '',
+                                                        translation: (diag.lemma || diag.original || '').toLowerCase(),
+                                                        wordClass: diag.suggestedPos || (diag.kind === 'pronoun' ? 'pronoun' : 'noun')
+                                                    })}
+                                                >
+                                                    <Plus size={11} /> Add {diag.suggestedPos || (diag.kind === 'pronoun' ? 'Pronoun' : 'Word')}
+                                                </button>
+                                            )}
+                                            {diag.kind === 'rule' && (
+                                                <button
+                                                    type="button"
+                                                    className="ltp-diag-btn primary"
+                                                    onClick={() => handleStartInlineRule(diag)}
+                                                >
+                                                    <Wrench size={11} /> Create Rule
+                                                </button>
+                                            )}
+                                            {diag.id === 'missing_copula_or_zero' && (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        className="ltp-diag-btn primary"
+                                                        onClick={handleEnableZeroCopula}
+                                                    >
+                                                        Enable Zero Copula
+                                                    </button>
+                                                    {onOpenAddWord && (
+                                                        <button
+                                                            type="button"
+                                                            className="ltp-diag-btn"
+                                                            onClick={() => onOpenAddWord({
+                                                                word: '',
+                                                                translation: 'be',
+                                                                wordClass: 'verb'
+                                                            })}
+                                                        >
+                                                            <Plus size={11} /> Add &quot;be&quot;
+                                                        </button>
+                                                    )}
+                                                </>
+                                            )}
+                                            {diag.id !== 'missing_copula_or_zero' && (diag.targetTab || diag.targetRoute) && (
+                                                <button
+                                                    type="button"
+                                                    className="ltp-diag-btn"
+                                                    onClick={() => handleOpenDiagnosticTarget(diag)}
+                                                    title="Open corresponding Settings tab"
+                                                >
+                                                    <ExternalLink size={11} /> {diag.kind === 'pronoun' ? 'Pronouns' : 'Settings'}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {inlineRuleDiagId === diag.id && (
+                                        <div className="ltp-inline-rule-form">
+                                            <input
+                                                type="text"
+                                                className="fi"
+                                                value={inlineRuleDraft.name}
+                                                onChange={(e) => setInlineRuleDraft(d => ({ ...d, name: e.target.value }))}
+                                                placeholder="Rule name"
+                                            />
+                                            <input
+                                                type="text"
+                                                className="fi"
+                                                value={inlineRuleDraft.affix}
+                                                onChange={(e) => setInlineRuleDraft(d => ({ ...d, affix: e.target.value }))}
+                                                placeholder="Affix (e.g. -ka) or particle"
+                                            />
+                                            <label className="ltp-inline-rule-check">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={inlineRuleDraft.standalone}
+                                                    onChange={(e) => setInlineRuleDraft(d => ({ ...d, standalone: e.target.checked }))}
+                                                />
+                                                Standalone
+                                            </label>
+                                            <button
+                                                type="button"
+                                                className="ltp-diag-btn primary"
+                                                onClick={() => handleSaveInlineRule(diag)}
+                                            >
+                                                Save
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="ltp-diag-btn"
+                                                onClick={() => setInlineRuleDiagId(null)}
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
 

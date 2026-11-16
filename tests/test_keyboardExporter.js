@@ -2,7 +2,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { 
-    getHexPoint, getMapping, QWERTY_DEFAULTS 
+    getHexPoint, getMapping, QWERTY_DEFAULTS,
+    generateKLCContent, buildWindowsPackageFiles, createZipBuffer
 } from '../src/utils/keyboardExporter.js';
 import { 
     distributeLetters, getPhoneticTargetKey, ASSIGNABLE_KEYS_HOME_FIRST 
@@ -148,5 +149,78 @@ describe('keyboardDistributor automatic distribution algorithms', () => {
         // NEW_B was mapped to an empty slot
         const values = Object.values(result).flatMap(m => [m.base, m.shift, m.altgr]);
         assert.ok(values.includes('NEW_B'));
+    });
+
+    it('resolves diacritic and IPA characters phonetically and skips plain punctuation noise', () => {
+        const items = [
+            { id: '1', char: 't', unicode: 't', category: 'letters', hasGlyph: false },
+            { id: '2', char: 'ṫ', phoneme: 'θ', unicode: 'ṫ', category: 'letters', hasGlyph: false },
+            { id: '3', char: 'l', unicode: 'l', category: 'letters', hasGlyph: false },
+            { id: '4', char: 'λ', unicode: 'λ', category: 'letters', hasGlyph: false },
+            { id: '5', char: 'ł', unicode: 'ł', category: 'letters', hasGlyph: false },
+            { id: '6', char: 'j', unicode: 'j', category: 'letters', hasGlyph: false },
+            { id: '7', char: 'ɟ', unicode: 'ɟ', category: 'letters', hasGlyph: false },
+            { id: '8', char: 'k', unicode: 'k', category: 'letters', hasGlyph: false },
+            { id: '9', char: 'ʞ', unicode: 'ʞ', category: 'letters', hasGlyph: false },
+            { id: 'p1', char: '@', unicode: '@', category: 'punctuation', hasGlyph: false },
+            { id: 'p2', char: '#', unicode: '#', category: 'punctuation', hasGlyph: false },
+        ];
+
+        const mappings = distributeLetters(items, { strategy: 'smart_phonetic' });
+        assert.strictEqual(mappings.T.base, 't');
+        assert.strictEqual(mappings.T.shift, 'ṫ');
+        assert.strictEqual(mappings.L.base, 'l');
+        assert.strictEqual(mappings.L.shift, 'λ');
+        assert.strictEqual(mappings.L.altgr, 'ł');
+        assert.strictEqual(mappings.J.base, 'j');
+        assert.strictEqual(mappings.J.shift, 'ɟ');
+        assert.strictEqual(mappings.K.base, 'k');
+        assert.strictEqual(mappings.K.shift, 'ʞ');
+
+        // Plain uncustomized punctuation must not overwrite empty letter keys
+        const allMapped = Object.values(mappings).flatMap(m => [m.base, m.shift, m.altgr]);
+        assert.ok(!allMapped.includes('@'));
+        assert.ok(!allMapped.includes('#'));
+    });
+
+    it('generateKLCContent produces CRLF lines and LIGATURE entries for multi-char or non-BMP strings', () => {
+        const mapped = {
+            'A': { base: 'a', shift: 'A', altgr: 'æ' },
+            'K': { base: 'ka', shift: 'KA', altgr: String.fromCodePoint(0x10000) }
+        };
+        const klc = generateKLCContent('TestLang', mapped);
+        assert.ok(klc.includes('\r\n'));
+        assert.ok(klc.includes('ENDKBD'));
+        assert.ok(klc.includes('%%'));
+        assert.ok(klc.includes('LIGATURE'));
+    });
+
+    it('buildWindowsPackageFiles & createZipBuffer produce valid 2-click installer ZIP with PK headers', () => {
+        const mapped = {
+            'A': { base: '\uE001', shift: '\uE002', altgr: '-1' },
+            'K': { base: 'k', shift: 'K', altgr: 'ʞ' }
+        };
+        const files = buildWindowsPackageFiles('Mani Script', mapped);
+        const names = files.map(f => f.name);
+        assert.ok(names.some(n => n.startsWith('Install_') && n.endsWith('.bat')));
+        assert.ok(names.some(n => n.endsWith('_Keyboard.ps1')));
+        assert.ok(names.some(n => n.endsWith('.klc')));
+        assert.ok(names.includes('README.txt'));
+
+        const ps1 = new TextDecoder().decode(files.find(f => f.name.endsWith('_Keyboard.ps1')).data);
+        assert.ok(ps1.includes('\\uE001'));
+        assert.ok(ps1.includes('WH_KEYBOARD_LL'));
+
+        const zip = createZipBuffer(files);
+        // PK\x03\x04 local file signature at byte 0, EOCD PK\x05\x06 at end - 22
+        assert.strictEqual(zip[0], 0x50);
+        assert.strictEqual(zip[1], 0x4B);
+        assert.strictEqual(zip[2], 0x03);
+        assert.strictEqual(zip[3], 0x04);
+        const eocdOffset = zip.length - 22;
+        assert.strictEqual(zip[eocdOffset], 0x50);
+        assert.strictEqual(zip[eocdOffset + 1], 0x4B);
+        assert.strictEqual(zip[eocdOffset + 2], 0x05);
+        assert.strictEqual(zip[eocdOffset + 3], 0x06);
     });
 });

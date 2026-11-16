@@ -231,14 +231,25 @@ export const INITIAL_CONFIG = {
     configVersion: 2,
     wordAssistConfig: {
         syntaxOrder: '',
+        alignment: 'accusative',
+        genitivePlacement: 'possessor-possessed',
+        adpositionPlacement: 'preposition',
+        absorbPrepositionsIntoCase: true,
+        adverbPlacement: 'beforeVerb',
+        negationPlacement: 'beforeVerb',
+        comparativeStrategy: 'analytic',
+        questionWordPlacement: 'front',
+        questionParticleBehavior: 'yesNoOnly',
+        articleStrategy: 'omit',
+        subjectRealization: 'free_only',
+        proDropMode: 'never',
+        verbPersonAgreement: 'off',
         copulaBehavior: 'normal',
         copulaReplacement: '',
-        triggers: [
-            { id: 'obj-1', name: 'Direct Object', trigger: 'O', marker: '', type: 'trigger', position: 'suffix', priority: 4 },
-            { id: 'neg-1', name: 'Negation', trigger: 'not', marker: '', type: 'word', position: 'beforeVerb', priority: 1 },
-            { id: 'comp-1', name: 'Comparative', trigger: 'more, -er', marker: '', type: 'word', position: 'before', priority: 2 },
-            { id: 'pl-1', name: 'Plural', trigger: '-s', marker: '', type: 'suffix', position: 'suffix', priority: 3 }
-        ]
+        ruleBindings: {},
+        particleBindings: {},
+        roleOverrides: {},
+        triggers: []
     },
     worldMap: {
         x: null,

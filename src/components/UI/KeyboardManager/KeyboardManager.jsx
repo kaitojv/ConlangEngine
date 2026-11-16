@@ -9,13 +9,13 @@ import { useLexiconStore } from '@/store/useLexiconStore.jsx';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
 import Button from '../Buttons/Buttons.jsx';
 import { 
-    exportKLC, exportMac, exportLinux, exportJSON, QWERTY_DEFAULTS 
+    exportWindowsInstaller, exportKLC, exportMac, exportLinux, exportJSON, QWERTY_DEFAULTS 
 } from '../../../utils/keyboardExporter.js';
 import { 
     distributeLetters, ASSIGNABLE_KEYS_HOME_FIRST 
 } from '../../../utils/keyboardDistributor.js';
 import { 
-    getScriptSystem, getScriptData 
+    getScriptSystem, getScriptData, getDefaultScriptId, normalizeScriptType, resolveWordScriptId
 } from '../../../utils/scriptResolver.js';
 import toast from 'react-hot-toast';
 import './keyboardManager.css';
@@ -65,17 +65,52 @@ export default function KeyboardManager({ initialScriptId, allChars = [], alphab
     const legacyVowels = useConfigStore(s => s.vowels) || '';
     const legacyOther = useConfigStore(s => s.otherPhonemes) || '';
     const configState = useConfigStore(s => s);
+    const projectId = configState?.projectId || 'local';
+    const resolvedDefaultScriptId = getDefaultScriptId(configState) || defaultScriptId;
     const rawLexicon = useLexiconStore(s => s.lexicon);
     const lexicon = useMemo(() => rawLexicon || [], [rawLexicon]);
 
-    // Local State
-    const [selectedScriptId, setSelectedScriptId] = useState(() => initialScriptId || defaultScriptId || 'default');
+    // Local State — keyboard mappings stored independently per script
+    const storageKey = `ce_keyboard_mappings_${projectId}`;
+    const [selectedScriptId, setSelectedScriptId] = useState(() => initialScriptId || resolvedDefaultScriptId || 'default');
     const [activeLayer, setActiveLayer] = useState('base'); // 'base' | 'shift' | 'altgr'
     const [selectedKey, setSelectedKey] = useState(null); // { vk, label }
-    const [mappings, setMappings] = useState({}); // { [vk]: { base, shift, altgr } }
+    const [mappingsByScript, setMappingsByScript] = useState(() => {
+        try {
+            const raw = localStorage.getItem(storageKey);
+            const parsed = raw ? JSON.parse(raw) : null;
+            return (parsed && typeof parsed === 'object') ? parsed : {};
+        } catch {
+            return {};
+        }
+    });
     const [searchQuery, setSearchQuery] = useState('');
     const [activeCategory, setActiveCategory] = useState('all');
     const [showDistributeMenu, setShowDistributeMenu] = useState(false);
+
+    const mappings = useMemo(() => mappingsByScript[selectedScriptId] || {}, [mappingsByScript, selectedScriptId]);
+
+    const setMappings = useCallback((updater) => {
+        setMappingsByScript(prev => {
+            const currentScriptMap = prev[selectedScriptId] || {};
+            const nextScriptMap = typeof updater === 'function' ? updater(currentScriptMap) : updater;
+            const nextAll = { ...prev, [selectedScriptId]: nextScriptMap || {} };
+            try {
+                localStorage.setItem(storageKey, JSON.stringify(nextAll));
+            } catch {
+                /* ignore storage quota errors */
+            }
+            return nextAll;
+        });
+    }, [selectedScriptId, storageKey]);
+
+    const handleScriptChange = (nextScriptId) => {
+        setSelectedScriptId(nextScriptId);
+        setSelectedKey(null);
+        setActiveCategory('all');
+        setSearchQuery('');
+        setShowDistributeMenu(false);
+    };
 
     // Resolve current writing system & data
     const currentScript = useMemo(() => {
@@ -86,10 +121,14 @@ export default function KeyboardManager({ initialScriptId, allChars = [], alphab
         return getScriptData(configState, selectedScriptId);
     }, [configState, selectedScriptId]);
 
-    const scriptType = currentScript?.type || configState?.phonologyTypes || 'alphabetic';
+    const isDefaultScript = (currentScript?.id || selectedScriptId) === resolvedDefaultScriptId;
+    const scriptType = normalizeScriptType(
+        currentScript?.type || (isDefaultScript ? configState?.phonologyTypes : 'alphabetic')
+    );
     const scriptName = currentScript?.name || 'Conlang';
+    const scriptWritingDirection = currentScript?.writingDirection || (isDefaultScript ? configState?.writingDirection : 'ltr') || 'ltr';
 
-    // Parse comma-separated phoneme strings
+    // Parse comma-separated phoneme strings ("phoneme=orthography" or "char")
     const parsePhonemes = useCallback((str) => {
         if (!str) return [];
         return str.split(',')
@@ -98,21 +137,29 @@ export default function KeyboardManager({ initialScriptId, allChars = [], alphab
             .map(s => {
                 if (s.includes('=')) {
                     const [k, v] = s.split('=');
-                    return { raw: s, char: k.trim(), mapped: v.trim() };
+                    const phoneme = k.trim();
+                    const mapped = v.trim();
+                    return { raw: s, phoneme, char: mapped || phoneme, mapped: mapped || phoneme };
                 }
-                return { raw: s, char: s, mapped: s };
+                return { raw: s, phoneme: s, char: s, mapped: s };
             });
     }, []);
 
-    // Build comprehensive list of available characters
+    // Build strictly script-isolated character inventory
     const availableItems = useMemo(() => {
         const items = [];
-        const seenCodes = new Set();
+        const seenOutputByCat = new Set();
+        const seenScriptOutputs = new Set();
 
         const addUnique = (item) => {
-            const key = `${item.category}_${item.unicode || item.char}`;
-            if (!seenCodes.has(key)) {
-                seenCodes.add(key);
+            const val = item.unicode || item.char;
+            if (!val) return;
+            const catKey = `${item.category}_${val}`;
+            if (!seenOutputByCat.has(catKey)) {
+                seenOutputByCat.add(catKey);
+                if (item.category !== 'punctuation') {
+                    seenScriptOutputs.add(val);
+                }
                 items.push(item);
             }
         };
@@ -120,114 +167,176 @@ export default function KeyboardManager({ initialScriptId, allChars = [], alphab
         const legacyAlphabetGlyphs = configState?.alphabetGlyphs || {};
         const legacySyllabaryMap = configState?.syllabaryMap || {};
         const legacyCustomGlyphs = configState?.customGlyphs || {};
+        const legacyFeatural = configState?.featuralComponents || {};
         const numberSystem = configState?.numberSystem || {};
 
-        const activeAlphabetGlyphs = currentScriptData?.alphabetGlyphs 
-            || (Object.keys(alphabetGlyphs).length > 0 ? alphabetGlyphs : legacyAlphabetGlyphs) 
+        const activeAlphabetGlyphs = currentScriptData?.alphabetGlyphs
+            || (isDefaultScript ? (Object.keys(legacyAlphabetGlyphs).length > 0 ? legacyAlphabetGlyphs : alphabetGlyphs) : {})
             || {};
-        const activeNames = currentScript?.alphabetNames || {};
+        const activeNames = (currentScript?.alphabetNames && Object.keys(currentScript.alphabetNames).length > 0)
+            ? currentScript.alphabetNames
+            : (isDefaultScript ? (configState?.alphabetNames || {}) : {});
 
-        // 1. Phonemes & Alphabet Letters
-        const phonemes = [
-            ...parsePhonemes(legacyConsonants),
-            ...parsePhonemes(legacyVowels),
-            ...parsePhonemes(legacyOther),
-            ...allChars.map(c => ({ raw: c, char: c, mapped: c }))
-        ];
-
-        phonemes.forEach(({ char, mapped }) => {
-            const glyphCode = activeAlphabetGlyphs[char] || activeAlphabetGlyphs[mapped];
-            const name = activeNames[char] || activeNames[mapped] || char;
-            addUnique({
-                id: `letter_${char}`,
-                char: char,
-                unicode: glyphCode || mapped || char,
-                label: name,
-                category: 'letters',
-                hasGlyph: Boolean(glyphCode)
+        // 1. Alphabetic / Abjad / Abugida letters (isolated from syllabary/logographs)
+        if (['alphabetic', 'abjad', 'abugida'].includes(scriptType)) {
+            const phonemes = [
+                ...parsePhonemes(legacyConsonants),
+                ...parsePhonemes(legacyVowels),
+                ...parsePhonemes(legacyOther),
+            ];
+            // Include any extra allChars entries not already covered by phonemes
+            const knownMapped = new Set(phonemes.map(p => p.mapped));
+            allChars.forEach(c => {
+                if (c && !knownMapped.has(c)) {
+                    phonemes.push({ raw: c, phoneme: c, char: c, mapped: c });
+                }
             });
-        });
 
-        // 2. Syllabary (for Syllabic conlangs)
-        const sylMap = currentScriptData?.syllabaryMap || legacySyllabaryMap || {};
-        Object.entries(sylMap).forEach(([syl, code]) => {
-            addUnique({
-                id: `syl_${syl}`,
-                char: syl,
-                unicode: code || syl,
-                label: syl,
-                category: 'syllables',
-                hasGlyph: Boolean(code && code !== syl)
-            });
-        });
-
-        // 3. Logographs & Words (for Logographic conlangs)
-        lexicon.forEach(entry => {
-            const hasIdeogram = entry.customGlyph || entry.ideogram;
-            if (hasIdeogram) {
+            phonemes.forEach(({ phoneme, char, mapped }) => {
+                const baseChar = mapped || char;
+                const glyphCode = activeAlphabetGlyphs[baseChar] || activeAlphabetGlyphs[phoneme];
+                const name = activeNames[baseChar] || activeNames[phoneme] || (phoneme !== baseChar ? phoneme : baseChar);
                 addUnique({
-                    id: `logo_${entry.id || entry.word}`,
-                    char: entry.word,
-                    unicode: hasIdeogram,
-                    label: entry.translation ? `${entry.word} (${entry.translation})` : entry.word,
-                    category: 'logographs',
+                    id: `letter_${baseChar}`,
+                    char: baseChar,
+                    phoneme,
+                    unicode: glyphCode || baseChar,
+                    label: name,
+                    category: 'letters',
+                    hasGlyph: Boolean(glyphCode),
+                    isUpper: false
+                });
+
+                // Include uppercase glyph variant if mapped in this script
+                const upperGlyph = activeAlphabetGlyphs[`${baseChar}_uppercase`] || activeAlphabetGlyphs[`${phoneme}_uppercase`];
+                if (upperGlyph) {
+                    addUnique({
+                        id: `letter_upper_${baseChar}`,
+                        char: baseChar.toUpperCase(),
+                        phoneme,
+                        unicode: upperGlyph,
+                        label: `${name} (Upper)`,
+                        category: 'letters',
+                        hasGlyph: true,
+                        isUpper: true
+                    });
+                }
+            });
+        }
+
+        // 2. Syllabary (only for syllabic scripts, strictly isolated to selected script)
+        if (scriptType === 'syllabic') {
+            const sylMap = currentScriptData?.syllabaryMap
+                || (isDefaultScript ? legacySyllabaryMap : {})
+                || {};
+            Object.entries(sylMap).forEach(([syl, code]) => {
+                addUnique({
+                    id: `syl_${syl}`,
+                    char: syl,
+                    phoneme: syl,
+                    unicode: code || syl,
+                    label: syl,
+                    category: 'syllables',
+                    hasGlyph: Boolean(code && code !== syl)
+                });
+            });
+        }
+
+        // 3. Logographs & direct lexicon forms (only for logographic scripts, or entries explicitly targeting this script)
+        if (scriptType === 'logographic') {
+            lexicon.forEach(entry => {
+                const directScriptForm = entry.scriptForms?.[selectedScriptId];
+                const resolvesHere = resolveWordScriptId(entry, configState) === selectedScriptId;
+                const glyph = directScriptForm || (resolvesHere ? (entry.customGlyph || entry.ideogram) : '');
+                if (glyph) {
+                    addUnique({
+                        id: `logo_${entry.id || entry.word}`,
+                        char: entry.word,
+                        phoneme: entry.word,
+                        unicode: glyph,
+                        label: entry.translation ? `${entry.word} (${entry.translation})` : entry.word,
+                        category: 'logographs',
+                        hasGlyph: true
+                    });
+                }
+            });
+        }
+
+        // 4. Featural components (only for featural_block scripts)
+        if (scriptType === 'featural_block') {
+            const featural = currentScriptData?.featuralComponents
+                || (isDefaultScript ? legacyFeatural : {})
+                || {};
+            Object.entries(featural).forEach(([slotName, val]) => {
+                addUnique({
+                    id: `feat_${slotName}`,
+                    char: slotName,
+                    phoneme: slotName,
+                    unicode: val,
+                    label: slotName,
+                    category: 'blocks',
                     hasGlyph: true
                 });
-            }
-        });
-
-        // 4. Featural components (for Featural/Block conlangs)
-        const featural = currentScriptData?.featuralComponents || {};
-        Object.entries(featural).forEach(([slotName, val]) => {
-            addUnique({
-                id: `feat_${slotName}`,
-                char: slotName,
-                unicode: val,
-                label: slotName,
-                category: 'blocks',
-                hasGlyph: true
             });
-        });
+        }
 
-        // 5. Custom Drawn Glyphs not yet listed
-        const customGlyphs = currentScriptData?.customGlyphs || legacyCustomGlyphs || {};
+        // 5. Custom Drawn Glyphs belonging to THIS script that aren't already represented above
+        const customGlyphs = currentScriptData?.customGlyphs
+            || (isDefaultScript ? legacyCustomGlyphs : {})
+            || {};
+        const fallbackCategory = scriptType === 'syllabic'
+            ? 'syllables'
+            : scriptType === 'logographic'
+                ? 'logographs'
+                : scriptType === 'featural_block'
+                    ? 'blocks'
+                    : 'letters';
+
         Object.keys(customGlyphs).forEach(code => {
             const num = Number(code);
             const unicodeChar = !isNaN(num) ? String.fromCodePoint(num) : code;
+            if (seenScriptOutputs.has(unicodeChar)) return;
             addUnique({
-                id: `glyph_${code}`,
+                id: `glyph_${selectedScriptId}_${code}`,
                 char: unicodeChar,
                 unicode: unicodeChar,
                 label: `Glyph ${code}`,
-                category: 'letters',
+                category: fallbackCategory,
                 hasGlyph: true
             });
         });
 
-        // 6. Number System Digits
-        if (numberSystem.zero) {
+        // 6. Number System Digits — ALWAYS use the digit glyph or actual digit '0'..'9',
+        // never multi-letter number word names like "uri" or "luta".
+        const emitDigit = (digitStr, name) => {
+            const customDigit = numberSystem.digitGlyphs?.[digitStr];
             addUnique({
-                id: 'num_0',
-                char: '0',
-                unicode: numberSystem.digitGlyphs?.['0'] || numberSystem.zero,
-                label: `0 (${numberSystem.zero})`,
+                id: `num_${digitStr}`,
+                char: digitStr,
+                unicode: customDigit || digitStr,
+                label: name ? `${digitStr} (${name})` : digitStr,
                 category: 'numbers',
-                hasGlyph: Boolean(numberSystem.digitGlyphs?.['0'])
+                hasGlyph: Boolean(customDigit)
             });
+        };
+
+        if (numberSystem.zero || numberSystem.digitGlyphs?.['0']) {
+            emitDigit('0', numberSystem.zero || '');
         }
         Object.entries(numberSystem.digits || {}).forEach(([digit, name]) => {
-            addUnique({
-                id: `num_${digit}`,
-                char: String(digit),
-                unicode: numberSystem.digitGlyphs?.[digit] || name,
-                label: `${digit} (${name})`,
-                category: 'numbers',
-                hasGlyph: Boolean(numberSystem.digitGlyphs?.[digit])
-            });
+            if (/^[0-9]$/.test(String(digit))) {
+                emitDigit(String(digit), name || '');
+            }
         });
+        for (let d = 0; d <= 9; d++) {
+            const ds = String(d);
+            if (!seenOutputByCat.has(`numbers_${numberSystem.digitGlyphs?.[ds] || ds}`)) {
+                emitDigit(ds, '');
+            }
+        }
 
-        // 7. Standard Punctuation & Symbols
-        const STD_PUNCT = "0123456789[]{}|;:'\",.<>/?-=_+`~!@#$%^&*()".split("");
+        // 7. Standard Punctuation & Symbols (digits omitted — handled in numbers above)
+        const STD_PUNCT = "[]{}|;:'\",.<>/?-=_+`~!@#$%^&*()".split("");
         STD_PUNCT.forEach(p => {
             addUnique({
                 id: `punct_${p}`,
@@ -241,8 +350,8 @@ export default function KeyboardManager({ initialScriptId, allChars = [], alphab
 
         return items;
     }, [
-        currentScriptData, currentScript, legacyConsonants, legacyVowels, 
-        legacyOther, allChars, alphabetGlyphs, configState, lexicon, parsePhonemes
+        currentScriptData, currentScript, selectedScriptId, isDefaultScript, scriptType,
+        legacyConsonants, legacyVowels, legacyOther, allChars, alphabetGlyphs, configState, lexicon, parsePhonemes
     ]);
 
     // Available categories
@@ -450,7 +559,7 @@ export default function KeyboardManager({ initialScriptId, allChars = [], alphab
                     <select 
                         className="km-select"
                         value={selectedScriptId}
-                        onChange={(e) => setSelectedScriptId(e.target.value)}
+                        onChange={(e) => handleScriptChange(e.target.value)}
                     >
                         {scriptSystems.length > 0 ? (
                             scriptSystems.map(s => (
@@ -561,8 +670,26 @@ export default function KeyboardManager({ initialScriptId, allChars = [], alphab
 
                 {/* Exporters */}
                 <div className="km-export-group">
-                    <Button variant="sec" size="sm" onClick={() => exportKLC(scriptName, mappings)}>
-                        <Download size={14} /> Windows (.klc)
+                    <Button
+                        variant="sec"
+                        size="sm"
+                        title={t('keyboardManager.windowsInstallerTooltip', { defaultValue: 'Download 2-click Windows Installer (.zip) + .klc' })}
+                        onClick={() => {
+                            exportWindowsInstaller(scriptName, mappings);
+                            toast.success(t('keyboardManager.windowsInstallerToast', {
+                                defaultValue: 'ZIP downloaded! Extract it and double-click Install_*.bat to run.'
+                            }));
+                        }}
+                    >
+                        <Download size={14} /> {t('keyboardManager.windowsInstallerBtn', { defaultValue: 'Windows (Installer .zip)' })}
+                    </Button>
+                    <Button
+                        variant="sec"
+                        size="sm"
+                        title={t('keyboardManager.windowsKlcTooltip', { defaultValue: 'Export raw MSKLC source (.klc)' })}
+                        onClick={() => exportKLC(scriptName, mappings)}
+                    >
+                        <Download size={14} /> .klc
                     </Button>
                     <Button variant="sec" size="sm" onClick={() => exportMac(scriptName, mappings)}>
                         <Download size={14} /> macOS (.keylayout)
@@ -611,7 +738,10 @@ export default function KeyboardManager({ initialScriptId, allChars = [], alphab
                                     >
                                         <span className="km-key-hint">{k.label}</span>
                                         {isMapped && !k.special && (
-                                            <span className="km-key-val custom-font-text notranslate">
+                                            <span
+                                                className={`km-key-val custom-font-text conlang-script-${selectedScriptId} notranslate`}
+                                                style={{ writingMode: 'horizontal-tb', direction: scriptWritingDirection === 'rtl' ? 'rtl' : 'ltr' }}
+                                            >
                                                 {val}
                                             </span>
                                         )}
@@ -711,10 +841,15 @@ export default function KeyboardManager({ initialScriptId, allChars = [], alphab
                                 onClick={() => handleAssignChar(item)}
                                 title={`${item.label} (${item.unicode}) ${isMappedSomewhere ? `— ${mappedTo.join(', ')}` : ''}`}
                             >
-                                <span className="km-char-glyph custom-font-text notranslate">
+                                <span
+                                    className={`km-char-glyph custom-font-text conlang-script-${selectedScriptId} notranslate`}
+                                    style={{ writingMode: 'horizontal-tb', direction: scriptWritingDirection === 'rtl' ? 'rtl' : 'ltr' }}
+                                >
                                     {item.unicode}
                                 </span>
-                                <span className="km-char-meta">{item.char || item.label}</span>
+                                <span className="km-char-meta">
+                                    {item.phoneme && item.phoneme !== item.char ? `${item.char} (${item.phoneme})` : (item.char || item.label)}
+                                </span>
                                 {isMappedSomewhere && (
                                     <span className="km-char-badge" title={mappedTo.join(', ')}>
                                         ✓

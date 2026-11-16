@@ -2072,6 +2072,10 @@ export default {
     "selectKeyFirst": "请先在上方键盘中点击选择一个按键。",
     "importSuccess": "键盘布局导入成功！",
     "invalidFile": "无效的键盘布局 JSON 文件格式。",
-    "readError": "无法解析 JSON 文件。"
+    "readError": "无法解析 JSON 文件。",
+    "windowsInstallerBtn": "Windows (安装包 .zip)",
+    "windowsInstallerTooltip": "下载双击即可安装的 Windows 安装包 (.zip) + .klc",
+    "windowsInstallerToast": "ZIP 已下载！解压后双击 Install_*.bat 即可安装并启用。",
+    "windowsKlcTooltip": "导出 MSKLC 源文件 (.klc)"
   }
 }

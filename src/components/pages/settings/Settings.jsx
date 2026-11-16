@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import SettingsGeneral from './SettingsGeneral.jsx';
 import PhonologyTab from './PhonologyTab.jsx';
 import './settings.css';
@@ -14,12 +15,29 @@ import ParticleTab from './ParticleTab.jsx';
 import BackupTab from './BackupTab.jsx';
 import { useIsDesktop } from '../../../utils/device.js';
 
+const VALID_SETTINGS_TABS = new Set([
+    'general', 'phonology', 'lexicon', 'grammar', 'numerals',
+    'functionWords', 'particles', 'backup', 'system'
+]);
+
 export default function Settings() {
     const { t } = useTranslation();
-    const [activeTab, setActiveTab] = useState('general');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const location = useLocation();
+    const requestedTab = searchParams.get('tab') || location.state?.tab || '';
+    const [localTab, setLocalTab] = useState('general');
+    const activeTab = VALID_SETTINGS_TABS.has(requestedTab) ? requestedTab : localTab;
     // Backup talks to the desktop-only Obsidian plugin — hide the tab on mobile.
     const isDesktop = useIsDesktop();
     const usesParticles = useConfigStore((state) => state.usesParticles) || false;
+
+    const handleTabSelect = (tabId) => {
+        setLocalTab(tabId);
+        const next = new URLSearchParams(searchParams);
+        next.set('tab', tabId);
+        if (tabId !== 'grammar') next.delete('sub');
+        setSearchParams(next, { replace: true });
+    };
 
     const configTabs = [
         { id: 'general', label: 'General', icon: Cog },
@@ -44,7 +62,7 @@ export default function Settings() {
                         <button
                             key={tab.id}
                             className={`config-tab-btn tab ${activeTab === tab.id ? 'active' : ''}`}
-                            onClick={() => setActiveTab(tab.id)}
+                            onClick={() => handleTabSelect(tab.id)}
                         >
                             <tab.icon className='settings-icon' size={18}/> 
                             {t(`settings.tabs.${tab.id}`) || tab.label}

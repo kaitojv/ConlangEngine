@@ -42,8 +42,9 @@ import { CharacterCount } from '@tiptap/extension-character-count';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Mark, mergeAttributes } from '@tiptap/core';
 import { createGrammarAnalyzer } from '@/utils/grammarAnalyzer.js';
-import { resolveEffectiveSyntaxOrder, buildRolePriorityMap } from '@/utils/wordAssist/syntaxOrdering.js';
+import { resolveEffectiveSyntaxOrder } from '@/utils/wordAssist/syntaxOrdering.js';
 import LiveTranslatorPanel from './LiveTranslatorPanel.jsx';
+import WordAssistSettingsPanel from './WordAssistSettingsPanel.jsx';
 import LexiconEditModal from '../dictionary/LexiconEditModal.jsx';
 import { Indent } from './indentExtension.js';
 import { WikiImageNode, WikiDiagramNode, configureWikiNodeViews } from './wikiNodes.js';
@@ -319,31 +320,6 @@ const PRONOUN_MAP = {
     'theirs': { base: 'they', person: '3rd', number: 'P', role: null, case: 'genitive' },
 };
 
-// Word Assist Configuration Menu Constants
-const GRAMMAR_RULE_IMPORT_MAP = [
-    { keywords: ['past', 'preterit', 'preterite'], trigger: 'was, did', type: 'word', position: 'suffix' },
-    { keywords: ['future'], trigger: 'will', type: 'word', position: 'suffix' },
-    { keywords: ['perfect'], trigger: 'have, has, had', type: 'word', position: 'suffix' },
-    { keywords: ['plural'], trigger: '-s', type: 'suffix', position: 'suffix' },
-    { keywords: ['negat', 'negative'], trigger: 'not', type: 'word', position: 'prefix' },
-    { keywords: ['gerund', 'continuous', 'progressive'], trigger: '-ing', type: 'suffix', position: 'suffix' },
-    { keywords: ['passive'], trigger: 'was, been', type: 'word', position: 'suffix' },
-    { keywords: ['possessive', 'genitive'], trigger: "'s", type: 'suffix', position: 'suffix' },
-    { keywords: ['comparative'], trigger: 'more, -er', type: 'word', position: 'before' },
-    { keywords: ['superlative'], trigger: 'most, -est', type: 'word', position: 'before' },
-    { keywords: ['agentive'], trigger: '-er, -or', type: 'suffix', position: 'suffix' },
-    { keywords: ['object', 'accusative'], trigger: 'O', type: 'trigger', position: 'suffix' },
-    { keywords: ['subject', 'nominative'], trigger: 'S', type: 'trigger', position: 'suffix' },
-];
-
-function importDefaults(ruleName) {
-    const lower = (ruleName || '').toLowerCase();
-    for (const map of GRAMMAR_RULE_IMPORT_MAP) {
-        if (map.keywords.some(k => lower.includes(k))) return map;
-    }
-    return { trigger: '', type: 'word', position: 'suffix' };
-}
-
 function useConlangAnalyzer() {
     const rawLexicon = useLexiconStore((state) => state.lexicon);
     const lexicon = useMemo(() => rawLexicon || [], [rawLexicon]);
@@ -352,10 +328,22 @@ function useConlangAnalyzer() {
         grammarRules: state.grammarRules,
         personRules: state.personRules,
         verbMarker: state.verbMarker,
+        cliticsRules: state.cliticsRules,
         syntaxOrder: state.syntaxOrder,
         wordAssistConfig: state.wordAssistConfig,
         adjectivePlacement: state.adjectivePlacement,
         adjectiveAgreement: state.adjectiveAgreement,
+        pronounMatrixData: state.pronounMatrixData,
+        particleDatabase: state.particleDatabase,
+        usesParticles: state.usesParticles,
+        morphologyMode: state.morphologyMode,
+        numberSystem: state.numberSystem,
+        numeralBase: state.numeralBase,
+        vowels: state.vowels,
+        consonants: state.consonants,
+        otherPhonemes: state.otherPhonemes,
+        scriptSystems: state.scriptSystems,
+        activeScriptSystemId: state.activeScriptSystemId,
     })));
     const personRulesStr   = config.personRules || "";
     const rawGrammarRules  = config.grammarRules;
@@ -402,9 +390,40 @@ function useConlangAnalyzer() {
         transliterate,
         normalizeToBase,
         verbMarker: config.verbMarker,
+        cliticsRules: config.cliticsRules,
         adjectivePlacement: config.adjectivePlacement,
-        adjectiveAgreement: config.adjectiveAgreement
-    }), [lexicon, grammarRules, syntaxOrder, waConfig, personRulesArray, transliterate, normalizeToBase, config.verbMarker, config.adjectivePlacement, config.adjectiveAgreement]);
+        adjectiveAgreement: config.adjectiveAgreement,
+        pronounMatrixData: config.pronounMatrixData,
+        particleDatabase: config.particleDatabase,
+        usesParticles: config.usesParticles,
+        morphologyMode: config.morphologyMode,
+        numberSystem: config.numberSystem,
+        numeralBase: config.numeralBase,
+        vowels: config.vowels,
+        consonants: config.consonants,
+        otherPhonemes: config.otherPhonemes
+    }), [
+        lexicon,
+        grammarRules,
+        syntaxOrder,
+        waConfig,
+        personRulesArray,
+        transliterate,
+        normalizeToBase,
+        config.verbMarker,
+        config.cliticsRules,
+        config.adjectivePlacement,
+        config.adjectiveAgreement,
+        config.pronounMatrixData,
+        config.particleDatabase,
+        config.usesParticles,
+        config.morphologyMode,
+        config.numberSystem,
+        config.numeralBase,
+        config.vowels,
+        config.consonants,
+        config.otherPhonemes
+    ]);
 
     return {
         analyzer,
@@ -419,421 +438,6 @@ function useConlangAnalyzer() {
         updateConfig
     };
 }
-
-function WordAssistSettingsMenu({ config, updateConfig, grammarRules }) {
-    const { t } = useTranslation();
-    const wa = config.wordAssistConfig || { triggers: [] };
-    const triggers = wa.triggers || [];
-
-    const updateTrigger = (id, field, value) => {
-        const newTriggers = triggers.map(trig => trig.id === id ? { ...trig, [field]: value } : trig);
-        updateConfig({ wordAssistConfig: { ...wa, triggers: newTriggers } });
-    };
-
-    const addTrigger = () => {
-        const newId = `tr-${Date.now()}`;
-        const newTrigger = { id: newId, name: 'New Rule', trigger: '', marker: '', type: 'word', position: 'before', priority: triggers.length + 1 };
-        updateConfig({ wordAssistConfig: { ...wa, triggers: [...triggers, newTrigger] } });
-    };
-
-    const removeTrigger = (id) => {
-        const newTriggers = triggers.filter(trig => trig.id !== id);
-        updateConfig({ wordAssistConfig: { ...wa, triggers: newTriggers } });
-    };
-
-    const moveTrigger = (idx, direction) => {
-        const newTriggers = [...triggers];
-        const targetIdx = idx + direction;
-        if (targetIdx < 0 || targetIdx >= newTriggers.length) return;
-        const [moved] = newTriggers.splice(idx, 1);
-        newTriggers.splice(targetIdx, 0, moved);
-        
-        // Ensure priority matches the new array order so sorting works correctly
-        newTriggers.forEach((trig, i) => { trig.priority = i + 1; });
-        
-        updateConfig({ wordAssistConfig: { ...wa, triggers: newTriggers } });
-    };
-
-    const importFromGrammarRules = () => {
-        const rules = grammarRules || [];
-        const existingNames = new Set(triggers.map(trig => trig.name.trim().toLowerCase()));
-        const newTriggers = [...triggers];
-        let added = 0;
-        rules.forEach(rule => {
-            if (!rule.affix || !rule.name) return;
-            // Skip if a trigger with the same name already exists
-            if (existingNames.has(rule.name.trim().toLowerCase())) return;
-            const defaults = importDefaults(rule.name);
-            // Extract a clean marker from the affix (strip regex/formula, keep affix chars)
-            const rawAffix = rule.affix.trim();
-            const isSuffix = rawAffix.startsWith('-');
-            const isPrefix = rawAffix.endsWith('-');
-            let marker = rawAffix;
-            // Simplify formulas: if it contains '=>', take the right-hand side as hint only
-            if (rawAffix.includes('=>')) marker = '-' + rawAffix.split('=>')[1].trim().replace(/[^a-zA-Z'\u00C0-\u024F]/g, '');
-            const newEntry = {
-                id: `gr-import-${rule.id || Date.now()}-${added}`,
-                name: rule.name,
-                trigger: defaults.trigger,
-                marker,
-                type: defaults.type,
-                position: isSuffix ? 'suffix' : isPrefix ? 'prefix' : defaults.position,
-                priority: newTriggers.length + 1,
-            };
-            newTriggers.push(newEntry);
-            existingNames.add(rule.name.trim().toLowerCase());
-            added++;
-        });
-        if (added === 0) return; // nothing new to import
-        updateConfig({ wordAssistConfig: { ...wa, triggers: newTriggers } });
-    };
-
-    const roleOverrides = wa.roleOverrides || [];
-    const addRoleOverride = () => {
-        updateConfig({ wordAssistConfig: { ...wa, roleOverrides: [...roleOverrides, { word: '', role: 'V' }] } });
-    };
-    const updateRoleOverride = (idx, field, value) => {
-        const newOverrides = [...roleOverrides];
-        newOverrides[idx][field] = field === 'word' ? value.toLowerCase() : value;
-        updateConfig({ wordAssistConfig: { ...wa, roleOverrides: newOverrides } });
-    };
-    const removeRoleOverride = (idx) => {
-        const newOverrides = roleOverrides.filter((_, i) => i !== idx);
-        updateConfig({ wordAssistConfig: { ...wa, roleOverrides: newOverrides } });
-    };
-
-    const importableCount = (grammarRules || []).filter(r =>
-        r.affix && r.name && !triggers.some(trig => trig.name.trim().toLowerCase() === r.name.trim().toLowerCase())
-    ).length;
-
-    const roleLabels = {
-        'S': 'Subject',
-        'V': 'Verb',
-        'O': 'Direct Object',
-        'D': 'Indirect Object (Dative)',
-        'M': 'Modal Verb',
-        'N': 'Negation',
-        'P': 'Preposition / Adposition',
-        'L': 'Location / Place',
-        'T': 'Time',
-        'Q': 'Question Word',
-        'C': 'Comparative / Particle',
-        'R': 'Adverb'
-    };
-
-    const effectiveOrder = resolveEffectiveSyntaxOrder(wa.syntaxOrder, config.syntaxOrder || 'SVO', config.syntaxOrder || 'SVO');
-    const syntaxOrder = buildRolePriorityMap(effectiveOrder).baseOrder.filter(r => roleLabels[r]).join('');
-
-    const [draggedRoleIdx, setDraggedRoleIdx] = useState(null);
-
-    const handleRoleDragStart = (e, index) => {
-        setDraggedRoleIdx(index);
-        e.dataTransfer.effectAllowed = "move";
-    };
-
-    const handleRoleDragOver = (e) => {
-        e.preventDefault();
-    };
-
-    const handleRoleDrop = (e, targetIndex) => {
-        e.preventDefault();
-        if (draggedRoleIdx === null || draggedRoleIdx === targetIndex) return;
-        const arr = syntaxOrder.split('');
-        const [moved] = arr.splice(draggedRoleIdx, 1);
-        arr.splice(targetIndex, 0, moved);
-        updateConfig({ wordAssistConfig: { ...wa, syntaxOrder: arr.join('') } });
-        setDraggedRoleIdx(null);
-    };
-
-    const moveRole = (idx, dir) => {
-        const arr = syntaxOrder.split('');
-        const target = idx + dir;
-        if (target < 0 || target >= arr.length) return;
-        const [moved] = arr.splice(idx, 1);
-        arr.splice(target, 0, moved);
-        updateConfig({ wordAssistConfig: { ...wa, syntaxOrder: arr.join('') } });
-    };
-
-    return (
-        <div className="wa-settings-container-v2">
-
-            {/* Syntax Priority Editor */}
-            <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(0,0,0,0.25)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.2)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <h4 style={{ fontSize: '0.8rem', fontWeight: 800, margin: 0, color: 'var(--acc)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Settings size={15} /> {t('wiki.wordAssistSettings.syntacticPriority')}
-                    </h4>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                updateConfig({ wordAssistConfig: { ...wa, syntaxOrder: '' } });
-                            }}
-                            style={{
-                                background: 'none',
-                                border: '1px solid var(--bd)',
-                                borderRadius: '4px',
-                                color: 'var(--acc)',
-                                fontSize: '0.62rem',
-                                padding: '2px 8px',
-                                cursor: 'pointer'
-                            }}
-                            title="Reset constituent order to match Settings > Grammar"
-                        >
-                            Reset to Grammar ({config.syntaxOrder || 'SVO'})
-                        </button>
-                        <span style={{ fontSize: '0.62rem', color: 'var(--tx3)' }}>{t('wiki.wordAssistSettings.dragHint')}</span>
-                    </div>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {syntaxOrder.split('').map((role, idx) => (
-                        <div 
-                            key={role} 
-                            draggable
-                            onDragStart={(e) => handleRoleDragStart(e, idx)}
-                            onDragOver={handleRoleDragOver}
-                            onDrop={(e) => handleRoleDrop(e, idx)}
-                            style={{ 
-                                display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--s2)', padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--bd)',
-                                fontSize: '0.68rem', fontWeight: 600, cursor: 'grab', transition: 'all 0.15s ease',
-                                userSelect: 'none',
-                                opacity: draggedRoleIdx === idx ? 0.3 : 1
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.borderColor = 'var(--acc)';
-                                e.currentTarget.style.background = 'var(--s3)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.borderColor = 'var(--bd)';
-                                e.currentTarget.style.background = 'var(--s2)';
-                            }}
-                        >
-                            <span style={{ color: 'var(--tx)', whiteSpace: 'nowrap' }}>{idx + 1}. {roleLabels[role] || role}</span>
-                            <div style={{ display: 'flex', gap: '2px', marginLeft: '4px' }}>
-                                <button onClick={() => moveRole(idx, -1)} disabled={idx === 0} style={{ padding: 0, border: 'none', background: 'none', color: 'var(--tx3)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><ChevronUp size={11}/></button>
-                                <button onClick={() => moveRole(idx, 1)} disabled={idx === syntaxOrder.length - 1} style={{ padding: 0, border: 'none', background: 'none', color: 'var(--tx3)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><ChevronDown size={11}/></button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* Modifier Placement Options */}
-            <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(0,0,0,0.25)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <h4 style={{ fontSize: '0.8rem', fontWeight: 800, margin: 0, color: 'var(--acc)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Settings size={15} /> {t('wiki.wordAssistSettings.modifierPosition')}
-                    </h4>
-                </div>
-                <div style={{ display: 'flex', gap: '20px' }}>
-                    <div style={{ flex: 1 }}>
-                        <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>{t('wiki.wordAssistSettings.adjectives')}</label>
-                        <select className="wa-select-v2" value={wa.adjPos || 'before'} onChange={(e) => updateConfig({ wordAssistConfig: { ...wa, adjPos: e.target.value } })}>
-                            <option value="before">{t('wiki.wordAssistSettings.beforeNoun')}</option>
-                            <option value="after">{t('wiki.wordAssistSettings.afterNoun')}</option>
-                            <option value="priority">{t('wiki.wordAssistSettings.followPriority')}</option>
-                        </select>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                        <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>{t('wiki.wordAssistSettings.genitives')}</label>
-                        <select className="wa-select-v2" value={wa.genPos || 'before'} onChange={(e) => updateConfig({ wordAssistConfig: { ...wa, genPos: e.target.value } })}>
-                            <option value="before">{t('wiki.wordAssistSettings.beforeNounGen')}</option>
-                            <option value="after">{t('wiki.wordAssistSettings.afterNounGen')}</option>
-                            <option value="priority">{t('wiki.wordAssistSettings.followPriority')}</option>
-                        </select>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                        <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>{t('wiki.wordAssistSettings.adverbs')}</label>
-                        <select className="wa-select-v2" value={wa.advPos || 'before'} onChange={(e) => updateConfig({ wordAssistConfig: { ...wa, advPos: e.target.value } })}>
-                            <option value="before">{t('wiki.wordAssistSettings.beforeVerb')}</option>
-                            <option value="after">{t('wiki.wordAssistSettings.afterVerb')}</option>
-                            <option value="priority">{t('wiki.wordAssistSettings.followPriority')}</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            {/* Copula Settings */}
-            <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(0,0,0,0.25)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <h4 style={{ fontSize: '0.8rem', fontWeight: 800, margin: 0, color: 'var(--acc)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Settings size={15} /> {t('wiki.wordAssistSettings.copulaTitle')}
-                    </h4>
-                </div>
-                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                    <div style={{ flex: 1, minWidth: '200px' }}>
-                        <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>{t('wiki.wordAssistSettings.copulaBehavior')}</label>
-                        <select 
-                            className="wa-select-v2" 
-                            value={wa.copulaBehavior === 'replace' || wa.copulaBehavior === 'both' || wa.copulaBehavior === 'omit' ? 'zero_copula' : (wa.copulaBehavior || 'normal')} 
-                            onChange={(e) => updateConfig({ wordAssistConfig: { ...wa, copulaBehavior: e.target.value } })}
-                        >
-                            <option value="normal">{t('wiki.wordAssistSettings.copulaNormal')}</option>
-                            <option value="zero_copula">{t('wiki.wordAssistSettings.copulaZero')}</option>
-                        </select>
-                    </div>
-                    {wa.copulaBehavior === 'zero_copula' && (
-                        <div style={{ flex: 1, minWidth: '200px' }}>
-                            <label style={{ fontSize: '0.7rem', color: 'var(--tx2)', display: 'block', marginBottom: '4px' }}>{t('wiki.wordAssistSettings.copulaReplacement')}</label>
-                            <Input 
-                                value={wa.copulaReplacement || ''} 
-                                onChange={(e) => updateConfig({ wordAssistConfig: { ...wa, copulaReplacement: e.target.value } })}
-                                placeholder="e.g. vu"
-                                style={{ width: '100%', padding: '8px 12px', fontSize: '0.85rem' }}
-                            />
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Global Dictionary Overrides */}
-            <div style={{ marginBottom: '20px', padding: '16px', background: 'rgba(0,0,0,0.25)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <h4 style={{ fontSize: '0.8rem', fontWeight: 800, margin: 0, color: 'var(--acc)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Settings size={15} /> {t('wiki.wordAssistSettings.globalOverrides')}
-                    </h4>
-                    <Button variant="default" onClick={addRoleOverride} style={{ fontSize: '0.65rem', padding: '2px 8px' }}>
-                        <Plus size={12} /> {t('wiki.wordAssistSettings.addWord')}
-                    </Button>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {roleOverrides.map((ro, idx) => (
-                        <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            <Input 
-                                value={ro.word} 
-                                onChange={(e) => updateRoleOverride(idx, 'word', e.target.value)}
-                                placeholder={t('wiki.wordAssistSettings.overridesPlaceholder')}
-                                style={{ flex: 1, padding: '4px 8px', fontSize: '0.8rem' }}
-                            />
-                            <span style={{ color: 'var(--tx3)' }}>→</span>
-                            <select className="wa-select-v2" value={ro.role} onChange={(e) => updateRoleOverride(idx, 'role', e.target.value)} style={{ flex: 1, minWidth: '150px' }}>
-                                {Object.entries(roleLabels).map(([val, label]) => (
-                                    <option key={val} value={val}>{label}</option>
-                                ))}
-                            </select>
-                            <button onClick={() => removeRoleOverride(idx)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '4px' }}><Trash2 size={14}/></button>
-                        </div>
-                    ))}
-                    {roleOverrides.length === 0 && <div style={{ fontSize: '0.7rem', color: 'var(--tx3)' }}>{t('wiki.wordAssistSettings.noOverrides')}</div>}
-                </div>
-            </div>
-
-            <div style={{ marginBottom: '12px', padding: '10px 14px', background: 'rgba(236, 72, 153, 0.08)', borderRadius: '8px', border: '1px solid rgba(236, 72, 153, 0.25)', fontSize: '0.74rem', color: 'var(--tx)' }}>
-                <strong>✨ Morphology Rules Auto-Active:</strong> Case affixes (Accusative, Genitive, Dative, Locative) and verb tenses defined in <strong>Settings &gt; Grammar &gt; Morphology</strong> are automatically applied to translated words. Custom triggers below are only needed for non-standard manual overrides.
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <span style={{ fontSize: '0.7rem', color: 'var(--tx3)', fontStyle: 'italic' }}>
-                    {t('wiki.wordAssistSettings.triggersDesc')}
-                </span>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                    {importableCount > 0 && (
-                        <Button
-                            variant="default"
-                            onClick={importFromGrammarRules}
-                            style={{ fontSize: '0.7rem', padding: '4px 10px', borderColor: 'var(--acc)', color: 'var(--acc)' }}
-                        >
-                            <Languages size={13} /> {t('wiki.wordAssistSettings.importGrammarRules', { count: importableCount })}
-                        </Button>
-                    )}
-                    <Button variant="default" onClick={addTrigger} style={{ fontSize: '0.7rem', padding: '4px 10px' }}>
-                        <Plus size={14} /> {t('wiki.wordAssistSettings.addNewTrigger')}
-                    </Button>
-                </div>
-            </div>
-
-            <div className="wa-triggers-list">
-                {[...triggers].sort((a,b) => a.priority - b.priority).map((trig, idx) => (
-                    <div key={trig.id} className="wa-trigger-card">
-                        <div className="wa-card-header">
-                            <div className="wa-priority-controls">
-                                <button onClick={() => moveTrigger(idx, -1)} disabled={idx === 0}><ChevronUp size={14}/></button>
-                                <button onClick={() => moveTrigger(idx, 1)} disabled={idx === triggers.length - 1}><ChevronDown size={14}/></button>
-                            </div>
-                            <input 
-                                className="wa-title-input"
-                                value={trig.name} 
-                                onChange={(e) => updateTrigger(trig.id, 'name', e.target.value)}
-                                placeholder={t('wiki.wordAssistSettings.ruleName')}
-                            />
-                            <button className="wa-remove-btn" onClick={() => removeTrigger(trig.id)}><Trash2 size={14}/></button>
-                        </div>
-                        
-                        <div className="wa-card-body">
-                            <div className="wa-field">
-                                <label>{trig.type === 'trigger' ? t('wiki.wordAssistSettings.syntacticRole') : t('wiki.wordAssistSettings.englishTrigger')}</label>
-                                {trig.type === 'trigger' ? (
-                                    <select className="wa-select-v2" value={trig.trigger} onChange={(e) => updateTrigger(trig.id, 'trigger', e.target.value)}>
-                                        <option value="">{t('wiki.wordAssistSettings.selectRole')}</option>
-                                        <option value="S">Subject (Nominative / Agent)</option>
-                                        <option value="V">Verb (Action)</option>
-                                        <option value="O">Object (Accusative / Patient)</option>
-                                        <option value="A">Article</option>
-                                        <option value="P">Preposition</option>
-                                        <option value="Q">Question Word</option>
-                                        <option value="G">Genitive / Possessive</option>
-                                        <option value="C">Comparative</option>
-                                        <option value="T">Time</option>
-                                        <option value="L">Place</option>
-                                        <option value="J">Adjective</option>
-                                        <option value="N">Negation</option>
-                                        <option value="R">Adverb</option>
-                                        <option value="M">Modal</option>
-                                    </select>
-                                ) : (
-                                    <Input 
-                                        value={trig.trigger} 
-                                        onChange={(e) => updateTrigger(trig.id, 'trigger', e.target.value)}
-                                        placeholder="e.g. not, from, -ing"
-                                    />
-                                )}
-                            </div>
-                            <div className="wa-field">
-                                <label>{t('wiki.wordAssistSettings.conlangMarker')}</label>
-                                <Input 
-                                    value={trig.marker} 
-                                    onChange={(e) => updateTrigger(trig.id, 'marker', e.target.value)}
-                                    placeholder="e.g. un, -m"
-                                />
-                            </div>
-                            <div className="wa-field">
-                                <label>{t('wiki.wordAssistSettings.applyAs')}</label>
-                                <select className="wa-select-v2" value={trig.type} onChange={(e) => updateTrigger(trig.id, 'type', e.target.value)}>
-                                    <option value="word">{t('wiki.wordAssistSettings.typeWord')}</option>
-                                    <option value="suffix">{t('wiki.wordAssistSettings.typeSuffix')}</option>
-                                    <option value="trigger">{t('wiki.wordAssistSettings.typeTrigger')}</option>
-                                </select>
-                            </div>
-                            <div className="wa-field">
-                                <label>{t('wiki.wordAssistSettings.position')}</label>
-                                <select className="wa-select-v2" value={trig.position} onChange={(e) => updateTrigger(trig.id, 'position', e.target.value)}>
-                                    <option value="prefix">{t('wiki.wordAssistSettings.posPrefix')}</option>
-                                    <option value="suffix">{t('wiki.wordAssistSettings.posSuffix')}</option>
-                                    <option value="before">{t('wiki.wordAssistSettings.posBefore')}</option>
-                                    <option value="after">{t('wiki.wordAssistSettings.posAfter')}</option>
-                                    <option value="beforeVerb">{t('wiki.wordAssistSettings.posBeforeVerb')}</option>
-                                    <option value="afterVerb">{t('wiki.wordAssistSettings.posAfterVerb')}</option>
-                                    <option value="endOfSentence">{t('wiki.wordAssistSettings.posEndSentence')}</option>
-                                    <option value="thanTarget">{t('wiki.wordAssistSettings.posThanTarget')}</option>
-                                </select>
-                            </div>
-                            {trig.type === 'trigger' && (
-                                <div className="wa-field">
-                                    <label>{t('wiki.wordAssistSettings.scope')}</label>
-                                    <select className="wa-select-v2" value={trig.scope || 'all'} onChange={(e) => updateTrigger(trig.id, 'scope', e.target.value)}>
-                                        <option value="all">{t('wiki.wordAssistSettings.scopeAll')}</option>
-                                        <option value="pronoun">{t('wiki.wordAssistSettings.scopePronoun')}</option>
-                                    </select>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-}
-
 
 // The new Interlinear Editor Component
 function WordAssistTutorial({ onClose }) {
@@ -1286,6 +890,8 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
                             transliterate={transliterate}
                             lexicon={lexicon}
                             config={config}
+                            updateConfig={updateConfig}
+                            grammarRules={grammarRules}
                             scriptSystems={config.scriptSystems || []}
                             activeScriptId={config.activeScriptSystemId || 'default'}
                         />
@@ -1296,10 +902,11 @@ function CorpusEditor({ content, onSave, writingDirection: props_writingDirectio
             {/* Settings Modal */}
             <Modal isOpen={isWaSettingsOpen} onClose={() => setIsWaSettingsOpen(false)} title={t('wiki.corpus.wordAssistSettings')}>
                 <div style={{ maxHeight: '75vh', overflowY: 'auto', paddingRight: '4px' }}>
-                    <WordAssistSettingsMenu 
-                        config={{ ...config, wordAssistConfig: waConfig }} 
-                        updateConfig={updateConfig} 
-                        grammarRules={grammarRules} 
+                    <WordAssistSettingsPanel
+                        config={{ ...config, wordAssistConfig: waConfig }}
+                        updateConfig={updateConfig}
+                        grammarRules={grammarRules}
+                        onClose={() => setIsWaSettingsOpen(false)}
                     />
                 </div>
             </Modal>
@@ -1389,6 +996,7 @@ function LegacyWikiEditor({ content, onSave }) {
 
     const {
         analyzer,
+        config: analyzerConfig,
         transliterate,
         syntaxOrder,
         waConfig,
@@ -1746,7 +1354,9 @@ function LegacyWikiEditor({ content, onSave }) {
                             syntaxOrder={resolveEffectiveSyntaxOrder(waConfig?.syntaxOrder, syntaxOrder, syntaxOrder)}
                             transliterate={transliterate}
                             lexicon={lexicon}
-                            config={config}
+                            config={{ ...config, ...analyzerConfig }}
+                            updateConfig={updateConfig}
+                            grammarRules={grammarRules}
                             scriptSystems={resolvedScripts}
                             activeScriptId={config.activeScriptSystemId || 'default'}
                         />
@@ -1877,10 +1487,11 @@ function LegacyWikiEditor({ content, onSave }) {
             {/* Word Assist Settings Modal */}
             <Modal isOpen={isWaSettingsOpen} onClose={() => setIsWaSettingsOpen(false)} title={t('wiki.corpus.wordAssistSettings')}>
                 <div style={{ maxHeight: '75vh', overflowY: 'auto', paddingRight: '4px' }}>
-                    <WordAssistSettingsMenu 
-                        config={{ wordAssistConfig: waConfig }} 
-                        updateConfig={updateConfig} 
-                        grammarRules={grammarRules} 
+                    <WordAssistSettingsPanel
+                        config={{ ...analyzerConfig, wordAssistConfig: waConfig }}
+                        updateConfig={updateConfig}
+                        grammarRules={grammarRules}
+                        onClose={() => setIsWaSettingsOpen(false)}
                     />
                 </div>
             </Modal>

@@ -2132,6 +2132,10 @@ export default {
     "selectKeyFirst": "Por favor, selecciona una tecla en el teclado primero.",
     "importSuccess": "¡Disposición de teclado importada con éxito!",
     "invalidFile": "Formato de archivo JSON de teclado no válido.",
-    "readError": "No se pudo leer el archivo JSON."
+    "readError": "No se pudo leer el archivo JSON.",
+    "windowsInstallerBtn": "Windows (Instalador .zip)",
+    "windowsInstallerTooltip": "Descargar instalador de Windows de 2 clics (.zip) + .klc",
+    "windowsInstallerToast": "¡ZIP descargado! Extráelo y haz doble clic en Install_*.bat para instalar y activar.",
+    "windowsKlcTooltip": "Exportar archivo fuente MSKLC (.klc)"
   }
 }

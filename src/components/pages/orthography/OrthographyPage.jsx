@@ -1658,9 +1658,6 @@ export default function OrthographyPage() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', background: 'var(--s2)', padding: '0.75rem 1rem', borderRadius: '1rem', border: '1px solid var(--bd)', flexWrap: 'wrap', gap: '1rem' }}>
                             {renderActiveScriptDropdown() || <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--tx)' }}>{activeScript?.name || t('orthography.scriptRegister')}</div>}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                <Button variant="sec" className="btn-sm" onClick={() => setActiveTab('studio')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                    <Brush size={14} /> {t('settings.graphism.title')}
-                                </Button>
                                 <span style={{ fontSize: '0.85rem', color: 'var(--tx2)', fontWeight: 600, whiteSpace: 'nowrap' }}>{t('orthography.gridColumns')}</span>
                                 <select 
                                     className="select select-bordered" 

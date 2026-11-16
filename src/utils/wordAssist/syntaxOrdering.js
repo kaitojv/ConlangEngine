@@ -1,523 +1,545 @@
+// src/utils/wordAssist/syntaxOrdering.js
+// Constituent-aware syntactic ordering driven by Settings > Grammar and
+// explicit Word Assist typological settings (alignment, adpositions,
+// genitives, adjectives, negation, adverbs, comparatives, WH-questions).
+
 export const LEGACY_STALE_WA_ORDER = 'QCTLJNORVMSAPG';
 
-const ALL_ROLES = ['Q', 'C', 'T', 'L', 'O', 'D', 'V', 'M', 'N', 'S', 'P', 'R', 'A', 'J', 'G'];
-
-const DEGREE_ADVERBS = new Set([
-    'very', 'so', 'too', 'quite', 'rather', 'really', 'extremely',
-    'incredibly', 'fairly', 'pretty', 'super', 'more', 'most', 'less', 'least'
-]);
+const CANONICAL_CORE_ORDERS = {
+    SVO: ['S', 'V', 'O', 'D', 'L'],
+    SOV: ['S', 'L', 'D', 'O', 'V'],
+    VSO: ['V', 'S', 'O', 'D', 'L'],
+    VOS: ['V', 'O', 'D', 'L', 'S'],
+    OVS: ['L', 'D', 'O', 'V', 'S'],
+    OSV: ['O', 'D', 'L', 'S', 'V'],
+    OVA: ['O', 'V', 'M', 'D', 'L', 'S']
+};
 
 /**
- * Resolve effective Word Assist syntax order cleanly, ignoring the legacy stale
- * 'QCTLJNORVMSAPG' OVS store default unless grammar order genuinely is OVS.
+ * Resolves the effective syntax order, rescuing any legacy/stale QCTLJNORVMSAPG
+ * default that shadows the canonical Grammar syntaxOrder.
  */
 export function resolveEffectiveSyntaxOrder(waSyntaxOrder, targetSyntaxOrder, storeSyntaxOrder = 'SVO') {
-    const baseGrammar = (storeSyntaxOrder || 'SVO').toUpperCase().trim();
-    const target = (targetSyntaxOrder || '').toUpperCase().trim();
-    const waOrder = (waSyntaxOrder || '').toUpperCase().trim();
+    const cleanTarget = (targetSyntaxOrder || '').trim().toUpperCase();
+    const cleanWa = (waSyntaxOrder || '').trim().toUpperCase();
+    const cleanStore = (storeSyntaxOrder || 'SVO').trim().toUpperCase();
 
-    // If caller explicitly passed a different syntax order than store default (e.g. unit test or override), honor it
-    if (target && target !== baseGrammar) {
-        return target;
-    }
-
-    if (waOrder) {
-        const isStaleDefault = waOrder === LEGACY_STALE_WA_ORDER && baseGrammar !== 'OVS';
-        if (!isStaleDefault) {
-            return waOrder;
+    if (cleanTarget && cleanTarget !== LEGACY_STALE_WA_ORDER) {
+        if (cleanTarget === cleanWa && cleanWa === LEGACY_STALE_WA_ORDER) {
+            return cleanStore;
         }
+        return cleanTarget;
     }
 
-    return target || baseGrammar || 'SVO';
+    if (cleanWa && cleanWa !== LEGACY_STALE_WA_ORDER) {
+        return cleanWa;
+    }
+
+    return cleanStore || 'SVO';
 }
 
-/**
- * Expand canonical 3-4 letter syntax orders (SVO, SOV, VSO, VOS, OVS, OSV, OVA)
- * or preserve explicit >4-char custom drag priority orders into a complete role weight map.
- */
-export function buildRolePriorityMap(effectiveSyntaxOrder = 'SVO') {
-    let normalizedInput = (effectiveSyntaxOrder || 'SVO').toUpperCase().replace(/[^A-Z]/g, '');
-    if (!normalizedInput) normalizedInput = 'SVO';
-
-    // Support 'OVA' (Object-Verb-Agent) shorthand in GrammarTab
-    if (normalizedInput === 'OVA') {
-        normalizedInput = 'OVS';
-    }
-
-    const baseOrder = [];
-    const pushUnique = (role) => {
-        if (role && !baseOrder.includes(role)) baseOrder.push(role);
-    };
-
-    if (normalizedInput.length > 4) {
-        // Explicit custom syntactic priority string from drag-and-drop settings
-        for (const ch of normalizedInput) pushUnique(ch);
-        ALL_ROLES.forEach(pushUnique);
-    } else {
-        // Canonical short order (e.g. SVO, SOV, VSO, VOS, OVS, OSV)
-        const coreChars = [];
-        for (const ch of normalizedInput) {
-            if (!coreChars.includes(ch)) coreChars.push(ch);
-        }
-        const isVerbFinal = coreChars[coreChars.length - 1] === 'V';
-
-        // 1. Clause-initial frame elements (Wh-questions, Complementizers/Subordinators, Time adjuncts)
-        ['Q', 'C', 'T'].forEach(pushUnique);
-
-        // 2. Core arguments & Verb complex
-        coreChars.forEach((role) => {
-            if (role === 'O') {
-                // Dative indirect object naturally precedes Direct Object ("give Mary a book")
-                pushUnique('D');
-                pushUnique('O');
-            } else if (role === 'V') {
-                if (isVerbFinal) {
-                    // In SOV/OSV, locative/prepositional adjuncts come before the clause-final verb
-                    pushUnique('L');
-                    pushUnique('P');
-                    pushUnique('M');
-                    pushUnique('N');
-                    pushUnique('V');
-                } else {
-                    pushUnique('M');
-                    pushUnique('N');
-                    pushUnique('V');
-                }
-            } else {
-                pushUnique(role);
-            }
-        });
-
-        // 3. Post-core locative/adpositional phrases for VO / V-initial / V-medial orders
-        pushUnique('L');
-        pushUnique('P');
-
-        // 4. Fill remaining modifier roles deterministically
-        ALL_ROLES.forEach(pushUnique);
-    }
-
-    const roleOrder = {};
-    baseOrder.forEach((role, idx) => {
-        roleOrder[role] = idx;
-    });
-    return { baseOrder, roleOrder, normalizedInput };
-}
-
-/**
- * Format short display label for the panel header (e.g. "SOV", "OVS", "VSO").
- */
 export function extractCoreOrderLabel(effectiveSyntaxOrder = 'SVO') {
-    const clean = (effectiveSyntaxOrder || 'SVO').toUpperCase().trim();
-    if (clean.length <= 4) return clean;
-    const core = [];
-    for (const ch of clean) {
-        if ((ch === 'S' || ch === 'V' || ch === 'O') && !core.includes(ch)) {
-            core.push(ch);
+    const upper = (effectiveSyntaxOrder || 'SVO').toUpperCase();
+    if (CANONICAL_CORE_ORDERS[upper]) return upper;
+
+    const cleanCore = upper.split('').filter(c => c === 'S' || c === 'V' || c === 'O').join('');
+    if (cleanCore.length === 3 && cleanCore.includes('S') && cleanCore.includes('V') && cleanCore.includes('O')) {
+        return cleanCore;
+    }
+    return upper.slice(0, 3) || 'SVO';
+}
+
+export function buildRolePriorityMap(effectiveSyntaxOrder = 'SVO') {
+    const upper = (effectiveSyntaxOrder || 'SVO').trim().toUpperCase();
+    const fallbackOrder = 'QCTLJNORVMSAPG';
+    const order = {};
+    let priorityIndex = 1;
+
+    if (CANONICAL_CORE_ORDERS[upper]) {
+        const sIdx = upper.indexOf('S');
+        const vIdx = upper.indexOf('V');
+        const oIdx = upper.indexOf('O');
+        const aIdx = upper.indexOf('A');
+
+        order.C = priorityIndex++;
+        order.Q = priorityIndex++;
+        order.T = priorityIndex++;
+
+        const coreChars = [];
+        if (sIdx !== -1) coreChars.push({ char: 'S', idx: sIdx });
+        if (vIdx !== -1) coreChars.push({ char: 'V', idx: vIdx });
+        if (oIdx !== -1) coreChars.push({ char: 'O', idx: oIdx });
+        if (aIdx !== -1) coreChars.push({ char: 'M', idx: aIdx });
+        coreChars.sort((a, b) => a.idx - b.idx);
+
+        coreChars.forEach(item => {
+            if (item.char === 'S') {
+                order.S = priorityIndex++;
+            } else if (item.char === 'V') {
+                order.N = priorityIndex++;
+                if (!order.M) order.M = priorityIndex++;
+                order.V = priorityIndex++;
+            } else if (item.char === 'O') {
+                order.D = priorityIndex++;
+                order.O = priorityIndex++;
+            } else if (item.char === 'M') {
+                order.M = priorityIndex++;
+            }
+        });
+
+        order.P = priorityIndex++;
+        order.L = priorityIndex++;
+        order.J = priorityIndex++;
+        order.G = priorityIndex++;
+        order.A = priorityIndex++;
+
+        for (const c of fallbackOrder) {
+            if (!order[c]) order[c] = priorityIndex++;
+        }
+        return order;
+    }
+
+    for (let i = 0; i < upper.length; i++) {
+        const ch = upper[i];
+        if (!order[ch]) {
+            order[ch] = priorityIndex++;
         }
     }
-    return core.length === 3 ? core.join('') : clean.slice(0, 4);
+    if (!order.L) order.L = order.O ? order.O + 0.5 : priorityIndex++;
+    if (!order.D) order.D = order.O ? order.O - 0.1 : priorityIndex++;
+    for (const ch of fallbackOrder) {
+        if (!order[ch]) order[ch] = priorityIndex++;
+    }
+    return order;
+}
+
+function isCustomLongPriorityString(rawOrder) {
+    if (!rawOrder || typeof rawOrder !== 'string') return false;
+    const upper = rawOrder.trim().toUpperCase();
+    if (upper === LEGACY_STALE_WA_ORDER) return false;
+    return upper.length >= 8 && !CANONICAL_CORE_ORDERS[upper];
+}
+
+function normalizeOrderingOptions(optionsOrOrder = 'SVO', legacyAdjPos, legacyGenPos, legacyAdvPos) {
+    if (typeof optionsOrOrder === 'string' || !optionsOrOrder) {
+        const syntaxOrder = (optionsOrOrder || 'SVO').toUpperCase();
+        return {
+            syntaxOrder,
+            adjectivePlacement: legacyAdjPos === 'after' ? 'post-nominal' : (legacyAdjPos === 'before' ? 'pre-nominal' : 'pre-nominal'),
+            genitivePlacement: legacyGenPos === 'after' ? 'possessed-possessor' : 'possessor-possessed',
+            adpositionPlacement: 'preposition',
+            adverbPlacement: legacyAdvPos === 'after' || legacyAdvPos === 'afterVerb' ? 'afterVerb' : (legacyAdvPos === 'clauseInitial' || legacyAdvPos === 'clauseFinal' ? legacyAdvPos : 'beforeVerb'),
+            negationPlacement: 'beforeVerb',
+            comparativeStrategy: 'analytic',
+            questionWordPlacement: 'front',
+            legacyAdjPos,
+            legacyGenPos,
+            legacyAdvPos
+        };
+    }
+
+    return {
+        syntaxOrder: (optionsOrOrder.syntaxOrder || 'SVO').toUpperCase(),
+        adjectivePlacement: optionsOrOrder.adjectivePlacement || (optionsOrOrder.adjPos === 'after' ? 'post-nominal' : 'pre-nominal'),
+        genitivePlacement: optionsOrOrder.genitivePlacement || (optionsOrOrder.genPos === 'after' ? 'possessed-possessor' : 'possessor-possessed'),
+        adpositionPlacement: optionsOrOrder.adpositionPlacement || 'preposition',
+        adverbPlacement: optionsOrOrder.adverbPlacement || 'beforeVerb',
+        negationPlacement: optionsOrOrder.negationPlacement || 'beforeVerb',
+        comparativeStrategy: optionsOrOrder.comparativeStrategy || 'analytic',
+        questionWordPlacement: optionsOrOrder.questionWordPlacement || 'front'
+    };
 }
 
 /**
- * Reorder a single clause breakdown into target conlang word order using constituent grouping:
- * - Adjectives (J), Genitives (G), Articles (A), and Noun-modifying degree adverbs stay bound to their head noun
- * - Prepositional/Postpositional phrases stay cohesive around their NP complement
- * - Clause adverbs (R) attach to the Verb constituent rather than the nearest Noun
- * - Coordinated noun phrases ("cats and dogs") stay together inside their constituent
- * - Adjective agreement (if enabled) propagates head noun rules onto bound adjectives
+ * Fallback sorter ONLY for legacy custom >=8-char priority strings (e.g. OQCLTRNPDVMS)
+ * used in direct API calls / regression tests.
  */
-export function reorderClauseBreakdown(breakdownArray, options = {}) {
-    const {
-        effectiveSyntaxOrder = 'SVO',
-        adjPosDefault = 'before',
-        waConfig = {},
-        isPostpositional = false,
-        adjectiveAgreement = false,
-        applyPhonologicalRule = null
-    } = options;
+function legacyPrioritySort(breakdownArray, opts) {
+    const cleanTokens = breakdownArray.filter(t => t && !t.swallowed);
+    if (cleanTokens.length <= 1) return cleanTokens;
 
-    const { roleOrder } = buildRolePriorityMap(effectiveSyntaxOrder);
+    const orderMap = buildRolePriorityMap(opts.syntaxOrder);
+    const items = cleanTokens.map((t, idx) => ({
+        ...t,
+        _origIdx: idx,
+        _p: orderMap[t.role] || 99
+    }));
 
-    const resolveModifierPos = (modRole) => {
-        if (modRole === 'A') return 'before';
-        if (modRole === 'G') return waConfig?.genPos || 'before';
-        if (modRole === 'R') return waConfig?.advPos || 'before';
-        if (modRole === 'J' || modRole === 'C') return adjPosDefault;
-        return waConfig?.adjPos || adjPosDefault;
+    const anchorAdj = opts.legacyAdjPos || (opts.adjectivePlacement === 'post-nominal' ? 'after' : 'before');
+    const anchorGen = opts.legacyGenPos || (opts.genitivePlacement === 'possessed-possessor' ? 'after' : 'before');
+    const anchorAdv = opts.legacyAdvPos || opts.adverbPlacement || 'beforeVerb';
+
+    const anchors = items.filter(t => !['J', 'G', 'A', 'P'].includes(t.role) && !(t.role === 'M' && anchorAdv !== 'followPriority'));
+    const modifiers = items.filter(t => ['J', 'G', 'A', 'P'].includes(t.role) || (t.role === 'M' && anchorAdv !== 'followPriority'));
+
+    anchors.sort((a, b) => (a._p !== b._p ? a._p - b._p : a._origIdx - b._origIdx));
+
+    const result = [...anchors];
+    const insertAround = (mod, target, placeAfter) => {
+        if (!target) {
+            result.push(mod);
+            return;
+        }
+        const idx = result.indexOf(target);
+        if (idx === -1) {
+            result.push(mod);
+            return;
+        }
+        result.splice(placeAfter ? idx + 1 : idx, 0, mod);
     };
 
-    const activeTokens = (breakdownArray || []).filter(Boolean);
-    if (activeTokens.length === 0) return [];
-
-    activeTokens.forEach((tok, idx) => {
-        tok.originalPos = idx;
-    });
-
-    const isNominalRole = (r) => r === 'S' || r === 'O' || r === 'D' || r === 'L' || r === 'T' || r === 'Q';
-    const isNounModRole = (r) => r === 'A' || r === 'G' || r === 'J' || r === 'C';
-
-    const partitionNpModifiers = (mods) => {
-        const before = [];
-        const after = [];
-        mods.forEach((m) => {
-            // Keep degree adverbs attached directly to adjectives
-            if (m._attachedToAdj) {
-                const adjPos = resolveModifierPos('J');
-                if (adjPos === 'after') after.push(m);
-                else before.push(m);
-                return;
-            }
-            const pos = resolveModifierPos(m.role);
-            if (pos === 'after') after.push(m);
-            else before.push(m);
-        });
-        return { before, after };
-    };
-
-    const blocks = [];
-    let pendingNounMods = [];
-    const pendingVerbAdverbs = [];
-    let j = 0;
-
-    while (j < activeTokens.length) {
-        const tokenObj = activeTokens[j];
-        const r = tokenObj.role;
-        const low = (tokenObj.original || '').toLowerCase();
-
-        // 1. Degree adverb directly preceding an Adjective or another Adverb -> bind them together
-        if (r === 'R' && DEGREE_ADVERBS.has(low) && j + 1 < activeTokens.length && (activeTokens[j + 1].role === 'J' || activeTokens[j + 1].role === 'R')) {
-            const nextTok = activeTokens[j + 1];
-            if (nextTok.role === 'J') {
-                const pos = resolveModifierPos('J');
-                if (pos === 'priority') {
-                    blocks.push({ type: 'Standalone', headRole: 'R', tokens: [tokenObj], originalPos: tokenObj.originalPos });
-                } else {
-                    tokenObj._attachedToAdj = true;
-                    pendingNounMods.push(tokenObj);
-                }
-                j++;
+    for (const mod of modifiers) {
+        if (mod.role === 'J' || mod.role === 'G' || mod.role === 'A') {
+            if (mod.isPredicateAdjective) {
+                const pos = result.findIndex(x => x._p > mod._p);
+                if (pos === -1) result.push(mod);
+                else result.splice(pos, 0, mod);
                 continue;
             }
-        }
-
-        // 2. General Adverb ('R') -> attach to Verb block (or standalone if advPos === 'priority')
-        if (r === 'R') {
-            const pos = resolveModifierPos('R');
-            if (pos === 'priority') {
-                blocks.push({ type: 'Standalone', headRole: 'R', tokens: [tokenObj], originalPos: tokenObj.originalPos });
-            } else {
-                pendingVerbAdverbs.push({ token: tokenObj, pos });
+            let head = null;
+            for (let i = mod._origIdx + 1; i < items.length; i++) {
+                if (['S', 'O', 'D', 'L'].includes(items[i].role)) { head = items[i]; break; }
             }
-            j++;
-            continue;
-        }
-
-        // 3. Prepositional / Postpositional Phrase ('P' + modifiers + NP (+ optional 'and NP'))
-        if (r === 'P') {
-            // Flush any stray noun modifiers if they came before P without a noun
-            if (pendingNounMods.length > 0) {
-                blocks.push({
-                    type: 'Standalone',
-                    headRole: pendingNounMods[0].role,
-                    tokens: pendingNounMods,
-                    originalPos: pendingNounMods[0].originalPos
-                });
-                pendingNounMods = [];
-            }
-
-            const pToken = tokenObj;
-            j++;
-
-            const pMods = [];
-            while (j < activeTokens.length && (isNounModRole(activeTokens[j].role) || (activeTokens[j].role === 'R' && activeTokens[j + 1]?.role === 'J'))) {
-                pMods.push(activeTokens[j]);
-                j++;
-            }
-
-            const pTokens = [pToken];
-            let pHeadToken = null;
-            let pHeadRole = 'P';
-
-            if (j < activeTokens.length && isNominalRole(activeTokens[j].role)) {
-                const before = [];
-                const after = [];
-                pMods.forEach((m) => {
-                    const pos = resolveModifierPos(m.role);
-                    if (pos === 'priority') {
-                        blocks.push({ type: 'Standalone', headRole: m.role, tokens: [m], originalPos: m.originalPos });
-                    } else if (pos === 'after') {
-                        after.push(m);
-                    } else {
-                        before.push(m);
-                    }
-                });
-                pHeadToken = activeTokens[j];
-                pHeadRole = pHeadToken.role;
-                pTokens.push(...before, pHeadToken, ...after);
-                j++;
-
-                // Support coordinated PP objects like "between the cat and the dog"
-                if (
-                    j + 1 < activeTokens.length &&
-                    activeTokens[j].role === 'K' &&
-                    isNominalRole(activeTokens[j + 1].role)
-                ) {
-                    pTokens.push(activeTokens[j], activeTokens[j + 1]);
-                    j += 2;
-                }
-            } else {
-                pMods.forEach((m) => {
-                    const pos = resolveModifierPos(m.role);
-                    if (pos === 'priority') {
-                        blocks.push({ type: 'Standalone', headRole: m.role, tokens: [m], originalPos: m.originalPos });
-                    } else {
-                        pTokens.push(m);
-                    }
-                });
-            }
-
-            blocks.push({
-                type: 'Prepositional',
-                headRole: pHeadRole,
-                headToken: pHeadToken,
-                tokens: pTokens,
-                hasAdposition: true,
-                originalPos: pToken.originalPos
-            });
-            continue;
-        }
-
-        // 4. Noun Modifiers ('A', 'G', 'J', 'C')
-        if (isNounModRole(r)) {
-            const pos = resolveModifierPos(r);
-            if (pos === 'priority') {
-                if (pendingNounMods.length > 0) {
-                    blocks.push({
-                        type: 'Standalone',
-                        headRole: pendingNounMods[0].role,
-                        tokens: pendingNounMods,
-                        originalPos: pendingNounMods[0].originalPos
-                    });
-                    pendingNounMods = [];
-                }
-                blocks.push({ type: 'Standalone', headRole: r, tokens: [tokenObj], originalPos: tokenObj.originalPos });
-            } else {
-                // Coordinated adjectives: "red and big dog"
-                pendingNounMods.push(tokenObj);
-            }
-            j++;
-            continue;
-        }
-
-        // 5. Nominal Heads ('S', 'O', 'D', 'L', 'T', 'Q')
-        if (isNominalRole(r)) {
-            const { before, after } = partitionNpModifiers(pendingNounMods);
-            const npTokens = [...before, tokenObj, ...after];
-            pendingNounMods = [];
-            j++;
-
-            // Keep coordinated NP heads ("cats and dogs", "Mary and John") in one constituent!
-            while (
-                j < activeTokens.length &&
-                activeTokens[j].role === 'K'
-            ) {
-                const conjToken = activeTokens[j];
-                let look = j + 1;
-                const coordMods = [];
-                while (look < activeTokens.length && isNounModRole(activeTokens[look].role)) {
-                    coordMods.push(activeTokens[look]);
-                    look++;
-                }
-                if (look < activeTokens.length && isNominalRole(activeTokens[look].role)) {
-                    const { before: cb, after: ca } = partitionNpModifiers(coordMods);
-                    npTokens.push(conjToken, ...cb, activeTokens[look], ...ca);
-                    j = look + 1;
-                } else {
-                    break;
+            if (!head) {
+                for (let i = mod._origIdx - 1; i >= 0; i--) {
+                    if (['S', 'O', 'D', 'L'].includes(items[i].role)) { head = items[i]; break; }
                 }
             }
-
-            blocks.push({
-                type: r === 'S' ? 'Subject' : r === 'D' ? 'IndirectObject' : r === 'O' ? 'Object' : 'Constituent',
-                headRole: r,
-                headToken: tokenObj,
-                tokens: npTokens,
-                originalPos: tokenObj.originalPos
-            });
-            continue;
-        }
-
-        // 6. Verbs ('V'), Modals ('M'), Negation ('N')
-        if (r === 'V' || r === 'M' || r === 'N') {
-            if (pendingNounMods.length > 0 && r === 'V') {
-                // Edge case: lone predicate adjective or subordinator preceding V ("is red" is handled below;
-                // flush modifiers if they don't belong inside V)
-                const { before, after } = partitionNpModifiers(pendingNounMods);
-                const lastBlock = blocks[blocks.length - 1];
-                if (lastBlock && lastBlock.headRole === r) {
-                    lastBlock.tokens.push(...before, tokenObj, ...after);
-                } else {
-                    blocks.push({
-                        type: 'Verb',
-                        headRole: r,
-                        headToken: tokenObj,
-                        tokens: [...before, tokenObj, ...after],
-                        originalPos: tokenObj.originalPos
-                    });
-                }
-                pendingNounMods = [];
-                j++;
-                continue;
-            }
-
-            const lastBlock = blocks[blocks.length - 1];
-            // Group adjacent infinitive/serial verbs into the Verb complex (e.g. "want [to] sleep")
-            if (lastBlock && lastBlock.headRole === 'V' && r === 'V' && pendingNounMods.every(m => m.role === 'C')) {
-                lastBlock.tokens.push(...pendingNounMods, tokenObj);
-                pendingNounMods = [];
-                j++;
-                continue;
-            }
-
-            if (pendingNounMods.length > 0) {
-                blocks.push({
-                    type: 'Standalone',
-                    headRole: pendingNounMods[0].role,
-                    tokens: pendingNounMods,
-                    originalPos: pendingNounMods[0].originalPos
-                });
-                pendingNounMods = [];
-            }
-
-            if (lastBlock && lastBlock.headRole === r && r !== 'N') {
-                lastBlock.tokens.push(tokenObj);
-            } else {
-                blocks.push({
-                    type: r === 'V' ? 'Verb' : r === 'M' ? 'Modal' : 'Negation',
-                    headRole: r,
-                    headToken: tokenObj,
-                    tokens: [tokenObj],
-                    originalPos: tokenObj.originalPos
-                });
-            }
-            j++;
-            continue;
-        }
-
-        // 7. Standalone / Remaining roles (e.g. 'K' inside clause)
-        if (pendingNounMods.length > 0) {
-            blocks.push({
-                type: 'Standalone',
-                headRole: pendingNounMods[0].role,
-                tokens: pendingNounMods,
-                originalPos: pendingNounMods[0].originalPos
-            });
-            pendingNounMods = [];
-        }
-        blocks.push({
-            type: 'Standalone',
-            headRole: r,
-            tokens: [tokenObj],
-            originalPos: tokenObj.originalPos
-        });
-        j++;
-    }
-
-    // Flush leftover noun/predicate modifiers:
-    // If the clause is a copula predicate ("The cat is black"), pending predicate adjectives ('J') stay as standalone 'J' blocks
-    // OR attach cleanly without attaching to Subject erroneously!
-    if (pendingNounMods.length > 0) {
-        const lastNonVerbNounBlock = blocks.find(b => b.headRole === 'V' || b.headRole === 'M');
-        if (pendingNounMods.length === 1 && lastNonVerbNounBlock) {
-            const isShortOrder = (effectiveSyntaxOrder || '').trim().length <= 4;
-            blocks.push({
-                type: 'PredicateModifier',
-                headRole: isShortOrder && pendingNounMods[0].role === 'J' ? 'O' : pendingNounMods[0].role,
-                tokens: pendingNounMods,
-                originalPos: pendingNounMods[0].originalPos
-            });
+            const placeAfter = (mod.role === 'G' && anchorGen === 'after') || (mod.role === 'J' && anchorAdj === 'after');
+            insertAround(mod, head, placeAfter);
+        } else if (mod.role === 'M') {
+            let head = items.find((x, idx) => idx > mod._origIdx && x.role === 'V')
+                || [...items].reverse().find(x => x._origIdx < mod._origIdx && x.role === 'V');
+            insertAround(mod, head, anchorAdv === 'afterVerb' || anchorAdv === 'after');
         } else {
-            pendingNounMods.forEach((modTok) => {
-                blocks.push({
-                    type: 'Standalone',
-                    headRole: modTok.role,
-                    tokens: [modTok],
-                    originalPos: modTok.originalPos
-                });
-            });
+            result.push(mod);
         }
     }
-
-    // Attach deferred Verb-modifying Adverbs ('R') onto the clause's Verb block (instead of dangling onto an Object noun!)
-    if (pendingVerbAdverbs.length > 0) {
-        const verbBlock = blocks.find(b => b.headRole === 'V') || blocks.find(b => b.headRole === 'M');
-        if (verbBlock) {
-            pendingVerbAdverbs.forEach(({ token, pos }) => {
-                if (pos === 'after') verbBlock.tokens.push(token);
-                else verbBlock.tokens.unshift(token);
-            });
-        } else {
-            pendingVerbAdverbs.forEach(({ token }) => {
-                blocks.push({
-                    type: 'Standalone',
-                    headRole: 'R',
-                    tokens: [token],
-                    originalPos: token.originalPos
-                });
-            });
-        }
-    }
-
-    // Sort constituent blocks stably according to roleOrder
-    blocks.sort((a, b) => {
-        const weightA = roleOrder[a.headRole] ?? 99;
-        const weightB = roleOrder[b.headRole] ?? 99;
-        if (weightA !== weightB) return weightA - weightB;
-        return (a.originalPos ?? 0) - (b.originalPos ?? 0);
-    });
-
-    // Respect Preposition vs Postposition settings inside adpositional phrases
-    blocks.forEach((block) => {
-        if (!block.hasAdposition) return;
-        block.tokens.sort((a, b) => {
-            if (a.role === 'P' && b.role !== 'P') return isPostpositional ? 1 : -1;
-            if (b.role === 'P' && a.role !== 'P') return isPostpositional ? -1 : 1;
-            return 0;
-        });
-    });
-
-    // Adjective agreement with head noun rules
-    if (adjectiveAgreement && applyPhonologicalRule) {
-        blocks.forEach((block) => {
-            if (block.headToken?.appliedRules?.length > 0) {
-                block.tokens.forEach((t) => {
-                    if (t.role === 'J') {
-                        let c = t.conlang;
-                        block.headToken.appliedRules.forEach((r) => {
-                            try {
-                                c = applyPhonologicalRule(c, r);
-                                t.inflected = true;
-                                t.ruleSource = (t.ruleSource ? t.ruleSource + ', ' : '') + 'Adjective Agreement: ' + (r.name || r.condition);
-                            } catch (e) {
-                                console.error(e);
-                            }
-                        });
-                        t.conlang = c;
-                    }
-                });
-            }
-        });
-    }
-
-    const result = [];
-    blocks.forEach((block) => {
-        // Clean internal temp flag
-        block.tokens.forEach(tok => {
-            if (tok && Object.prototype.hasOwnProperty.call(tok, '_attachedToAdj')) {
-                delete tok._attachedToAdj;
-            }
-        });
-        result.push(...block.tokens);
-    });
     return result;
+}
+
+/**
+ * Formats an internal NP group according to explicit grammatical placement settings:
+ * - Determiner/Numeral edge placement
+ * - Adjective Pre-nominal vs Post-nominal
+ * - Genitive/Possessor Possessor-Possessed vs Possessed-Possessor
+ * - Adposition Preposition vs Postposition around the full NP
+ */
+function orderNounPhrase(groupTokens, opts) {
+    const prepositions = [];
+    const articlesAndDet = [];
+    const numerals = [];
+    const adjectives = [];
+    const possessors = [];
+    const heads = [];
+    const other = [];
+
+    for (const t of groupTokens) {
+        if (t.role === 'P') prepositions.push(t);
+        else if (t.role === 'A' && !t.isNumeral) articlesAndDet.push(t);
+        else if (t.isNumeral) numerals.push(t);
+        else if (t.role === 'J') adjectives.push(t);
+        else if (t.role === 'G') possessors.push(t);
+        else if (['S', 'O', 'D', 'L', 'Q'].includes(t.role)) heads.push(t);
+        else other.push(t);
+    }
+
+    const adjBefore = opts.adjectivePlacement !== 'post-nominal';
+    const genBefore = opts.genitivePlacement !== 'possessed-possessor';
+    const isPostposition = opts.adpositionPlacement === 'postposition';
+
+    const coreNP = [];
+    if (genBefore) coreNP.push(...possessors);
+    coreNP.push(...articlesAndDet, ...numerals);
+    if (adjBefore) coreNP.push(...adjectives);
+    coreNP.push(...heads);
+    if (!adjBefore) coreNP.push(...adjectives);
+    if (!genBefore) coreNP.push(...possessors);
+    coreNP.push(...other);
+
+    if (prepositions.length === 0) return coreNP;
+    return isPostposition ? [...coreNP, ...prepositions] : [...prepositions, ...coreNP];
+}
+
+/**
+ * Constituent-aware clause reordering driven directly by Grammar Tab + Word Assist settings.
+ */
+export function reorderClauseBreakdown(breakdownArray, options = 'SVO', legacyAdjPos, legacyGenPos, legacyAdvPos) {
+    if (!Array.isArray(breakdownArray)) return [];
+    const cleanTokens = breakdownArray.filter(t => t && !t.swallowed);
+    if (cleanTokens.length <= 1) return cleanTokens;
+
+    const opts = normalizeOrderingOptions(options, legacyAdjPos, legacyGenPos, legacyAdvPos);
+    if (isCustomLongPriorityString(opts.syntaxOrder)) {
+        return legacyPrioritySort(cleanTokens, opts);
+    }
+
+    const coreLabel = extractCoreOrderLabel(opts.syntaxOrder);
+    const coreSequence = CANONICAL_CORE_ORDERS[coreLabel] || CANONICAL_CORE_ORDERS.SVO;
+    const isOV = coreSequence.indexOf('O') < coreSequence.indexOf('V');
+
+    // First, group tokens into syntactic constituents
+    const coordinators = [];
+    const timeLeading = [];
+    const timeTrailing = [];
+    const whTokens = [];
+    const questionParticles = [];
+    const verbTokens = [];
+    const adverbTokens = [];
+    const negationTokens = [];
+
+    // NP chunks keyed by id
+    const npChunks = []; // { slotRole: 'S'|'O'|'D'|'L', tokens: [] }
+    const comparativeItems = { more: [], adj: [], than: [], std: [] };
+    let seenVerb = false;
+
+    const isNPHeadRole = (r) => r === 'S' || r === 'O' || r === 'D' || r === 'L';
+    const isNPModifier = (t) => !t.isPredicateAdjective && !t.isComparativePart && ['P', 'A', 'J', 'G'].includes(t.role);
+
+    let i = 0;
+    while (i < cleanTokens.length) {
+        const tok = cleanTokens[i];
+
+        if (tok.isQuestionParticle) {
+            questionParticles.push(tok);
+            i++;
+            continue;
+        }
+
+        if (tok.role === 'Q') {
+            seenVerb = seenVerb || false;
+            if (opts.questionWordPlacement === 'inSitu' && tok.inSituRole && isNPHeadRole(tok.inSituRole)) {
+                npChunks.push({ slotRole: tok.inSituRole, tokens: [tok] });
+            } else {
+                whTokens.push(tok);
+            }
+            i++;
+            continue;
+        }
+
+        if (tok.role === 'C' && !tok.isInternalCoordinator) {
+            coordinators.push(tok);
+            i++;
+            continue;
+        }
+
+        if (tok.isInternalCoordinator) {
+            // Standalone internal coordinator (e.g. joining S and predicate J) stays attached cleanly
+            const prevChunk = npChunks[npChunks.length - 1];
+            const nextTok = cleanTokens[i + 1];
+            if (prevChunk && nextTok && !['V', 'T', 'N'].includes(nextTok.role)) {
+                prevChunk.tokens.push(tok, nextTok);
+                i += 2;
+                continue;
+            }
+            coordinators.push(tok);
+            i++;
+            continue;
+        }
+
+        if (tok.role === 'T') {
+            if (!seenVerb) timeLeading.push(tok);
+            else timeTrailing.push(tok);
+            i++;
+            continue;
+        }
+
+        if (tok.role === 'N') {
+            negationTokens.push(tok);
+            i++;
+            continue;
+        }
+
+        if (tok.role === 'M') {
+            adverbTokens.push(tok);
+            i++;
+            continue;
+        }
+
+        if (tok.role === 'V') {
+            seenVerb = true;
+            verbTokens.push(tok);
+            i++;
+            continue;
+        }
+
+        // Comparative phrase parts tagged by grammarAnalyzer
+        if (tok.isComparativePart) {
+            if (tok.compPart === 'more') comparativeItems.more.push(tok);
+            else if (tok.compPart === 'adj') comparativeItems.adj.push(tok);
+            else if (tok.compPart === 'than') comparativeItems.than.push(tok);
+            else comparativeItems.std.push(tok);
+            i++;
+            continue;
+        }
+
+        // Predicate Adjective after copula acts as Predicate Complement ('O')
+        if (tok.isPredicateAdjective) {
+            npChunks.push({ slotRole: 'O', tokens: [tok], isPredicate: true });
+            i++;
+            continue;
+        }
+
+        // Gather contiguous NP (e.g., P? + A/G/J* + Head(S/O/D/L)+ + J/G?, plus coordinated NP siblings joined by 'and'/'or')
+        if (isNPModifier(tok) || isNPHeadRole(tok.role)) {
+            const subPhrases = [];
+            let assignedSlotRole = null;
+            let j = i;
+
+            while (j < cleanTokens.length) {
+                const subChunk = [];
+                let subHeadRole = null;
+                while (j < cleanTokens.length) {
+                    const cur = cleanTokens[j];
+                    if (cur.isPredicateAdjective || cur.isComparativePart || cur.isQuestionParticle || cur.isInternalCoordinator) break;
+
+                    if (isNPModifier(cur)) {
+                        if (subHeadRole && (cur.role === 'P' || (cur.role === 'A' && !cur.isNumeral))) break;
+                        if (subHeadRole && cur.role === 'J' && !cur.postNominalForPrevious) {
+                            const nextAfter = cleanTokens[j + 1];
+                            if (nextAfter && isNPHeadRole(nextAfter.role) && nextAfter.role !== subHeadRole) {
+                                break;
+                            }
+                        }
+                        subChunk.push(cur);
+                        j++;
+                    } else if (isNPHeadRole(cur.role)) {
+                        if (subHeadRole && subHeadRole !== cur.role) break;
+                        subHeadRole = cur.role;
+                        if (!assignedSlotRole) assignedSlotRole = cur.role;
+                        subChunk.push(cur);
+                        j++;
+
+                        while (j < cleanTokens.length && cleanTokens[j].role === 'G' && !cleanTokens[j].startsNewPhrase) {
+                            subChunk.push(cleanTokens[j]);
+                            j++;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+
+                if (subChunk.length === 0) break;
+                subPhrases.push({ subChunk, hasHead: Boolean(subHeadRole) });
+
+                // If immediately followed by internal coordinator ('and'/'or') linking another NP of same slot (or Adj/Noun), chain them together!
+                const coord = cleanTokens[j];
+                const afterCoord = cleanTokens[j + 1];
+                if (coord && coord.isInternalCoordinator && afterCoord && (isNPHeadRole(afterCoord.role) || isNPModifier(afterCoord))) {
+                    // Only chain as coordinated NP when both share nominal role (or afterCoord starts an NP)
+                    if (!assignedSlotRole || afterCoord.role === assignedSlotRole || isNPModifier(afterCoord)) {
+                        subPhrases.push({ coordinator: coord });
+                        j++;
+                        continue;
+                    }
+                }
+                break;
+            }
+
+            if (subPhrases.length > 0) {
+                const orderedFlat = [];
+                for (const sp of subPhrases) {
+                    if (sp.coordinator) {
+                        orderedFlat.push(sp.coordinator);
+                    } else if (!sp.hasHead && sp.subChunk.length === 1) {
+                        orderedFlat.push(...sp.subChunk);
+                    } else {
+                        orderedFlat.push(...orderNounPhrase(sp.subChunk, opts));
+                    }
+                }
+                const effectiveSlotRole = assignedSlotRole
+                    || (orderedFlat.some(t => t.role === 'P') ? 'L' : (seenVerb ? 'O' : 'S'));
+                npChunks.push({ slotRole: effectiveSlotRole, tokens: orderedFlat });
+                i = j;
+                continue;
+            }
+        }
+
+        npChunks.push({ slotRole: seenVerb ? 'O' : 'S', tokens: [tok] });
+        i++;
+    }
+
+    // Build Comparative constituent if present
+    const hasComparative = comparativeItems.adj.length > 0 || comparativeItems.std.length > 0;
+    if (hasComparative) {
+        let compOrdered = [];
+        const orderedStd = comparativeItems.std.length > 0 ? orderNounPhrase(comparativeItems.std, opts) : [];
+        if (opts.comparativeStrategy === 'suffix_ablative') {
+            compOrdered = isOV
+                ? [...orderedStd, ...comparativeItems.adj]
+                : [...comparativeItems.adj, ...orderedStd];
+        } else if (opts.comparativeStrategy === 'standard_first') {
+            compOrdered = [...orderedStd, ...comparativeItems.than, ...comparativeItems.more, ...comparativeItems.adj];
+        } else {
+            // analytic
+            compOrdered = [...comparativeItems.more, ...comparativeItems.adj, ...comparativeItems.than, ...orderedStd];
+        }
+        if (compOrdered.length > 0) {
+            npChunks.push({ slotRole: 'O', tokens: compOrdered, isComparative: true });
+        }
+    }
+
+    // Assemble Verb Complex with Negation & Adverbs
+    const verbComplex = [];
+    const negInitial = opts.negationPlacement === 'clauseInitial' ? negationTokens : [];
+    const negFinal = opts.negationPlacement === 'clauseFinal' ? negationTokens : [];
+    const negBeforeV = (opts.negationPlacement === 'beforeVerb' || opts.negationPlacement === 'affix') ? negationTokens : [];
+    const negAfterV = opts.negationPlacement === 'afterVerb' ? negationTokens : [];
+
+    const advInitial = opts.adverbPlacement === 'clauseInitial' ? adverbTokens : [];
+    const advFinal = opts.adverbPlacement === 'clauseFinal' ? adverbTokens : [];
+    const advBeforeV = opts.adverbPlacement === 'beforeVerb' ? adverbTokens : [];
+    const advAfterV = opts.adverbPlacement === 'afterVerb' ? adverbTokens : [];
+
+    verbComplex.push(...negBeforeV, ...advBeforeV, ...verbTokens, ...negAfterV, ...advAfterV);
+
+    // Order core clause roles according to canonical order (SVO, SOV, VSO, VOS, OVS, OSV, OVA)
+    const buckets = {
+        S: [],
+        O: [],
+        D: [],
+        L: [],
+        V: verbComplex,
+        M: []
+    };
+
+    for (const chunk of npChunks) {
+        const key = buckets[chunk.slotRole] ? chunk.slotRole : 'O';
+        buckets[key].push(...chunk.tokens);
+    }
+
+    const coreOrdered = [];
+    for (const slot of coreSequence) {
+        if (buckets[slot] && buckets[slot].length > 0) {
+            coreOrdered.push(...buckets[slot]);
+        }
+    }
+
+    // Put WH-words & Time adverbs into their typological slots
+    const out = [];
+    out.push(...coordinators);
+    out.push(...negInitial);
+    if (opts.questionWordPlacement === 'front') {
+        out.push(...whTokens);
+    }
+    out.push(...advInitial);
+    out.push(...timeLeading);
+
+    // In OV / V-initial languages, trailing time expressions typically precede core or verb; in SVO preserve trailing after core
+    if (coreLabel === 'SOV' || coreLabel === 'OSV') {
+        out.push(...timeTrailing);
+        out.push(...coreOrdered);
+    } else {
+        out.push(...coreOrdered);
+        out.push(...timeTrailing);
+    }
+
+    out.push(...advFinal);
+    if (opts.questionWordPlacement === 'clauseFinal') {
+        out.push(...whTokens);
+    }
+    out.push(...negFinal);
+    out.push(...questionParticles);
+
+    return out;
 }
