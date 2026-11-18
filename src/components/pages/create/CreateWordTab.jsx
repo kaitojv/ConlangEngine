@@ -6,7 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 import Card from '../../UI/Card/Card.jsx';
 import Input from '../../UI/Input/Input.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
-import { Sparkles, AlertTriangle, Save, Brush, X, Plus, Wand2 } from 'lucide-react';
+import { Sparkles, AlertTriangle, Save, Brush, X, Plus, Wand2, HelpCircle } from 'lucide-react';
 import { applyRuleToWord, expandWildcardDependencies } from '../../../utils/morphologyEngine.jsx';
 import { useTransliterator } from '../../../hooks/useTransliterator.jsx';
 import { getScriptData, getScriptSystem, resolveWordScriptId } from '../../../utils/scriptResolver.js';
@@ -14,6 +14,7 @@ import { validateNewWord } from '@/utils/validationEngine.jsx';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { fetchSynonymOptions, fetchDefinitionOptions, fetchTopicOptions } from '../../../utils/semanticUtils.js';
 import { getTagsForTranslation } from '../../../utils/semanticTagger.js';
+import { buildDerivedGlossAndDefinition } from '../../../utils/derivationGloss.js';
 import './createWordTab.css';
 import Modal from '../../UI/Modal/Modal.jsx';
 import DefinitionSelectModal from '../../UI/Modal/DefinitionSelectModal.jsx';
@@ -76,6 +77,8 @@ export default function CreateWordTab() {
     const [isFetchingRelated, setIsFetchingRelated] = useState(false);
     const [isFetchingDefinition, setIsFetchingDefinition] = useState(false);
     const [isFetchingTags, setIsFetchingTags] = useState(false);
+    const [showGuide, setShowGuide] = useState(false);
+    const [customDerivedDefs, setCustomDerivedDefs] = useState({});
     const [autoEnrichEnabled, setAutoEnrichEnabled] = useState(() => {
         try {
             return localStorage.getItem('ce_create_word_auto_enrich') !== 'false';
@@ -624,9 +627,9 @@ export default function CreateWordTab() {
                     ipa: '', // Derivations don't auto-generate IPA yet
                     wordClass: targetClass,
                     translation: customTranslations[idx] !== undefined && customTranslations[idx].trim() !== '' ? customTranslations[idx].trim() : item.translationText,
-                    definition: '',
+                    definition: customDerivedDefs[idx] !== undefined && customDerivedDefs[idx].trim() !== '' ? customDerivedDefs[idx].trim() : (item.definitionText || ''),
                     tags: [...processedTags, 'derived'],
-                    relatedWords: [],
+                    relatedWords: cleanTrans ? [cleanTrans] : [],
                     ideogram: '',
                     parentRootId: rootId,
                     derivationRuleId: rule?.id
@@ -649,6 +652,7 @@ export default function CreateWordTab() {
 
         setSelectedDerivs({});
         setCustomTranslations({});
+        setCustomDerivedDefs({});
         toast.success((toastItem) => (
             <div className="toast-inner-flex">
                 <span>{keepRoot ? t('createWord.savedAndNewSuccess') : t('createWord.savedSuccess')}</span>
@@ -979,36 +983,63 @@ export default function CreateWordTab() {
                 const result = applyRuleToWord(base, rule, grammarRules, vowels, consonants, otherPhonemes);
 
                 if (result) {
-                    const transLabel = translation && translation.trim()
-                        ? `${translation.trim()} (${(rule.gloss || rule.name || 'Unnamed Rule').toLowerCase()})`
-                        : `(${(rule.gloss || rule.name || 'Unnamed Rule').toLowerCase()})`;
+                    const { translationText, definitionText } = buildDerivedGlossAndDefinition({
+                        baseTranslation: translation,
+                        baseDefinition: autoEnrichEnabled ? definition : '',
+                        rule
+                    });
 
                     results.push({
                         derivedWord: result,
                         ruleName: rule.name || 'Unnamed Rule',
                         rule: rule,
-                        translationText: transLabel
+                        translationText,
+                        definitionText
                     });
                 }
             }
         });
 
         return results;
-    }, [word, translation, wordClass, grammarRules, vowels, consonants, otherPhonemes, normalizeToBase]);
+    }, [word, translation, definition, autoEnrichEnabled, wordClass, grammarRules, vowels, consonants, otherPhonemes, normalizeToBase]);
 
     return (
         <div className="create-word-container">
             <Card>
-                <h2 className="create-word-title">
-                    <Sparkles className="title-icon" /> {t('createWord.title')}
-                </h2>
+                <div className="create-word-header-row">
+                    <h2 className="create-word-title">
+                        <Sparkles className="title-icon" /> {t('createWord.title')}
+                    </h2>
+                    <div className="create-word-header-tools">
+                        <button
+                            type="button"
+                            className={`cw-header-pill ${autoEnrichEnabled ? 'active' : ''}`}
+                            onClick={() => toggleAutoEnrich(!autoEnrichEnabled)}
+                            title="Automatically fill Definition, Tags, Related Words & Derivation Definitions from your translation"
+                        >
+                            <Sparkles size={13} />
+                            <span>Auto-fill: {autoEnrichEnabled ? 'On' : 'Off'}</span>
+                        </button>
+                        <button
+                            type="button"
+                            className={`cw-header-pill icon-only ${showGuide ? 'active' : ''}`}
+                            onClick={() => setShowGuide((v) => !v)}
+                            title={t('createWord.guideTitle')}
+                            aria-expanded={showGuide}
+                        >
+                            <HelpCircle size={15} />
+                        </button>
+                    </div>
+                </div>
 
-                <Infobox title={t('createWord.guideTitle')}>
-                    • {t('createWord.guideLinking')}<br />
-                    • {t('createWord.guidePos')}<br />
-                    • {t('createWord.guideDuplicates')}<br />
-                    • {t('createWord.guideIpa')}
-                </Infobox>
+                {showGuide && (
+                    <Infobox title={t('createWord.guideTitle')}>
+                        • {t('createWord.guideLinking')}<br />
+                        • {t('createWord.guidePos')}<br />
+                        • {t('createWord.guideDuplicates')}<br />
+                        • {t('createWord.guideIpa')}
+                    </Infobox>
+                )}
 
                 <div className="input-grid">
                     <div>
@@ -1272,29 +1303,6 @@ export default function CreateWordTab() {
                     </div>
                 </details>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '6px' }}>
-                    <label
-                        style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            fontSize: '0.78rem',
-                            color: 'var(--tx2)',
-                            cursor: 'pointer',
-                            userSelect: 'none'
-                        }}
-                        title="Automatically suggest Definition, Semantic Tags & Related Words when typing a translation"
-                    >
-                        <input
-                            type="checkbox"
-                            checked={autoEnrichEnabled}
-                            onChange={(e) => toggleAutoEnrich(e.target.checked)}
-                        />
-                        <Sparkles size={13} style={{ color: 'var(--acc)' }} />
-                        Auto-fill Definition, Tags &amp; Related Words
-                    </label>
-                </div>
-
                 <div className="input-grid trans-def-grid">
                     <div>
                         <Input
@@ -1344,93 +1352,95 @@ export default function CreateWordTab() {
                     </div>
                 )}
 
-                <div className="tags-section">
-                    <div className="auto-suggest-label-row">
-                        <label className="form-label">{t('createWord.semanticTags')}</label>
-                        <button className="btn-link" onClick={autoSuggestTags} disabled={isFetchingTags}>
-                            <Wand2 size={12} /> {isFetchingTags ? t('createWord.searching') : t('createWord.autoSuggest')}
-                        </button>
-                    </div>
-                    <div className="tags-chip-container">
-                        {formData.tags.map(tag => (
-                            <span key={tag} className="tag-chip">
-                                {tag}
-                                <X size={12} onClick={() => removeTag(tag)} className="tag-remove-icon" />
-                            </span>
-                        ))}
-                        <div className="tag-input-wrap">
-                            <Input
-                                placeholder={formData.tags.length === 0 ? t('createWord.tagPlaceholder') : ""}
-                                value={tagInput}
-                                onChange={(e) => setTagInput(e.target.value)}
-                                onInput={(e) => {
-                                    if (allTags.includes(e.target.value.toLowerCase())) {
-                                        handleAddTag(e.target.value);
-                                    }
-                                }}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ',') {
-                                        e.preventDefault();
-                                        handleAddTag(tagInput);
-                                    }
-                                }}
-                                onBlur={() => handleAddTag(tagInput)}
-                                list="semantic-tags"
-                                className="tag-input-field"
-                            >
-                                {tagInput && (
-                                    <button
-                                        className="clear-input-btn"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setTagInput('');
-                                        }}
-                                        title="Clear Tag Input"
-                                    >
-                                        <X size={14} />
-                                    </button>
-                                )}
-                            </Input>
-                            <Plus size={16} className="tag-add-icon" onClick={() => handleAddTag(tagInput)} />
+                <div className="create-meta-grid">
+                    <div className="tags-section">
+                        <div className="auto-suggest-label-row">
+                            <label className="form-label">{t('createWord.semanticTags')}</label>
+                            <button className="btn-link" onClick={autoSuggestTags} disabled={isFetchingTags}>
+                                <Wand2 size={12} /> {isFetchingTags ? t('createWord.searching') : t('createWord.autoSuggest')}
+                            </button>
                         </div>
+                        <div className="tags-chip-container">
+                            {formData.tags.map(tag => (
+                                <span key={tag} className="tag-chip">
+                                    {tag}
+                                    <X size={12} onClick={() => removeTag(tag)} className="tag-remove-icon" />
+                                </span>
+                            ))}
+                            <div className="tag-input-wrap">
+                                <Input
+                                    placeholder={formData.tags.length === 0 ? t('createWord.tagPlaceholder') : ""}
+                                    value={tagInput}
+                                    onChange={(e) => setTagInput(e.target.value)}
+                                    onInput={(e) => {
+                                        if (allTags.includes(e.target.value.toLowerCase())) {
+                                            handleAddTag(e.target.value);
+                                        }
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ',') {
+                                            e.preventDefault();
+                                            handleAddTag(tagInput);
+                                        }
+                                    }}
+                                    onBlur={() => handleAddTag(tagInput)}
+                                    list="semantic-tags"
+                                    className="tag-input-field"
+                                >
+                                    {tagInput && (
+                                        <button
+                                            className="clear-input-btn"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setTagInput('');
+                                            }}
+                                            title="Clear Tag Input"
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    )}
+                                </Input>
+                                <Plus size={16} className="tag-add-icon" onClick={() => handleAddTag(tagInput)} />
+                            </div>
+                        </div>
+                        {/* Autocomplete from previously used tags */}
+                        <datalist id="semantic-tags">
+                            {allTags.map(tag => (
+                                <option key={tag} value={tag} />
+                            ))}
+                        </datalist>
                     </div>
-                    {/* Autocomplete from previously used tags */}
-                    <datalist id="semantic-tags">
-                        {allTags.map(tag => (
-                            <option key={tag} value={tag} />
-                        ))}
-                    </datalist>
-                </div>
 
-                <div style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
-                    <div className="auto-suggest-label-row">
-                        <label className="form-label">{t('createWord.relatedWordsTitle')}</label>
-                        <button className="btn-link" onClick={autoSuggestRelated} disabled={isFetchingRelated}>
-                            <Wand2 size={12} /> {isFetchingRelated ? t('createWord.searching') : t('createWord.autoSuggest')}
-                        </button>
-                    </div>
-                    <div className="tags-chip-container">
-                        {formData.relatedWords.map(rw => (
-                            <span key={rw} className="tag-chip" style={{ background: 'var(--s3)', borderColor: 'var(--s4)' }}>
-                                {rw}
-                                <X size={12} onClick={() => removeRelated(rw)} className="tag-remove-icon" />
-                            </span>
-                        ))}
-                        <div className="tag-input-wrap">
-                            <Input
-                                placeholder={formData.relatedWords.length === 0 ? t('createWord.relatedPlaceholder') : ""}
-                                value={relatedInput}
-                                onChange={(e) => setRelatedInput(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ',') {
-                                        e.preventDefault();
-                                        handleAddRelated(relatedInput);
-                                    }
-                                }}
-                                onBlur={() => handleAddRelated(relatedInput)}
-                                className="tag-input-field"
-                            />
-                            <Plus size={16} className="tag-add-icon" onClick={() => handleAddRelated(relatedInput)} />
+                    <div className="tags-section">
+                        <div className="auto-suggest-label-row">
+                            <label className="form-label">{t('createWord.relatedWordsTitle')}</label>
+                            <button className="btn-link" onClick={autoSuggestRelated} disabled={isFetchingRelated}>
+                                <Wand2 size={12} /> {isFetchingRelated ? t('createWord.searching') : t('createWord.autoSuggest')}
+                            </button>
+                        </div>
+                        <div className="tags-chip-container">
+                            {formData.relatedWords.map(rw => (
+                                <span key={rw} className="tag-chip" style={{ background: 'var(--s3)', borderColor: 'var(--s4)' }}>
+                                    {rw}
+                                    <X size={12} onClick={() => removeRelated(rw)} className="tag-remove-icon" />
+                                </span>
+                            ))}
+                            <div className="tag-input-wrap">
+                                <Input
+                                    placeholder={formData.relatedWords.length === 0 ? t('createWord.relatedPlaceholder') : ""}
+                                    value={relatedInput}
+                                    onChange={(e) => setRelatedInput(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ',') {
+                                            e.preventDefault();
+                                            handleAddRelated(relatedInput);
+                                        }
+                                    }}
+                                    onBlur={() => handleAddRelated(relatedInput)}
+                                    className="tag-input-field"
+                                />
+                                <Plus size={16} className="tag-add-icon" onClick={() => handleAddRelated(relatedInput)} />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1462,6 +1472,16 @@ export default function CreateWordTab() {
                                                 onClick={(e) => e.stopPropagation()} // Prevent toggling the checkbox when editing translation
                                                 placeholder={item.translationText}
                                             />
+                                            {(autoEnrichEnabled || customDerivedDefs[idx] !== undefined) && item.definitionText && (
+                                                <input
+                                                    type="text"
+                                                    className="preview-def-input"
+                                                    value={customDerivedDefs[idx] !== undefined ? customDerivedDefs[idx] : item.definitionText}
+                                                    onChange={(e) => setCustomDerivedDefs(prev => ({ ...prev, [idx]: e.target.value }))}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    placeholder={item.definitionText}
+                                                />
+                                            )}
                                         </div>
                                         <div className="preview-checkbox">
                                             {selectedDerivs[idx] && <span className="deriv-checkbox-check">✓</span>}
