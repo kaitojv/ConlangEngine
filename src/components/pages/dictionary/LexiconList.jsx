@@ -106,8 +106,8 @@ export default function LexiconList() {
     const [showBoundMorphemes, setShowBoundMorphemes] = useState(false);
     // Toggle for showing romanized form beneath the conscript in script modes
     const [showRomanization, setShowRomanization] = useState(false);
-    // Active script display switcher: 'auto', 'latin', or specific scriptId
-    const [activeDisplayScript, setActiveDisplayScript] = useState('auto');
+    // Active script display switcher: defaults to the user's default script
+    const [selectedDisplayScript, setSelectedDisplayScript] = useState(null);
     // Grid vs List view mode
     const [layoutMode, setLayoutMode] = useState('list');
     // Toggle for showing/hiding quick character jump bar
@@ -136,6 +136,9 @@ export default function LexiconList() {
         })
     );
     const defaultScriptId = getDefaultScriptId(configFull);
+    const activeDisplayScript = (selectedDisplayScript && scriptSystems.some(s => s.id === selectedDisplayScript))
+        ? selectedDisplayScript
+        : (scriptSystems.length > 0 ? defaultScriptId : 'auto');
     
     // Spin up the transliterator to convert base words into the language's custom script
     const { transliterate, normalizeToBase } = useTransliterator();
@@ -644,19 +647,17 @@ export default function LexiconList() {
                         ))}
                     </select>
 
-                    {(scriptSystems.length > 0 || isScriptMode) && (
+                    {scriptSystems.length > 0 && (
                         <select 
                             className="filter-select script-switcher-select"
                             value={activeDisplayScript}
-                            onChange={(e) => setActiveDisplayScript(e.target.value)}
+                            onChange={(e) => setSelectedDisplayScript(e.target.value)}
                             title={t('lexicon.scriptSwitcherTooltip')}
                             aria-label={t('lexicon.scriptSwitcherTooltip')}
                         >
-                            <option value="auto">{t('lexicon.scriptAuto')}</option>
-                            <option value="latin">{t('lexicon.scriptLatin')}</option>
                             {scriptSystems.map(s => (
                                 <option key={s.id} value={s.id}>
-                                    Script: {s.name || s.id} ({s.type})
+                                    {s.name || s.id} ({s.type})
                                 </option>
                             ))}
                         </select>

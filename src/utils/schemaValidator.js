@@ -26,6 +26,7 @@ export const VALID_CONFIG_KEYS = new Set([
     'syllablePatternWeights', 'suppressDuplicateWarnings',
     'enableToneAndStress', 'functionWords', 'calendarSystem', 'measurementSystem',
     'stressRules', 'toneRules', 'isPublic', 'conlangIcon', 'parentId',
+    'authorAvatar', 'authorBio', 'authorBadge',
     'pronounMatrixData', 'pronounMatrixSettings',
     'vowelHarmonyMode', 'vowelHarmonySets', 'vowelHarmonyOverrideWordClasses', 'vowelHarmonyOverrideTags',
     'backupSettings',

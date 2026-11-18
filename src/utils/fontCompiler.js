@@ -737,7 +737,9 @@ export async function buildOpenTypeFont(customGlyphs, traceWidth = 30, fontScale
         path: new opentype.Path()
     });
 
-    const spaceAdvance = isConsistentGlobal ? targetAdvance : 500;
+    // Keep word-separator space typographically natural (~0.3 em) even when
+    // visible glyphs use full-em consistent sizing, so mixed/custom words don't get huge gaps.
+    const spaceAdvance = Math.round(upe * 0.3);
     let spaceGlyph = new opentype.Glyph({
         name: 'space',
         unicode: 32,
@@ -768,14 +770,16 @@ export async function buildOpenTypeFont(customGlyphs, traceWidth = 30, fontScale
         const { path, advanceWidth } = buildGlyphPathAndMetrics(strokeArray, traceWidth, safeScale, options);
 
         if (unicode === 32) {
+            const hasVisibleSpacePath = path && Array.isArray(path.commands) && path.commands.length > 0;
+            const effectiveSpaceAdvance = hasVisibleSpacePath ? advanceWidth : spaceAdvance;
             spaceGlyph = new opentype.Glyph({
                 name: 'space',
                 unicode: 32,
-                advanceWidth,
+                advanceWidth: effectiveSpaceAdvance,
                 path
             });
             glyphs[1] = spaceGlyph;
-            compiledDataByUnicode.set(32, { path, advanceWidth });
+            compiledDataByUnicode.set(32, { path, advanceWidth: effectiveSpaceAdvance });
             continue;
         }
 

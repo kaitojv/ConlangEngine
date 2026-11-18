@@ -8,7 +8,9 @@ import Card from '@/components/UI/Card/Card.jsx';
 import Button from '@/components/UI/Buttons/Buttons.jsx';
 import Input from '@/components/UI/Input/Input.jsx';
 import Modal from '@/components/UI/Modal/Modal.jsx';
-import { CloudUpload, CloudDownload, Trophy, Activity, User, LogOut, Globe, MessageCircle, BookOpen, Crown, Cog, Puzzle, Tags, Flame, GitBranch, GitMerge, Share2, Heart, Coffee, PieChart, Sparkles, Book, Library, BrainCircuit, ScrollText, Network, Ear, ArrowLeftRight, Layers, Volume2, PenTool, Shapes, Download, Trash2, Edit2, History, RotateCcw, RefreshCw, Gem, Landmark, Star, Compass, CheckCircle2, Award, Quote, BookMarked, Languages, Feather, Medal, GraduationCap, Zap, Scroll } from 'lucide-react';
+import { CloudUpload, CloudDownload, Trophy, Activity, User, LogOut, Globe, MessageCircle, BookOpen, Crown, Cog, Puzzle, Tags, Flame, GitBranch, GitMerge, Share2, Heart, Coffee, PieChart, Sparkles, Book, Library, BrainCircuit, ScrollText, Network, Ear, ArrowLeftRight, Layers, Volume2, PenTool, Shapes, Download, Trash2, Edit2, History, RotateCcw, RefreshCw, Gem, Landmark, Star, Compass, CheckCircle2, Award, Quote, BookMarked, Languages, Feather, Medal, GraduationCap, Zap, Scroll, Upload } from 'lucide-react';
+import CreatorAvatar from '@/components/UI/CreatorAvatar/CreatorAvatar.jsx';
+import { CREATOR_AVATAR_ICONS, CREATOR_AVATAR_COLORS, compressAvatarImage } from '@/components/UI/CreatorAvatar/creatorAvatarUtils.js';
 import './profileTab.css';
 import { isSyncReviewEnabled, setSyncReviewEnabled } from '@/utils/syncEngine.js';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -167,7 +169,7 @@ export default function ProfileTab() {
         customGlyphs: configCustomGlyphs, scriptSystems, scriptDataById,
         customCourse, isPublic,
         unlockedBadges: configUnlockedBadges, unlockBadge, logActivity,
-        isProActive, isAutoSyncEnabled, authorName,
+        isProActive, isAutoSyncEnabled, authorName, authorAvatar, authorBio, authorBadge,
         vowels, activity, projectId,
         updateConfig, setFullConfig,
     } = useConfigStore(useShallow(state => ({
@@ -189,12 +191,61 @@ export default function ProfileTab() {
         isProActive: state.isProActive,
         isAutoSyncEnabled: state.isAutoSyncEnabled,
         authorName: state.authorName,
+        authorAvatar: state.authorAvatar,
+        authorBio: state.authorBio,
+        authorBadge: state.authorBadge,
         vowels: state.vowels,
         activity: state.activity,
         projectId: state.projectId,
         updateConfig: state.updateConfig,
         setFullConfig: state.setFullConfig,
     })));
+
+    const [isCustomizingProfile, setIsCustomizingProfile] = useState(false);
+    const [isSyncingProfileMeta, setIsSyncingProfileMeta] = useState(false);
+
+    const syncAuthProfileMetadata = async (patch = {}) => {
+        if (!session?.user) return;
+        setIsSyncingProfileMeta(true);
+        try {
+            await supabase.auth.updateUser({
+                data: {
+                    display_name: patch.authorName !== undefined ? patch.authorName : authorName,
+                    author_avatar: patch.authorAvatar !== undefined ? patch.authorAvatar : authorAvatar,
+                    author_bio: patch.authorBio !== undefined ? patch.authorBio : authorBio,
+                    author_badge: patch.authorBadge !== undefined ? patch.authorBadge : authorBadge
+                }
+            });
+        } catch {
+            // Non-blocking: local config still preserves profile changes
+        } finally {
+            setIsSyncingProfileMeta(false);
+        }
+    };
+
+    const handleAvatarChange = async (nextAvatar) => {
+        updateConfig({ authorAvatar: nextAvatar });
+        await syncAuthProfileMetadata({ authorAvatar: nextAvatar });
+    };
+
+    const handleAvatarImageUpload = async (e) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+        try {
+            const compressed = await compressAvatarImage(file, 128);
+            const nextAvatar = { ...(authorAvatar || {}), type: 'image', imageData: compressed };
+            await handleAvatarChange(nextAvatar);
+            toast.success('Profile picture updated!');
+        } catch (err) {
+            toast.error(err?.message || 'Could not process image.');
+        }
+    };
+
+    const pinnedBadgeObj = useMemo(
+        () => BADGES.find((b) => b.id === authorBadge && configUnlockedBadges?.includes(b.id)) || null,
+        [authorBadge, configUnlockedBadges]
+    );
 
     const [showSyncReview, setShowSyncReview] = useState(() => isSyncReviewEnabled());
     const toggleSyncReview = () => {
@@ -615,6 +666,174 @@ export default function ProfileTab() {
 
     return (
         <div className="profile-dashboard-layout">
+
+            {/* Social Creator Identity Banner */}
+            <Card className="social-hero-card">
+                <div className="social-hero-top">
+                    <div className="social-hero-identity">
+                        <button
+                            type="button"
+                            className="social-avatar-trigger"
+                            onClick={() => setIsCustomizingProfile((v) => !v)}
+                            title="Customize Creator Icon or Photo"
+                        >
+                            <CreatorAvatar avatar={authorAvatar} name={authorName} size={76} />
+                            <span className="social-avatar-hover-overlay" aria-hidden="true">
+                                <Edit2 size={16} />
+                            </span>
+                        </button>
+                        <div className="social-hero-meta">
+                            <div className="social-hero-name-row">
+                                <h2 className="social-hero-name">
+                                    {authorName && authorName !== 'Author Name'
+                                        ? authorName
+                                        : (session?.user?.email?.split('@')[0] || 'Creator')}
+                                </h2>
+                                {pinnedBadgeObj && (
+                                    <span className="social-pinned-badge" title={pinnedBadgeObj.desc}>
+                                        <pinnedBadgeObj.Icon size={13} />
+                                        {t(`profile.badges.${pinnedBadgeObj.id}.name`) || pinnedBadgeObj.name}
+                                    </span>
+                                )}
+                            </div>
+                            <p className="social-hero-bio">
+                                {authorBio?.trim() || 'Constructed Language Creator · Add a short bio or specialty'}
+                            </p>
+                            <div className="social-stats-strip">
+                                <span><strong>{lexicon.length}</strong> Words</span>
+                                <span><strong>{grammarRules.length}</strong> Rules</span>
+                                <span><strong>{scriptSystems?.length || 1}</strong> Scripts</span>
+                                <span><strong>{configStreak || 0}</strong> Streak</span>
+                                <span><strong>{configUnlockedBadges?.length || 0}/{BADGES.length}</strong> Badges</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="social-hero-actions">
+                        <Button
+                            variant={isCustomizingProfile ? 'imp' : 'default'}
+                            onClick={() => setIsCustomizingProfile((v) => !v)}
+                        >
+                            <div className="btn-content"><Edit2 size={14} /> Customize</div>
+                        </Button>
+                        <Button variant="default" onClick={() => navigate('/explore')}>
+                            <div className="btn-content"><Globe size={14} /> Explore</div>
+                        </Button>
+                    </div>
+                </div>
+
+                {isCustomizingProfile && (
+                    <div className="social-customizer-panel">
+                        <div className="social-customizer-row">
+                            <div className="social-customizer-col">
+                                <label className="form-label">Creator Picture or Icon</label>
+                                <div className="social-upload-row">
+                                    <label className="social-upload-btn">
+                                        <Upload size={14} /> Upload Photo
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            style={{ display: 'none' }}
+                                            onChange={handleAvatarImageUpload}
+                                        />
+                                    </label>
+                                    {authorAvatar?.type === 'image' && (
+                                        <button
+                                            type="button"
+                                            className="btn-link"
+                                            onClick={() => handleAvatarChange({ ...(authorAvatar || {}), type: 'icon', imageData: '' })}
+                                        >
+                                            <RotateCcw size={13} /> Use Icon Instead
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className="avatar-icon-grid">
+                                    {CREATOR_AVATAR_ICONS.map((item) => {
+                                        const isActive = authorAvatar?.type !== 'image' && (authorAvatar?.icon || 'User') === item.id;
+                                        return (
+                                            <button
+                                                key={item.id}
+                                                type="button"
+                                                className={`avatar-icon-option ${isActive ? 'active' : ''}`}
+                                                onClick={() => handleAvatarChange({ ...(authorAvatar || {}), type: 'icon', icon: item.id })}
+                                                title={item.label}
+                                            >
+                                                <item.Icon size={16} />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="avatar-color-row">
+                                    {CREATOR_AVATAR_COLORS.map((hex) => {
+                                        const isActive = (authorAvatar?.color || '#6366f1') === hex;
+                                        return (
+                                            <button
+                                                key={hex}
+                                                type="button"
+                                                className={`avatar-color-swatch ${isActive ? 'active' : ''}`}
+                                                style={{ background: hex }}
+                                                onClick={() => handleAvatarChange({ ...(authorAvatar || {}), type: 'icon', color: hex })}
+                                                aria-label={`Select color ${hex}`}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className="social-customizer-col">
+                                <Input
+                                    label="Creator Bio / Specialty"
+                                    value={authorBio || ''}
+                                    maxLength={140}
+                                    onChange={(e) => updateConfig({ authorBio: e.target.value })}
+                                    onBlur={() => syncAuthProfileMetadata({ authorBio })}
+                                    placeholder="e.g. Worldbuilder, polysynthetic & featural script creator"
+                                />
+
+                                <div style={{ marginTop: '10px' }}>
+                                    <label className="form-label">Pinned Showcase Achievement</label>
+                                    <select
+                                        className="fi custom-select"
+                                        value={authorBadge || ''}
+                                        onChange={(e) => {
+                                            const nextBadge = e.target.value;
+                                            updateConfig({ authorBadge: nextBadge });
+                                            syncAuthProfileMetadata({ authorBadge: nextBadge });
+                                        }}
+                                    >
+                                        <option value="">None (No pinned badge)</option>
+                                        {BADGES.filter((b) => configUnlockedBadges?.includes(b.id)).map((b) => (
+                                            <option key={b.id} value={b.id}>
+                                                {t(`profile.badges.${b.id}.name`) || b.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {session && (
+                                    <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+                                        <Button
+                                            variant="save"
+                                            disabled={isSyncingProfileMeta}
+                                            onClick={async () => {
+                                                await syncAuthProfileMetadata();
+                                                toast.success('Social profile synced to account!');
+                                            }}
+                                        >
+                                            <div className="btn-content">
+                                                <RefreshCw size={13} className={isSyncingProfileMeta ? 'animate-spin' : ''} />
+                                                {isSyncingProfileMeta ? ' Syncing...' : ' Save Profile'}
+                                            </div>
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </Card>
             
             <Card className="account-status-card">
                 <div className="account-header">

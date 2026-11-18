@@ -513,6 +513,150 @@ export const DARK_THEMES = [
             font: "#e5ffff", font2: "#00ffcc", accent: "#00ffcc", accent2: "#0066ff", accent3: "#33ff99",
             border: "rgba(0, 255, 204, 0.2)", blur: "0px", glow: "rgba(0, 102, 255, 0.15)"
         }
+    },
+    {
+        name: "Tokyo Night",
+        preview: "linear-gradient(135deg, #1a1b26, #7aa2f7, #bb9af7)",
+        colors: {
+            bg: "#1a1b26", s1: "#24283b", s2: "#292e42", s3: "#333952", s4: "#16161e", header: "#16161e",
+            font: "#c0caf5", font2: "#787c99", accent: "#7aa2f7", accent2: "#bb9af7", accent3: "#7dcfff",
+            border: "rgba(122, 162, 247, 0.18)", blur: "0px", glow: "rgba(122, 162, 247, 0.16)"
+        }
+    },
+    {
+        name: "Dracula Classic",
+        preview: "linear-gradient(135deg, #282a36, #bd93f9, #ff79c6)",
+        colors: {
+            bg: "#282a36", s1: "#303341", s2: "#383b4c", s3: "#44475a", s4: "#21222c", header: "#1e1f29",
+            font: "#f8f8f2", font2: "#6272a4", accent: "#bd93f9", accent2: "#ff79c6", accent3: "#50fa7b",
+            border: "rgba(189, 147, 249, 0.22)", blur: "0px", glow: "rgba(189, 147, 249, 0.18)"
+        }
+    },
+    {
+        name: "Catppuccin Mocha",
+        preview: "linear-gradient(135deg, #1e1e2e, #cba6f7, #f5c2e7)",
+        colors: {
+            bg: "#1e1e2e", s1: "#252538", s2: "#2b2b40", s3: "#313244", s4: "#181825", header: "#11111b",
+            font: "#cdd6f4", font2: "#a6adc8", accent: "#cba6f7", accent2: "#89b4fa", accent3: "#f5c2e7",
+            border: "rgba(203, 166, 247, 0.2)", blur: "0px", glow: "rgba(203, 166, 247, 0.16)"
+        }
+    },
+    {
+        name: "Gruvbox Dark",
+        preview: "linear-gradient(135deg, #282828, #fe8019, #fabd2f)",
+        colors: {
+            bg: "#1d2021", s1: "#282828", s2: "#32302f", s3: "#3c3836", s4: "#171819", header: "#141617",
+            font: "#ebdbb2", font2: "#a89984", accent: "#fe8019", accent2: "#fabd2f", accent3: "#b8bb26",
+            border: "rgba(254, 128, 25, 0.2)", blur: "0px", glow: "rgba(250, 189, 47, 0.14)"
+        }
+    },
+    {
+        name: "Solarized Night",
+        preview: "linear-gradient(135deg, #002b36, #268bd2, #2aa198)",
+        colors: {
+            bg: "#002b36", s1: "#073642", s2: "#0b414f", s3: "#124e5e", s4: "#00212b", header: "#001e26",
+            font: "#eee8d5", font2: "#93a1a1", accent: "#2aa198", accent2: "#268bd2", accent3: "#b58900",
+            border: "rgba(42, 161, 152, 0.22)", blur: "0px", glow: "rgba(38, 139, 210, 0.16)"
+        }
+    },
+    {
+        name: "One Dark Pro",
+        preview: "linear-gradient(135deg, #282c34, #61afef, #c678dd)",
+        colors: {
+            bg: "#21252b", s1: "#282c34", s2: "#2f343e", s3: "#383e4a", s4: "#1b1e23", header: "#181a1f",
+            font: "#abb2bf", font2: "#7f848e", accent: "#61afef", accent2: "#c678dd", accent3: "#98c379",
+            border: "rgba(97, 175, 239, 0.18)", blur: "0px", glow: "rgba(97, 175, 239, 0.14)"
+        }
+    },
+    {
+        name: "Monokai Velvet",
+        preview: "linear-gradient(135deg, #272822, #f92672, #a6e22e)",
+        colors: {
+            bg: "#1e1f1c", s1: "#272822", s2: "#31322b", s3: "#3e3d32", s4: "#171814", header: "#141512",
+            font: "#f8f8f2", font2: "#a59f85", accent: "#f92672", accent2: "#a6e22e", accent3: "#66d9ef",
+            border: "rgba(249, 38, 114, 0.2)", blur: "0px", glow: "rgba(249, 38, 114, 0.15)"
+        }
+    },
+    {
+        name: "Copper Steampunk",
+        preview: "linear-gradient(135deg, #1b130e, #d97742, #eab308)",
+        colors: {
+            bg: "#16100c", s1: "#231912", s2: "#2e2118", s3: "#3d2b1f", s4: "#100b08", header: "#0d0906",
+            font: "#f7ead9", font2: "#c7a487", accent: "#d97742", accent2: "#eab308", accent3: "#14b8a6",
+            border: "rgba(217, 119, 66, 0.22)", blur: "0px", glow: "rgba(217, 119, 66, 0.18)"
+        }
+    },
+    {
+        name: "Velvet Library",
+        preview: "linear-gradient(135deg, #1a0f14, #c9a25f, #9f1239)",
+        colors: {
+            bg: "#140b0f", s1: "#211219", s2: "#2b1720", s3: "#381f2a", s4: "#0f080b", header: "#0c0609",
+            font: "#f9eef2", font2: "#c29aa8", accent: "#d4af37", accent2: "#e11d48", accent3: "#fbbf24",
+            border: "rgba(212, 175, 55, 0.22)", blur: "0px", glow: "rgba(212, 175, 55, 0.15)"
+        }
+    },
+    {
+        name: "Sumi-e Charcoal",
+        preview: "linear-gradient(135deg, #161618, #e05a47, #d6d3d1)",
+        colors: {
+            bg: "#121214", s1: "#1c1c20", s2: "#242429", s3: "#2f2f36", s4: "#0d0d0f", header: "#0a0a0c",
+            font: "#f5f5f4", font2: "#a8a29e", accent: "#e05a47", accent2: "#f97316", accent3: "#d6d3d1",
+            border: "rgba(255, 255, 255, 0.1)", blur: "0px", glow: "rgba(224, 90, 71, 0.16)"
+        }
+    },
+    {
+        name: "Abyssal Teal",
+        preview: "linear-gradient(135deg, #06181c, #14b8a6, #38bdf8)",
+        colors: {
+            bg: "#041216", s1: "#091e24", s2: "#0e2930", s3: "#143740", s4: "#030c0f", header: "#02090b",
+            font: "#ecfeff", font2: "#67e8f9", accent: "#14b8a6", accent2: "#2dd4bf", accent3: "#0ea5e9",
+            border: "rgba(20, 184, 166, 0.2)", blur: "0px", glow: "rgba(20, 184, 166, 0.18)"
+        }
+    },
+    {
+        name: "Starlight Lavender",
+        preview: "linear-gradient(135deg, #131126, #a78bfa, #f472b6)",
+        colors: {
+            bg: "#0e0c1d", s1: "#17142e", s2: "#201c3f", s3: "#2b2552", s4: "#0a0814", header: "#070610",
+            font: "#f5f3ff", font2: "#c4b5fd", accent: "#a78bfa", accent2: "#f472b6", accent3: "#38bdf8",
+            border: "rgba(167, 139, 250, 0.2)", blur: "0px", glow: "rgba(167, 139, 250, 0.18)"
+        }
+    },
+    {
+        name: "Jade Temple",
+        preview: "linear-gradient(135deg, #0a1914, #34d399, #fbbf24)",
+        colors: {
+            bg: "#071410", s1: "#0e211b", s2: "#142c24", s3: "#1c3a30", s4: "#050d0a", header: "#040a08",
+            font: "#ecfdf5", font2: "#6ee7b7", accent: "#34d399", accent2: "#fbbf24", accent3: "#10b981",
+            border: "rgba(52, 211, 153, 0.2)", blur: "0px", glow: "rgba(52, 211, 153, 0.16)"
+        }
+    },
+    {
+        name: "Nordic Pine",
+        preview: "linear-gradient(135deg, #1b2224, #88c0d0, #a3be8c)",
+        colors: {
+            bg: "#1b2224", s1: "#232c2f", s2: "#2a3539", s3: "#344146", s4: "#141a1c", header: "#101517",
+            font: "#eceff4", font2: "#9fb3b8", accent: "#88c0d0", accent2: "#a3be8c", accent3: "#ebcb8b",
+            border: "rgba(136, 192, 208, 0.18)", blur: "0px", glow: "rgba(136, 192, 208, 0.14)"
+        }
+    },
+    {
+        name: "Terracotta Ember",
+        preview: "linear-gradient(135deg, #1f1210, #e07a5f, #f2cc8f)",
+        colors: {
+            bg: "#1a0f0d", s1: "#261714", s2: "#311e1a", s3: "#402822", s4: "#120a09", header: "#0e0807",
+            font: "#faf0ec", font2: "#d4a69a", accent: "#e07a5f", accent2: "#f2cc8f", accent3: "#81b29a",
+            border: "rgba(224, 122, 95, 0.22)", blur: "0px", glow: "rgba(224, 122, 95, 0.16)"
+        }
+    },
+    {
+        name: "Lunar Eclipse",
+        preview: "linear-gradient(135deg, #101218, #f59e0b, #64748b)",
+        colors: {
+            bg: "#0c0e13", s1: "#151821", s2: "#1d212d", s3: "#272d3d", s4: "#08090d", header: "#06070a",
+            font: "#f1f5f9", font2: "#94a3b8", accent: "#f59e0b", accent2: "#fbbf24", accent3: "#94a3b8",
+            border: "rgba(245, 158, 11, 0.2)", blur: "0px", glow: "rgba(245, 158, 11, 0.16)"
+        }
     }
 ];
 
@@ -967,6 +1111,150 @@ export const LIGHT_THEMES = [
             bg: "#fffef8", s1: "#ffffff", s2: "#fff9e6", s3: "#fff5cc", s4: "#ffffff", header: "#ffffff",
             font: "#661a29", font2: "#b32d47", accent: "#f5576c", accent2: "#f093fb", accent3: "#ff6666",
             border: "rgba(245, 87, 108, 0.15)", blur: "0px", glow: "rgba(240, 147, 251, 0.15)"
+        }
+    },
+    {
+        name: "Catppuccin Latte",
+        preview: "linear-gradient(135deg, #eff1f5, #8839ef, #1e66f5)",
+        colors: {
+            bg: "#eff1f5", s1: "#ffffff", s2: "#e6e9ef", s3: "#dce0e8", s4: "#f8f9fc", header: "#ffffff",
+            font: "#4c4f69", font2: "#6c6f85", accent: "#8839ef", accent2: "#1e66f5", accent3: "#ea76cb",
+            border: "rgba(76, 79, 105, 0.14)", blur: "0px", glow: "rgba(136, 57, 239, 0.12)"
+        }
+    },
+    {
+        name: "Solarized Daylight",
+        preview: "linear-gradient(135deg, #fdf6e3, #268bd2, #2aa198)",
+        colors: {
+            bg: "#fdf6e3", s1: "#fffcf2", s2: "#eee8d5", s3: "#e4ddc8", s4: "#faf3df", header: "#f7f0dc",
+            font: "#073642", font2: "#586e75", accent: "#268bd2", accent2: "#2aa198", accent3: "#b58900",
+            border: "rgba(7, 54, 66, 0.14)", blur: "0px", glow: "rgba(38, 139, 210, 0.12)"
+        }
+    },
+    {
+        name: "Gruvbox Parchment",
+        preview: "linear-gradient(135deg, #fbf1c7, #d65d0e, #98971a)",
+        colors: {
+            bg: "#fbf1c7", s1: "#fff8db", s2: "#f2e5bc", s3: "#ebdbb2", s4: "#f9efca", header: "#f5e9bd",
+            font: "#3c3836", font2: "#665c54", accent: "#d65d0e", accent2: "#b57614", accent3: "#79740e",
+            border: "rgba(60, 56, 54, 0.15)", blur: "0px", glow: "rgba(214, 93, 14, 0.12)"
+        }
+    },
+    {
+        name: "Kyoto Bamboo",
+        preview: "linear-gradient(135deg, #f4f7f0, #4d7c0f, #84cc16)",
+        colors: {
+            bg: "#f4f7f0", s1: "#ffffff", s2: "#e8efe0", s3: "#dbe6ce", s4: "#f9fbf6", header: "#ffffff",
+            font: "#1f2e15", font2: "#4d6b38", accent: "#4d7c0f", accent2: "#65a30d", accent3: "#15803d",
+            border: "rgba(77, 124, 15, 0.15)", blur: "0px", glow: "rgba(101, 163, 13, 0.12)"
+        }
+    },
+    {
+        name: "Aegean Marble",
+        preview: "linear-gradient(135deg, #f6f9fc, #0369a1, #38bdf8)",
+        colors: {
+            bg: "#f6f9fc", s1: "#ffffff", s2: "#e8f1f8", s3: "#d7e6f3", s4: "#fafcfe", header: "#ffffff",
+            font: "#0f2942", font2: "#4a6b8a", accent: "#0369a1", accent2: "#0284c7", accent3: "#0ea5e9",
+            border: "rgba(3, 105, 161, 0.14)", blur: "0px", glow: "rgba(14, 165, 233, 0.12)"
+        }
+    },
+    {
+        name: "Terracotta Clay",
+        preview: "linear-gradient(135deg, #faf3ee, #c2410c, #ea580c)",
+        colors: {
+            bg: "#faf3ee", s1: "#ffffff", s2: "#f3e4da", s3: "#ebd4c6", s4: "#fcf8f5", header: "#ffffff",
+            font: "#431407", font2: "#9a3412", accent: "#c2410c", accent2: "#ea580c", accent3: "#d97706",
+            border: "rgba(194, 65, 12, 0.15)", blur: "0px", glow: "rgba(234, 88, 12, 0.12)"
+        }
+    },
+    {
+        name: "Papyrus Scroll",
+        preview: "linear-gradient(135deg, #f8f1dc, #854d0e, #ca8a04)",
+        colors: {
+            bg: "#f8f1dc", s1: "#fffdf5", s2: "#efe4c2", s3: "#e5d5a8", s4: "#fbf6e6", header: "#fffcf0",
+            font: "#3d2808", font2: "#78551a", accent: "#854d0e", accent2: "#b45309", accent3: "#ca8a04",
+            border: "rgba(133, 77, 14, 0.16)", blur: "0px", glow: "rgba(202, 138, 4, 0.12)"
+        }
+    },
+    {
+        name: "Blueprint Schematic",
+        preview: "linear-gradient(135deg, #eff6ff, #1d4ed8, #3b82f6)",
+        colors: {
+            bg: "#eff6ff", s1: "#ffffff", s2: "#dbeafe", s3: "#bfdbfe", s4: "#f8faff", header: "#ffffff",
+            font: "#1e3a8a", font2: "#3b5998", accent: "#1d4ed8", accent2: "#2563eb", accent3: "#0284c7",
+            border: "rgba(29, 78, 216, 0.16)", blur: "0px", glow: "rgba(37, 99, 235, 0.12)"
+        }
+    },
+    {
+        name: "Sage Botanical",
+        preview: "linear-gradient(135deg, #f2f7f4, #047857, #10b981)",
+        colors: {
+            bg: "#f2f7f4", s1: "#ffffff", s2: "#e3efe8", s3: "#d1e5d9", s4: "#f7faf8", header: "#ffffff",
+            font: "#123524", font2: "#3c6e57", accent: "#047857", accent2: "#059669", accent3: "#10b981",
+            border: "rgba(4, 120, 87, 0.15)", blur: "0px", glow: "rgba(16, 185, 129, 0.12)"
+        }
+    },
+    {
+        name: "Porcelain Rose",
+        preview: "linear-gradient(135deg, #fdf2f8, #be185d, #ec4899)",
+        colors: {
+            bg: "#fdf2f8", s1: "#ffffff", s2: "#fce7f3", s3: "#fbcfe8", s4: "#fff8fb", header: "#ffffff",
+            font: "#500724", font2: "#9d174d", accent: "#be185d", accent2: "#db2777", accent3: "#ec4899",
+            border: "rgba(190, 24, 93, 0.15)", blur: "0px", glow: "rgba(236, 72, 153, 0.12)"
+        }
+    },
+    {
+        name: "Honeydew Cream",
+        preview: "linear-gradient(135deg, #f7fee7, #65a30d, #eab308)",
+        colors: {
+            bg: "#f7fee7", s1: "#ffffff", s2: "#ecfccb", s3: "#d9f99d", s4: "#fbfff0", header: "#ffffff",
+            font: "#1a2e05", font2: "#4d7c0f", accent: "#65a30d", accent2: "#84cc16", accent3: "#ca8a04",
+            border: "rgba(101, 163, 13, 0.16)", blur: "0px", glow: "rgba(132, 204, 22, 0.12)"
+        }
+    },
+    {
+        name: "Indigo Ink",
+        preview: "linear-gradient(135deg, #f5f7ff, #3730a3, #6366f1)",
+        colors: {
+            bg: "#f5f7ff", s1: "#ffffff", s2: "#e8ecff", s3: "#d8dfff", s4: "#fafbff", header: "#ffffff",
+            font: "#1e1b4b", font2: "#4338ca", accent: "#3730a3", accent2: "#4f46e5", accent3: "#6366f1",
+            border: "rgba(55, 48, 163, 0.15)", blur: "0px", glow: "rgba(99, 102, 241, 0.12)"
+        }
+    },
+    {
+        name: "Sandstone Oasis",
+        preview: "linear-gradient(135deg, #fbf8f1, #0f766e, #d97706)",
+        colors: {
+            bg: "#fbf8f1", s1: "#ffffff", s2: "#f3ecdc", s3: "#e8dec6", s4: "#fdfbf7", header: "#ffffff",
+            font: "#2c2419", font2: "#6b5a42", accent: "#0f766e", accent2: "#d97706", accent3: "#14b8a6",
+            border: "rgba(15, 118, 110, 0.15)", blur: "0px", glow: "rgba(217, 119, 6, 0.12)"
+        }
+    },
+    {
+        name: "Cherry Blossom",
+        preview: "linear-gradient(135deg, #fff5f7, #e11d48, #fb7185)",
+        colors: {
+            bg: "#fff5f7", s1: "#ffffff", s2: "#ffe4e9", s3: "#fecdd6", s4: "#fffafb", header: "#ffffff",
+            font: "#4c0519", font2: "#9f1239", accent: "#e11d48", accent2: "#f43f5e", accent3: "#fb7185",
+            border: "rgba(225, 29, 72, 0.15)", blur: "0px", glow: "rgba(244, 63, 94, 0.12)"
+        }
+    },
+    {
+        name: "Chalkboard Ivory",
+        preview: "linear-gradient(135deg, #fafaf9, #1c1917, #57534e)",
+        colors: {
+            bg: "#fafaf9", s1: "#ffffff", s2: "#f5f5f4", s3: "#e7e5e4", s4: "#ffffff", header: "#ffffff",
+            font: "#1c1917", font2: "#57534e", accent: "#292524", accent2: "#44403c", accent3: "#78716c",
+            border: "rgba(28, 25, 23, 0.14)", blur: "0px", glow: "rgba(28, 25, 23, 0.08)"
+        }
+    },
+    {
+        name: "Glacier Sky",
+        preview: "linear-gradient(135deg, #f0fdfa, #0284c7, #2dd4bf)",
+        colors: {
+            bg: "#f0fdfa", s1: "#ffffff", s2: "#ccfbf1", s3: "#99f6e4", s4: "#f7fffd", header: "#ffffff",
+            font: "#0f3d3e", font2: "#115e59", accent: "#0284c7", accent2: "#0d9488", accent3: "#06b6d4",
+            border: "rgba(2, 132, 199, 0.15)", blur: "0px", glow: "rgba(45, 212, 191, 0.14)"
         }
     }
 ];

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLexiconStore } from '../../../store/useLexiconStore.jsx';
 import { useConfigStore } from '../../../store/useConfigStore.jsx';
@@ -13,6 +13,7 @@ import { getScriptData, getScriptSystem, resolveWordScriptId } from '../../../ut
 import { validateNewWord } from '@/utils/validationEngine.jsx';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { fetchSynonymOptions, fetchDefinitionOptions, fetchTopicOptions } from '../../../utils/semanticUtils.js';
+import { getTagsForTranslation } from '../../../utils/semanticTagger.js';
 import './createWordTab.css';
 import Modal from '../../UI/Modal/Modal.jsx';
 import DefinitionSelectModal from '../../UI/Modal/DefinitionSelectModal.jsx';
@@ -25,6 +26,21 @@ import Infobox from '../../UI/Infobox/Infobox.jsx';
 import toast from 'react-hot-toast';
 import ToneStressSelector from '../dictionary/ToneStressSelector.jsx';
 import { PenTool } from 'lucide-react';
+
+const sameStringList = (a = [], b = []) => (
+    a.length === b.length && a.every((v, i) => v === b[i])
+);
+
+const pickBestDefinition = (options = [], wordClass = '') => {
+    if (!Array.isArray(options) || options.length === 0) return '';
+    const lowerPos = (wordClass || '').toLowerCase();
+    const match = options.find((opt) => {
+        const p = (opt?.pos || '').toLowerCase();
+        if (!p || !lowerPos) return false;
+        return p.includes(lowerPos) || lowerPos.includes(p);
+    });
+    return (match?.definition || options[0]?.definition || '').trim();
+};
 
 // Standard POS options that always show in the dropdown
 const STANDARD_WORD_CLASSES = [
@@ -60,6 +76,17 @@ export default function CreateWordTab() {
     const [isFetchingRelated, setIsFetchingRelated] = useState(false);
     const [isFetchingDefinition, setIsFetchingDefinition] = useState(false);
     const [isFetchingTags, setIsFetchingTags] = useState(false);
+    const [autoEnrichEnabled, setAutoEnrichEnabled] = useState(() => {
+        try {
+            return localStorage.getItem('ce_create_word_auto_enrich') !== 'false';
+        } catch {
+            return true;
+        }
+    });
+    const autoDefRef = useRef('');
+    const autoTagsRef = useRef([]);
+    const autoRelatedRef = useRef([]);
+    const enrichSeqRef = useRef(0);
 
     // Global stores
     const addWord = useLexiconStore((state) => state.addWord);
@@ -395,6 +422,119 @@ export default function CreateWordTab() {
 
     const [isDefModalOpen, setIsDefModalOpen] = useState(false);
     const [defOptions, setDefOptions] = useState([]);
+
+    const formDataRef = useRef(formData);
+    useEffect(() => {
+        formDataRef.current = formData;
+    }, [formData]);
+
+    const toggleAutoEnrich = (enabled) => {
+        setAutoEnrichEnabled(enabled);
+        try {
+            localStorage.setItem('ce_create_word_auto_enrich', enabled ? 'true' : 'false');
+        } catch { /* ignore storage errors */ }
+    };
+
+    // Automatically enrich Definition, Semantic Tags & Related Words when typing a translation
+    useEffect(() => {
+        if (!autoEnrichEnabled) return undefined;
+        const cleanTrans = (translation || '').trim();
+
+        if (cleanTrans.length < 2) {
+            const clearTimer = setTimeout(() => {
+                setFormData((prev) => {
+                    let changed = false;
+                    const next = { ...prev };
+                    if (autoDefRef.current && prev.definition === autoDefRef.current) {
+                        next.definition = '';
+                        autoDefRef.current = '';
+                        changed = true;
+                    }
+                    if (autoTagsRef.current.length > 0 && sameStringList(prev.tags, autoTagsRef.current)) {
+                        next.tags = [];
+                        autoTagsRef.current = [];
+                        changed = true;
+                    }
+                    if (autoRelatedRef.current.length > 0 && sameStringList(prev.relatedWords, autoRelatedRef.current)) {
+                        next.relatedWords = [];
+                        autoRelatedRef.current = [];
+                        changed = true;
+                    }
+                    return changed ? next : prev;
+                });
+            }, 150);
+            return () => clearTimeout(clearTimer);
+        }
+
+        const timer = setTimeout(async () => {
+            const snap = formDataRef.current;
+            const canFillDef = !snap.definition.trim() || snap.definition === autoDefRef.current;
+            const canFillTags = snap.tags.length === 0 || sameStringList(snap.tags, autoTagsRef.current);
+            const canFillRelated = snap.relatedWords.length === 0 || sameStringList(snap.relatedWords, autoRelatedRef.current);
+
+            if (!canFillDef && !canFillTags && !canFillRelated) return;
+
+            const seq = ++enrichSeqRef.current;
+            if (canFillDef) setIsFetchingDefinition(true);
+            if (canFillTags) setIsFetchingTags(true);
+            if (canFillRelated) setIsFetchingRelated(true);
+
+            try {
+                const [defOpts, offlineTags, topicOpts, synOpts] = await Promise.all([
+                    canFillDef ? fetchDefinitionOptions(cleanTrans).catch(() => []) : Promise.resolve(null),
+                    canFillTags ? getTagsForTranslation(cleanTrans, true).catch(() => []) : Promise.resolve(null),
+                    canFillTags ? fetchTopicOptions(cleanTrans).catch(() => []) : Promise.resolve(null),
+                    canFillRelated ? fetchSynonymOptions(cleanTrans).catch(() => []) : Promise.resolve(null)
+                ]);
+
+                if (seq !== enrichSeqRef.current) return;
+
+                const nextDef = canFillDef ? pickBestDefinition(defOpts, wordClass) : null;
+                const nextTags = canFillTags
+                    ? [...new Set([
+                        ...(Array.isArray(offlineTags) ? offlineTags : []),
+                        ...(Array.isArray(topicOpts) ? topicOpts.map((r) => r.lemma?.toLowerCase()).filter(Boolean) : [])
+                    ])].slice(0, 5)
+                    : null;
+                const nextRelated = canFillRelated
+                    ? [...new Set(
+                        (Array.isArray(synOpts) ? synOpts : [])
+                            .map((r) => r.lemma?.toLowerCase())
+                            .filter((w) => w && w !== cleanTrans.toLowerCase())
+                    )].slice(0, 6)
+                    : null;
+
+                setFormData((prev) => {
+                    let changed = false;
+                    const next = { ...prev };
+                    if (canFillDef && nextDef && (!prev.definition.trim() || prev.definition === autoDefRef.current)) {
+                        next.definition = nextDef;
+                        autoDefRef.current = nextDef;
+                        changed = true;
+                    }
+                    if (canFillTags && nextTags && nextTags.length > 0 && (prev.tags.length === 0 || sameStringList(prev.tags, autoTagsRef.current))) {
+                        next.tags = nextTags;
+                        autoTagsRef.current = nextTags;
+                        changed = true;
+                    }
+                    if (canFillRelated && nextRelated && nextRelated.length > 0 && (prev.relatedWords.length === 0 || sameStringList(prev.relatedWords, autoRelatedRef.current))) {
+                        next.relatedWords = nextRelated;
+                        autoRelatedRef.current = nextRelated;
+                        changed = true;
+                    }
+                    return changed ? next : prev;
+                });
+            } finally {
+                if (seq === enrichSeqRef.current) {
+                    if (canFillDef) setIsFetchingDefinition(false);
+                    if (canFillTags) setIsFetchingTags(false);
+                    if (canFillRelated) setIsFetchingRelated(false);
+                }
+            }
+        }, 650);
+
+        return () => clearTimeout(timer);
+    }, [translation, wordClass, autoEnrichEnabled]);
 
     const autoSuggestDefinition = async () => {
         if (!translation) return toast.error("Please enter a short translation first.");
@@ -1131,6 +1271,29 @@ export default function CreateWordTab() {
                         />
                     </div>
                 </details>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '6px' }}>
+                    <label
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontSize: '0.78rem',
+                            color: 'var(--tx2)',
+                            cursor: 'pointer',
+                            userSelect: 'none'
+                        }}
+                        title="Automatically suggest Definition, Semantic Tags & Related Words when typing a translation"
+                    >
+                        <input
+                            type="checkbox"
+                            checked={autoEnrichEnabled}
+                            onChange={(e) => toggleAutoEnrich(e.target.checked)}
+                        />
+                        <Sparkles size={13} style={{ color: 'var(--acc)' }} />
+                        Auto-fill Definition, Tags &amp; Related Words
+                    </label>
+                </div>
 
                 <div className="input-grid trans-def-grid">
                     <div>

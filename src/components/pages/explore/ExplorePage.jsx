@@ -14,6 +14,7 @@ import { collectSubsetGlyphs } from '../../../hooks/usePublicInjectors.jsx';
 import { arrayBufferToFontDataUrl, getCachedPublicFont } from '../../../utils/publicFontCache.js';
 import { generateBlockFontData } from '../../../utils/blockFontGenerator.jsx';
 import Button from '../../UI/Buttons/Buttons.jsx';
+import CreatorAvatar from '../../UI/CreatorAvatar/CreatorAvatar.jsx';
 import PageSkeleton from '../../UI/PageSkeleton/PageSkeleton.jsx';
 import { useSharing } from '../../../hooks/useSharing.jsx';
 import CommentsModal from './CommentsModal.jsx';
@@ -621,6 +622,12 @@ export default function ExplorePage() {
             if (aName && !grp.authorNames.includes(aName)) {
                 grp.authorNames.push(aName);
             }
+            if (!grp.authorAvatar && lang.project_data?.config?.authorAvatar) {
+                grp.authorAvatar = lang.project_data.config.authorAvatar;
+            }
+            if (!grp.authorBio && lang.project_data?.config?.authorBio) {
+                grp.authorBio = lang.project_data.config.authorBio;
+            }
             grp.totalLikes += (likesData[lang.project_id] || 0);
             grp.totalWords += (lang.project_data?.wordCount || lang.project_data?.dictionary?.length || 0);
             const itemDate = new Date(lang.project_data?.last_updated || lang.updated_at || lang.created_at).getTime();
@@ -1029,14 +1036,21 @@ export default function ExplorePage() {
                                         <div className={`explore-author-chevron ${isCollapsed ? 'collapsed' : ''}`}>
                                             <ChevronDown size={18} />
                                         </div>
-                                        <div className="explore-author-avatar">
-                                            <User size={16} />
-                                        </div>
+                                        <CreatorAvatar
+                                            avatar={group.authorAvatar}
+                                            name={group.authorName}
+                                            size={34}
+                                        />
                                         <div className="explore-author-name-row">
                                             <h2 className="explore-author-name">{group.authorName}</h2>
                                             <span className="explore-author-badge">
                                                 {group.langs.length} {group.langs.length === 1 ? 'conlang' : 'conlangs'}
                                             </span>
+                                            {group.authorBio && (
+                                                <span style={{ fontSize: '0.76rem', color: 'var(--tx3)', fontWeight: 400 }}>
+                                                    · {group.authorBio}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="explore-author-stats">

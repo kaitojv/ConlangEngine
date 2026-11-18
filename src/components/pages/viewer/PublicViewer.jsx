@@ -3,6 +3,7 @@ import { useParams, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/utils/supabaseClient.js';
 import { BookOpen, Globe, User, Search, Layers, PenTool, ChevronDown, Volume2, Type, Hash, AlignLeft, BrainCircuit, FileText, Map as MapIcon, Zap, ArrowLeft, Loader2, Calendar, Clock, Library, Star, Crown, Book, Brain, Flame, Dumbbell, Sword, Shield, Lock, Check, CheckCircle } from 'lucide-react';
 import Button from '../../UI/Buttons/Buttons.jsx';
+import CreatorAvatar from '../../UI/CreatorAvatar/CreatorAvatar.jsx';
 import { playAzureTTS } from '@/utils/azureTTS.js';
 import { sanitizeWikiHtml } from '../../../utils/sanitizeHtml.js';
 import { getConlangIcon } from '../../../utils/iconMap.jsx';
@@ -537,9 +538,12 @@ export default function PublicViewer() {
                         </div>
                         <h1 className={`pv-lang-name ${activeScriptMode === 'latin' ? '' : `custom-font-text ${activeScriptClass}`} notranslate`} style={{ margin: 0, writingMode: 'horizontal-tb' }}>{displayName}</h1>
                     </div>
-                    <div className="pv-author">
-                        <User size={14} />
+                    <div className="pv-author" title={config.authorBio || ''}>
+                        <CreatorAvatar avatar={config.authorAvatar} name={config.authorName} size={24} />
                         <span>Created by {config.authorName || 'Anonymous'}</span>
+                        {config.authorBio && (
+                            <span style={{ opacity: 0.78, fontSize: '0.8rem' }}>· {config.authorBio}</span>
+                        )}
                     </div>
                     {displayDesc && displayDesc !== 'A brief description of your conlang.' && (
                         <p className="pv-description notranslate" style={{ writingMode: 'horizontal-tb' }}>{displayDesc}</p>

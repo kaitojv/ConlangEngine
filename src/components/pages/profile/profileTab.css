@@ -395,3 +395,223 @@
     border-color: var(--acc);
     box-shadow: 0 10px 20px rgba(0,0,0,0.1);
 }
+
+/* Social Creator Identity Hero */
+.social-hero-card {
+    border-top: 3px solid var(--acc);
+}
+
+.social-hero-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.social-hero-identity {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+    min-width: 240px;
+}
+
+.social-avatar-trigger {
+    position: relative;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    border-radius: 50%;
+    overflow: hidden;
+    display: inline-flex;
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+    box-shadow: 0 0 0 3px var(--s1), 0 6px 16px rgba(0,0,0,0.14);
+}
+
+.social-avatar-trigger:hover {
+    transform: scale(1.04);
+    box-shadow: 0 0 0 3px var(--acc), 0 8px 20px rgba(0,0,0,0.2);
+}
+
+.social-avatar-hover-overlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.52);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.16s ease;
+    backdrop-filter: blur(2px);
+}
+
+.social-avatar-trigger:hover .social-avatar-hover-overlay,
+.social-avatar-trigger:focus-visible .social-avatar-hover-overlay {
+    opacity: 1;
+}
+
+.social-hero-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.social-hero-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.social-hero-name {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--tx);
+}
+
+.social-pinned-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--acc) 14%, transparent);
+    color: var(--acc);
+    border: 1px solid color-mix(in srgb, var(--acc) 35%, transparent);
+}
+
+.social-hero-bio {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--tx2);
+    line-height: 1.4;
+}
+
+.social-stats-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 2px;
+    font-size: 0.78rem;
+    color: var(--tx3);
+}
+
+.social-stats-strip strong {
+    color: var(--tx);
+}
+
+.social-hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.social-customizer-panel {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--bd);
+}
+
+.social-customizer-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
+}
+
+.social-customizer-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.social-upload-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.social-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: var(--rad-sm);
+    background: var(--s2);
+    border: 1px solid var(--bd);
+    color: var(--tx);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+}
+
+.social-upload-btn:hover {
+    border-color: var(--acc);
+    color: var(--acc);
+}
+
+.avatar-icon-grid {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.avatar-icon-option {
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid var(--bd);
+    background: var(--s2);
+    color: var(--tx2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.14s ease;
+}
+
+.avatar-icon-option:hover {
+    border-color: var(--acc);
+    color: var(--tx);
+}
+
+.avatar-icon-option.active {
+    background: var(--acc);
+    border-color: var(--acc);
+    color: #fff;
+}
+
+.avatar-color-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+}
+
+.avatar-color-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.14s ease;
+}
+
+.avatar-color-swatch:hover {
+    transform: scale(1.12);
+}
+
+.avatar-color-swatch.active {
+    border-color: var(--tx);
+    box-shadow: 0 0 0 2px var(--s1);
+}
