@@ -236,7 +236,7 @@ export default function ProfileTab() {
             const compressed = await compressAvatarImage(file, 128);
             const nextAvatar = { ...(authorAvatar || {}), type: 'image', imageData: compressed };
             await handleAvatarChange(nextAvatar);
-            toast.success('Profile picture updated!');
+            toast.success(t('profile.social.photoUpdatedToast'));
         } catch (err) {
             toast.error(err?.message || 'Could not process image.');
         }
@@ -675,7 +675,7 @@ export default function ProfileTab() {
                             type="button"
                             className="social-avatar-trigger"
                             onClick={() => setIsCustomizingProfile((v) => !v)}
-                            title="Customize Creator Icon or Photo"
+                            title={t('profile.social.customizeTooltip')}
                         >
                             <CreatorAvatar avatar={authorAvatar} name={authorName} size={76} />
                             <span className="social-avatar-hover-overlay" aria-hidden="true">
@@ -697,14 +697,14 @@ export default function ProfileTab() {
                                 )}
                             </div>
                             <p className="social-hero-bio">
-                                {authorBio?.trim() || 'Constructed Language Creator · Add a short bio or specialty'}
+                                {authorBio?.trim() || t('profile.social.defaultBio')}
                             </p>
                             <div className="social-stats-strip">
-                                <span><strong>{lexicon.length}</strong> Words</span>
-                                <span><strong>{grammarRules.length}</strong> Rules</span>
-                                <span><strong>{scriptSystems?.length || 1}</strong> Scripts</span>
-                                <span><strong>{configStreak || 0}</strong> Streak</span>
-                                <span><strong>{configUnlockedBadges?.length || 0}/{BADGES.length}</strong> Badges</span>
+                                <span><strong>{lexicon.length}</strong> {t('profile.social.words')}</span>
+                                <span><strong>{grammarRules.length}</strong> {t('profile.social.rules')}</span>
+                                <span><strong>{scriptSystems?.length || 1}</strong> {t('profile.social.scripts')}</span>
+                                <span><strong>{configStreak || 0}</strong> {t('profile.social.streak')}</span>
+                                <span><strong>{configUnlockedBadges?.length || 0}/{BADGES.length}</strong> {t('profile.social.badges')}</span>
                             </div>
                         </div>
                     </div>
@@ -714,10 +714,10 @@ export default function ProfileTab() {
                             variant={isCustomizingProfile ? 'imp' : 'default'}
                             onClick={() => setIsCustomizingProfile((v) => !v)}
                         >
-                            <div className="btn-content"><Edit2 size={14} /> Customize</div>
+                            <div className="btn-content"><Edit2 size={14} /> {t('profile.social.customize')}</div>
                         </Button>
                         <Button variant="default" onClick={() => navigate('/explore')}>
-                            <div className="btn-content"><Globe size={14} /> Explore</div>
+                            <div className="btn-content"><Globe size={14} /> {t('profile.social.explore')}</div>
                         </Button>
                     </div>
                 </div>
@@ -726,10 +726,10 @@ export default function ProfileTab() {
                     <div className="social-customizer-panel">
                         <div className="social-customizer-row">
                             <div className="social-customizer-col">
-                                <label className="form-label">Creator Picture or Icon</label>
+                                <label className="form-label">{t('profile.social.pictureOrIcon')}</label>
                                 <div className="social-upload-row">
                                     <label className="social-upload-btn">
-                                        <Upload size={14} /> Upload Photo
+                                        <Upload size={14} /> {t('profile.social.uploadPhoto')}
                                         <input
                                             type="file"
                                             accept="image/*"
@@ -743,7 +743,7 @@ export default function ProfileTab() {
                                             className="btn-link"
                                             onClick={() => handleAvatarChange({ ...(authorAvatar || {}), type: 'icon', imageData: '' })}
                                         >
-                                            <RotateCcw size={13} /> Use Icon Instead
+                                            <RotateCcw size={13} /> {t('profile.social.useIconInstead')}
                                         </button>
                                     )}
                                 </div>
@@ -784,16 +784,16 @@ export default function ProfileTab() {
 
                             <div className="social-customizer-col">
                                 <Input
-                                    label="Creator Bio / Specialty"
+                                    label={t('profile.social.bioLabel')}
                                     value={authorBio || ''}
                                     maxLength={140}
                                     onChange={(e) => updateConfig({ authorBio: e.target.value })}
                                     onBlur={() => syncAuthProfileMetadata({ authorBio })}
-                                    placeholder="e.g. Worldbuilder, polysynthetic & featural script creator"
+                                    placeholder={t('profile.social.bioPlaceholder')}
                                 />
 
                                 <div style={{ marginTop: '10px' }}>
-                                    <label className="form-label">Pinned Showcase Achievement</label>
+                                    <label className="form-label">{t('profile.social.pinnedBadge')}</label>
                                     <select
                                         className="fi custom-select"
                                         value={authorBadge || ''}
@@ -803,7 +803,7 @@ export default function ProfileTab() {
                                             syncAuthProfileMetadata({ authorBadge: nextBadge });
                                         }}
                                     >
-                                        <option value="">None (No pinned badge)</option>
+                                        <option value="">{t('profile.social.noPinnedBadge')}</option>
                                         {BADGES.filter((b) => configUnlockedBadges?.includes(b.id)).map((b) => (
                                             <option key={b.id} value={b.id}>
                                                 {t(`profile.badges.${b.id}.name`) || b.name}
@@ -819,12 +819,12 @@ export default function ProfileTab() {
                                             disabled={isSyncingProfileMeta}
                                             onClick={async () => {
                                                 await syncAuthProfileMetadata();
-                                                toast.success('Social profile synced to account!');
+                                                toast.success(t('profile.social.syncedToast'));
                                             }}
                                         >
                                             <div className="btn-content">
                                                 <RefreshCw size={13} className={isSyncingProfileMeta ? 'animate-spin' : ''} />
-                                                {isSyncingProfileMeta ? ' Syncing...' : ' Save Profile'}
+                                                {isSyncingProfileMeta ? ` ${t('profile.social.syncing')}` : ` ${t('profile.social.saveProfile')}`}
                                             </div>
                                         </Button>
                                     </div>

@@ -1086,10 +1086,10 @@ export default function CreateWordTab() {
                             type="button"
                             className={`cw-header-pill ${autoEnrichEnabled ? 'active' : ''}`}
                             onClick={() => toggleAutoEnrich(!autoEnrichEnabled)}
-                            title="Automatically fill Definition, Tags, Related Words & Derivation Definitions from your translation"
+                            title={t('createWord.autoFillTooltip')}
                         >
                             <Sparkles size={13} />
-                            <span>Auto-fill: {autoEnrichEnabled ? 'On' : 'Off'}</span>
+                            <span>{autoEnrichEnabled ? t('createWord.autoFillOn') : t('createWord.autoFillOff')}</span>
                         </button>
                         <button
                             type="button"

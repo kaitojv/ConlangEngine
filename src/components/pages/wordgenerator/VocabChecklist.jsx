@@ -944,7 +944,7 @@ export default function VocabChecklist({ onExit }) {
 
                     <label
                         className="vc-toggle-label"
-                        title='Display and save verbs in infinitive form (e.g. "suck" → "to suck", "do" → "to do")'
+                        title={t('vocabChecklist.infinitiveVerbsTitle')}
                     >
                         <input
                             type="checkbox"
@@ -955,7 +955,7 @@ export default function VocabChecklist({ onExit }) {
                                 try { localStorage.setItem('vc_infinitive_verbs', String(nextVal)); } catch { /* ignore */ }
                             }}
                         />
-                        <span>Infinitive Verbs (&quot;to ...&quot;)</span>
+                        <span>{t('vocabChecklist.infinitiveVerbs')}</span>
                     </label>
                 </div>
 
