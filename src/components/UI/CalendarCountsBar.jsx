@@ -53,7 +53,10 @@ export default function CalendarCountsBar({ calendarSystem, onChangeCalendarSyst
                 border: '1px solid var(--bd)',
             }}
         >
-            {CALENDAR_COUNT_FIELDS.map((field) => (
+            {CALENDAR_COUNT_FIELDS.map((field) => {
+                const labelText = t(field.labelKey);
+                const resolvedLabel = labelText === field.labelKey ? field.fallbackLabel : labelText;
+                return (
                 <label
                     key={field.key}
                     style={{
@@ -65,7 +68,7 @@ export default function CalendarCountsBar({ calendarSystem, onChangeCalendarSyst
                         color: 'var(--tx)',
                     }}
                 >
-                    <span>{t(field.labelKey, field.fallbackLabel)}</span>
+                    <span>{resolvedLabel}</span>
                     <input
                         type="number"
                         className="fi"
@@ -77,7 +80,8 @@ export default function CalendarCountsBar({ calendarSystem, onChangeCalendarSyst
                         style={{ width: '70px', textAlign: 'center' }}
                     />
                 </label>
-            ))}
+                );
+            })}
             <span style={{ marginLeft: 'auto', fontSize: '0.82rem', color: 'var(--tx2)' }}>
                 {daysPerWeek * weeksPerMonth} days/month • {daysPerWeek * weeksPerMonth * monthsPerYear} days/year
             </span>

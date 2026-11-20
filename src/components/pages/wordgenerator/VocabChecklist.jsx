@@ -956,15 +956,15 @@ export default function VocabChecklist({ onExit }) {
                                     variant="secondary"
                                     onClick={handleRestoreSelected}
                                 >
-                                    <RotateCcw size={15} /> {t('vocabChecklist.restoreSelected', `Restore Selected (${selectedEnglishWords.size})`, { count: selectedEnglishWords.size })}
+                                    <RotateCcw size={15} /> {t('vocabChecklist.restoreSelected', { count: selectedEnglishWords.size })}
                                 </Button>
                             ) : (
                                 <Button
                                     variant="secondary"
                                     onClick={handleOccultSelected}
-                                    title={t('vocabChecklist.occultSelectedTitle', 'Occult / Remove selected words from checklist')}
+                                    title="Occult / Remove selected words from checklist"
                                 >
-                                    <EyeOff size={15} /> {t('vocabChecklist.occultSelected', `Occult Selected (${selectedEnglishWords.size})`, { count: selectedEnglishWords.size })}
+                                    <EyeOff size={15} /> {t('vocabChecklist.occultSelected', { count: selectedEnglishWords.size })}
                                 </Button>
                             )
                         )}
