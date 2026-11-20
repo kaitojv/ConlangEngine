@@ -32,6 +32,14 @@ const CATEGORY_ICONS = {
     MessageSquare, Coins, Sparkles, Filter
 };
 
+function formatChecklistTranslation(englishWord, wordClass, useInfinitive) {
+    const clean = (englishWord || '').trim();
+    if (!useInfinitive || !clean) return clean;
+    if (!/\bverb\b/i.test(wordClass || '')) return clean;
+    if (/^to\s+/i.test(clean)) return clean;
+    return `to ${clean.charAt(0).toLowerCase()}${clean.slice(1)}`;
+}
+
 export default function VocabChecklist({ onExit }) {
     const { t } = useTranslation();
     const { generateWord } = useWordGenerator();
@@ -73,6 +81,10 @@ export default function VocabChecklist({ onExit }) {
     const [onlyUncreated, setOnlyUncreated] = useState(true);
     const [showOcculted, setShowOcculted] = useState(false);
     const [onlyOcculted, setOnlyOcculted] = useState(false);
+    const [infinitiveVerbs, setInfinitiveVerbs] = useState(() => {
+        try { return localStorage.getItem('vc_infinitive_verbs') === 'true'; }
+        catch { return false; }
+    });
     const [posFilter, setPosFilter] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -390,7 +402,9 @@ export default function VocabChecklist({ onExit }) {
         }
 
         const cleanWord = normalizeToBase(edit.conlangWord.trim());
-        const { isDuplicateWord, isDuplicateTranslation } = checkDuplicate(cleanWord, englishWord);
+        const targetClass = edit.wordClass || (item ? item.class : 'noun');
+        const saveTranslation = formatChecklistTranslation(englishWord, targetClass, infinitiveVerbs);
+        const { isDuplicateWord, isDuplicateTranslation } = checkDuplicate(cleanWord, saveTranslation);
         if (isDuplicateWord || isDuplicateTranslation) {
             toast.error(t('vocabChecklist.duplicateWordOrTrans', 'Word or translation already exists in your lexicon.'));
             return;
@@ -402,8 +416,8 @@ export default function VocabChecklist({ onExit }) {
 
         addWord({
             word: cleanWord,
-            wordClass: edit.wordClass || (item ? item.class : 'noun'),
-            translation: englishWord,
+            wordClass: targetClass,
+            translation: saveTranslation,
             tags: tags,
             description: edit.description || ''
         });
@@ -427,10 +441,12 @@ export default function VocabChecklist({ onExit }) {
             toast.error(t('vocabChecklist.enterConlangFirst', 'Please enter or roll a word first.'));
             return;
         }
+        const targetClass = edit.wordClass || (item ? item.class : 'noun');
         setDerivModalWord({
             englishWord,
+            saveTranslation: formatChecklistTranslation(englishWord, targetClass, infinitiveVerbs),
             conlangWord: edit.conlangWord.trim(),
-            wordClass: edit.wordClass || (item ? item.class : 'noun'),
+            wordClass: targetClass,
             tags: edit.tags ? edit.tags.split(',').map(t => t.trim()).filter(Boolean) : (item && item.category ? [item.category] : []),
             description: edit.description || ''
         });
@@ -503,7 +519,8 @@ export default function VocabChecklist({ onExit }) {
         if (!derivModalWord) return;
 
         const safeWord = normalizeToBase(derivModalWord.conlangWord);
-        const { isDuplicateWord, isDuplicateTranslation } = checkDuplicate(safeWord, derivModalWord.englishWord);
+        const modalTrans = derivModalWord.saveTranslation || derivModalWord.englishWord;
+        const { isDuplicateWord, isDuplicateTranslation } = checkDuplicate(safeWord, modalTrans);
         if (isDuplicateWord || isDuplicateTranslation) {
             toast.error(t('vocabChecklist.duplicateWordOrTrans', 'Word or translation already exists in your lexicon.'));
             return;
@@ -516,7 +533,7 @@ export default function VocabChecklist({ onExit }) {
             id: rootId,
             word: safeWord,
             wordClass: derivModalWord.wordClass,
-            translation: derivModalWord.englishWord,
+            translation: modalTrans,
             tags: derivModalWord.tags,
             description: derivModalWord.description || ''
         });
@@ -591,7 +608,8 @@ export default function VocabChecklist({ onExit }) {
         let dupCount = 0;
 
         for (const row of toSave) {
-            const { isDuplicateWord, isDuplicateTranslation } = checkDuplicate(row.conlangWord, row.englishWord);
+            const saveTranslation = formatChecklistTranslation(row.englishWord, row.wordClass, infinitiveVerbs);
+            const { isDuplicateWord, isDuplicateTranslation } = checkDuplicate(row.conlangWord, saveTranslation);
             if (isDuplicateWord || isDuplicateTranslation) {
                 dupCount++;
                 continue;
@@ -601,7 +619,7 @@ export default function VocabChecklist({ onExit }) {
             addWord({
                 word: safeWord,
                 wordClass: row.wordClass,
-                translation: row.englishWord,
+                translation: saveTranslation,
                 tags: row.tags,
                 description: row.description
             });
@@ -627,7 +645,7 @@ export default function VocabChecklist({ onExit }) {
         navigate('/create', {
             state: {
                 prefillWord: conlangWord || '',
-                prefillTranslation: englishWord,
+                prefillTranslation: formatChecklistTranslation(englishWord, wordClass, infinitiveVerbs),
                 prefillClass: wordClass,
                 prefillDefinition: description || '',
                 prefillTags: tags || ''
@@ -923,6 +941,22 @@ export default function VocabChecklist({ onExit }) {
                             <RotateCcw size={12} /> {t('vocabChecklist.restoreAll', 'Restore All')} ({hiddenWords.length})
                         </button>
                     )}
+
+                    <label
+                        className="vc-toggle-label"
+                        title='Display and save verbs in infinitive form (e.g. "suck" → "to suck", "do" → "to do")'
+                    >
+                        <input
+                            type="checkbox"
+                            checked={infinitiveVerbs}
+                            onChange={(e) => {
+                                const nextVal = e.target.checked;
+                                setInfinitiveVerbs(nextVal);
+                                try { localStorage.setItem('vc_infinitive_verbs', String(nextVal)); } catch { /* ignore */ }
+                            }}
+                        />
+                        <span>Infinitive Verbs (&quot;to ...&quot;)</span>
+                    </label>
                 </div>
 
                 {/* ── Batch Toolbar ── */}
@@ -1024,7 +1058,9 @@ export default function VocabChecklist({ onExit }) {
 
                                     {/* English word & meta */}
                                     <div className="vc-row-english">
-                                        <span className="vc-english-word">{item.word}</span>
+                                        <span className="vc-english-word">
+                                            {formatChecklistTranslation(item.word, edit.wordClass || item.class, infinitiveVerbs)}
+                                        </span>
                                         <div className="vc-row-meta">
                                             <span className="vc-pos-badge">
                                                 {t(`vocabChecklist.pos.${(edit.wordClass || item.class).toLowerCase()}`, edit.wordClass || item.class)}

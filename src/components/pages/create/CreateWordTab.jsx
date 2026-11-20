@@ -14,7 +14,6 @@ import { validateNewWord } from '@/utils/validationEngine.jsx';
 import { useTranslation } from '@/hooks/useTranslation.jsx';
 import { fetchSynonymOptions, fetchDefinitionOptions, fetchTopicOptions } from '../../../utils/semanticUtils.js';
 import { getTagsForTranslation } from '../../../utils/semanticTagger.js';
-import { buildDerivedGlossAndDefinition } from '../../../utils/derivationGloss.js';
 import './createWordTab.css';
 import Modal from '../../UI/Modal/Modal.jsx';
 import DefinitionSelectModal from '../../UI/Modal/DefinitionSelectModal.jsx';
@@ -79,6 +78,10 @@ export default function CreateWordTab() {
     const [isFetchingTags, setIsFetchingTags] = useState(false);
     const [showGuide, setShowGuide] = useState(false);
     const [customDerivedDefs, setCustomDerivedDefs] = useState({});
+    const [fetchingDerivedDefs, setFetchingDerivedDefs] = useState({});
+    const derivedDefTimersRef = useRef({});
+    const derivedDefSeqRef = useRef({});
+    const autoDerivedDefsRef = useRef({});
     const [autoEnrichEnabled, setAutoEnrichEnabled] = useState(() => {
         try {
             return localStorage.getItem('ce_create_word_auto_enrich') !== 'false';
@@ -582,6 +585,75 @@ export default function CreateWordTab() {
         }
     };
 
+    const handleDerivedTranslationChange = (idx, nextVal, rule) => {
+        setCustomTranslations((prev) => ({ ...prev, [idx]: nextVal }));
+
+        if (derivedDefTimersRef.current[idx]) {
+            clearTimeout(derivedDefTimersRef.current[idx]);
+            delete derivedDefTimersRef.current[idx];
+        }
+
+        if (!autoEnrichEnabled) return;
+
+        const cleanVal = (nextVal || '').trim();
+        if (cleanVal.length < 2 || cleanVal.startsWith('(')) {
+            setCustomDerivedDefs((prev) => {
+                if (autoDerivedDefsRef.current[idx] && prev[idx] === autoDerivedDefsRef.current[idx]) {
+                    const next = { ...prev };
+                    delete next[idx];
+                    delete autoDerivedDefsRef.current[idx];
+                    return next;
+                }
+                return prev;
+            });
+            return;
+        }
+
+        derivedDefTimersRef.current[idx] = setTimeout(async () => {
+            const seq = (derivedDefSeqRef.current[idx] || 0) + 1;
+            derivedDefSeqRef.current[idx] = seq;
+            setFetchingDerivedDefs((prev) => ({ ...prev, [idx]: true }));
+            try {
+                const options = await fetchDefinitionOptions(cleanVal).catch(() => []);
+                if (derivedDefSeqRef.current[idx] !== seq) return;
+
+                let targetPos = wordClass;
+                if (rule?.targetPOS) {
+                    targetPos = rule.targetPOS;
+                } else if (rule?.appliesTo && rule.appliesTo !== 'all') {
+                    targetPos = rule.appliesTo.split(',')[0].trim();
+                }
+
+                const bestDef = pickBestDefinition(options, targetPos);
+                if (bestDef) {
+                    setCustomDerivedDefs((prev) => {
+                        const curr = (prev[idx] || '').trim();
+                        if (!curr || prev[idx] === autoDerivedDefsRef.current[idx]) {
+                            autoDerivedDefsRef.current[idx] = bestDef;
+                            return { ...prev, [idx]: bestDef };
+                        }
+                        return prev;
+                    });
+                }
+            } finally {
+                if (derivedDefSeqRef.current[idx] === seq) {
+                    setFetchingDerivedDefs((prev) => {
+                        const next = { ...prev };
+                        delete next[idx];
+                        return next;
+                    });
+                }
+            }
+        }, 600);
+    };
+
+    useEffect(() => {
+        const timersRef = derivedDefTimersRef;
+        return () => {
+            Object.values(timersRef.current).forEach((id) => clearTimeout(id));
+        };
+    }, []);
+
     const saveConfirmedWord = (safeWord, cleanTrans, processedTags, keepRoot = false) => {
         const rootId = Date.now() + Math.random();
 
@@ -627,7 +699,7 @@ export default function CreateWordTab() {
                     ipa: '', // Derivations don't auto-generate IPA yet
                     wordClass: targetClass,
                     translation: customTranslations[idx] !== undefined && customTranslations[idx].trim() !== '' ? customTranslations[idx].trim() : item.translationText,
-                    definition: customDerivedDefs[idx] !== undefined && customDerivedDefs[idx].trim() !== '' ? customDerivedDefs[idx].trim() : (item.definitionText || ''),
+                    definition: (customDerivedDefs[idx] || '').trim(),
                     tags: [...processedTags, 'derived'],
                     relatedWords: cleanTrans ? [cleanTrans] : [],
                     ideogram: '',
@@ -653,6 +725,8 @@ export default function CreateWordTab() {
         setSelectedDerivs({});
         setCustomTranslations({});
         setCustomDerivedDefs({});
+        setFetchingDerivedDefs({});
+        autoDerivedDefsRef.current = {};
         toast.success((toastItem) => (
             <div className="toast-inner-flex">
                 <span>{keepRoot ? t('createWord.savedAndNewSuccess') : t('createWord.savedSuccess')}</span>
@@ -983,25 +1057,22 @@ export default function CreateWordTab() {
                 const result = applyRuleToWord(base, rule, grammarRules, vowels, consonants, otherPhonemes);
 
                 if (result) {
-                    const { translationText, definitionText } = buildDerivedGlossAndDefinition({
-                        baseTranslation: translation,
-                        baseDefinition: autoEnrichEnabled ? definition : '',
-                        rule
-                    });
+                    const transLabel = translation && translation.trim()
+                        ? `${translation.trim()} (${(rule.gloss || rule.name || 'Unnamed Rule').toLowerCase()})`
+                        : `(${(rule.gloss || rule.name || 'Unnamed Rule').toLowerCase()})`;
 
                     results.push({
                         derivedWord: result,
                         ruleName: rule.name || 'Unnamed Rule',
                         rule: rule,
-                        translationText,
-                        definitionText
+                        translationText: transLabel
                     });
                 }
             }
         });
 
         return results;
-    }, [word, translation, definition, autoEnrichEnabled, wordClass, grammarRules, vowels, consonants, otherPhonemes, normalizeToBase]);
+    }, [word, translation, wordClass, grammarRules, vowels, consonants, otherPhonemes, normalizeToBase]);
 
     return (
         <div className="create-word-container">
@@ -1468,18 +1539,18 @@ export default function CreateWordTab() {
                                                 type="text"
                                                 className="preview-translation-input"
                                                 value={customTranslations[idx] !== undefined ? customTranslations[idx] : item.translationText}
-                                                onChange={(e) => setCustomTranslations(prev => ({ ...prev, [idx]: e.target.value }))}
+                                                onChange={(e) => handleDerivedTranslationChange(idx, e.target.value, item.rule)}
                                                 onClick={(e) => e.stopPropagation()} // Prevent toggling the checkbox when editing translation
                                                 placeholder={item.translationText}
                                             />
-                                            {(autoEnrichEnabled || customDerivedDefs[idx] !== undefined) && item.definitionText && (
+                                            {(Boolean(fetchingDerivedDefs[idx]) || Boolean(customDerivedDefs[idx]) || Boolean((customTranslations[idx] || '').trim())) && (
                                                 <input
                                                     type="text"
                                                     className="preview-def-input"
-                                                    value={customDerivedDefs[idx] !== undefined ? customDerivedDefs[idx] : item.definitionText}
+                                                    value={customDerivedDefs[idx] || ''}
                                                     onChange={(e) => setCustomDerivedDefs(prev => ({ ...prev, [idx]: e.target.value }))}
                                                     onClick={(e) => e.stopPropagation()}
-                                                    placeholder={item.definitionText}
+                                                    placeholder={fetchingDerivedDefs[idx] ? t('createWord.fetching') : t('createWord.defPlaceholder')}
                                                 />
                                             )}
                                         </div>
